@@ -1,0 +1,1537 @@
+# -*- coding: utf-8 -*-
+# @Author: hzhu
+# @Date:   2024-07-08 13:53:40
+# @Last Modified by:   hzhu
+# @Last Modified time: 2024-10-17 18:17:47
+# @Description:
+#   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
+#   注
+#       - 此文件只调用 numpy 和 torch 两个包，不依赖不调用 ./tensor 中任何其他的包。
+#       - 这个文件中的函数可以被 ./tensor 中任何其他文件调用。
+#       - 根据系统 cuda 是否可用，这个文件中的函数统一使用 device = cuda 或 cpu。
+#       - 此文件中的所有函数都应保证梯度链。
+
+import torch as tc
+
+from quante.torch_utils.grad import clone_list
+from ..linalg.decomp import qr, svd, truncate, rq
+from ...linalg.svd_robust import TruncationError
+
+__all__ = [
+    "mpo_eye",
+    "full_contract",
+    "tn_inner",
+    "tn_norm",
+    "canonicalize",
+    "orthogonalize",
+    "add",
+]
+
+if tc.cuda.is_available():
+    device = tc.device("cuda")
+else:
+    device = tc.device("cpu")
+
+dtype = tc.complex128
+
+#######################################################################
+# Tensor Train 的加法
+#######################################################################
+
+def add(
+    W1s: list[tc.Tensor], W2s: list[tc.Tensor], alpha: float = 1.0, beta: float = 1.0) -> list[tc.Tensor]:
+    """
+    计算：α W1s + β W2s，默认 α = β = 1.0
+    """
+    assert len(W1s) == len(W2s), "two mpo should have the same length"
+    L = len(W1s)
+    Ws = [None] * L
+
+    Ws[0] = tc.cat((W1s[0], W2s[0]), dim=-1)
+
+    for i in range(1, L - 1):
+        assert (W1s[i].shape[1:-1] == W2s[i].shape[1:-1]), f"The physical dims of the {i}th local tensor is different for W1s, W2s, which is {W1s[i].shape} and {W2s[i].shape}, respectively"
+        Ws[i] = _add_each(W1s[i], W2s[i])
+
+    Ws[-1] = tc.cat((alpha * W1s[-1], beta * W2s[-1]), dim=0)
+
+    return Ws
+
+
+def _add_each(W1: tc.Tensor, W2: tc.Tensor) -> tc.Tensor:
+    """
+    ```
+    :        |                  |                         |
+    :       (b)                (b)                       (b)
+    :        |                  |                         |
+    : --(a)--W1--(d)-- + --(e)--W2--(f)--  --->  --(a+e)--W--(d+f)--
+    ```
+    对 MPS MPO 都适用
+    W1, W2 只要有一个的追踪了梯度，那返回的结果就追踪梯度
+    """
+    # 获得两个张量的维数
+    a, *b, d = W1.shape
+    e, *b, f = W2.shape
+
+    # 创建两个零张量，分别对应矩阵的左上和右下位置，用以拼接
+    part1 = tc.zeros(e, *b, d, device=W1.device, requires_grad=False)
+    part2 = tc.zeros(a, *b, f, device=W1.device, requires_grad=False)
+
+    # 将四个张量拼接在一起
+    Wup = tc.cat((W1, part1), dim=0)
+    Wdown = tc.cat((part2, W2), dim=0)
+
+    return tc.cat((Wup, Wdown), dim=-1)
+
+
+def _full_contract_right_mps(res: tc.Tensor, Wsi: tc.Tensor):
+    """
+    ```
+    :         |         |                         |
+    :        (b)       (b)          --->         (bd)
+    :         |         |                         |
+    : --(a)--res--(c)--Wsi--(e)--         --(a)--res--(e)--
+    ```
+    
+    res = tc.einsum("abc,cde->abde", res, Ws[i])
+    """
+    a, _, c = res.shape
+    c, _, e = Wsi.shape
+    res = res.reshape(-1, c) @ Wsi.reshape(c, -1)
+    return res.reshape(a, -1, e)
+
+def _local_apply(res: tc.Tensor, Wsi: tc.Tensor):
+    """
+    ```
+    :          |
+    :          ⬜
+    :          |
+    :         (b)
+    :          |
+    :  --(a)--res--(c)--
+    ```
+    """
+    a, b, *c = res.shape
+    return (Wsi @ res.swapaxes(0,1).reshape(b,-1)).reshape(b, a, *c).swapaxes(0,1)
+
+def _local_apply2(res: tc.Tensor, Ws1: tc.Tensor, Ws2: tc.Tensor):
+    """
+    ```
+    :          |
+    :          ⬜
+    :          |
+    :         (b)
+    :          |
+    :  --(a)--res--(c)--
+    :          |
+    :         (d)
+    :          |
+    :          ⬜
+    :          |
+    ```
+    """
+    a, b, d, c = res.shape
+    res = res.swapaxes(0,1).swapaxes(2,3)  # (b,a,c,d)
+    res = Ws1 @ (res.reshape(-1,d) @ Ws2).reshape(b,-1)
+    return res.reshape(b,a,c,d).swapaxes(0,1).swapaxes(2,3)
+
+
+def _full_contract_right_mps2(res: tc.Tensor, Wsi: tc.Tensor):
+    """
+    ```
+    :         |         |                         ║
+    :        (b)       (d)          --->        (b)(d)
+    :         |         |                         ║
+    : --(a)--res--(c)--Wsi--(e)--         --(a)--res--(e)--
+    ```
+    
+    res = tc.einsum("abc,cde->abde", res, Ws[i])
+    """
+    a, b, c = res.shape
+    c, d, e = Wsi.shape
+    res = res.reshape(-1, c) @ Wsi.reshape(c, -1)
+    return res.reshape(a, b, d, e)
+
+def _full_contract_mps(Ws):
+    result = Ws[0]
+    for i in range(1, len(Ws)):
+        result = _full_contract_right_mps(result, Ws[i])
+    return sum(
+        result[i, :, i] for i in range(result.shape[0])
+    )  # for obc, return result is fine
+
+
+def _full_contract_right_mpo(res: tc.Tensor, Wsi: tc.Tensor):
+    """
+    ```
+    :         |         |                         |
+    :        (b)       (e)                       (be)
+    :         |         |                         |
+    : --(a)--res--(d)--Wsi--(g)--  --->   --(a)--res--(g)--
+    :         |         |                         |
+    :        (c)       (f)                       (cf)
+    :         |         |                         |
+    ```
+    >>> res = tc.einsum("abcd,defg->abecfg", res, Ws[i])
+    """
+    a, b, c, d = res.shape
+    d, e, f, g = Wsi.shape
+    res = res.reshape(-1, d) @ Wsi.reshape(d, -1)
+    # (a,b,c,e,f,g) -> (a,b,e,c,f,g) -> (a,be,cf,g)
+    return (
+        res.reshape(a, b, c, e, f, g)
+        .permute([0, 1, 3, 2, 4, 5])
+        .reshape(a, b * e, c * f, g)
+    )
+
+
+def _full_contract_mpo(Ws):
+    # mpo -> matrix
+    result = Ws[0]
+    for i in range(1, len(Ws)):
+        result = _full_contract_right_mpo(result, Ws[i])
+    return sum(
+        result[i, :, :, i] for i in range(result.shape[0])
+    )  # for obc, return result is fine
+
+
+def full_contract(Ws: list[tc.Tensor]) -> tc.Tensor:
+    """
+    将 MPS(MPO) 完全收缩成为 向量(矩阵)
+    根据传入列表中每个张量的结束判断为 MPS(3阶张量) 还是 MPO(4阶张量)
+    """
+    ndim = Ws[0].ndim
+    if ndim == 3:
+        return _full_contract_mps(Ws)
+    elif ndim == 4:
+        return _full_contract_mpo(Ws)
+    else:
+        # not defined
+        raise NotImplementedError(
+            f"ndim is {ndim}, which should be 3 for mps or 4 for mpo"
+        )
+
+
+def _reshape2mps(ts: tc.Tensor, transpose=False):
+    """
+    ```
+    :        |                           |                    |
+    :       (b)                        (bc)                  (cb)
+    :        |                           |                    |
+    : --(a)--W--(d)--    ---->    --(a)--W--(d)--  or  --(a)--W--(d)--
+    :        |
+    :       (c)                    not transpose          transpose
+    :        |
+    ```
+    """
+    if transpose:
+        ts = ts.permute([0, 2, 1, 3])
+    shape = ts.shape
+    return ts.reshape(shape[0], -1, shape[-1])
+
+
+def _pre_local_tensor(Ws1i, Ws2i, conj_at_1, ismpo):
+    if conj_at_1:
+        Ws1i = Ws1i.conj()
+    if ismpo:
+        Ws1i = _reshape2mps(Ws1i, transpose=True)
+        Ws2i = _reshape2mps(Ws2i, transpose=False)
+    return Ws1i, Ws2i
+
+
+def _contract_init_pbc(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
+    """
+    ```
+    : --(a)--Ws1i--(c)--         --(a)--┬--(c)--
+    :         |                         |
+    :        (b)          --->         Lenv
+    :         |                         |
+    : --(d)--Ws2i--(e)--         --(d)--┴--(e)--
+    ```
+    
+    >>> Lenv = tc.einsum("abc,dbe->adce", Ws1i, Ws2i)
+    """
+    a, b, c = Ws1i.shape
+    # (a,b,c) -> (a,c,b) -> (ac,b)
+    Lenv = Ws1i.permute([0, 2, 1]).reshape(-1, b)
+    d, b, e = Ws2i.shape
+    # (d,b,e) -> (b,d,e) -> (b,de)
+    Lenv_down = Ws2i.permute([1, 0, 2]).reshape(b, -1)
+    # (ac,b)@(b,de) -> (ac,de) -> (a,c,d,e) -> (a,d,c,e)
+    return (Lenv @ Lenv_down).reshape(a, c, d, e).permute([0, 2, 1, 3])
+
+
+def _inner_contract_right_pbc(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor):
+    """
+    ```
+    : --(a)--┬--(c)--Ws1i--(f)--         --(a)--┬--(c)--
+    :        |        |                         |
+    :      Lenv      (b)          --->         Lenv
+    :        |        |                         |
+    : --(d)--┴--(e)--Ws2i--(g)--         --(d)--┴--(e)--
+    ```
+
+    >>> Lenv = tc.einsum("adce,cbf,ebg->adfg", Lenv, Ws1i, Ws2i)
+    """
+    e, b, g = Ws2i.shape
+    a, d, c, e = Lenv.shape
+    # (adc,e) @ (e,bg) -> (adc,bg)
+    Lenv = Lenv.reshape(-1, e) @ Ws2i.reshape(e, -1)
+    # (adc,bg) -> (ad,cb,g) -> (ad,g,cb) -> (adg,cb)
+    Lenv = Lenv.reshape(-1, c * b, g).permute([0, 2, 1]).reshape(-1, c * b)
+    # (adg,cb) @ (cb,f) -> (adg,f)
+    Lenv = Lenv @ Ws1i.reshape(c * b, -1)
+    # (adg,f) -> (a,d,g,f) -> (a,d,f,g)
+    return Lenv.reshape(a, d, g, -1).permute([0, 1, 3, 2])
+
+
+def _contract_init_obc(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
+    """
+    ```
+    : ╭--(a)--Ws1i--(c)--           ╭--(c)--
+    : |       |                     |  
+    : |      (b)          --->     Lenv
+    : |       |                     |  
+    : ╰--(a)--Ws2i--(e)--           ╰--(e)--
+    ```
+
+    >>> Lenv = tc.einsum("abc,abe->ce", Ws1i, Ws2i)
+    """
+    a, b, c = Ws1i.shape
+    # (a,b,c) -> (c,a,b) -> (c,ab)
+    Lenv = Ws1i.permute([2,0,1]).reshape(c, -1)
+    a, b, e = Ws2i.shape
+    # (a,b,e) -> (ab,e)
+    Lenv_down = Ws2i.reshape(-1, e)
+    return (Lenv @ Lenv_down).reshape(c,e)
+
+
+def _inner_contract_right_obc(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor):
+    """
+    ```
+    :  ╭--(c)--Ws1i--(f)--          ╭--(c)--
+    :  |        |                   |  
+    : Lenv     (b)          --->   Lenv
+    :  |        |                   |  
+    :  ╰--(e)--Ws2i--(g)--          ╰--(e)--
+    ```
+
+    >>> Lenv = tc.einsum("adce,cbf,ebg->adfg", Lenv, Ws1i, Ws2i)
+    """
+    e, b, g = Ws2i.shape
+    c, e = Lenv.shape
+    # (c,e) @ (e,bg) -> (c,bg)
+    Lenv = Lenv @ Ws2i.reshape(e, -1)
+    # (c,bg) -> (cb,g) -> (g,cb)
+    Lenv = Lenv.reshape(-1, g).permute([1,0])
+    # (g,cb) @ (cb,f) -> (g,f)
+    Lenv = Lenv @ Ws1i.reshape(c * b, -1)
+    # (g,f) -> (f,g)
+    return Lenv.T
+
+
+def _trace_Lenv(Lenv):
+    """
+    ```
+    : ╭--(a)--┬--(c)--╮
+    : ╰       |       ╯
+    :       Lenv            ---->  number
+    :         |
+    : ╭--(d)--┴--(e)--╮
+    : ╰               ╯
+    ```
+    >>> Lenv = tc.einsum("adad->", Lenv)
+    """
+    a, d, _, _ = Lenv.shape
+    return tc.trace(Lenv.reshape(a * d, a * d))
+
+
+def _inner_log_or_not(Lenv, logscale, lognm=0):
+    if logscale:
+        nm_ = tc.linalg.norm(Lenv)
+        Lenv /= nm_
+        return Lenv, lognm + tc.log(nm_)
+    else:
+        return Lenv, lognm
+
+
+def tn_inner_pbc(
+    Ws1: list[tc.Tensor], Ws2: list[tc.Tensor], logscale=False, conj_at_1=False
+) -> tc.Tensor:
+    """计算两个 MPS(MPO) 的内积
+
+    - 如果 logscale = True 那么就返回内积的对数值
+    - 如果 conj_at_1 = True 那么计算 Ws1.conj() 与 Ws2 的收缩
+
+    计算图：
+        Ws1 ┌---┬--...┬---┐ \n
+        Ws2 └---┴--...┴---┘
+    """
+    ismpo = Ws1[0].ndim == 4  # 判断是否是 MPO
+    Ws1i, Ws2i = _pre_local_tensor(Ws1[0], Ws2[0], conj_at_1=conj_at_1, ismpo=ismpo)
+    Lenv = _contract_init_pbc(Ws1i, Ws2i)
+    Lenv, lognm = _inner_log_or_not(Lenv, logscale=logscale, lognm=0)
+
+    for i in range(1, len(Ws2)):
+        Ws1i, Ws2i = _pre_local_tensor(Ws1[i], Ws2[i], conj_at_1=conj_at_1, ismpo=ismpo)
+        Lenv = _inner_contract_right_pbc(Lenv, Ws1i, Ws2i)
+        Lenv, lognm = _inner_log_or_not(Lenv, logscale=logscale, lognm=lognm)
+
+    nm = _trace_Lenv(Lenv)
+
+    if logscale:
+        return lognm + tc.log(nm)
+
+    return nm
+
+
+def tn_inner_obc(
+    Ws1: list[tc.Tensor], Ws2: list[tc.Tensor], logscale=False, conj_at_1=False
+) -> tc.Tensor:
+    """计算两个 MPS(MPO) 的内积
+
+    - 如果 logscale = True 那么就返回内积的对数值
+    - 如果 conj_at_1 = True 那么计算 Ws1.conj() 与 Ws2 的收缩
+
+    计算图：
+        Ws1 ┌---┬--...┬---┐ \n
+        Ws2 └---┴--...┴---┘
+    """
+    ismpo = Ws1[0].ndim == 4  # 判断是否是 MPO
+    Ws1i, Ws2i = _pre_local_tensor(Ws1[0], Ws2[0], conj_at_1=conj_at_1, ismpo=ismpo)
+    Lenv = _contract_init_obc(Ws1i, Ws2i)
+    Lenv, lognm = _inner_log_or_not(Lenv, logscale=logscale, lognm=0)
+
+    for i in range(1, len(Ws2)):
+        Ws1i, Ws2i = _pre_local_tensor(Ws1[i], Ws2[i], conj_at_1=conj_at_1, ismpo=ismpo)
+        Lenv = _inner_contract_right_obc(Lenv, Ws1i, Ws2i)
+        Lenv, lognm = _inner_log_or_not(Lenv, logscale=logscale, lognm=lognm)
+
+    nm = tc.trace(Lenv)
+
+    if logscale:
+        return lognm + tc.log(nm)
+
+    return nm
+
+
+def tn_inner(
+    Ws1: list[tc.Tensor], Ws2: list[tc.Tensor], logscale=False, conj_at_1=False, pbc=False
+) -> tc.Tensor:
+    if pbc:
+        return tn_inner_pbc(Ws1, Ws2, logscale, conj_at_1)
+    else:
+        return tn_inner_obc(Ws1, Ws2, logscale, conj_at_1)
+
+
+def tn_norm(Ws: list[tc.Tensor], lognorm=False, pbc=False) -> tc.Tensor:
+    """计算 MPS(MPO) 的模（MPO 的模定义为： tr(M†M)）
+
+    如果 lognorm = True 那么就返回模的对数值
+
+    计算图：
+        Ws† ┌---┬--...┬---┐ \n
+        Ws  └---┴--...┴---┘
+    """
+    norm2 = tn_inner(Ws, Ws, logscale=lognorm, conj_at_1=True, pbc=pbc)
+    if tc.is_complex(norm2):
+        norm2 = norm2.real
+    return norm2 / 2 if lognorm else norm2**0.5
+
+
+
+def _left2right_QR_step(W1:tc.Tensor, W2:tc.Tensor)->tuple[tc.Tensor,tc.Tensor]:
+    """
+    ```
+    :        |       |                         |       |
+    :       (b)     (d)                       (b)     (d)
+    :        |       |           QR            |       |
+    : --(a)--⬜--(c)--⬜--(e)--   ---->   --(a)--▷--(f)--⬜--(e)-- 
+    :        W1      W2                        W1p    W2p
+    ```
+    MPS MPO 都可以
+    """
+    W1p, S = qr(W1)
+    c, *e = W2.shape
+    W2p = S @ W2.reshape(c, -1)
+    return W1p, W2p.reshape(-1, *e)
+
+
+def _left2right_QR(Ws, L, qrnormalize=False)->tuple[tc.Tensor,tc.Tensor]:
+    As, lognm = [None] * L, 0.0
+    W1 = Ws[0]
+    for i in range(L-1):
+        As[i], W1 = _left2right_QR_step(W1, Ws[i+1])
+        if qrnormalize:
+            nm = tc.norm(W1)
+            lognm = tc.log(nm) + lognm
+            W1 = W1 / nm
+    As[-1] = W1
+    if not qrnormalize:
+        nm = tc.norm(As[-1])
+        lognm = tc.log(nm)
+        As[-1] = As[-1] / nm
+    return As, lognm
+
+
+def _right2left_QR_step(W1:tc.Tensor, W2:tc.Tensor):
+    """
+    ```
+    :        |       |                        |       |        
+    :       (b)     (d)                      (b)     (d)       
+    :        |       |           QR           |       |        
+    : --(a)--⬜--(f)--⨞--(e)--   <----  --(a)--⬜--(c)--⬜--(e)-- 
+    :        W1p    W2p                       W1      W2       
+    ```
+    MPS MPO 都可以
+    """
+    S, W2p = rq(W2)
+    *a, f = W1.shape
+    W1p = W1.reshape(-1, f) @ S
+    return W1p.reshape(*a, -1), W2p
+
+
+def _SVD_constract_right(A, U, S):
+    """
+    ```
+    :        |                                      |
+    :       (b)                                    (b)
+    :        |                                      |
+    : --(a)--A--(c)--U--(d)--S--(e)  ---->   --(a)--W--(e)--
+    ```
+    MPS MPO 都可以
+    >>> tc.einsum("abc,cd,de->abe", A, U, S)
+    """
+    *a, c = A.shape
+    W = (A.reshape(-1, c) @ U) * S
+    return W.reshape(*a, -1)
+
+
+def _right2left_SVD(As, L, trunc_para=(None,None,None)):
+    """
+    ```
+    :                        |                        |
+    :                       (b)                      (b)
+    :                        |          SVD           |
+    : --(a)--▷--(d)--◇--(e)--⨞--(c)--  <----   --(a)--⬜--(c)--
+    :        U       S       B                        W
+    ```
+    """
+    Ss, Bs = [None] * (L + 1), [None] * L
+    trunc_err_sum = TruncationError(0.0, 1.0)
+    lr_dims = [[0], list(range(1, As[0].ndim))]
+    for i in range(L - 1, 0, -1):
+        U, Ss[i], Bs[i], trunc_err = svd(As[i], lr_indx=lr_dims, trunc_para=trunc_para)
+        As[i - 1] = _SVD_constract_right(As[i - 1], U, Ss[i])
+        trunc_err_sum += trunc_err
+    Bs[0] = As[0]
+    return Bs, Ss, trunc_err_sum
+
+
+def canonicalize(
+    Ws: list[tc.Tensor], trunc_para=(None,None,None), qrnormalize=False
+) -> tuple[list[tc.Tensor], list[tc.Tensor]]:
+    """
+    将任意的 MPS/MPO Ws 变为标准正交的 MPS/MPO (Bs, Ss)
+    """
+    assert Ws[0].shape[0] == Ws[-1].shape[-1] == 1, "正则形式只对开边界mps有定义！"
+    L = len(Ws)
+    As, lognm = _left2right_QR(Ws, L, qrnormalize=qrnormalize)
+    Bs, Ss, trunc_err = _right2left_SVD(As, L, trunc_para=trunc_para)
+    Ss[0] = Ss[-1] = tc.tensor([1.], dtype=Ss[1].dtype, device=Ss[1].device)
+    return Bs, Ss, lognm, trunc_err
+
+
+def orthogonalize(Ws:list[tc.Tensor], j: int)->list[tc.Tensor]:
+    """
+    ```
+    :         |      |      |      |      |      |      |
+    :    -----▷------▷------▷------⬜------⨞------⨞------⨞-----
+    :        Ws[0]  Ws[1]  Ws[2]  Ws[3]  Ws[4]  Ws[5]  Ws[6]
+    :                              ↑ 
+    :                             j=3
+    ```
+    """
+    L = len(Ws)
+    newWs = clone_list(Ws)
+    for i in range(j-1):
+        newWs[i], newWs[i+1] = _left2right_QR_step(newWs[i], newWs[i+1])
+    for i in range(L-1,j,-1):
+        # print(newWs[i-1].shape, newWs[i].shape)
+        newWs[i-1], newWs[i] = _right2left_QR_step(newWs[i-1], newWs[i])
+    return newWs
+
+def _apply_2b_gate_mps(W1:tc.Tensor, W2:tc.Tensor, gate_2b:tc.Tensor) -> tc.Tensor:
+    """
+    ```
+    :        |         |
+    :       (c)       (f)
+    :        |         |
+    :        ├-gate2_b-┤
+    :        |         |                       |         
+    :       (b)       (e)                     (cf)       
+    :        |         |                       |         
+    : --(a)--⬜---(d)---⬜--(g)--  ----> --(a)---⬜---(g)-- 
+    :        W1        W2                             
+    ```
+    >>> tc.einsum("abd,deg,cfbe->acfg", W1, W2, gate_2b)
+    """
+    a, b, d = W1.shape
+    d, e, g = W2.shape
+    c, f, b, e = gate_2b.shape
+    # (a,b,d) -> (ab,d) @ (d,e,g) -> (d,eg)
+    W = W1.reshape(-1, d) @ W2.reshape(d, -1)
+    # (ab,eg) -> (a,b,e,g) -> (b,e,a,g) -> (be,ag)
+    W = W.reshape(a,b,e,g).permute([1,2,0,3]).reshape(b*e, -1)
+    # (cf,be) @ (be,ag)
+    W = gate_2b.reshape(-1,b*e) @ W
+    # (cf,ag) -> (c,f,a,g) -> (a,c,f,g)
+    res = W.reshape(c,f,a,g).permute([2,0,1,3]).reshape(a,c,f,g)
+    # res2 = tc.einsum("abd,deg,cfbe->acfg", W1, W2, gate_2b)
+    # print(tc.norm(res-res2))
+    return res
+
+
+def _apply_2b_gate_mpo_from_top(W1:tc.Tensor, W2:tc.Tensor, gate_2b:tc.Tensor) -> tc.Tensor:
+    """
+    ```
+    :        |         | 
+    :       (c)       (f)
+    :        |         | 
+    :        ├-gate2_b-┤ 
+    :        |         |                        |        
+    :       (b)       (e)                      (cf)       
+    :        |         |                        |        
+    : --(a)--⬜---(d)---⬜--(g)--  ---->  --(a)---▷---(j)--
+    :        |         |                        |        
+    :       (h)       (i)                      (hi)       
+    :        |         |                        |        
+    :        W1        W2            
+    ```
+    """
+    a, b, h, d = W1.shape
+    d, e, i, g = W2.shape
+    c, f, b, e = gate_2b.shape
+    # (a,b,h,d) -> (abh,d) @ (d,e,i,g) -> (d,eig)
+    W = W1.reshape(-1, d) @ W2.reshape(d, -1)
+    # (abh,eig) -> (a,b,h,e,i,g) -> (b,e,a,h,i,g) -> (be,ahig)
+    W = W.reshape(a,b,h,e,i*g).permute([1,3,0,2,4]).reshape(b*e, -1)
+    # (cf,be) @ (be,ahig)
+    W = gate_2b.reshape(-1,b*e) @ W
+    # (cf,ahig) -> (c,f,a,h,ig) -> (a,c,h,f,ig)
+    return W.reshape(c,f,a,h,i*g).permute([2,0,3,1,4]).reshape(a,c,h,f,i,g)
+
+
+def _apply_2b_gate_mpo_from_bottom(W1:tc.Tensor, W2:tc.Tensor, gate_2b:tc.Tensor) -> tc.Tensor:
+    """
+    ```
+    :        W1        W2                             
+    :        |         |                        |        
+    :       (b)       (e)                      (be)       
+    :        |         |                        |        
+    : --(a)--⬜---(d)---⬜--(g)--  ---->  --(a)---⬜---(j)--
+    :        |         |                        |        
+    :       (h)       (i)                      (cf)        
+    :        |         |                        |          
+    :        ├-gate2_b-┤
+    :        |         |
+    :       (c)       (f)
+    :        |         |
+    ```
+    """
+    a, b, h, d = W1.shape
+    d, e, i, g = W2.shape
+    h, i, c, f = gate_2b.shape
+    # (a,b,h,d) -> (abh,d) @ (d,e,i,g) -> (d,eig)
+    W = W1.reshape(-1, d) @ W2.reshape(d, -1)
+    # (abh,eig) -> (a,b,h,e,i,g) -> (a,b,e,g,h,i) -> (abeg,hi)
+    W = W.reshape(a,b,h,e,i,g).permute([0,1,3,5,2,4]).reshape(-1, h*i)
+    # (abeg,hi) @ (hi,cf)
+    W = W @ gate_2b.reshape(h*i, -1)
+    # (abeg,cf) -> (a*b,e,g,c,f) -> (a*b,c,e,f,g)
+    return W.reshape(a*b,e,g,c,f).permute([0,3,1,4,2]).reshape(a,b,c,e,f,g)
+
+
+def _apply_2b_gate_mpo_from_topbottom(W1:tc.Tensor, W2:tc.Tensor, gate_2b_tp:tc.Tensor, gate_2b_bt:tc.Tensor) -> tuple[list[tc.Tensor], list[tc.Tensor]]:
+    """
+    ```
+    :        |          | 
+    :       (c)        (f)
+    :        |          | 
+    :        ├gate_2b_tp┤                           
+    :        |          |                       |         
+    :       (b)        (e)                    (cf)      
+    :      W1|        W2|                       |       
+    : --(a)--⬜---(d)----⬜--(g)--  ---->  --(a)--⬜--(g)--
+    :        |          |                       |       
+    :       (h)        (i)                     (jk)     
+    :        |          |                       |        
+    :        ├gate_2b_bt┤
+    :        |          |
+    :       (j)        (k)
+    :        |          |
+    ```
+    """
+    a, b, h, d = W1.shape
+    d, e, i, g = W2.shape
+    c, f, b, e = gate_2b_tp.shape
+    h, i, j, k = gate_2b_bt.shape
+    # (a,b,h,d) -> (abh,d) @ (d,e,i,g) -> (d,eig)
+    W = W1.reshape(-1, d) @ W2.reshape(d, -1)
+    # (abh,eig) -> (a,b,h,e,i,g) -> (a,b,e,g,h,i) -> (abeg,hi)
+    W = W.reshape(a,b,h,e,i,g).permute([0,1,3,5,2,4]).reshape(-1, h*i)
+    # (abeg,hi) @ (hi,jk)
+    W = W @ gate_2b_bt.reshape(h*i, -1)
+    # (abeg,jk) -> (a,be,g,jk) -> (be,a,jk,g) -> (be,ajkg)
+    W = W.reshape(a,b*e,g,j*k).permute([1,0,3,2]).reshape(b*e,-1)
+    # (cf,be) @ (be,ajkg)
+    W = gate_2b_tp.reshape(-1, b*e) @ W
+    # (cf,ajkg) -> (c,f,a,j,k,g) -> (a,c,j,f,k,g)
+    return W.reshape(c,f,a,j,k,g).permute([2,0,3,1,4,5]).reshape(a,c,j,f,k,g)
+
+def _resume_canonical_mps(W, V):
+    """
+    ```
+    :                V.conj()
+    :         --(e)--⨞--(d)-╮                |     
+    :        |       |      |               (b)
+    :       (b)     (c)     |                | 
+    :        |       |      |   -->   --(a)--⨞--(e)--
+    : --(a)--╘═══════╛--(d)-╯         
+    :            W
+    ```
+    tc.einsum('abcd,ecd->abe', W, V.conj())
+    """
+    a, b, c, d = W.shape
+    return (W.reshape(-1, c*d) @ V.conj().reshape(-1, c*d).T).reshape(a,b,-1)
+
+
+def _resume_canonical_mpo(W, V):
+    """
+    ```
+    :                 ╭╮
+    :                 |
+    :                (g)
+    :         V.conj()|
+    :          --(e)--⨞--(d)-╮                |     
+    :         |       |      |               (b)
+    :        (b)     (c)     |                | 
+    :         |       |      |   -->   --(a)--⨞--(e)--
+    :  --(a)--⨞-------⨞--(d)-╯                |
+    :         |       |                      (f)
+    :        (f)     (g)
+    :         |       |
+    :                 ╰╯
+    :             W
+    ```
+    tc.einsum('abfcgd,ecgd->abfe', W, V.conj())
+    """
+    a,b,f,c,g,d = W.shape
+    return (W.reshape(-1, c*g*d) @ V.conj().reshape(-1, c*g*d).T).reshape(a,b,f,-1)
+
+def unitarize(gate_2b:tc.Tensor)->tc.Tensor:
+    """
+    ```
+    : │         │      └--▽--┘
+    : ├─gate_2b─┤  -->    │
+    : │         │      ┌--△--┐
+    ```
+    """
+    a, b, c, d = gate_2b.shape
+    gate_2b = gate_2b.reshape(a*b, -1)
+    u, _, v = tc.linalg.svd(gate_2b, full_matrices=False)
+    # u, _, v = tc.svd(gate_2b, compute_uv=True)
+    # v = v.conj().T
+    return (u @ v).reshape(a,b,c,d)
+
+
+def _diagonal_contract_step(A, M):
+    """
+    ```
+    :         M
+    : -(a)--┬--(c)------
+    :      (b)
+    :       |
+    :       ├---┐              -->   --(ad)--⬜---(ce)--
+    :      (b) (b)           
+    : -(d)--┼---|--(e)--
+    :      A╰---╯     
+    :     
+    : -(a)-┬--(c)----
+    :     (b)
+    :      |
+    :      ├---┐
+    :     (b) (b)
+    : -(d)-┼---┼--(e)--
+    :      ╰---╯
+    ```
+    >>> tc.einsum('dbbe,abc->adce', eig_mpo[n], eig_mps[n])
+    """
+    d, b, _, e = A.shape
+    a, b, c = M.shape
+    # (d,b,b,e) -> (d,b,e) -> (d,e,b) -> (de, b)
+    res = tc.diagonal(A, dim1=1, dim2=2).reshape(-1, b)
+    # (de,b) @ (a,b,c)->(b,ac)
+    res = res @ M.permute([1,0,2]).reshape(b, -1)
+    # (de,ac) -> (d,e,a,c) -> (a,d,c,e) -> (ad,ce)
+    return res.reshape(d,e,a,c).permute([2,0,3,1]).reshape(a*d,-1)
+
+
+def diagonal_inner(mps, mpo):
+    L = len(mps)
+    res = _diagonal_contract_step(mpo[0], mps[0])
+    for i in range(1,L):
+        res = res @ _diagonal_contract_step(mpo[i], mps[i])
+    return tc.trace(res)
+
+def mpo_eye(L, local_dims, dtype=tc.complex128, device=None) -> list[tc.Tensor]:
+    eyempo = [None] * L
+    for i in range(L):
+        dim = local_dims[i]
+        eyempo[i] = tc.eye(dim, dtype=dtype, device=device).reshape(1, dim, dim, 1)
+    return eyempo
+
+
+def _dm_left2right_mps(Lenv:tc.Tensor, B:tc.Tensor, A:tc.Tensor):
+    """
+    ```
+    :  Lenv
+    :            ╭╮          
+    :            |          
+    :  ╭-╮      (f) B             ╭-╮       
+    :  | ├--(d)--┼--(e)--         | ├--(e)--
+    :  | |      (b)               | |       
+    :  | |       | A              | |       
+    :  | ├--(a)--┴--(c)--         | ├--(c)--
+    :  | ├--(g)--┬--(i)--    -->  | ├--(i)--
+    :  | |       | A.conj()       | |       
+    :  | |      (h)               | |       
+    :  | ├--(j)--┼--(l)--         | ├--(l)--
+    :  ╰-╯       | B.conj()       ╰-╯       
+    :           (f)         
+    :            |          
+    :            ╰╯         
+    ```
+    tc.einsum("adgj,dfbe,abc,ghi,jkhl->ceil", Lenv, B, A, A.conj(), B.conj())
+    """
+    d,f,b,e = B.shape
+    a,d,g,j = Lenv.shape
+    a, b, c = A.shape
+    # (d,f,b,e) -> (d,f,e,b) -> (dfe,b) @ (a,b,c) -> (b,a,c) -> (b,ac)
+    BA = B.permute([0,1,3,2]).reshape(-1,b) @ A.permute([1,0,2]).reshape(b,-1)
+    # (dfe,ac) -> (d,f,e,a,c) -> (c,e,f,a,d) -> (cef,ad)
+    BA = BA.reshape(d,f,e,a,c).permute([4,2,1,3,0]).reshape(-1, a*d)
+    # (cef,ad) @ (ad,gj)
+    Lenv = BA @ Lenv.reshape(d*a,g*j)
+    # (cef,gj) -> (ce,fgj) @ (ilf,gj) -> (il,fgj) -> (fgj,il)
+    Lenv = Lenv.reshape(e*c, -1) @ BA.conj().reshape(e*c, -1).T
+    return Lenv.reshape(c,e,c,e)
+
+
+def _dm_get_R_mps(B:tc.Tensor, A:tc.Tensor, R:tc.Tensor, V:tc.Tensor):
+    """
+    ```
+    :                  |
+    :                 (c)
+    :                  |
+    :                  ⬜ V.conj()
+    :        |         | 
+    :       (g) B     (j)
+    : --(b)--┼--(h)----┤R          
+    :       (e)        |      -->  --(a,b)--⬜--(gc)--
+    :        | A       | 
+    : --(a)--┴--(f)----╯
+    ```
+    """
+    a, e, f = A.shape
+    b, g, e, h = B.shape
+    f, h, j = R.shape
+    
+    # (b,g,e,h) -> (b,g,h,e) @ (a,e,f)->(e,a,f)
+    res = B.permute([0,1,3,2]).reshape(-1,e) @ A.permute([1,0,2]).reshape(e,-1)
+    # (bgh,af) -> (b,g,h,a,f) -> (a,b,g,f,h) @ (fh,j)
+    res = res.reshape(b,g,h,a,f).permute([3,0,1,4,2]).reshape(-1,f*h) @ R.reshape(f*h,-1)
+    # (abg,j)
+    return (res @ V.conj()).reshape(a,b,-1)
+
+def _dm_get_rho(Lenv:tc.Tensor, R:tc.Tensor):
+    """
+    ```
+    :    Lenv               
+    :              | 
+    :    ╭-╮      (g)
+    :    | ├--(b)--┤
+    :    | |       |R                         |
+    :    | |       |                         (g)
+    :    | ├--(a)--┘                          |
+    :    | ├--(c)--┐                    --->  ⬜
+    :    | |       |R.conj()                  |
+    :    | |       |                         (f)
+    :    | ├--(d)--┤                          |
+    :    ╰-╯       |
+    :             (f)
+    :              |
+    ```
+    tc.einsum("abcd,abg,cdf->gf", E[-1], R, R.conj())
+    """
+    a, b, g = R.shape
+
+    R = R.reshape(-1, g)
+    return R.T @ Lenv.reshape(a*b,-1) @ R.conj()
+
+def _dm_get_Lenvs_mps(Ws_mpo, Ws, n, dtype):
+    Lenvs = []
+    Lenv = tc.tensor(1., dtype=dtype).reshape(1,1,1,1)
+    for j in range(n - 1):
+        Lenv = _dm_left2right_mps(Lenv, Ws_mpo[j], Ws[j])
+        Lenv = Lenv/tc.norm(Lenv)
+        Lenvs.append(Lenv)
+    return Lenvs
+
+def _apply_on_mps_step(B:tc.Tensor, A:tc.Tensor):
+    """
+    ```
+    :        |         
+    :       (e)
+    :        |  B       
+    : --(d)--┼---(f)---                  |
+    :        |                          (e)
+    :       (b)         -->              |
+    :        |  A                --(ad)--⬜--(cf)--
+    : --(a)--⬜---(c)---
+    ```
+    """
+    a, b, c = A.shape
+    d, e, b, f = B.shape
+    
+    # (d,e,b,f) -> (d,e,f,b) @ (a,b,c)->(b,a,c)
+    res = B.permute([0,1,3,2]).reshape(-1,b) @ A.permute([1,0,2]).reshape(b,-1)
+    # (def,ac) -> (d,e,f,a,c) -> (a,d,e,c,f)
+    return res.reshape(d,e,f,a,c).permute([3,0,1,4,2]).reshape(a*d,e,-1)
+
+
+def _apply_on_mpo_step(B:tc.Tensor, A:tc.Tensor):
+    """
+    ```
+    :        |         
+    :       (e)
+    :        |  B       
+    : --(d)--┼---(f)---                  |
+    :        |                          (e)
+    :       (b)         -->              |
+    :        |  A                --(ad)--⬜--(cf)--
+    : --(a)--⬜---(c)---                  |
+    :        |                          (g)
+    :       (g)                          |
+    :        |
+    ```
+    """
+    a, b, g, c = A.shape
+    d, e, b, f = B.shape
+    
+    # (d,e,b,f) -> (d,e,f,b) @ (a,b,g,c)->(b,a,g,c)
+    res = B.permute([0,1,3,2]).reshape(-1,b) @ A.permute([1,0,2,3]).reshape(b,-1)
+    # (def,agc) -> (d,e,f,a,g,c) -> (a,d,e,g,c,f)
+    return res.reshape(d,e,f,a,g,c).permute([3,0,1,4,5,2]).reshape(a*d,e,g,-1)
+
+
+def _dm_left2right_mpo(Lenv:tc.Tensor, B:tc.Tensor, A:tc.Tensor):
+    """
+    ```
+    :  Lenv
+    :            ╭╮          
+    :            |          
+    :  ╭-╮      (f) B             ╭-╮       
+    :  | ├--(d)--┼--(e)--         | ├--(e)--
+    :  | |      (b)               | |       
+    :  | |       | A              | |       
+    :  | ├--(a)--┼--(c)--         | ├--(c)--
+    :  | |       |                | |
+    :  | |      (k)               | |
+    :  | |       |                | |
+    :  | ├--(g)--┼--(i)--    -->  | ├--(i)--
+    :  | |       | A.conj()       | |       
+    :  | |      (h)               | |       
+    :  | ├--(j)--┼--(l)--         | ├--(l)--
+    :  ╰-╯       | B.conj()       ╰-╯       
+    :           (f)         
+    :            |          
+    :            ╰╯         
+    ```
+    tc.einsum("adgj,dfbe,abc,ghi,jkhl->ceil", Lenv, B, A, A.conj(), B.conj())
+    """
+    d,f,b,e = B.shape
+    a,d,g,j = Lenv.shape
+    a, b, k, c = A.shape
+    # (d,f,b,e) -> (d,f,e,b) -> (dfe,b) @ (a,b,k,c) -> (b,a,c,k) -> (b,ack)
+    BA = B.permute([0,1,3,2]).reshape(-1,b) @ A.permute([1,0,3,2]).reshape(b,-1)
+    # (dfe,ack) -> (d,f,e,a,c,k) -> (c,e,f,k,a,d) -> (cefk,ad)
+    BA = BA.reshape(d,f,e,a,c,k).permute([4,2,1,5,3,0]).reshape(-1, a*d)
+    # (cefk,ad) @ (ad,gj)
+    Lenv = BA @ Lenv.reshape(d*a,g*j)
+    # (cefk,gj) -> (ce,fkgj) @ (ilfk,gj) -> (il,fkgj) -> (fkgj,il)
+    Lenv = Lenv.reshape(e*c, -1) @ BA.conj().reshape(e*c, -1).T
+    return Lenv.reshape(c,e,c,e)
+
+
+def _dm_get_R_mpo(B:tc.Tensor, A:tc.Tensor, R:tc.Tensor, V:tc.Tensor):
+    """
+    ```
+    :                  |
+    :                 (c)
+    :                  |
+    :                  ⬜ V.conj()
+    :        |         | 
+    :       (g) B     (j)
+    : --(b)--┼--(h)----┤R          
+    :       (e)        |      -->  --(a,b)--⬜--(g,k,c)--
+    :        | A       | 
+    : --(a)--┼--(f)----╯
+    :       (k)
+    :        │
+    ```
+    tc.einsum("bgeh,aekf,fhj,jc->abgkc", B, A, R, V.conj)
+    """
+    a, e, k, f = A.shape
+    b, g, e, h = B.shape
+    f, h, j = R.shape
+    
+    # (b,g,e,h) -> (b,g,h,e) @ (a,e,k,f)->(e,a,k,f)
+    res = B.permute([0,1,3,2]).reshape(-1,e) @ A.permute([1,0,2,3]).reshape(e,-1)
+    # (bgh,akf) -> (b,g,h,a,k,f) -> (a,b,g,k,f,h) @ (fh,j)
+    res = res.reshape(b,g,h,a,k,f).permute([3,0,1,4,5,2]).reshape(-1,f*h) @ R.reshape(f*h,-1)
+    # (abgk,j)
+    return (res @ V.conj()).reshape(a,b,-1)
+
+
+def _dm_get_Lenvs_mpo(Ws_mpo, Ws, n, dtype):
+    Lenvs = []
+    Lenv = tc.tensor(1., dtype=dtype).reshape(1,1,1,1)
+    for j in range(n - 1):
+        Lenv = _dm_left2right_mpo(Lenv, Ws_mpo[j], Ws[j])
+        Lenv = Lenv/tc.norm(Lenv)
+        Lenvs.append(Lenv)
+    return Lenvs
+
+
+def _up_bottom_tr(tsr):
+    """
+    ```
+    :        ╭╮
+    :        │
+    :       (b)
+    :        │
+    : --(a)--┼--(d)--  ⟶  --(a)--⬜--(d)--
+    :        │
+    :       (b)
+    :        │
+    :        ╰╯
+    ```
+    tc.einsum('abbc->ac',tsr)
+    """
+    diag_elements = tsr.permute([0,3,1,2]).diagonal(offset=0, dim1=-2, dim2=-1)
+    return diag_elements.sum(-1)
+
+
+def _contract_right_env(H:tc.Tensor, psi:tc.Tensor, Renv:tc.Tensor) -> tc.Tensor:
+    """
+    ```
+    :         ╭-╮          psi.conj()╭-╮
+    :  --(a)--┤ │     --(a)--⬜--(b)--┤ │
+    :         │ │            │       │ │
+    :         │ │           (c)      │ │
+    :         │ │            │H      │ │
+    :  --(d)--┤ │ <-  --(d)--⬜--(e)--┤ │
+    :         │ │            │       │ │
+    :         │ │           (f)      │ │
+    :         │ │            │       │ │
+    :  --(g)--┤ │     --(g)--⬜--(h)--┤ │
+    :         ╰-╯          psi       ╰-╯
+    ```  
+    tc.einsum("acb,dcfe,gfh,beh->adg", psi.conj(), H, psi, Renv)
+    """
+    b, e, h = Renv.shape
+    g, f, h = psi.shape
+    d, c, f, e = H.shape
+    a = g
+    
+    # (b,e,h) -> (be,h) @ (g,f,h) -> (h,f,g) -> (h,fg) = (be,fg)
+    out = Renv.reshape(-1,h) @ psi.permute([2,1,0]).reshape(h, -1)
+    # (d,c,f,e) -> (d,c,e,f) -> (dc,ef) @ (be,fg) -> (b,ef,g) -> (ef,b,g) -> (ef,bg) = (dc,bg)
+    out = H.permute([0,1,3,2]).reshape(-1, e*f) @ out.reshape(b, e*f, g).permute([1,0,2]).reshape(e*f, -1)
+    # (a,c,b) -> (a,cb) @ (dc,bg) -> (d,cb,g) -> (cb,d,g) -> (cb,dg) = (a,dg)
+    out = psi.conj().reshape(a,-1) @ out.reshape(d, -1, g).permute([1,0,2]).reshape(c*b, -1)
+    
+    return out.reshape(a,d,g)
+
+
+def _contract_left_env(H:tc.Tensor, psi:tc.Tensor, Lenv:tc.Tensor) -> tc.Tensor:
+    """
+    ```
+    : ╭-╮   psi.conj()          ╭-╮       
+    : │ ├--(a)--⬜--(b)--        │ ├--(b)--
+    : │ │       │               │ │       
+    : │ │      (c)              │ │       
+    : │ │       │H              │ │       
+    : │ ├--(d)--⬜--(e)--  --->  │ ├--(e)--
+    : │ │       │               │ │       
+    : │ │      (f)              │ │       
+    : │ │       │               │ │       
+    : │ ├--(g)--⬜--(h)--        │ ├--(h)--
+    : ╰-╯     psi               ╰-╯       
+    ```  
+    tc.einsum("adg,acb,dcfe,gfh->beh", Lenv, psi.conj(), H, psi)
+    """
+    a, d, g = Lenv.shape
+    g, f, h = psi.shape
+    d, c, f, e = H.shape
+    
+    # (a,d,g) -> (ad,g) @ (g,f,h) -> (g,fh) = (ad,fh)
+    out = Lenv.reshape(-1,g) @ psi.reshape(g, -1)
+    # (ad,fh) -> (a,df,h) -> (a,h,df) -> (ah,df) @ (d,c,f,e) -> (d,f,c,e) -> (df,ce) = (ah,ce)
+    out = out.reshape(a,-1,h).permute([0,2,1]).reshape(-1, d*f) @ H.permute([0,2,1,3]).reshape(d*f, -1)
+    # (ah,ce) -> (a,h,c,e) -> (e,h,a,c) -> (eh,ac) @ (a,c,b) -> (ac,b) = (eh,b) -> (b,eh)
+    out = out.reshape(a,h,c,e).permute([3,1,0,2]).reshape(e*h, -1) @ psi.conj().reshape(a*c,-1)
+    
+    return out.T.reshape(h,e,h)
+
+
+def _matrix_vector_product0(Lenv, Renv, v):
+    """
+    ```
+    : ╭-╮                 ╭-╮ 
+    : │ ├--(a)-     -(c)--┤ │ 
+    : │ │                 │ │ 
+    : │ │                 │ │ 
+    : │ │                 │ │              
+    : │ ├--(f)-------(h)--┤ │  -->    --(a)--(c)-         
+    : │ │                 │ │     
+    : │ │                 │ │ 
+    : │ │                 │ │ 
+    : │ ├--(k)---⬜---(m)--┤ │ 
+    : ╰-╯       psi       ╰-╯ 
+    : Lenv                Renv
+    ```
+    输入：
+    
+    Lenv: (a, fk)
+    
+    Renv: (m, hc)
+    
+    v: (km)
+    
+    前期准备：
+    >>> Lenv = np.ascontiguousarray(Lenv.reshape(Lenv.shape[0], -1))
+    >>> H12 = np.einsum("fdig,gejh->defijh", H1, H2)
+    >>> d, e, f, *ijh = H12.shape
+    >>> H12 = np.ascontiguousarray(H12.reshape(f*d*e, -1))
+    >>> Renv = Renv.transpose([2,1,0])
+    >>> Renv = np.ascontiguousarray(Renv.reshape(Renv.shape[0], -1))
+    
+    np.einsum("afk,fdig,gejh,kijm,chm->adec", Lenv, H1, H2, psi, Renv)
+    """
+    m, _ = Renv.shape
+    a, fa = Lenv.shape
+    f = fa // a
+    #                 km => khc -> h,k,c -> hk,c => ac
+    out = (Lenv @ (v.reshape(-1,m) @ Renv).reshape(a, f, m).swapaxes(0, 1).reshape(fa, -1)).reshape(-1)
+    # assert tc.dist(out, tc.einsum("afk,mhc,km->ac", Lenv.reshape(a,f,a), Renv.reshape(a,f,a), v.reshape(a,a)).reshape(-1)) < 1e-10
+    return out
+
+
+def _trace_matrix_vector_product0(Lenv, Renv):
+    """
+    ```
+    : ╭-╮                 ╭-╮ 
+    : │ ├--(a)-╯   ╰-(c)--┤ │ 
+    : │ │                 │ │ 
+    : │ │                 │ │ 
+    : │ │                 │ │              
+    : │ ├--(f)-------(h)--┤ │  -->    --(a)--(c)-         
+    : │ │                 │ │     
+    : │ │                 │ │ 
+    : │ │                 │ │ 
+    : │ ├--(a)-╮   ╭-(c)--┤ │ 
+    : ╰-╯                 ╰-╯ 
+    : Lenv                Renv
+    ```
+    输入：
+    
+    Lenv: (a, fk)
+    
+    Renv: (m, hc)
+    
+    v: (km)
+    
+    前期准备：
+    >>> Lenv = np.ascontiguousarray(Lenv.reshape(Lenv.shape[0], -1))
+    >>> H12 = np.einsum("fdig,gejh->defijh", H1, H2)
+    >>> d, e, f, *ijh = H12.shape
+    >>> H12 = np.ascontiguousarray(H12.reshape(f*d*e, -1))
+    >>> Renv = Renv.transpose([2,1,0])
+    >>> Renv = np.ascontiguousarray(Renv.reshape(Renv.shape[0], -1))
+    
+    np.einsum("afk,fdig,gejh,kijm,chm->adec", Lenv, H1, H2, psi, Renv)
+    """
+    c, hc = Renv.shape
+    h = hc // c
+    a, fa = Lenv.shape
+    f = fa // a
+    
+    return tc.einsum("afa->f", Lenv.reshape(a,f,a)) @ tc.einsum("afa->f", Renv.reshape(c, h, c))
+
+
+
+def _trace_matrix_vector_product(Lenv, H12, Renv):
+    """
+    ```
+    : ╭-╮                       ╭-╮ 
+    : │ ├--(a)-╯         ╰-(c)--┤ │ 
+    : │ │       │       │       │ │ 
+    : │ │      (d)     (e)      │ │ 
+    : │ │       │H1     │H2     │ │              │       │
+    : │ ├--(f)--⬜--(g)--⬜--(h)--┤ │  -->        (d)     (e)
+    : │ │       │       │       │ │       --(a)--┴-------┴--(c)- 
+    : │ │      (i)     (j)      │ │ 
+    : │ │       │       │       │ │ 
+    : │ ├--(k)-╮         ╭-(m)--┤ │ 
+    : ╰-╯         psi           ╰-╯ 
+    : Lenv                      Renv
+    ```
+    输入：
+    
+    Lenv: (a, fk)
+    
+    H12: (def, ijh)
+    
+    Renv: (m, hc)
+    
+    v: (kijm)
+    
+    前期准备：
+    >>> Lenv = np.ascontiguousarray(Lenv.swapaxes(1,2).reshape(Lenv.shape[0], -1))
+    >>> H12 = np.einsum("fdig,gejh->defijh", H1, H2)
+    >>> d, e, f, *ijh = H12.shape
+    >>> H12 = np.ascontiguousarray(H12.reshape(f*d*e, -1))
+    >>> Renv = Renv.transpose([2,1,0])
+    >>> Renv = np.ascontiguousarray(Renv.reshape(Renv.shape[0], -1))
+    
+    np.einsum("afk,fdig,gejh,kijm,chm->adec", Lenv, H1, H2, psi, Renv)
+    """
+    a, fa = Lenv.shape
+    f = fa//a
+    Lenv = Lenv.reshape(a, f, a)
+    
+    m, mh = Renv.shape
+    h = mh//m
+    Renv = Renv.reshape(m, h, m)
+    
+    ddf, iih = H12.shape
+    dd = ddf//f
+    ii = iih//h
+    H12 = H12.reshape(dd, f, ii, h)
+    
+    return tc.einsum("afa->f",Lenv) @ tc.einsum("abac->bc", H12) @ tc.einsum("afa->f",Renv)
+    
+
+
+
+
+def _matrix_vector_product(Lenv, H12, Renv, v):
+    """
+    ```
+    : ╭-╮                       ╭-╮ 
+    : │ ├--(a)-           -(c)--┤ │ 
+    : │ │       │       │       │ │ 
+    : │ │      (d)     (e)      │ │ 
+    : │ │       │H1     │H2     │ │              │       │
+    : │ ├--(f)--⬜--(g)--⬜--(h)--┤ │  -->        (d)     (e)
+    : │ │       │       │       │ │       --(a)--┴-------┴--(c)- 
+    : │ │      (i)     (j)      │ │ 
+    : │ │       │       │       │ │ 
+    : │ ├--(k)--┴-------┴--(m)--┤ │ 
+    : ╰-╯         psi           ╰-╯ 
+    : Lenv                      Renv
+    ```
+    输入：
+    
+    Lenv: (a, fk)
+    
+    H12: (def, ijh)
+    
+    Renv: (m, hc)
+    
+    v: (kijm)
+    
+    前期准备：
+    >>> Lenv = np.ascontiguousarray(Lenv.swapaxes(1,2).reshape(Lenv.shape[0], -1))
+    >>> H12 = np.einsum("fdig,gejh->defijh", H1, H2)
+    >>> d, e, f, *ijh = H12.shape
+    >>> H12 = np.ascontiguousarray(H12.reshape(f*d*e, -1))
+    >>> Renv = Renv.transpose([2,1,0])
+    >>> Renv = np.ascontiguousarray(Renv.reshape(Renv.shape[0], -1))
+    
+    np.einsum("afk,fdig,gejh,kijm,chm->adec", Lenv, H1, H2, psi, Renv)
+    """
+    m, _ = Renv.shape
+    a, fa = Lenv.shape
+                            #    kijhc -> k,ijh,c -> ijh,kc => def,kc -> de,fk,c
+    return (Lenv @ (H12 @ (v.reshape(-1,m) @ Renv).reshape(a, -1, m).swapaxes(0, 1).reshape(-1, a*m)).reshape(-1, fa, m).swapaxes(0, 1).reshape(fa, -1)).reshape(-1)
+
+
+
+def make_matrix(Lenv:tc.Tensor, H12:tc.Tensor, Renv:tc.Tensor):
+    """
+    ```
+    : ╭-╮                ╭-╮ 
+    : │ ├--(a)-    -(c)--┤ │ 
+    : │ │       │        │ │ 
+    : │ │      (d)       │ │ 
+    : │ │       │H12     │ │              │    │    │
+    : │ ├--(f)--⬜--(g)---┤ │  -->        (a)  (d)  (c)
+    : │ │       │        │ │              ├----┼----┤
+    : │ │      (i)       │ │             (k)  (i)  (m)
+    : │ │       │        │ │              │    │    │
+    : │ ├--(k)--  --(m)--┤ │ 
+    : ╰-╯                ╰-╯ 
+    : Lenv                      Renv
+    ```
+    a,fk
+    df,ig
+    m,gc
+    
+    tc.einsum("afk,fdig,cgm->adckim", Lenv, H1, H2, Renv)
+    """
+    a, fk = Lenv.shape
+    f = fk // a
+    df, ig = H12.shape
+    d = df // f
+    m,gc = Renv.shape
+    g = gc // m
+    
+    # (d,f,i,g) @ (g,m,c) = (dfi,mc)
+    out = H12.reshape(-1, g) @ Renv.reshape(m,g,m).swapaxes(0,1).reshape(g, -1)
+    
+    # (a,fk) @ (f,d,imc) = (ak,dimc)
+    out = Lenv.reshape(a,f,a).swapaxes(1,2).reshape(-1, f) @ out.reshape(d,f,-1).swapaxes(0,1).reshape(f,-1)
+    
+    # (a,k,d,i,c,m) -> (a,d,c,k,i,m) -> (adec,kijn)
+    out = out.reshape(a,a,d,d,m,m).permute([0,2,5,1,3,4]).reshape(a*d*m,-1)
+    
+    # out2 = tc.einsum("afk,fdig,gejh,chm->adeckijm", Lenv, H1, H2, Renv)
+    # out2 = out2.reshape(a*d*e*c, k*i*j*m)
+    return out
+
+
+def make_matrix0(Lenv:tc.Tensor, Renv:tc.Tensor):
+    """
+    ```
+    : ╭-╮                ╭-╮ 
+    : │ ├--(a)-    -(c)--┤ │ 
+    : │ │                │ │ 
+    : │ │                │ │ 
+    : │ │                │ │              │    │
+    : │ ├--(f)-----(g)---┤ │  -->        (a)  (c)
+    : │ │                │ │              ├----┤
+    : │ │                │ │             (k)  (m)
+    : │ │                │ │              │    │
+    : │ ├--(k)-    -(m)--┤ │ 
+    : ╰-╯                ╰-╯ 
+    : Lenv                      Renv
+    ```
+    a,fk
+    m,gc
+    
+    tc.einsum("afk,fdig,cgm->adckim", Lenv, H1, H2, Renv)
+    """
+    a, fk = Lenv.shape
+    m,gc = Renv.shape
+    g = gc // m
+    
+    # (a,fk) -> (a,k,f) @ (m,gc) -> (g,m,c) = (ak,mc)
+    out = Lenv.reshape(a,g,a).swapaxes(1,2).reshape(-1, g) @ Renv.reshape(m,g,m).swapaxes(0,1).reshape(g, -1)
+    # (a,k,m,c) -> (a,c,k,m)
+    out = out.reshape(a,a,m,m).permute([0,3,1,2]).reshape(a*m,-1)
+    
+    # assert tc.dist(out.reshape(-1), tc.einsum("afk,mfc->ackm", Lenv.reshape(a,g,a), Renv.reshape(m,g,m)).reshape(-1)).item() < 1e-10
+    return out
+
+
+
+def _prepare_solve_ground_state(H1:tc.Tensor, H2:tc.Tensor) -> tc.Tensor:
+    """
+    ```
+    :         |       |
+    :        (d)     (e)
+    :         |       |
+    :  --(f)--⬜--(g)--⬜--(h)--
+    :         |       |
+    :        (i)     (j)
+    :         |       |
+    ```
+    
+    tc.einsum("fdig,gejh->defijh", H1, H2)
+    """
+    f,d,i,g = H1.shape
+    g,e,j,h = H2.shape
+    # (fdi,g) @ (g,ejh) = (fdi,ejh)
+    out = H1.reshape(-1, g) @ H2.reshape(g, -1)
+    
+    # (f,d,i,e,jh) -> (d,e,f,i,jh)
+    return out.reshape(f,d,i,e,j*h).permute([1,3,0,2,4]).reshape(d*e*f,-1)
+
+
+def add_many(
+    ψs: list[list[tc.Tensor]],
+    αs: list[float] = None,
+    trunc_para = (None,None,None),
+) -> list[tc.Tensor]:
+    """计算多个 MPS 相加，边相加边裁剪，但如果裁剪大于等于本身的应有维数，那么裁剪并没有意义
+    这样得到的 MPS 是右正则形式，但不能获得奇异谱
+
+    计算：
+
+    |    |   |   |     |    |   |   |
+    └-...┴---┴---┘  +  └-...┴---┴---┘
+
+    1). 最后一个格点：
+                                             |
+                 |                  |        ▽ V1
+       ψ1[-1]  ╭-┘        ψ2[-1]  ╭-┘        |
+       ψ1[-1]† ╰-┐  +     ψ2[-1]† ╰-┐   ->   ◇         记录：  --⨞--
+                 |                  |        |                  V1
+                                             △
+                                             |
+
+    2). 倒数第二个格点：
+
+              ┌-╨-┐            ┌-╨-┐       ║
+              |   △            |   △       ▽ V2
+            ╭-┴---┘          ╭-┴---┘       |                    |  |
+            ╰-┬---┐  +       ╰-┬---┐   ->  ◇           记录：  --⨞--⨞--
+              |   ▽            |   ▽       |                   V2  V1
+              └-╥-┘            └-╥-┘       △
+                                           ║
+
+    3). 倒数第三个格点：
+
+          ┌--╨--┐          ┌--╨--┐
+          |     △          |     △
+          |   ┌-╨-┐        |   ┌-╨-┐       ║
+          |   |   △        |   |   △       ▽ V3
+        ╭-┴---┴---┘      ╭-┴---┴---┘       |                    |  |  |
+        ╰-┬---┬---┐  +   ╰-┬---┬---┐   ->  ◇           记录：  --⨞--⨞--⨞--
+          |   |   ▽        |   |   ▽       |                   V3  V2  V1
+          |   └-╥-┘        |   └-╥-┘       △
+          |     ▽          |     ▽         ║
+          └--╥--┘          └--╥--┘
+
+    ... 依次类推
+
+    4). 最后一个格点： 
+
+          |     |          |     |
+          |     △          |     △
+          |   ┌-╨-...      |   ┌-╨-...                       |     |  |  |
+          |   |        +   |   |        ->   --⬜--     记录： ⬜-...-⨞--⨞--⨞--
+          └---┴---...      └---┴---...                            V3  V2  V1
+
+    Example
+    -------
+    >>> N = 5
+    >>> linkdims = [1] + [4] * (N-1) + [1]
+    >>> ψ1 = [tc.randn(linkdims[i],2,linkdims[i+1], dtype=tc.complex128) for i in range(N)]
+    >>> ψ2 = [tc.randn(linkdims[i],2,linkdims[i+1], dtype=tc.complex128) for i in range(N)]
+    >>> ψ_out2 = add_many([ψ1, ψ2],[1., 1.])
+    """
+    chi_max, svd_min, trunc_cut = trunc_para
+    
+    N_mps = len(ψs)
+    assert all([len(ψs[1]) == len(ψi) for ψi in ψs])
+
+    if αs is None:
+        αs = [1.0] * N_mps
+
+    N = len(ψs[0])
+
+    ψs_mps, phydims = [], []
+    for i, ψ in enumerate(ψs):
+        ψ_mps, lognm = _left2right_QR(ψ, N)
+        ψ_mps[-1] = ψ_mps[-1] * tc.exp(lognm) * αs[i]
+        ψs_mps.append(ψ_mps)
+        phydim = [ψ_.shape[1:-1] for ψ_ in ψ_mps]
+        phydims.append(phydim)
+
+    assert all(phydims[0] == phydim for phydim in phydims)
+
+    ρns = []
+    for ψi in ψs_mps:
+        a, *s1, b = ψi[-1].shape
+        tmp = ψi[-1].reshape(a, -1, b).permute([1, 0, 2]).reshape(-1, a*b)
+        ρns.append(tmp @ tmp.conj().T)
+
+    ρn = sum(ρns)
+
+    # Maximum theoretical link dimensions
+    add_maxlinkdims = []
+    for i in range(N - 1):
+        add_maxlinkdims.append(sum([ψ[i].shape[-1] for ψ in ψs_mps]))
+
+    ψ_out = [None] * N
+
+    Cns = [ψ[-1] for ψ in ψs_mps]
+    linkdim = 1
+    for n in range(N, 1, -1):
+        nm = tc.norm(ρn)
+        ρn /= nm
+        Dn, Vn = tc.linalg.eigh(ρn)
+
+        Dn = Dn.flip(0)
+        Vn = Vn.flip(1)
+        # V 指标是 (cd,e)
+        tc.clamp_(Dn, min=0)  # 将 E 中的负数置为 0，避免根号错误
+        tc.sqrt_(Dn)  # 开根号之后才得到奇异值
+        good, trunc_err = truncate(Dn, chi_max, svd_min, trunc_cut)
+        if not all(good):
+            Vn = Vn[:, good]
+            Dn = Dn[good]
+        
+        maxdim = len(Dn)
+        Vn = Vn[:, 0:maxdim]
+        # Update the total state
+        ψ_out[n - 1] = Vn.T.reshape(maxdim, -1, linkdim)
+        linkdim = maxdim
+
+        # Compute the new density matrix
+        ρnm1 = 0
+        for i in range(N_mps):
+            # tmp_ = _np.einsum("abc,cde,df->abfe", ψs_mps[i][n - 2], Cns[i], Vn.conj(), optimize=True)
+
+            c, *d, e = Cns[i].shape
+            a, *b, c = ψs_mps[i][n - 2].shape
+            d, f = Vn.shape
+
+            # [(c,d,e) -> (c,e,d) -> (ce,d) @  (d,f)] = (ce,f) -> (c,ef)
+            tmp = (Cns[i].reshape(c,-1,e).permute([0, 2, 1]).reshape(-1, d) @ Vn.conj()).reshape(c, -1)
+            # [(a,b,c) -> (ab,c) @ (c,ef)] = (ab,ef) -> (a,b,e,f) -> (a,b,f,e)
+            tmp = (
+                (ψs_mps[i][n - 2].reshape(-1, c) @ tmp)
+                .reshape(a, -1, e, f)
+                .permute([0, 1, 3, 2])
+            )
+
+            s1, _, _, s2 = tmp.shape
+            Cns[i] = tmp.reshape(s1, -1, s2)
+            # Cnm1s.append(tmp.reshape(s1, -1, s2))
+            tmp = tmp.permute([1, 2, 0, 3]).reshape(-1, s1 * s2)
+            ρnm1 += tmp @ tmp.conj().T
+
+        ρn = ρnm1
+
+    ψ_out[0] = sum(Cns).reshape(1, -1, linkdim)
+
+    for i, B in enumerate(ψ_out):
+        linkdim1, linkdim2 = B.shape[0], B.shape[-1]
+        ψ_out[i] = B.reshape(linkdim1, *phydims[0][i], linkdim2)
+
+    return ψ_out
