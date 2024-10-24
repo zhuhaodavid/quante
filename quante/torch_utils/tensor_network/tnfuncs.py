@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-17 18:17:47
+# @Last Modified time: 2024-10-24 21:05:46
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -13,7 +13,7 @@
 
 import torch as tc
 
-from quante.torch_utils.grad import clone_list
+from ...torch_utils.grad import clone_list
 from ..linalg.decomp import qr, svd, truncate, rq
 from ...linalg.svd_robust import TruncationError
 
@@ -39,26 +39,30 @@ dtype = tc.complex128
 #######################################################################
 
 def add(
-    W1s: list[tc.Tensor], W2s: list[tc.Tensor], alpha: float = 1.0, beta: float = 1.0) -> list[tc.Tensor]:
+    Wss: list[list[tc.Tensor]], alphas: float | list[float] = 1.0) -> list[tc.Tensor]:
     """
     计算：α W1s + β W2s，默认 α = β = 1.0
     """
-    assert len(W1s) == len(W2s), "two mpo should have the same length"
-    L = len(W1s)
-    Ws = [None] * L
-
-    Ws[0] = tc.cat((W1s[0], W2s[0]), dim=-1)
+    if isinstance(alphas, float):
+        alphas = [alphas] * len(Wss)
+    L = len(Wss[0])
+    for Ws in Wss:
+        if len(Ws) != L:
+            raise Exception(f"lenght: L={L} != {len(Ws)}")
+    
+    res = [None] * L
+    res[0] = tc.cat(tuple(Ws[0] for Ws in Wss), dim=-1)
 
     for i in range(1, L - 1):
-        assert (W1s[i].shape[1:-1] == W2s[i].shape[1:-1]), f"The physical dims of the {i}th local tensor is different for W1s, W2s, which is {W1s[i].shape} and {W2s[i].shape}, respectively"
-        Ws[i] = _add_each(W1s[i], W2s[i])
+        for Ws in Wss:
+            assert (Ws[i].shape[1:-1] == Wss[0][i].shape[1:-1]), f"The physical dims of the {i}th local tensor is different for Ws, which is {Ws[i].shape} and {Ws[0][0].shape}, respectively"
+        res[i] = _add_each([Ws[i] for Ws in Wss])
 
-    Ws[-1] = tc.cat((alpha * W1s[-1], beta * W2s[-1]), dim=0)
+    res[-1] = tc.cat(tuple(alphas[i] * Ws[-1] for i,Ws in enumerate(Wss)), dim=0)
+    return res
 
-    return Ws
 
-
-def _add_each(W1: tc.Tensor, W2: tc.Tensor) -> tc.Tensor:
+def _add_each(tsrs: list[tc.Tensor]) -> tc.Tensor:
     """
     ```
     :        |                  |                         |
@@ -70,18 +74,21 @@ def _add_each(W1: tc.Tensor, W2: tc.Tensor) -> tc.Tensor:
     W1, W2 只要有一个的追踪了梯度，那返回的结果就追踪梯度
     """
     # 获得两个张量的维数
-    a, *b, d = W1.shape
-    e, *b, f = W2.shape
-
-    # 创建两个零张量，分别对应矩阵的左上和右下位置，用以拼接
-    part1 = tc.zeros(e, *b, d, device=W1.device, requires_grad=False)
-    part2 = tc.zeros(a, *b, f, device=W1.device, requires_grad=False)
-
-    # 将四个张量拼接在一起
-    Wup = tc.cat((W1, part1), dim=0)
-    Wdown = tc.cat((part2, W2), dim=0)
-
-    return tc.cat((Wup, Wdown), dim=-1)
+    rightbond = [tsr.shape[-1] for tsr in tsrs]
+    sum_a = sum(rightbond)
+    data = []
+    a, *b, c = tsrs[0].shape
+    rightpart = tc.zeros(sum_a - a, *b, c, device=tsrs[0].device, requires_grad=False)
+    data.append(tc.cat((tsrs[0], rightpart), dim=0))
+    for i in range(1, len(tsrs)-1):
+        a, *b, c = tsrs[i].shape
+        leftpart = tc.zeros(sum(rightbond[:i]), *b, c, device=tsrs[i].device, requires_grad=False)
+        rightpart = tc.zeros(sum(rightbond[i+1:]), *b, c, device=tsrs[i].device, requires_grad=False)
+        data.append(tc.cat((leftpart, tsrs[i], rightpart), dim=0))    
+    a, *b, c = tsrs[-1].shape
+    leftpart = tc.zeros(sum_a - a, *b, c, device=tsrs[-1].device, requires_grad=False)
+    data.append(tc.cat((leftpart, tsrs[-1]), dim=0))
+    return tc.cat(data, dim=-1)
 
 
 def _full_contract_right_mps(res: tc.Tensor, Wsi: tc.Tensor):
@@ -1535,3 +1542,25 @@ def add_many(
         ψ_out[i] = B.reshape(linkdim1, *phydims[0][i], linkdim2)
 
     return ψ_out
+
+
+def periodic_trace(tsr:list[tc.Tensor]):
+    psis = []
+    psis_num = tsr[0].shape[0]
+    length = len(tsr)
+    for j in range(psis_num):
+        psi = []
+        for i in range(length):
+            if i == 0:
+                psi.append(tsr[i][j:j+1, ...])
+            elif i == length - 1:
+                psi.append(tsr[i][..., j:j+1])
+            else:
+                psi.append(tsr[i])
+        psis.append(psi)
+    
+    if psis_num == 1:
+        return psis[0]
+    
+    return add(psis)
+

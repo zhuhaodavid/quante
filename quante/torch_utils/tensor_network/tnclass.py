@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-17 22:11:38
+# @Last Modified time: 2024-10-23 16:51:34
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -14,7 +14,7 @@
 import torch as tc
 from typing import Union, TypeVar
 
-from ..linalg.decomp import eig, qr, rq, svd, truncate
+from ..linalg.decomp import eigh, qr, rq, svd, truncate
 
 from . import tnfuncs as tf
 from ..linalg.krylov import lanczos_ground_state, lanczos_evolve_state
@@ -85,7 +85,7 @@ class TensorTrain:
         alpha = tc.exp(a - newlognm)
         beta = tc.exp(b - newlognm)
         # 跟新数据
-        self.data = tf.add(self.data, anotherTT.data, alpha, beta)
+        self.data = tf.add([self.data, anotherTT.data], [alpha, beta])
         self.lognm = newlognm
     
     def copy(self):
@@ -108,7 +108,7 @@ class TensorTrain:
         alpha = tc.exp(a - newlognm)
         beta = tc.exp(b - newlognm)
         # 跟新数据
-        self.data = tf.add(self.data, anotherTT.data, alpha, -beta)
+        self.data = tf.add([self.data, anotherTT.data], [alpha, -beta])
         self.lognm = newlognm
     
     def __sub__(self, antoherTT):
@@ -507,7 +507,7 @@ class TensorTrain:
         # -------------- 使用 eig ------------
         elif svd_alg == "eig":
             # todo 目前 eig 使用的是自动判断方向，是否有更好的做法？
-            W1, S, W2, trunc_err, eigdirection = eig(W, direction=None, trunc_para=trunc_para, pertube=pertube)
+            W1, S, W2, trunc_err, eigdirection = eigh(W, direction=None, trunc_para=trunc_para, pertube=pertube)
             
             # 如果 eig 选择的方向与需要的方向不一样，通过 qr 调整回来
             if direction is None:
@@ -594,7 +594,7 @@ class TensorTrain:
             if self.length == tc.inf:
                 raise ValueError("正则形式下不能使用 eig 方法，因为证明中用到了本征分解的正确性，如果有裁剪，会破坏左正交的正交性质，并且在无穷长链中，这个破坏会逐步积累。")
             
-            W1, S, W2, err, direction = eig(theta, trunc_para=trunc_para)
+            W1, S, W2, err, direction = eigh(theta, trunc_para=trunc_para)
             if direction == 'right':
                 _, W2 = rq(W2)
             # W1, S, W2, err = svd(theta, trunc_para=trunc_para)

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-17 23:08:37
+# @Last Modified time: 2024-10-22 01:30:55
 
 
 import numpy as np
@@ -197,7 +197,7 @@ def rq(tsr:tc.Tensor, *, lr_indx=None) -> tuple[tc.Tensor, tc.Tensor]:
     return L.reshape(*ac, -1), U.reshape(-1, *fg)
 
 
-def eig(tsr:tc.Tensor, *, lr_indx=None, direction=None, trunc_para=(None, None, None), pertube=None) -> tuple[tc.Tensor, tc.Tensor, tc.Tensor, TruncationError]:
+def eigh(tsr:tc.Tensor, *, lr_indx=None, direction=None, trunc_para=(None, None, None), pertube=None) -> tuple[tc.Tensor, tc.Tensor, tc.Tensor, TruncationError]:
     """
     注意！！
     虽然返回的是 U, S, V，但 U, V 不一定是半幺的！！
