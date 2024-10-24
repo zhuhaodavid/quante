@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-18 15:36:14
+# @Last Modified time: 2024-10-24 22:20:52
 """
 功能：
 
@@ -677,75 +677,6 @@ class PrintLn:
             return [prefix + lines[0]] + [" " * prefixlen + line for line in lines[1:]]
 
 println = PrintLn()  # 实例化 PrintLn 类
-
-def save_h5(filename:str, *data, group:Union[list[str],str] = [], mode:str='a') -> None:
-    """
-    简化的 save_hdf5
-
-    Example:
-    >>> import numpy as np
-    >>> import quante.basicfun as bf
-    >>> mat = np.random.randn(10,10)
-    >>> bf.save_h5("data.h5", mat)
-    """
-    assert filename[-3:] == ".h5", "use h5 for consistance"
-    if len(data) == 1 and isinstance(data[0], dict):
-        data_dic = data[0]
-    else:
-        current_frame = _inspect.currentframe()
-        assert current_frame is not None and current_frame.f_back is not None, "Can't get the caller's frame"
-        paraname = PrintLn._get_paraname(current_frame.f_back)
-        data_dic = dict()
-        for i, arg in enumerate(data):
-            if type(arg).__name__ == "type":
-                data_dic[paraname[i+1]] = arg()
-            else:
-                data_dic[paraname[i+1]] = arg
-    if isinstance(group, str):
-        group = [group]
-    assert isinstance(group, list) and "/" not in group
-    group_name = "/".join(group)
-    save_hdf5(filename, group_name, data_dic, mode=mode)
-
-
-def load_h5(filename:str, *datanames, group=[]) -> Union[Dict[str, Any], list[Any]]:
-    """
-    简化的 load_hdf5
-
-    Example:
-    >>> import numpy as np
-    >>> import quante.basicfun as bf
-    >>> mat = np.random.randn(10,10)
-    >>> bf.save_h5("data.h5", mat)
-    >>> mat, = bf.saveh5("data.h5", "mat")
-    """
-    _logging.info("Loading from " + _os.path.abspath(filename) + " ... ")
-    if isinstance(group, str):
-        group = [group]
-    assert isinstance(group, list) and "/" not in group
-    group = "/".join(group)
-    
-    with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
-        group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
-        group_location = f[group]  # 获取组对象
-        if len(datanames) == 0:
-            data: Union[Dict[str, Any], list[Any]] = _load_dict(group_location)
-        else:
-            data = []
-            for dataname in datanames:
-                group_location = f[group]  # 获取组对象
-                data_location = group_location[dataname]
-                data_type_str = data_location.attrs.get("object_type", None)
-                if data_type_str is None and isinstance(data_location, _h5py.Group):
-                    data_type_str = 'dict'
-                load_func = _LOAD_FUNC.get(data_type_str, _default_load)
-                data.append(load_func(data_location))
-            if len(datanames) == 1:
-                data = data[0]
-    _logging.info("Load done")
-    return data
-
-
 
 # =======
 # 字典格式

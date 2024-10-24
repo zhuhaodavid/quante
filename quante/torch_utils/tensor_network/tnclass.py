@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-23 16:51:34
+# @Last Modified time: 2024-10-24 22:18:53
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -1447,7 +1447,7 @@ class ProjMPO:
         self.lpos:int = -1
         self.rpos:int = len(H.data)
         self.nsite:int = nsite
-        self.L = len(self.data)
+        self.L = len(H.data)
         self.mpo:MPO = H
         self.LR:list = [None] * len(H.data)
         self.dtype = H.dtype
