@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-24 21:05:46
+# @Last Modified time: 2024-10-24 22:58:15
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -13,7 +13,7 @@
 
 import torch as tc
 
-from ...torch_utils.grad import clone_list
+from ..utils import clone_list
 from ..linalg.decomp import qr, svd, truncate, rq
 from ...linalg.svd_robust import TruncationError
 
@@ -25,6 +25,8 @@ __all__ = [
     "canonicalize",
     "orthogonalize",
     "add",
+    "canonicalize_infinite",
+    "periodic_trace"
 ]
 
 if tc.cuda.is_available():
@@ -1542,6 +1544,107 @@ def add_many(
         ψ_out[i] = B.reshape(linkdim1, *phydims[0][i], linkdim2)
 
     return ψ_out
+
+
+
+def _cholesky_decomp(VL):
+    vld = tc.diag(VL)
+    tmp = vld[tc.abs(vld)>1e-10][0].conj()
+    tmp /= tc.norm(tmp)
+    newVL = VL * tmp
+    newVL = (newVL + newVL.conj().T)/2
+    
+    D, WY = tc.linalg.eigh(newVL)
+
+    Y = WY * tc.sqrt(D).reshape(1,-1)
+    Yinv = WY.conj().T / tc.sqrt(D).reshape(-1,1)
+    
+    return Y, Yinv
+
+def canonicalize_infinite(tsr:tc.Tensor):
+    """
+    tsr 是一个三阶张量，将它变换成正则形式
+    
+    初始平移不变：
+    ```
+    :    │   │   │
+    : ───◻───◻───◻───
+    ```
+    
+    求解本征问题：
+    ```
+    :  ╭╮                  ╭╮         
+    :  │├──◻──             │├─   ┌◻─
+    :  ││  │   = \lamdba_l ││  = │
+    :  │├──◻──             │├─   └◻─
+    :  ╰╯                  ╰╯     Y  
+    ```
+
+    以及
+    ```
+    :       ╭╮              ╭╮      
+    :  ──◻──┤│             ─┤│   ─◻┐
+    :    │  ││ = \lamdba_r  ││ =   │
+    :  ──◻──┤│             ─┤│   ─◻┘
+    :       ╰╯              ╰╯    X 
+    ```
+    
+    插入：
+    ```
+    :    │              │              │
+    : ───◻──◻──◻──◻──◻──◻──◻──◻──◻──◻──◻───
+    :      Y⁻¹ Y  X X⁻¹    Y⁻¹ Y  X X⁻¹
+    ```
+    
+    svd 分解
+    ```
+    : ──◻──◻── = ──▷──◇──⨞──
+    :   Y  X       U  S  V
+    ```
+    
+    那么：
+    ```
+    :    │                     │                     │
+    : ───◻──◻──▷─  ─◇─  ─⨞──◻──◻──◻──▷─  ─◇─  ─⨞──◻──◻───
+    :      Y⁻¹ U    S    V  X⁻¹   Y⁻¹ U    S    V  X⁻¹
+    :               ↑   └─────────────┘   ↑
+    :                         res
+    ```
+    
+    这样 `s * res` 是左正交形式，`res * s` 是右正交形式
+    
+    
+    """
+    # 拿到转移矩阵：
+    tsf_mat = _contract_init_pbc(tsr.conj(), tsr)
+    a,b,c,d = tsf_mat.shape
+    tsf_mat = tsf_mat.reshape(a*b,c*d)
+    
+    dlsy, VLs = tc.linalg.eig(tsf_mat)
+    VR = VLs[:, 0].reshape(c,d)
+    # print(tc.dist(tc.einsum("abc,dbe,ce->ad", tsr.conj(), tsr, VR), dlsy[0]*VR))
+    
+    dlsx, VRs = tc.linalg.eig(tsf_mat.T)
+    VL = VRs[:, 0].reshape(a,b)
+    # print(tc.dist(tc.einsum("ad,abc,dbe->ce", VL, tsr.conj(), tsr), dlsx[0]*VL))
+    
+    X, Xinv = _cholesky_decomp(VR)
+    # print(tc.dist(VR, X @ X.conj().T))
+    X, Xinv = X.conj(), Xinv.conj()
+    # print(tc.dist(X @ Xinv, tc.eye(*X.shape)))
+    # print(tc.dist(tc.einsum("abc,dbe,cf,ef->ad", tsr.conj(), tsr, X.conj(), X), dlsy[0]*tc.einsum("cf,ef->ce", X.conj(), X)))
+    
+    Y, Yinv = _cholesky_decomp(VL)
+    # print(tc.dist(VL, Y @ Y.conj().T))
+    Y, Yinv = Y.conj().T, Yinv.conj().T
+    # print(tc.dist(tc.einsum("ba,bc->ac", Y.conj(), Y), VL))
+    # print(tc.dist(Y @ Yinv, tc.eye(*Y.shape)))
+    # print(tc.dist(tc.einsum("fa,fd,abc,dbe->ce", Y.conj(), Y, tsr.conj(), tsr), dlsx[0]*VL))
+    U, sv, V = tc.linalg.svd(Y @ X)
+    sVXinv = V @ Xinv
+    YinvU = Yinv @ U
+    newtsr = tc.einsum("ab,bec,cd->aed", sVXinv, tsr, YinvU)  # todo 用矩阵乘法来计算
+    return newtsr, sv, dlsy[0], dlsy[1]
 
 
 def periodic_trace(tsr:list[tc.Tensor]):

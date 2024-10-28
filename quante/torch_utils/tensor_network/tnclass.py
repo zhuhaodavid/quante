@@ -18,7 +18,7 @@ from ..linalg.decomp import eigh, qr, rq, svd, truncate
 
 from . import tnfuncs as tf
 from ..linalg.krylov import lanczos_ground_state, lanczos_evolve_state
-from ..grad import clone_list
+from ..utils import clone_list
 from ...generate.matrix import pauli_matrix
 from ...linalg.svd_robust import TruncationError
 from ...linalg.krylov import lanczos_arpack

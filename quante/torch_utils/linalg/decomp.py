@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-22 01:30:55
+# @Last Modified time: 2024-10-27 20:25:38
 
 
 import numpy as np
@@ -306,3 +306,74 @@ def eigh(tsr:tc.Tensor, *, lr_indx=None, direction=None, trunc_para=(None, None,
         raise ValueError("direction must be 'left' or 'right'")
 
     return U.reshape(*ab, -1), S, V.reshape(-1, *cd), trunc_err, direction
+
+def tensor_train_decompose(tsr:tc.Tensor, phys_dim:int|list, trunc_para:tuple=(None,None,None)):
+    """
+    执行 tt 分解，是 full_contract 的逆过程
+    
+    输入 tsr 可以是一维或二维数组
+    
+    返回 tt, Ss, lognm
+    
+    Example:
+    >>> tsr = tc.randn(2**10, dtype=tc.complex128)
+    >>> tt, s, lognm = tensor_train_decompose(tsr, 2)
+    >>> tc.dist(tn.full_contract(tt)*tc.exp(lognm), tsr)
+    tensor(1.0391e-13, dtype=torch.float64)
+    >>> tsr = tc.randn(2**10, 2**10, dtype=tc.complex128)
+    >>> tt, s, lognm = tensor_train_decompose(tsr, 2)
+    >>> tc.dist(tn.full_contract(tt)*tc.exp(lognm), tsr)
+    tensor(7.2339e-12, dtype=torch.float64)
+    """
+    # 首先检查维数是否正确：
+    if isinstance(phys_dim, int):
+        tmp = np.log(tsr.shape[0]) / np.log(phys_dim)
+        assert tmp.is_integer(), "The physical dimension is not compatible with the tensor shape."
+        phys_dim = [phys_dim] * int(tmp)
+    else:
+        tmp = np.prod(phys_dim)
+        assert tsr.shape[0] == tmp, "The physical dimension is not compatible with the tensor shape."
+    
+    # 然后进行TT分解：
+    tt = [None]*len(phys_dim)
+    Ss = [None]*(len(phys_dim)+1)
+    Ss[-1] = 1.
+    lognm = 0.
+    if tsr.ndim == 1:
+        lstdim = 1
+        for i in  range(1, len(phys_dim)+1):
+            u, s, v = tc.linalg.svd(tsr.reshape(-1, phys_dim[-i]*lstdim), full_matrices=False)
+            nms = tc.norm(s)
+            s = s/nms
+            lognm += tc.log(nms)
+            good, _ = truncate(s, *trunc_para)
+            u, s, v = u[:, good], s[good], v[good, :]
+            tt[-i] = v.reshape(-1, phys_dim[-i], lstdim)
+            Ss[-i-1] = s
+            tsr = u * s.reshape(1,1,-1)
+            lstdim = len(s)
+    elif tsr.ndim == 2:
+        for i in  range(1, len(phys_dim)+1):
+            permute_indx = list(range(len(phys_dim)-1)) \
+                + [i+len(phys_dim)-1 for i in range(1,len(phys_dim))] \
+                + [len(phys_dim)-1, 2*len(phys_dim)-1, 2*len(phys_dim)]
+            tsr = tsr.reshape(*phys_dim, *phys_dim, -1).permute(permute_indx) 
+            
+            lstdim = tsr.shape[-1]
+            u, s, v = tc.linalg.svd(tsr.reshape(-1, phys_dim[-1]**2*lstdim), full_matrices=False)
+            nms = tc.norm(s)
+            s = s/nms
+            lognm += tc.log(nms)
+            good, _ = truncate(s, *trunc_para)
+            u, s, v = u[:, good], s[good], v[good, :]
+            
+            tt[-i] = v.reshape(-1, phys_dim[-1], phys_dim[-1], lstdim)
+            Ss[-i-1] = s
+            tsr = u * s.reshape(1,1,-1)
+            phys_dim = phys_dim[:-1]
+    else:
+        raise ValueError("The tensor must be 1- or 2-dimensional.")
+    tt[0] *= tc.sign(u[0,0])
+    lognm += tc.log(tc.abs(u[0,0]))
+    Ss[0] = 1.0
+    return tt, Ss, lognm
