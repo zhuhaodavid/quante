@@ -30,23 +30,47 @@
 
 ## package dependence (python=3.11) new version
 
-（下一次更新提醒：2024.10 pytorch 更新 2.5，numba 更新 0.61，二者能否兼容 2.1.0 numpy？）
+（下一次更新提醒：numba 更新 0.61?，conda 更新 scipy 1.14？）
 
 - `conda create -n envname python=3.11`, create new virtual python envrionment.
 
 - `conda activate envname`, login that virtual environment.
 
-- `conda install numba=0.60.0 numpy=1.26.4 scipy matplotlib h5py cytoolz psutil mypy matplotlib tqdm ipykernel ipympl` 
+- `conda install numba=0.60 numpy=1 scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler` 
 
 - `cd xxx` 进入 setup.py 所在的文件夹
 
 - `pip install -e .` 到此已经完成安装，可以 `import quante as qt`; 如果想要安装到本地，使用 `pip install .`; 如果卸载 使用 `pip uninstall quante`
 
-接下来是 torch tenpy 的安装（不需要安装也能运行）
+接下来是 torch tenpy 的安装（不需要安装下面的包也能运行 quante）
 
 - `nvcc --version`, check version `release xxx`. https://pytorch.org/ `conda install pytorch ...`, according to CUDA version. For cpu,  `conda install pytorch torchvision torchaudio cpuonly -c pytorch`
 
-- `conda install -c conda-forge cupy`
+- `conda install -c conda-forge cupy` cupy
+
+- `conda install --channel=conda-forge physics-tenpy` tenpy
+
+- `conda install qutip` qutip
+
+## package dependence (python=3.12) for quspin new version
+
+quspin 1.0.0 要求 numpy>=2.0.0
+
+但 torch 要求 numpy <= 2.0.0，因此不能同时安装，下面时同时安装 quante 和 quspin 的方法。
+
+- `conda create -n envname python=3.12`, create new virtual python envrionment.
+
+- `conda activate envname`, login that virtual environment.
+
+- `conda install --channel=conda-forge numba=0.60 numpy=2 scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler` 支持 numpy=2.0 的 scipy=1.14 暂时只能通过 conda-forge 获取
+
+- `pip install quspin numpy==2.0.1` 在保持 numpy 版本的情况下安装 quspin， numpy=2.0.1 是因为 numba=0.60 最高支持到 2.0.1
+
+- `cd xxx` 进入 setup.py 所在的文件夹
+
+- `pip install -e .` 到此已经完成安装，可以 `import quante as qt`; 如果想要安装到本地，使用 `pip install .`; 如果卸载 使用 `pip uninstall quante`
+
+接下来是 torch tenpy 的安装（不需要安装下面的包也能运行 quante）
 
 - `conda install --channel=conda-forge physics-tenpy` tenpy
 
