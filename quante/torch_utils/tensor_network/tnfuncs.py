@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-17 18:17:47
+# @Last Modified time: 2024-10-24 22:58:15
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -13,7 +13,7 @@
 
 import torch as tc
 
-from quante.torch_utils.grad import clone_list
+from ..utils import clone_list
 from ..linalg.decomp import qr, svd, truncate, rq
 from ...linalg.svd_robust import TruncationError
 
@@ -25,6 +25,8 @@ __all__ = [
     "canonicalize",
     "orthogonalize",
     "add",
+    "canonicalize_infinite",
+    "periodic_trace"
 ]
 
 if tc.cuda.is_available():
@@ -39,26 +41,30 @@ dtype = tc.complex128
 #######################################################################
 
 def add(
-    W1s: list[tc.Tensor], W2s: list[tc.Tensor], alpha: float = 1.0, beta: float = 1.0) -> list[tc.Tensor]:
+    Wss: list[list[tc.Tensor]], alphas: float | list[float] = 1.0) -> list[tc.Tensor]:
     """
     计算：α W1s + β W2s，默认 α = β = 1.0
     """
-    assert len(W1s) == len(W2s), "two mpo should have the same length"
-    L = len(W1s)
-    Ws = [None] * L
-
-    Ws[0] = tc.cat((W1s[0], W2s[0]), dim=-1)
+    if isinstance(alphas, float):
+        alphas = [alphas] * len(Wss)
+    L = len(Wss[0])
+    for Ws in Wss:
+        if len(Ws) != L:
+            raise Exception(f"lenght: L={L} != {len(Ws)}")
+    
+    res = [None] * L
+    res[0] = tc.cat(tuple(Ws[0] for Ws in Wss), dim=-1)
 
     for i in range(1, L - 1):
-        assert (W1s[i].shape[1:-1] == W2s[i].shape[1:-1]), f"The physical dims of the {i}th local tensor is different for W1s, W2s, which is {W1s[i].shape} and {W2s[i].shape}, respectively"
-        Ws[i] = _add_each(W1s[i], W2s[i])
+        for Ws in Wss:
+            assert (Ws[i].shape[1:-1] == Wss[0][i].shape[1:-1]), f"The physical dims of the {i}th local tensor is different for Ws, which is {Ws[i].shape} and {Ws[0][0].shape}, respectively"
+        res[i] = _add_each([Ws[i] for Ws in Wss])
 
-    Ws[-1] = tc.cat((alpha * W1s[-1], beta * W2s[-1]), dim=0)
+    res[-1] = tc.cat(tuple(alphas[i] * Ws[-1] for i,Ws in enumerate(Wss)), dim=0)
+    return res
 
-    return Ws
 
-
-def _add_each(W1: tc.Tensor, W2: tc.Tensor) -> tc.Tensor:
+def _add_each(tsrs: list[tc.Tensor]) -> tc.Tensor:
     """
     ```
     :        |                  |                         |
@@ -70,18 +76,21 @@ def _add_each(W1: tc.Tensor, W2: tc.Tensor) -> tc.Tensor:
     W1, W2 只要有一个的追踪了梯度，那返回的结果就追踪梯度
     """
     # 获得两个张量的维数
-    a, *b, d = W1.shape
-    e, *b, f = W2.shape
-
-    # 创建两个零张量，分别对应矩阵的左上和右下位置，用以拼接
-    part1 = tc.zeros(e, *b, d, device=W1.device, requires_grad=False)
-    part2 = tc.zeros(a, *b, f, device=W1.device, requires_grad=False)
-
-    # 将四个张量拼接在一起
-    Wup = tc.cat((W1, part1), dim=0)
-    Wdown = tc.cat((part2, W2), dim=0)
-
-    return tc.cat((Wup, Wdown), dim=-1)
+    rightbond = [tsr.shape[-1] for tsr in tsrs]
+    sum_a = sum(rightbond)
+    data = []
+    a, *b, c = tsrs[0].shape
+    rightpart = tc.zeros(sum_a - a, *b, c, device=tsrs[0].device, requires_grad=False)
+    data.append(tc.cat((tsrs[0], rightpart), dim=0))
+    for i in range(1, len(tsrs)-1):
+        a, *b, c = tsrs[i].shape
+        leftpart = tc.zeros(sum(rightbond[:i]), *b, c, device=tsrs[i].device, requires_grad=False)
+        rightpart = tc.zeros(sum(rightbond[i+1:]), *b, c, device=tsrs[i].device, requires_grad=False)
+        data.append(tc.cat((leftpart, tsrs[i], rightpart), dim=0))    
+    a, *b, c = tsrs[-1].shape
+    leftpart = tc.zeros(sum_a - a, *b, c, device=tsrs[-1].device, requires_grad=False)
+    data.append(tc.cat((leftpart, tsrs[-1]), dim=0))
+    return tc.cat(data, dim=-1)
 
 
 def _full_contract_right_mps(res: tc.Tensor, Wsi: tc.Tensor):
@@ -1535,3 +1544,126 @@ def add_many(
         ψ_out[i] = B.reshape(linkdim1, *phydims[0][i], linkdim2)
 
     return ψ_out
+
+
+
+def _cholesky_decomp(VL):
+    vld = tc.diag(VL)
+    tmp = vld[tc.abs(vld)>1e-10][0].conj()
+    tmp /= tc.norm(tmp)
+    newVL = VL * tmp
+    newVL = (newVL + newVL.conj().T)/2
+    
+    D, WY = tc.linalg.eigh(newVL)
+
+    Y = WY * tc.sqrt(D).reshape(1,-1)
+    Yinv = WY.conj().T / tc.sqrt(D).reshape(-1,1)
+    
+    return Y, Yinv
+
+def canonicalize_infinite(tsr:tc.Tensor):
+    """
+    tsr 是一个三阶张量，将它变换成正则形式
+    
+    初始平移不变：
+    ```
+    :    │   │   │
+    : ───◻───◻───◻───
+    ```
+    
+    求解本征问题：
+    ```
+    :  ╭╮                  ╭╮         
+    :  │├──◻──             │├─   ┌◻─
+    :  ││  │   = \lamdba_l ││  = │
+    :  │├──◻──             │├─   └◻─
+    :  ╰╯                  ╰╯     Y  
+    ```
+
+    以及
+    ```
+    :       ╭╮              ╭╮      
+    :  ──◻──┤│             ─┤│   ─◻┐
+    :    │  ││ = \lamdba_r  ││ =   │
+    :  ──◻──┤│             ─┤│   ─◻┘
+    :       ╰╯              ╰╯    X 
+    ```
+    
+    插入：
+    ```
+    :    │              │              │
+    : ───◻──◻──◻──◻──◻──◻──◻──◻──◻──◻──◻───
+    :      Y⁻¹ Y  X X⁻¹    Y⁻¹ Y  X X⁻¹
+    ```
+    
+    svd 分解
+    ```
+    : ──◻──◻── = ──▷──◇──⨞──
+    :   Y  X       U  S  V
+    ```
+    
+    那么：
+    ```
+    :    │                     │                     │
+    : ───◻──◻──▷─  ─◇─  ─⨞──◻──◻──◻──▷─  ─◇─  ─⨞──◻──◻───
+    :      Y⁻¹ U    S    V  X⁻¹   Y⁻¹ U    S    V  X⁻¹
+    :               ↑   └─────────────┘   ↑
+    :                         res
+    ```
+    
+    这样 `s * res` 是左正交形式，`res * s` 是右正交形式
+    
+    
+    """
+    # 拿到转移矩阵：
+    tsf_mat = _contract_init_pbc(tsr.conj(), tsr)
+    a,b,c,d = tsf_mat.shape
+    tsf_mat = tsf_mat.reshape(a*b,c*d)
+    
+    dlsy, VLs = tc.linalg.eig(tsf_mat)
+    VR = VLs[:, 0].reshape(c,d)
+    # print(tc.dist(tc.einsum("abc,dbe,ce->ad", tsr.conj(), tsr, VR), dlsy[0]*VR))
+    
+    dlsx, VRs = tc.linalg.eig(tsf_mat.T)
+    VL = VRs[:, 0].reshape(a,b)
+    # print(tc.dist(tc.einsum("ad,abc,dbe->ce", VL, tsr.conj(), tsr), dlsx[0]*VL))
+    
+    X, Xinv = _cholesky_decomp(VR)
+    # print(tc.dist(VR, X @ X.conj().T))
+    X, Xinv = X.conj(), Xinv.conj()
+    # print(tc.dist(X @ Xinv, tc.eye(*X.shape)))
+    # print(tc.dist(tc.einsum("abc,dbe,cf,ef->ad", tsr.conj(), tsr, X.conj(), X), dlsy[0]*tc.einsum("cf,ef->ce", X.conj(), X)))
+    
+    Y, Yinv = _cholesky_decomp(VL)
+    # print(tc.dist(VL, Y @ Y.conj().T))
+    Y, Yinv = Y.conj().T, Yinv.conj().T
+    # print(tc.dist(tc.einsum("ba,bc->ac", Y.conj(), Y), VL))
+    # print(tc.dist(Y @ Yinv, tc.eye(*Y.shape)))
+    # print(tc.dist(tc.einsum("fa,fd,abc,dbe->ce", Y.conj(), Y, tsr.conj(), tsr), dlsx[0]*VL))
+    U, sv, V = tc.linalg.svd(Y @ X)
+    sVXinv = V @ Xinv
+    YinvU = Yinv @ U
+    newtsr = tc.einsum("ab,bec,cd->aed", sVXinv, tsr, YinvU)  # todo 用矩阵乘法来计算
+    return newtsr, sv, dlsy[0], dlsy[1]
+
+
+def periodic_trace(tsr:list[tc.Tensor]):
+    psis = []
+    psis_num = tsr[0].shape[0]
+    length = len(tsr)
+    for j in range(psis_num):
+        psi = []
+        for i in range(length):
+            if i == 0:
+                psi.append(tsr[i][j:j+1, ...])
+            elif i == length - 1:
+                psi.append(tsr[i][..., j:j+1])
+            else:
+                psi.append(tsr[i])
+        psis.append(psi)
+    
+    if psis_num == 1:
+        return psis[0]
+    
+    return add(psis)
+

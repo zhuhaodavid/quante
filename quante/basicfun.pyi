@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Union
 
 __all__ = ['test_time', 'test_memory', 'clear', 'get_free_space', 'create_folder', 'save_hdf5', 'load_hdf5', 'view_hdf5', 'set_logging', 'println', 'idataclass', 'NamedData', 'set_matplotlib']
 

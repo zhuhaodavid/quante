@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-15 14:19:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-05 10:20:26
+# @Last Modified time: 2024-10-31 03:57:41
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -161,6 +161,7 @@ def kron(
     只要有一个是稀疏的，结果就是稀疏的。
     
     示例:
+    ---------
     >>> op1 = np.array([[1, 2], [3, 4]])
     >>> op2 = np.array([[5, 6], [7, 8]])
     >>> kron(op1, op2)
@@ -171,10 +172,11 @@ def kron(
 
     Parameters
     ----------
-    - *ops (Union[_np.ndarray, _sparse.sparray]): 要计算克罗内克积的算符。
+    - ops (Union[_np.ndarray, _sparse.sparray]): 要计算克罗内克积的算符。
     - stype (str, 可选): 返回的稀疏矩阵的类型，可以是 "csr" (压缩稀疏行)、"bsr" (块稀疏行)、"csc" (压缩稀疏列) 或 "coo" (坐标格式)。默认为None。
     - chopped (bool, 可选): 是否在计算之前将算符中的零值设置为0。默认为True。
     - parallel (bool, 可选): 是否使用并行计算。默认为False。
+    
     """
     tmp_stype = "coo" if coo_build or stype == "coo" else None
     

@@ -728,7 +728,7 @@ class Oper:
     def to_mpo(self, L, pauli=False, backend='torch', device=None):
         if backend == 'torch':
             from ..torch_utils.tensor_network.tnclass import MPO
-            from ..torch_utils.grad import convert_to_torch 
+            from ..torch_utils.utils import convert_to_torch 
             import torch as tc
             tt = self.automata(L, pauli=pauli)
             dtype = tc.float64

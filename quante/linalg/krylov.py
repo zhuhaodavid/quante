@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-26 17:09:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-04 21:42:41
+# @Last Modified time: 2024-10-31 03:18:05
 
 # todo: 实现 Arnoldi method 对角化非厄密矩阵；LanczosEvolution 计算 :math:`exp(delta H) |psi0>`
 
@@ -10,7 +10,7 @@ import numpy as np
 import scipy.sparse.linalg as spalg
 from typing import Callable
 
-__all__ = ["lanczos_ground_state", "lanczos_evolve_state", "lanczos_arpack", "lanczos_arpack"]
+__all__ = ["lanczos_ground_state", "lanczos_evolve_state", "lanczos_arpack"]
 
 
 def lanczos_ground_state(matvec:Callable[[np.ndarray], np.ndarray], psi0:np.ndarray, **kwargs) -> tuple[float, np.ndarray]:

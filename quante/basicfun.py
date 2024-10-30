@@ -2,16 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-15 16:31:24
-"""
-功能：
-
-- 测试工具：`test_time`, `test_memory`
-- 系统层面的函数：`create_folder`, `save_hdf5`, `load_hdf5`
-- 日志工具：`set_logging`, `println`
-- 字典格式：`todict`, `idataclass`
-- 画图预设：`set_matplotlib`
-"""
+# @Last Modified time: 2024-10-31 02:51:39
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -19,16 +10,14 @@ import gc as _gc
 import os as _os
 import ast as _ast
 import sys as _sys
-import time as _time
-import h5py as _h5py # type: ignore
 import numpy as _np
-import pprint as _pprint
+import scipy as _sp
+import time as _time
+import h5py as _h5py
 import ctypes as _ctypes
 import inspect as _inspect
 import logging as _logging
 import platform as _platform
-import scipy as _sp  # type: ignore
-
 
 from itertools import chain
 from collections import deque
@@ -65,10 +54,13 @@ def test_time(func: Callable, *args, inner_func_list:list[Callable] = [], timer_
     另一个更高效的方法是，在文件最开始添加 os.environ["LINE_PROFILE"] = "1"
     
     然后在要测试的函数加上装饰器
+    
     >>> from line_profiler import profile
+    
     即可得到每一行代码的执行时间
     
     Example:
+    
     >>> import numpy as np
     >>> from quante.basicfun import test_time
     >>> def func2(dim):
@@ -111,6 +103,7 @@ def test_memory(obj: Any):
     打印对象的占用空间的大小
     
     Example:
+    
     >>> import numpy as np
     >>> from quante.basicfun import test_memory
     >>> a = [np.random.randn(10,10) for i in range(100)]
@@ -184,6 +177,7 @@ def get_free_space(folder: str) -> float:
     获取磁盘剩余空间。
 
     示例:
+    
     >>> get_free_space("D:\\")
     
     参数:
@@ -211,6 +205,7 @@ def create_folder(path1:str, path2: Union[None, str]=None) -> str:
     创建一个文件夹（包括路径中指定的所有父文件夹）。
     
     Example:
+    
     >>> import quante as qt
     >>> path1 = "data/entanglement"
     >>> path2 = "XXZ"
@@ -242,6 +237,7 @@ def save_hdf5(filename:str, group:str, data: Dict[str, Any], mode: str = "a") ->
     **便是 append 模式下，相同group 也会被覆盖，所以要注意。**
     
     Example:
+
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5
     >>> mat = np.random.randn(10,10)
@@ -329,6 +325,7 @@ def load_hdf5(filename:str, group:str, dataname:str) -> Any:
     从 HDF5 文件中加载数据。
 
     Example:
+    
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5, load_hdf5
     >>> mat = np.random.randn(10,10)
@@ -394,6 +391,7 @@ def view_hdf5(filename:str, group:str, depth=1):
 
 
     Example:
+    
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5, load_hdf5
     >>> mat = np.random.randn(10,10)
@@ -436,6 +434,7 @@ def set_logging(level: int = _logging.WARNING, savelog: bool = False, filenameTi
     配置日志记录功能。
     
     实例：
+    
     >>> set_logging(savelog=True, logtime=True)
 
     参数:
@@ -495,6 +494,7 @@ class PrintLn:
     todo: 整理这部分代码，实现多行输出，目前只能单行
 
     示例:
+    
     >>> a = "this is a test"
     >>> println(a)
     """
@@ -680,75 +680,6 @@ class PrintLn:
 
 println = PrintLn()  # 实例化 PrintLn 类
 
-def save_h5(filename:str, *data, group:Union[list[str],str] = [], mode:str='a') -> None:
-    """
-    简化的 save_hdf5
-
-    Example:
-    >>> import numpy as np
-    >>> import quante.basicfun as bf
-    >>> mat = np.random.randn(10,10)
-    >>> bf.save_h5("data.h5", mat)
-    """
-    assert filename[-3:] == ".h5", "use h5 for consistance"
-    if len(data) == 1 and isinstance(data[0], dict):
-        data_dic = data[0]
-    else:
-        current_frame = _inspect.currentframe()
-        assert current_frame is not None and current_frame.f_back is not None, "Can't get the caller's frame"
-        paraname = PrintLn._get_paraname(current_frame.f_back)
-        data_dic = dict()
-        for i, arg in enumerate(data):
-            if type(arg).__name__ == "type":
-                data_dic[paraname[i+1]] = arg()
-            else:
-                data_dic[paraname[i+1]] = arg
-    if isinstance(group, str):
-        group = [group]
-    assert isinstance(group, list) and "/" not in group
-    group_name = "/".join(group)
-    save_hdf5(filename, group_name, data_dic, mode=mode)
-
-
-def load_h5(filename:str, *datanames, group=[]) -> Union[Dict[str, Any], list[Any]]:
-    """
-    简化的 load_hdf5
-
-    Example:
-    >>> import numpy as np
-    >>> import quante.basicfun as bf
-    >>> mat = np.random.randn(10,10)
-    >>> bf.save_h5("data.h5", mat)
-    >>> mat, = bf.saveh5("data.h5", "mat")
-    """
-    _logging.info("Loading from " + _os.path.abspath(filename) + " ... ")
-    if isinstance(group, str):
-        group = [group]
-    assert isinstance(group, list) and "/" not in group
-    group = "/".join(group)
-    
-    with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
-        group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
-        group_location = f[group]  # 获取组对象
-        if len(datanames) == 0:
-            data: Union[Dict[str, Any], list[Any]] = _load_dict(group_location)
-        else:
-            data = []
-            for dataname in datanames:
-                group_location = f[group]  # 获取组对象
-                data_location = group_location[dataname]
-                data_type_str = data_location.attrs.get("object_type", None)
-                if data_type_str is None and isinstance(data_location, _h5py.Group):
-                    data_type_str = 'dict'
-                load_func = _LOAD_FUNC.get(data_type_str, _default_load)
-                data.append(load_func(data_location))
-            if len(datanames) == 1:
-                data = data[0]
-    _logging.info("Load done")
-    return data
-
-
-
 # =======
 # 字典格式
 # =======
@@ -795,6 +726,7 @@ def todict(cls):
     得到的就是一个字典，无需创建实例！！！
     
     Example:
+    
     >>> import numpy as np
     >>> from quante.basicfun import idataclass, println, save_hdf5
     >>> @todict
