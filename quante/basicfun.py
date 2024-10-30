@@ -2,16 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-24 22:20:52
-"""
-功能：
-
-- 测试工具：`test_time`, `test_memory`
-- 系统层面的函数：`create_folder`, `save_hdf5`, `load_hdf5`
-- 日志工具：`set_logging`, `println`
-- 字典格式：`todict`, `idataclass`
-- 画图预设：`set_matplotlib`
-"""
+# @Last Modified time: 2024-10-31 02:51:39
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -63,10 +54,13 @@ def test_time(func: Callable, *args, inner_func_list:list[Callable] = [], timer_
     另一个更高效的方法是，在文件最开始添加 os.environ["LINE_PROFILE"] = "1"
     
     然后在要测试的函数加上装饰器
+    
     >>> from line_profiler import profile
+    
     即可得到每一行代码的执行时间
     
     Example:
+    
     >>> import numpy as np
     >>> from quante.basicfun import test_time
     >>> def func2(dim):
@@ -109,6 +103,7 @@ def test_memory(obj: Any):
     打印对象的占用空间的大小
     
     Example:
+    
     >>> import numpy as np
     >>> from quante.basicfun import test_memory
     >>> a = [np.random.randn(10,10) for i in range(100)]
@@ -182,6 +177,7 @@ def get_free_space(folder: str) -> float:
     获取磁盘剩余空间。
 
     示例:
+    
     >>> get_free_space("D:\\")
     
     参数:
@@ -209,6 +205,7 @@ def create_folder(path1:str, path2: Union[None, str]=None) -> str:
     创建一个文件夹（包括路径中指定的所有父文件夹）。
     
     Example:
+    
     >>> import quante as qt
     >>> path1 = "data/entanglement"
     >>> path2 = "XXZ"
@@ -240,6 +237,7 @@ def save_hdf5(filename:str, group:str, data: Dict[str, Any], mode: str = "a") ->
     **便是 append 模式下，相同group 也会被覆盖，所以要注意。**
     
     Example:
+
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5
     >>> mat = np.random.randn(10,10)
@@ -327,6 +325,7 @@ def load_hdf5(filename:str, group:str, dataname:str) -> Any:
     从 HDF5 文件中加载数据。
 
     Example:
+    
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5, load_hdf5
     >>> mat = np.random.randn(10,10)
@@ -392,6 +391,7 @@ def view_hdf5(filename:str, group:str, depth=1):
 
 
     Example:
+    
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5, load_hdf5
     >>> mat = np.random.randn(10,10)
@@ -434,6 +434,7 @@ def set_logging(level: int = _logging.WARNING, savelog: bool = False, filenameTi
     配置日志记录功能。
     
     实例：
+    
     >>> set_logging(savelog=True, logtime=True)
 
     参数:
@@ -493,6 +494,7 @@ class PrintLn:
     todo: 整理这部分代码，实现多行输出，目前只能单行
 
     示例:
+    
     >>> a = "this is a test"
     >>> println(a)
     """
@@ -724,6 +726,7 @@ def todict(cls):
     得到的就是一个字典，无需创建实例！！！
     
     Example:
+    
     >>> import numpy as np
     >>> from quante.basicfun import idataclass, println, save_hdf5
     >>> @todict

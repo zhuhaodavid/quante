@@ -28,6 +28,10 @@
 
 - 删除没有用的包：conda clean -p
 
+- 查看安装历史：conda list --revisions
+
+- 恢复安装历史：conda install --revision N
+
 ## package dependence (python=3.11) new version
 
 （下一次更新提醒：numba 更新 0.61?，conda 更新 scipy 1.14？）
@@ -70,9 +74,7 @@ quspin 1.0.0 要求 numpy>=2.0.0
 
 - `pip install -e .` 到此已经完成安装，可以 `import quante as qt`; 如果想要安装到本地，使用 `pip install .`; 如果卸载 使用 `pip uninstall quante`
 
-接下来是 torch tenpy 的安装（不需要安装下面的包也能运行 quante）
-
-- `conda install --channel=conda-forge physics-tenpy` tenpy
+安装完 quspin 其他的包，如 torch, tenpy 都会安装失败
 
 ## package dependence (python=3.11) old version
 

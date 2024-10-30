@@ -2,11 +2,8 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-09 12:55:57
+# @Last Modified time: 2024-10-31 04:16:08
 
-"""
-常用的物理指标：如 `entropy`, `mean_level_spacing`
-"""
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
 import numpy as _np
@@ -158,11 +155,6 @@ def mean_level_spacing(E,verbose=True):
 
 	The following example shows how to calculate the mean level spacing :math:`\\langle\\tilde r_\mathrm{W}\\rangle` for the
 	spectrum of the ergodic Hamiltonian :math:`H_1=\\sum_jJ S^z_{j+1}S^z + hS^x_j + g S^z_j`.
-	
-	.. literalinclude:: ../../doc_examples/mean_level_spacing-example.py
-		:linenos:
-		:language: python
-		:lines: 7-
 
 	Parameters
 	-----------

@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2024-10-29 13:34:14
+# # @Last Modified time: 2024-10-31 03:55:35
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
@@ -28,8 +28,8 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
         此时需要给定 `herm` 参数，`herm=True`，表示 `matvec` 是厄密算符，那么 `rmatvec = matvec`
         如果不是厄密算符，那么就需要用 `herm` 传入伴随算符，`rmatvec = herm`
         同时需要传入 `traceA`（`matvec` 的迹），否则内部会估计，影响结果精确度。
-    
-    - 矩阵（`numpy`或`scipy.sparse`格式，不能是`torch`格式）：
+        
+    - 矩阵（ `numpy` 或 `scipy.sparse` 格式，不能是 `torch` 格式）：
         支持稀疏矩阵和密集矩阵，此时通过 `scale=-1.j` 可以在 `matvec` 是实矩阵的时候节约内存，同时加快计算。
         此时如果指定 `herm=True`，可以稍微加快计算。
     
@@ -52,16 +52,16 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
         
     References
     ----------
-    .. [1] scipy https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.expm_multiply.html
+    - scipy https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.expm_multiply.html
     
-    .. [2] Awad H. Al-Mohy and Nicholas J. Higham (2011)
+    - Awad H. Al-Mohy and Nicholas J. Higham (2011)
            "Computing the Action of the Matrix Exponential,
            with an Application to Exponential Integrators."
            SIAM Journal on Scientific Computing,
            33 (2). pp. 488-511. ISSN 1064-8275
            http://eprints.ma.man.ac.uk/1591/
 
-    .. [3] Nicholas J. Higham and Awad H. Al-Mohy (2010)
+    - Nicholas J. Higham and Awad H. Al-Mohy (2010)
            "Computing Matrix Functions."
            Acta Numerica,
            19. 159-208. ISSN 0962-4929

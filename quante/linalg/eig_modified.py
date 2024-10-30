@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-27 15:24:15
+# @Last Modified time: 2024-10-31 03:50:53
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -454,7 +454,7 @@ def eigs_scipy(
     sigma : float, optional
         Shift, if targeting interior eigenpairs.
     isherm : bool, optional
-        Whether ``A`` is hermitian.
+        Whether `A` is hermitian.
     P : array_like, sparse_matrix, LinearOperator or quimb.Lazy, optional
         Perform the eigensolve in the subspace defined by this projector.
     sort : bool, optional
@@ -470,7 +470,7 @@ def eigs_scipy(
     lk : (k,) array
         The eigenvalues.
     vk : (m, k) array
-        Corresponding eigenvectors (if ``return_vecs=True``).
+        Corresponding eigenvectors (if `return_vecs=True`).
     """
     # project into subspace
     if P is not None:
@@ -693,48 +693,56 @@ def eig(
     ----------
     A : operator
         要分解的算子。
+        
     k : int, 可选
-        如果为负数，查找所有特征对，否则执行部分特征分解并查找 ``k`` 对。
-    backend : {'AUTO', 'NUMPY', 'SCIPY',
-               'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
+        如果为负数，查找所有特征对，否则执行部分特征分解并查找 `k` 对。
+        
+    backend : {'AUTO', 'NUMPY', 'SCIPY', 'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
         使用哪个求解器。('MATLAB' 用于 k=-1 的情况。)
+        
     save: bool, str, list, 可选
         如果为 False，不保存。
         如果为 True，按默认路径保存，k=-1 时为 EigData，k>0 时为 PartialEigData。
         如果为 str，该字符串被解释为保存的文件名。
         如果为列表 [path_save_to, file_name]，则路径和文件名都被指定。
+        
     reload: bool, 可选
         如果为 False，不返回任何内容。
+        
     autoblock : bool, 可选
         如果为 True，自动识别并利用当前基中出现的对称性，通过行和列的置换形成块对角线。（仅适用于 k=-1）
+        
     which : {'SA', 'LA', 'LM', 'SM', 'TR'}
-        从谱的哪个部分获取特征值（参见 :func:``scipy.sparse.linalg.eigsh``）。
+        从谱的哪个部分获取特征值（参见 :func:`scipy.sparse.linalg.eigsh`）。
+        
     sigma : float, 可选
         目标谱的哪一部分，如果 which 为 None，则意味着 which='TR'。
+        
     ncv : int, 可选
         兰索斯向量的数量，可以用来优化速度。
+        
     tol : None 或 float
         查找特征值的容差。
+        
     v0 : None 或 类 1D-array
         用于迭代的初始向量猜测。
+        
     sort : bool, 可选
         是否按升序显式排序特征值。
+        
     fallback_to_scipy : bool, 可选
         如果发生错误且未使用 scipy，尝试使用 scipy。
+        
     sort : bool, 可选
         是否按升序排序特征对。
+        
     P : array_like, sparse_matrix, LinearOperator, 可选
         在此投影算子定义的子空间中执行特征求解。（仅适用于 k=-1）
+        
     backend_opts
         提供给后端求解器的选项。
         根据指定的求解器 backend 提供具体的参数
 
-    返回值
-    -------
-    el : (k,) 数组
-        特征值。
-    ev : (d, k) 数组
-        对应的特征向量作为数组的列，使得 ``A @ ev == ev @ A``。
     """
     if k < 0:
         if unitary:
@@ -787,55 +795,73 @@ def eigh(A: Union[_np.ndarray, _sparse.spmatrix],
          P: Optional[_np.ndarray] = None,
          **backend_opts
          ) -> tuple[_np.ndarray, _np.ndarray]:
-    """查找厄米矩阵的算子的所有或部分特征对。
+    """计算本征值厄米矩阵的算子的所有或部分特征对。
 
     参数
     ----------
+    
     A : operator
         要分解的算子。
+        
     k : int, 可选
-        如果为负数，查找所有特征对，否则执行部分特征分解并查找 ``k`` 对。
-    backend : {'AUTO', 'NUMPY', 'SCIPY',
-               'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
+        如果为负数，查找所有特征对，否则执行部分特征分解并查找 k 对。
+        
+    backend : {'AUTO', 'NUMPY', 'SCIPY', 'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
         使用哪个求解器。('MATLAB' 用于 k=-1 的情况。)
+        
     save: bool, str, list, 可选
         如果为 False，不保存。
         如果为 True，按默认路径保存，k=-1 时为 EigData，k>0 时为 PartialEigData。
         如果为 str，该字符串被解释为保存的文件名。
         如果为列表 [path_save_to, file_name]，则路径和文件名都被指定。
+        
     reload: bool, 可选
         如果为 False，不返回任何内容。
+        
     autoblock : bool, 可选
         如果为 True，自动识别并利用当前基中出现的对称性，通过行和列的置换形成块对角线。（仅适用于 k=-1）
+        
     which : {'SA', 'LA', 'LM', 'SM', 'TR'}
-        从谱的哪个部分获取特征值（参见 :func:``scipy.sparse.linalg.eigsh``）。
+        从谱的哪个部分获取特征值（参见 :func:`scipy.sparse.linalg.eigsh`）。
         基态能量是 SA。
+        
     sigma : float, 可选
         目标谱的哪一部分，如果 which 为 None，则意味着 which='TR'。
+        
     ncv : int, 可选
         兰索斯向量的数量，可以用来优化速度。
+        
     tol : None 或 float
         查找特征值的容差。
+        
     v0 : None 或 类 1D-array
         用于迭代的初始向量猜测。
+        
     sort : bool, 可选
         是否按升序显式排序特征值。
+        
     fallback_to_scipy : bool, 可选
         如果发生错误且未使用 scipy，尝试使用 scipy。
+        
     sort : bool, 可选
         是否按升序排序特征对。
+        
     P : array_like, sparse_matrix, LinearOperator, 可选
         在此投影算子定义的子空间中执行特征求解。（仅适用于 k=-1）
+        
     backend_opts
         提供给后端求解器的选项。
         根据指定的求解器 backend 提供具体的参数
 
     返回值
     -------
+    
     el : (k,) 数组
         特征值。
+        
     ev : (d, k) 数组
-        对应的特征向量作为数组的列，使得 ``A @ ev == ev @ A``。
+        对应的特征向量作为数组的列，使得 `A @ ev == ev @ A`。
+        
     """
     if k < 0:
         return eigensolve(
@@ -849,6 +875,7 @@ def eigh(A: Union[_np.ndarray, _sparse.spmatrix],
         )
 
     return eigensolve_partial(A, k=k, isherm=True, backend=backend, save=save, reload=reload, return_vecs=True, which=which, sigma=sigma, ncv=ncv, tol=tol, v0=v0, sort=sort, fallback_to_scipy=fallback_to_scipy, P=P, **backend_opts,)
+
 
 
 def eigvals(
@@ -876,38 +903,52 @@ def eigvals(
     ----------
     A : operator
         要分解的算子。
+        
     k : int, 可选
-        如果为负数，查找所有特征值，否则执行部分特征分解并查找 ``k`` 对。
-    backend : {'AUTO', 'NUMPY', 'SCIPY',
-               'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
+        如果为负数，查找所有特征值，否则执行部分特征分解并查找 `k` 对。
+        
+    backend : {'AUTO', 'NUMPY', 'SCIPY', 'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
         使用哪个求解器。('MATLAB' 用于 k=-1 的情况。)
+        
     save: bool, str, list, 可选
         如果为 False，不保存。
         如果为 True，按默认路径保存，k=-1 时为 EigData，k>0 时为 PartialEigData。
         如果为 str，该字符串被解释为保存的文件名。
         如果为列表 [path_save_to, file_name]，则路径和文件名都被指定。
+        
     reload: bool, 可选
         如果为 False，不返回任何内容。
+        
     autoblock : bool, 可选
         如果为 True，自动识别并利用当前基中出现的对称性，通过行和列的置换形成块对角线。（仅适用于 k=-1）
+        
     which : {'SA', 'LA', 'LM', 'SM', 'TR'}
-        从谱的哪个部分获取特征值（参见 :func:``scipy.sparse.linalg.eigsh``）。
+        从谱的哪个部分获取特征值（参见 :func:`scipy.sparse.linalg.eigsh`）。
+        
     sigma : float, 可选
         目标谱的哪一部分，如果 which 为 None，则意味着 which='TR'。
+        
     ncv : int, 可选
         兰索斯向量的数量，可以用来优化速度。
+        
     tol : None 或 float
         查找特征值的容差。
+        
     v0 : None 或 类 1D-array
         用于迭代的初始向量猜测。
+        
     sort : bool, 可选
         是否按升序显式排序特征值。
+        
     fallback_to_scipy : bool, 可选
         如果发生错误且未使用 scipy，尝试使用 scipy。
+        
     sort : bool, 可选
         是否按升序排序特征对。
+        
     P : array_like, sparse_matrix, LinearOperator, 可选
         在此投影算子定义的子空间中执行特征求解。（仅适用于 k=-1）
+        
     backend_opts
         提供给后端求解器的选项。
         根据指定的求解器 backend 提供具体的参数
@@ -917,7 +958,8 @@ def eigvals(
     el : (k,) 数组
         特征值。
     ev : (d, k) 数组
-        对应的特征向量作为数组的列，使得 ``A @ ev == ev @ A``。
+        对应的特征向量作为数组的列，使得 `A @ ev == ev @ A`。
+        
     """
     if k < 0:
         if unitary:
@@ -983,9 +1025,8 @@ def eigvalsh(
     A : operator
         要分解的算子。
     k : int, 可选
-        如果为负数，查找所有特征对，否则执行部分特征分解并查找 ``k`` 对。
-    backend : {'AUTO', 'NUMPY', 'SCIPY',
-               'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
+        如果为负数，查找所有特征对，否则执行部分特征分解并查找 `k` 对。
+    backend : {'AUTO', 'NUMPY', 'SCIPY', 'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
         使用哪个求解器。('MATLAB' 用于 k=-1 的情况。)
     save: bool, str, list, 可选
         如果为 False，不保存。
@@ -997,7 +1038,7 @@ def eigvalsh(
     autoblock : bool, 可选
         如果为 True，自动识别并利用当前基中出现的对称性，通过行和列的置换形成块对角线。（仅适用于 k=-1）
     which : {'SA', 'LA', 'LM', 'SM', 'TR'}
-        从谱的哪个部分获取特征值（参见 :func:``scipy.sparse.linalg.eigsh``）。
+        从谱的哪个部分获取特征值（参见 :func:`scipy.sparse.linalg.eigsh`）。
         基态能量是 SA。
     sigma : float, 可选
         目标谱的哪一部分，如果 which 为 None，则意味着 which='TR'。
@@ -1024,7 +1065,8 @@ def eigvalsh(
     el : (k,) 数组
         特征值。
     ev : (d, k) 数组
-        对应的特征向量作为数组的列，使得 ``A @ ev == ev @ A``。
+        对应的特征向量作为数组的列，使得 `A @ ev == ev @ A`。
+        
     """
     if k < 0:
         return eigensolve(
@@ -1208,17 +1250,18 @@ def eighbetween(
 ):
     """
     计算 H 中的部分谱
-    可以指定 index 范围
-        如 subset_by_index = (10, 500) 指第 10 个到第 499 个本征态
-    可以指定 value 范围
-        如 subset_by_value = (-1, 1) 指本征值在 -1 到 1 之间的所有本征态
+    可以指定 index 范围，如 subset_by_index = (10, 500) 指第 10 个到第 499 个本征态
+    可以指定 value 范围，如 subset_by_value = (-1, 1) 指本征值在 -1 到 1 之间的所有本征态
+        
     可以指定从 value 开始某个范围的本征态
-        如 value_number = ("up", 0, 3) 指大于 0 的三个最小本征态
-        如 value_number = ("down", 0, 3) 指小于 0 的三个最小本征态
-        如 value_number = ("between", 0, 6) 指 0 附近的 6 个本征态
+        - 如 value_number = ("up", 0, 3) 指大于 0 的三个最小本征态
+        - 如 value_number = ("down", 0, 3) 指小于 0 的三个最小本征态
+        - 如 value_number = ("between", 0, 6) 指 0 附近的 6 个本征态
+    
     前两者是用 eigh 计算，需要稠密矩阵，
     最后是用 eigsh 计算，但要计算矩阵的逆算符
     最后一个需要
+    
     """
     if (
         subset_by_index != None and subset_by_value == None and value_number == None

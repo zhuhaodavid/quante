@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-19 17:54:02
+# @Last Modified time: 2024-10-31 01:30:34
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
