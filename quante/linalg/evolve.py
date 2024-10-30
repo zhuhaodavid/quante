@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2024-10-14 16:43:36
+# # @Last Modified time: 2024-10-29 13:34:48
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
@@ -121,23 +121,26 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
     if callable(mat):
         # 构造 scipy 的线性算符
         dim = psi0.shape[0]
+        dtype = psi0.dtype
         if herm is True:
             if scale == 1.0:
-                lo = _spalg.LinearOperator((dim,dim), matvec=mat, rmatvec=mat)
+                lo = _spalg.LinearOperator((dim,dim), matvec=mat, rmatvec=mat, dtype=dtype)
             elif scale == -1j:
-                lo = _spalg.LinearOperator((dim,dim), matvec=lambda v: (-1j) * mat(v), rmatvec=lambda v: (1j) * mat(v))
+                lo = _spalg.LinearOperator((dim,dim), matvec=lambda v: (-1j) * mat(v), rmatvec=lambda v: (1j) * mat(v), dtype=dtype)
         elif callable(herm):
             assert scale == 1.0
-            lo = _spalg.LinearOperator((dim,dim), matvec=mat, rmatvec=herm)
+            lo = _spalg.LinearOperator((dim,dim), matvec=mat, rmatvec=herm, dtype=dtype)
         else:
             raise ValueError("herm should be 1 for hermitian or -1 for antihermitian or callable")
     else:
         assert isinstance(mat, (_np.ndarray, _sparse.spmatrix, _sparse.sparray)), "cuda only support numpy.ndarray or scipy.sparse matrix"
+        dtype = _np.complex128 if scale == -1j or _np.iscomplexobj(mat) or _np.iscomplexobj(psi0) else tc.float64
+        psi0 = psi0.astype(dtype)
         lo = mat
     
     # 主要的工作:
     from .usenumba.expm_multiply_numba import _expm_multiply_numba
-    return _expm_multiply_numba(lo, psi0, start=start, stop=stop, num=num, endpoint=endpoint, traceA=traceA)
+    return _expm_multiply_numba(lo, psi0, scale=scale, start=start, stop=stop, num=num, endpoint=endpoint, traceA=traceA)
     
 
 class evolve_engine_spexpm:
