@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # 类型检查时，导入 torch
     from ..torch_utils.tensor_network.tnclass import MPO as tcMPO
     from ..tensor import MPO as npMPO
-    import torch as tc
 
 class Oper:
     type: Incomplete

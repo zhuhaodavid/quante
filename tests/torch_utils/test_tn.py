@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-28 21:21:02
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-17 15:56:26
+# @Last Modified time: 2024-10-24 22:58:30
 
 
 import unittest
@@ -11,7 +11,7 @@ from quante.torch_utils import tensor_network
 import numpy as np
 import torch as tc
 
-from quante.torch_utils.grad import convert_to_torch
+from quante.torch_utils.utils import convert_to_torch
 
 class TestTN(unittest.TestCase):
     def test_canonicalize(self):
@@ -48,7 +48,7 @@ class TestTN(unittest.TestCase):
     def test_apply(self):
         
         import quante.generate.operas as op
-        from quante.torch_utils.grad import convert_to_torch
+        from quante.torch_utils.utils import convert_to_torch
         
         device = tc.device("cpu")
         dtype = tc.complex128
@@ -103,7 +103,7 @@ class TestTN(unittest.TestCase):
     def test_mpo_apply(self):
         # 验证 mpo 两体门的正确性
         import quante.generate.operas as op
-        from quante.torch_utils.grad import convert_to_torch
+        from quante.torch_utils.utils import convert_to_torch
         
         device = tc.device("cpu")
         dtype = tc.complex128
