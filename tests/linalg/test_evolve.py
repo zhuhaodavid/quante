@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 17:48:30
+# @Last Modified time: 2024-10-31 21:09:25
 
 import unittest
 import scipy.sparse
@@ -179,6 +179,7 @@ class TestTN(unittest.TestCase):
         from quante.linalg.usenumba.expm_multiply_numba import _expm_multiply_simple, _expm_multiply_interval
         mat, state = self._gen_mat_state_matrix(20)
 
+        state = state.astype(np.complex128)
         # 验证 exp(-1j*mat) @ state
         # 一次性作用:
         res1 = scipy.sparse.linalg.expm_multiply((-1j*mat), state)

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-08 17:12:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-13 20:44:54
+# @Last Modified time: 2024-10-31 21:10:49
 
 # !! 通过与 quspin 的对比，测试 quante 中的生成基矢的代码
 
@@ -145,7 +145,7 @@ class TestSpinHalf(unittest.TestCase):
         
         self.assertTrue(np.allclose(mat3, mat4))
 
-    @unittest.skipIf(sys.version_info < (3,10), "requires python3.10 or lower")
+    @unittest.skipIf(sys.version_info <= (3,11), "requires python3.10 or lower")
     def test_Nup(self):
         # 海森堡测试：
         from quante.generate.symmetry.spin_half.Nup.matrixele import heisenberg_matrix_element
