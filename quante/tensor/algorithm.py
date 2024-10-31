@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: dzwang
 # @Date:   2023-09-23 15:55:53
-# @Last Modified by:   dzwang
-# @Last Modified time: 2024-10-16 17:39:45
+# @Last Modified by:   hzhu
+# @Last Modified time: 2024-10-31 19:28:52
 import scipy as _scipy
 import numpy as _np
 import scipy.sparse as _sparse
@@ -135,8 +135,9 @@ def TNE_get_init_env_psi(D:int, env_d:int, psi_d:int, T_dtype:_np.dtype, env_pre
 class _effect_density_matrix(_sparse.linalg.LinearOperator):
     """
     Define env_rho_env by matrix-vector production
-
-         .--0      1      0--.
+    .. code-block:: text
+    
+        .--0       1      0--.
          |         |         |
         env--2  0--T--3  2--env
          |         |         |
@@ -166,7 +167,9 @@ class _effect_density_matrix(_sparse.linalg.LinearOperator):
 
 def _update_psi(T:_np.ndarray, env:_np.ndarray, psi:_np.ndarray) -> _np.ndarray:
     """
-        0         1         0                             
+    .. code-block:: text
+    
+       0          1         0                             
         |         |         |                              
        env--2  0--T--3  2--env    ------>        1        
         |         |         |     Lanczos        |      
@@ -179,7 +182,9 @@ def _update_psi(T:_np.ndarray, env:_np.ndarray, psi:_np.ndarray) -> _np.ndarray:
 
 def _contract_env_A_T_A(T:_np.ndarray, env:_np.ndarray, A:_np.ndarray) -> _np.ndarray:
     """
-                0---A---2  
+    .. code-block:: text
+    
+        .       0---A---2  
                     |
         1           1
         |           |     
@@ -252,12 +257,15 @@ def TNT_get_free_energy_pre_site(T:'_tc.Tensor', envL:'_tc.Tensor', beta:float, 
 
     Returns:
         tc.Tensor: 平均格点自由能
-        
-      0         1         0
-      |         |         |
-    envL--2  0--T--3  2--envR  = 𝜌(t) = exp(-𝜏H) 
-      |         |         |
-      1         2         1 
+    
+    
+    .. code-block:: text
+
+          0         1         0
+          |         |         |
+        envL--2  0--T--3  2--envR  = 𝜌(t) = exp(-𝜏H) 
+          |         |         |
+          1         2         1 
      
     freeE/N = -lnZ/βN 
             = -lnλ^N / βN 
@@ -379,16 +387,18 @@ def QES_get_EBH_coefficient(HL:_np.ndarray, HR:_np.ndarray, chi:int, pauli=False
 
 def _apply_single_gate(rho:MPO, i:int, gate:_np.ndarray) ->None:
     """
-            (x)
-             │
-            gate
-             |
-            (b)
-             |   
-    ---(a)---Wi---(d)---  
-             |
-            (c)
-             |
+    .. code-block:: text
+
+        .       (x)
+                 │
+                gate
+                 |
+                (b)
+                 |   
+        ---(a)---Wi---(d)---  
+                 |
+                (c)
+                 |
     """
     # einsum("xb,abcd->axcd", gate, rho.Ws[i])
     Wsi = gate @ rho.Ws[i].transpose(1, 0, 2, 3)
@@ -414,12 +424,14 @@ def _one_site_unitary_evolve_DM(rho:MPO, i:int, gate:_np.ndarray, Dc:int, eps:fl
 
 
 def _two_site_unitary_evolve_DM(rho:MPO, i:int, gate:_np.ndarray, Dc:int, eps:float) ->None:
-    r"""\tb, \cc, \rc, \tg, \dia
-                 c    f
-                 |    |
-    a--S--b   b--Wi---Wj--h 
-                 |    |
-                 d    g
+    r"""
+    .. code-block:: text
+
+        .            c    f
+                     |    |
+        a--S--b   b--Wi---Wj--h 
+                     |    |
+                     d    g
     """
     j = (i+1) % rho.L
     WW = rho.two_site_WW(i)
@@ -503,13 +515,13 @@ def mpo_apply_mps(mpo_Ws, mps_Ws, Dc, eps):
 def dissipative_uniform(rho:MPO, diss_operators:list[_np.ndarray]) -> MPO:
     L = rho.L
     d = int(diss_operators[0].shape[1]**0.5)
-    r"""
-      x   y      b 
-       \ /       |
-        D   D0---W---D1
-       / \       |
-      b   c      c
-    """
+    # r"""
+    #   x   y      b 
+    #    \ /       |
+    #     D   D0---W---D1
+    #    / \       |
+    #   b   c      c
+    # """
     for i in range(L):
         # rho.Bs[i] = _np.einsum("xybc,abcd->axyd", diss_operators[i].reshape(d, d, d, d), rho.Bs[i])
         D0, D1 = rho.Bs[i].shape[0], rho.Bs[i].shape[3]
@@ -529,11 +541,13 @@ def dissipative_boundary_driven(rho:MPO, left:_np.ndarray, right:_np.ndarray, Dc
     """
     def apply_boundary_operator(W, diss_gate:_np.ndarray) -> _np.ndarray:
         r"""
-           x   y       b 
-            \ /        |
-             D    D0---W---D1
-            / \        |
-           b   c       c
+        .. code-block:: text
+        
+            x   y       b 
+             \ /        |
+              D    D0---W---D1
+             / \        |
+            b   c       c
         updated_tensor = _np.einsum("abcd,xcdy->xaby", diss_gate.reshape(b, b, b, b), W)
         abxy -> 0123, xaby->2013
         """
@@ -553,12 +567,14 @@ def dissipative_boundary_driven(rho:MPO, left:_np.ndarray, right:_np.ndarray, Dc
 
 def _QR(W:_np.ndarray) -> tuple[_np.ndarray, _np.ndarray]:
     """
-           |                           |
-          (b)                         (b)
-           |            QR             |
-    --(a)--⬜--(c)--    ---->    --(a)--▷--(d)--⬜--(c)--
-           :                           :       :
-           W                           A       S
+    .. code-block:: text
+        
+        .      |                           |
+              (b)                         (b)
+               |            QR             |
+        --(a)--⬜--(c)--    ---->    --(a)--▷--(d)--⬜--(c)--
+               :                           :       :
+               W                           A       S
     """
     *bonds, c = W.shape
     A, S = _nla.qr(W.reshape(-1, c))
@@ -567,12 +583,14 @@ def _QR(W:_np.ndarray) -> tuple[_np.ndarray, _np.ndarray]:
 
 def _LU(W:_np.ndarray) -> tuple[_np.ndarray, _np.ndarray]:
     """
-                   |                       |         
-                  (b)                     (b)        
-                   |           QR          |         
-    --(a)--⬜--(d)--⨞--(c)--   <---  --(a)--⬜--(c)--    
-                   :                       :
-           S       A                       W
+    .. code-block:: text
+    
+        .              |                       |         
+                      (b)                     (b)        
+                       |           QR          |         
+        --(a)--⬜--(d)--⨞--(c)--   <---  --(a)--⬜--(c)--    
+                       :                       :
+               S       A                       W
     """
     a, *bonds = W.shape
     A, S = _nla.qr(W.reshape(a, -1).T)
@@ -581,11 +599,13 @@ def _LU(W:_np.ndarray) -> tuple[_np.ndarray, _np.ndarray]:
 
 def shift_orthogonal_center(Ws, current_llim, current_rlim, target_llim, target_rlim) -> tuple[_np.ndarray, _np.ndarray]:
     """
-    cur_llim --> <-- cur_rlim       tar_llim --> <-- tar_rlim
-        |       |       |       |       |       |       |
-    ----▷-------⬜-------⨞-------⨞--------⨞-------⬜-------⨞-----
-        :       :       :       :       :       :       :
-       Ws[0]   Ws[1]   Ws[2]   Ws[3]   Ws[4]   Ws[5]   Ws[6]
+    .. code-block:: text
+    
+        cur_llim --> <-- cur_rlim       tar_llim --> <-- tar_rlim
+            |       |       |       |       |       |       |
+        ----▷-------⬜-------⨞-------⨞--------⨞-------⬜-------⨞-----
+            :       :       :       :       :       :       :
+           Ws[0]   Ws[1]   Ws[2]   Ws[3]   Ws[4]   Ws[5]   Ws[6]
     """
     
     for i in range(current_llim, target_llim, 1):
@@ -615,12 +635,14 @@ def _left2right_QR(Ws) -> list[_np.ndarray]:
 
 def _right2left_SVD_step(W:_np.ndarray, Dc:int, eps:float) -> tuple[_np.ndarray, _np.ndarray, _np.ndarray]:
     """
-                           |                       |
-                          (b)                     (b)
-                           |          SVD          |
-    --(a)--▷--(d)--◇--(e)--⨞--(c)--  <----  --(a)--⬜--(c)--
-                           :                       : 
-           U       S       B                       W
+    .. code-block:: text
+    
+        .                      |                       |
+                              (b)                     (b)
+                               |          SVD          |
+        --(a)--▷--(d)--◇--(e)--⨞--(c)--  <----  --(a)--⬜--(c)--
+                               :                       : 
+               U       S       B                       W
     """
     a, *bonds = W.shape
     W = W.reshape(a, -1)
@@ -630,12 +652,15 @@ def _right2left_SVD_step(W:_np.ndarray, Dc:int, eps:float) -> tuple[_np.ndarray,
 
 def _SVD_constract_right(W:_np.ndarray, u:_np.ndarray, s:_np.ndarray)->_np.ndarray:
     """
-           |                                      |
-          (b)                                    (b)
-           |                                      |
-    --(a)--▷--(c)--▷--(d)--◇--(e)  ---->   --(a)--⬜--(e)--
-           :                                      :  
-           W       u       s                      W
+    .. code-block:: text
+    
+        .      |                                      |
+              (b)                                    (b)
+               |                                      |
+        --(a)--▷--(c)--▷--(d)--◇--(e)  ---->   --(a)--⬜--(e)--
+               :                                      :  
+               W       u       s                      W
+
     >>> tc.einsum("abc,cd,de->abe", A, U, S)
     """
     *bonds, c = W.shape

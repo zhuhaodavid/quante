@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-24 22:18:53
+# @Last Modified time: 2024-10-31 19:30:25
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -43,15 +43,16 @@ T = TypeVar('T')
 class TensorTrain:
     def __init__(self, Ws: list[tc.Tensor], Ss: list[tc.Tensor] = None, llim: int = None, rlim: int = None, lognm: float = None, L=None) -> None:
         """
-        ```
-        :        |      |      |      |      |      |      |
-        :   -----▷------▷------⬜------⬜------⬜------⨞------⨞-----
-        :      Ws[0]  Ws[1]  Ws[2]  Ws[3]  Ws[4]  Ws[5]  Ws[6]
-        :   ∘       ∘       ∘      ∘       ∘      ∘      ∘      ∘
-        : Ss[0]  Ss[1]   Ss[2]   Ss[3]  Ss[4]  Ss[5]  Ss[6]  Ss[7]
-        :                      ↑             ↑
-        :                   llim=2         rlim=4
-        ```
+        .. code-block:: text
+            
+            =>       |      |      |      |      |      |      |
+                —————▷——————▷——————◻——————◻——————◻——————⨞——————⨞—————
+                   Ws[0]  Ws[1]  Ws[2]  Ws[3]  Ws[4]  Ws[5]  Ws[6]
+                ∘       ∘       ∘      ∘       ∘      ∘      ∘      ∘
+              Ss[0]  Ss[1]   Ss[2]   Ss[3]  Ss[4]  Ss[5]  Ss[6]  Ss[7]
+                                 ↑             ↑
+                              llim=2         rlim=4
+        
         无论是 MPO 还是 MPS 都遵从这个格式
         对于标准的正则形式，llim=-1, rlim=1
         """
@@ -121,6 +122,9 @@ class TensorTrain:
         """乘以数，为了效率，不复制张量！！！
         
         #!!! 因此改变 data 的值会影响原始张量
+        
+        示例:
+        --------
         >>> 𝜓1 = tn.MPS.random(4, linkdims=3, dtype=tc.float64)
         >>> print(𝜓1.data[0][0,1,0])
         >>> 𝜓2 = 2 * 𝜓1
@@ -273,13 +277,13 @@ class TensorTrain:
 
     def orthogonalize_(self, j: int, normalize=True):
         """
-        ```
-        :       |      |      |      |      |      |      |
-        :  -----▷------▷------▷------⬜------⨞------⨞------⨞-----
-        :     Ws[0]  Ws[1]  Ws[2]  Ws[3]  Ws[4]  Ws[5]  Ws[6]
-        :                            ↑
-        :                     llim = rlim = 3
-        ```
+        .. code-block:: text
+
+          .      |      |      |      |      |      |      |
+            -----▷------▷------▷------◻------⨞------⨞------⨞-----
+               Ws[0]  Ws[1]  Ws[2]  Ws[3]  Ws[4]  Ws[5]  Ws[6]
+                                      ↑
+                               llim = rlim = 3
         """
         self.move_llim_(j)
         self.move_rlim_(j)
@@ -290,26 +294,30 @@ class TensorTrain:
 
     def canonicalize_(self, trunc_para:tuple[int,float,float]=(None,None,None), qrnormalize=False):
         """正则化，即：
-        ```
-        :             |      |      |      |
-        :       ------⨞------⨞------⨞------⨞-----
-        :           Ws[0]  Ws[1]  Ws[2]  Ws[3]
-        :         ∘       ∘       ∘      ∘       ∘
-        :       Ss[0]  Ss[1]   Ss[2]   Ss[3]  Ss[4]
-        : 
-        : llim = rlim = None
-        ```
+        
+        .. code-block:: text
+        
+            .     |      |      |      |
+            ------⨞------⨞------⨞------⨞-----
+                Ws[0]  Ws[1]  Ws[2]  Ws[3]
+              ∘       ∘       ∘      ∘       ∘
+            Ss[0]  Ss[1]   Ss[2]   Ss[3]  Ss[4]
+            
+            llim = rlim = None
+
         一旦进入这个形式不能再移动正交中心
         
         前从左到右 qr，再从右到左 svd
         
-        - trunc_para 是一个包含三个数的元组，分别表示:
-            - chi_max: int, 截断的最大值
-            - svd_min: float, SVD 的最小值
-            - trunc_cut: float, 截断的阈值
+        trunc_para 是一个包含三个数的元组，分别表示:
         
+        :chi_max: int, 截断的最大值
+        
+        :svd_min: float, SVD 的最小值
+        
+        :trunc_cut: float, 截断的阈值
+    
         因此 svd 过程中 Ss 的模自动是 1.0
-        
         """
         self.data, self.Ss, lognm, trunc_err = tf.canonicalize(self.data, trunc_para, qrnormalize)
         self.llim = self.rlim = None
@@ -331,25 +339,38 @@ class TensorTrain:
         unitary_gate=False,
     ):
         """
-        - pos 指两体门左侧的位置  |   |                    |   |
-        - dir 指的是作用后得到 ---▷---⬜--- (right) 还是 ---⬜---⨞---- (left)
-        - updateS 表示是否保存过程的中的奇异谱
-        - trunc_para 是一个包含三个数的元组，分别表示:
-            - chi_max: int, 截断的最大值
-            - svd_min: float, SVD 的最小值
-            - trunc_cut: float, 截断的阈值
-        ```
-        :           |         |               
-        :          (c)       (f)                  
-        :           |         |                
-        :           ├-gate2_b-┤              
-        :           |         |                      |         |        
-        :          (b)       (e)                    (c)       (f)       
-        :           |         |                      |         |            
-        :    --(a)--⨞---(d)---⨞--(g)--  -->   --(a)--⨞---(d)---⨞--(g)-- 
-        ```
+        - pos 指两体门左侧的位置
+                               
+        - dir 指的是作用后得到
         
-        Example:
+            .. code-block:: text
+            
+                .  |   |                   |   |
+                ---▷---◻--- (right) 还是 ---◻---⨞---- (left)
+        
+        - updateS 表示是否保存过程的中的奇异谱
+        
+        - trunc_para 是一个包含三个数的元组，分别表示:
+        
+            - chi_max: int, 截断的最大值
+            
+            - svd_min: float, SVD 的最小值
+            
+            - trunc_cut: float, 截断的阈值
+        
+        .. code-block:: text
+        
+            .      |         |               
+                  (c)       (f)                  
+                   |         |                
+                   ├-gate2_b-┤              
+                   |         |                      |         |        
+                  (b)       (e)                    (c)       (f)       
+                   |         |                      |         |            
+            --(a)--⨞---(d)---⨞--(g)--  -->   --(a)--⨞---(d)---⨞--(g)-- 
+        
+        示例:
+        --------
         >>> gates = ham.trotter_gates(L, tau=tau, order='2', evolve_type='time', pauli=False)
         >>> U_tau = MPO.eye(L)
         >>> for pos_cur, gate in zip(*gates):
@@ -425,17 +446,21 @@ class TensorTrain:
         
         可以使用的方法 method 包括："qr", "svd", "eig"
         
-        - trunc_para 是一个包含三个数的元组，分别表示:
-            - chi_max: int, 截断的最大值
-            - svd_min: float, SVD 的最小值
-            - trunc_cut: float, 截断的阈值
+        trunc_para 是一个包含三个数的元组，分别表示:
+    
+        :chi_max: int, 截断的最大值
+        
+        :svd_min: float, SVD 的最小值
+        
+        :trunc_cut: float, 截断的阈值
             
-        - direction 指的是作用后得到:                                     
-            ```
-            :right               left                center
-            :       │   │               │   │               │   │   
-            :    ---▷---⬜---         ---⬜---⨞---         ---⬜---⬜---
-            ```
+        - direction 指的是作用后得到:
+                                
+            .. code-block:: text
+            
+                right               left                center
+                    │   │               │   │               │   │   
+                 ---▷---◻---         ---◻---⨞---         ---◻---◻---
         """
         # todo 正则形式如何更新
         if self.is_canonical_form():
@@ -548,44 +573,48 @@ class TensorTrain:
         """
         警告：W 不应该包含 S
         
-        - trunc_para 是一个包含三个数的元组，分别表示:
-            - chi_max: int, 截断的最大值
-            - svd_min: float, SVD 的最小值
-            - trunc_cut: float, 截断的阈值
-        eig method:
-        ```
-        :                       |         |
-        :                      (c)       (f)
-        :                       |         |
-        :   W      =            ├-gate2_b-┤
-        :                       |         | 
-        :                      (b)       (e)
-        :                       |         |                  
-        :                --(a)--⨞---(d)---⨞--(g)--  
-        :             
-        :                       |         |
-        :                      (c)       (f)
-        :                       |         |
-        :   theta  =            ├-gate2_b-┤
-        :                       |         |                       |     |     
-        :                      (b)       (e)                     (c)   (f)  
-        :                       |         |                       |     |   
-        :             --◇--(a)--⨞---(d)---⨞--(g)--  ----> --(a)---▷--◇--⨞---(g)-- 
-        :              S1                                        W1  S  W2
-        :   
-        :   S1 * W = theta
-        :                                                             |    
-        :                                                            (c)   
-        :                                                             |    
-        :   S1 * W * W2.dagger()  =  theta * W2.dagger()  =   --(a)---▷--◇-
-        :                                                            W1  S
-        :                                                            
-        :                                                              |    
-        :                                                             (c)   
-        :                                                              |    
-        :   W * W2.dagger()  =  S1^-1 * theta * W2.dagger()  =   --◇---▷--◇-
-        :                                                       S1^-1  W1  S
-        ```
+        trunc_para 是一个包含三个数的元组，分别表示:
+        
+        :chi_max: int, 截断的最大值
+            
+        :svd_min: float, SVD 的最小值
+            
+        :trunc_cut: float, 截断的阈值
+        
+        .. code-block:: text
+        
+            eig method
+                                |         |
+                               (c)       (f)
+                                |         |
+            W      =            ├-gate2_b-┤
+                                |         | 
+                               (b)       (e)
+                                |         |                  
+                         --(a)--⨞---(d)---⨞--(g)--  
+
+                                |         |
+                               (c)       (f)
+                                |         |
+            theta  =            ├-gate2_b-┤
+                                |         |                       |     |     
+                               (b)       (e)                     (c)   (f)  
+                                |         |                       |     |   
+                      --◇--(a)--⨞---(d)---⨞--(g)--  ----> --(a)---▷--◇--⨞---(g)-- 
+                       S1                                        W1  S  W2
+
+            S1 * W = theta
+                                                                      |    
+                                                                     (c)   
+                                                                      |    
+            S1 * W * W2.dagger()  =  theta * W2.dagger()  =   --(a)---▷--◇-
+                                                                     W1  S
+
+                                                                       |    
+                                                                      (c)   
+                                                                       |    
+            W * W2.dagger()  =  S1^-1 * theta * W2.dagger()  =   --◇---▷--◇-
+                                                                S1^-1  W1  S
         """
         next_pos = pos + 1 if self.length != tc.inf else (pos + 1) % len(self.data)
         theta = self.Ss[pos].reshape(-1, *[1]*(W.ndim-1)) * W
@@ -631,70 +660,68 @@ class TensorTrain:
             ) -> T:
         """
         density matrix method
+        
         - trunc_para 是一个包含三个数的元组，分别表示:
+        
             - chi_max: int, 截断的最大值
+            
             - svd_min: float, SVD 的最小值
+            
             - trunc_cut: float, 截断的阈值
             
         Notes:
         --------------------
-        收缩如下网络：
-        ```
-        :      |   |       |
-        :  Ws  |---|--...--|
-        :  ψ   └---┴--...--┘
-        ```
+        .. code-block:: text
         
-        利用 density matrix 的方法进行收缩：
-
-        1). 首先得到最右侧的约化密度矩阵，裁剪：
-        ```
-        :        ╭╮  ╭╮    ╭╮  |         |
-        :    Ws  |---|--...|---|         ▽ V1
-        :    ψ   └---┴--...┴---┘         |
-        :    ψ†  ┌---┬--...┬---┐  -->    ◇        记录：  -⨞-
-        :    Ws† |---|--...|---|         |                V1
-        :        ╰╯  ╰╯    ╰╯  |         △
-        :                                |
-        ```
+            收缩如下网络：
+                    |   |       |
+                Ws  |---|--...--|
+                ψ   └---┴--...--┘
         
-        2). 计算右侧第二个位置约化密度矩阵，裁剪：
-        ```
-        :                      ┌-╨-┐
-        :        ╭╮  ╭╮    ╭╮  |   △ V1      ║
-        :    Ws  |---|--...|---|---|         ▽ V2
-        :    ψ   └---┴--...┴---┴---┘         |              |
-        :    ψ†  ┌---┬--...┬---┬---┐  -->    ◇       记录： -⨞--⨞-
-        :    Ws† |---|--...|---|---|         |              V2 V1
-        :        ╰╯  ╰╯    ╰╯  |   ▽         △
-        :                      └-╥-┘         ║
-        ```
-        3). 计算右侧第二个位置约化密度矩阵，裁剪：
-        ```
-        :                  ┌--╨--┐
-        :                  │     △
-        :                  │   ┌-╨-┐
-        :        ╭╮  ╭╮    │   |   △         ║
-        :    Ws  |---│--...|---┼---|         ▽ V3
-        :    ψ   └---┴--...┴---┴---┘         |             |  |
-        :    ψ†  ┌---┬--...┬---┬---┐  -->    ◇      记录： -⨞--⨞--⨞-
-        :    Ws† |---|--...|---|---|         |             V3 V2 V1
-        :        ╰╯  ╰╯    |   |   ▽         △
-        :                  |   └-╥-┘         ║
-        :                  |     ▽
-        :                  └--╥--┘
-        ```
-        ... 依次循环
+            利用 density matrix 的方法进行收缩：
 
-        4). 最后一个：
-        ```
-        :        |     |
-        :        |     △
-        :        |   ┌-╨  ...                            |  |       |  |
-        :        |   |                             记录： ⬜--⨞- ... -⨞--⨞-
-        :    Ws  |---|--- ...         |
-        :    ψ   └---┴--- ...   ->    ⬜--
-        ```
+            1). 首先得到最右侧的约化密度矩阵，裁剪：
+                    ╭╮  ╭╮    ╭╮  |         |
+                Ws  |---|--...|---|         ▽ V1
+                ψ   └---┴--...┴---┘         |
+                ψ†  ┌---┬--...┬---┐  -->    ◇        记录：  -⨞-
+                Ws† |---|--...|---|         |                V1
+                    ╰╯  ╰╯    ╰╯  |         △
+                                            |
+            
+            2). 计算右侧第二个位置约化密度矩阵，裁剪：
+                                   ┌-╨-┐
+                     ╭╮  ╭╮    ╭╮  |   △ V1      ║
+                 Ws  |---|--...|---|---|         ▽ V2
+                 ψ   └---┴--...┴---┴---┘         |              |
+                 ψ†  ┌---┬--...┬---┬---┐  -->    ◇       记录： -⨞--⨞-
+                 Ws† |---|--...|---|---|         |              V2 V1
+                     ╰╯  ╰╯    ╰╯  |   ▽         △
+                                   └-╥-┘         ║
+            
+            3). 计算右侧第二个位置约化密度矩阵，裁剪：
+                              ┌--╨--┐
+                              │     △
+                              │   ┌-╨-┐
+                    ╭╮  ╭╮    │   |   △         ║
+                Ws  |---│--...|---┼---|         ▽ V3
+                ψ   └---┴--...┴---┴---┘         |             |  |
+                ψ†  ┌---┬--...┬---┬---┐  -->    ◇      记录： -⨞--⨞--⨞-
+                Ws† |---|--...|---|---|         |             V3 V2 V1
+                    ╰╯  ╰╯    |   |   ▽         △
+                              |   └-╥-┘         ║
+                              |     ▽
+                              └--╥--┘
+            
+            ... 依次循环
+
+            4). 最后一个：
+                    |     |
+                    |     △
+                    |   ┌-╨  ...                            |  |       |  |
+                    |   |                             记录： ◻--⨞- ... -⨞--⨞-
+                Ws  |---|--- ...         |
+                ψ   └---┴--- ...   ->    ◻--
         """
         n = len(Ws_mpo.data)
         
@@ -916,20 +943,22 @@ class MPS(TensorTrain):
         """
         局域算符的观测值：
         
-        ```
-        :  -----▷------▷------⬜------⨞------⨞------⨞----- ψ.conj()
-        :       |      |      |      |      |      |
-        :       |      |      ⬜      |      |      |
-        :       |      |      |      |      |      |
-        :  -----▷------▷------⬜------⨞------⨞------⨞----- ψ
-        :                     ↑
-        :                    pos
-        ```
+        .. code-block:: text
+        
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ.conj()
+                 |      |      |      |      |      |
+                 |      |      ◻      |      |      |
+                 |      |      |      |      |      |
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ
+                               ↑
+                              pos
+        
         移动正交中心到 pos 位置，然后将 operator 作用在 pos 位置上
         
         如果不是局域的测量，使用单体门作用后 inner 的方法计算
         
-        Example:
+        示例:
+        --------
         >>> vec.measure("z", i)
         >>> vec.measure("zz", [i,i+1])
         """
@@ -1215,7 +1244,8 @@ class MPO(TensorTrain):
         todo: eig pertube mixer 
         todo: dmrg 求第一激发态
         
-        Example:
+        示例:
+        --------
         >>> from quante.torch_utils import tn
         >>> L = 100
         >>> ham = qt.generate.operas.heisenberg_operator(L, j=(1, 1, 1))
@@ -1317,24 +1347,25 @@ class MPO(TensorTrain):
         
         参数的含义如下：
         
-        ```
-        init: qtc.tn.MPS,  # 初始态
-        t: Number,  # 总时间
-        time_step: Number,  # 时间步长
-        chi_max: list[int],  # MPS 中最大的 bond 维度
-        trunc_cut: list[float],  # MPS 中奇异谱最小值
-        *,
-        backend='default',  # 计算有效哈密顿量基态的方法，"default", "expm_multiply", "lanczos"
-        svd_alg='svd',  #  update MPS 中张量的方法
-        normalize=True,  # 是否归一化
-        reverse_step=True, # 时间演化必须是 True，虚时演化 False 回到 DMRG
-        time_start=0.0, # 起始时间
-        nsite=2,  # nsite = 1 不改变 bond dimension, nsite = 2 可以改变 bond dimension
-        order=2,  # 时间演化的阶数
-        outputlevel=1,  # 输出等级，0 表示不输出中间信息
-        ```
+        .. code-block:: python
         
-        Example:
+            init: qtc.tn.MPS,  # 初始态
+            t: Number,  # 总时间
+            time_step: Number,  # 时间步长
+            chi_max: list[int],  # MPS 中最大的 bond 维度
+            trunc_cut: list[float],  # MPS 中奇异谱最小值
+            *,
+            backend='default',  # 计算有效哈密顿量基态的方法，"default", "expm_multiply", "lanczos"
+            svd_alg='svd',  #  update MPS 中张量的方法
+            normalize=True,  # 是否归一化
+            reverse_step=True, # 时间演化必须是 True，虚时演化 False 回到 DMRG
+            time_start=0.0, # 起始时间
+            nsite=2,  # nsite = 1 不改变 bond dimension, nsite = 2 可以改变 bond dimension
+            order=2,  # 时间演化的阶数
+            outputlevel=1,  # 输出等级，0 表示不输出中间信息
+        
+        示例:
+        --------
         >>> L = 100
         >>> ham = qt.generate.operas.heisenberg_operator(L, j=(1, 1, 1))
         >>> ham = ham.expandxy(pauli=False)
@@ -1434,15 +1465,15 @@ class ProjMPO:
 
         ProjMPO `PH` 表示的网络图示（`PH.set_position_(psi, 3)`）：
 
-        ```
-        : o--o--o-      -o--o--o--o--o--o <psi|
-        : |  |  |  |  |  |  |  |  |  |  |
-        : o--o--o--o--o--o--o--o--o--o--o H
-        : |  |  |  |  |  |  |  |  |  |  |
-        : o--o--o-      -o--o--o--o--o--o |psi>
-        :       ↑        ↑
-        :    lpos=2    rpos=5
-        ```
+        .. code-block:: text
+        
+            o--o--o-      -o--o--o--o--o--o <psi|
+            |  |  |  |  |  |  |  |  |  |  |
+            o--o--o--o--o--o--o--o--o--o--o H
+            |  |  |  |  |  |  |  |  |  |  |
+            o--o--o-      -o--o--o--o--o--o |psi>
+                  ↑        ↑
+               lpos=2    rpos=5
         """
         self.lpos:int = -1
         self.rpos:int = len(H.data)
@@ -1664,16 +1695,15 @@ class ProjMPO:
         """
         优化 position 位置的张量:
         参数如下：
-        ```
-        psi:MPS,  # 当前态
-        position:int,   # 优化 postion 位置的张量
-        direction:str,   # 方向 'left' 或 'right'
-        svd_alg:str,    # update MPS 中张量的方法
-        chi_max:int,  # MPS 中最大的 bond 维度
-        svd_min:float,  # MPS 中奇异谱最小值
-        backend:str,   # 计算有效哈密顿量基态的方法，"default", "larpack", "lanczos"
-        max_trunc_err:float  # 最大的误差
-        ```
+        .. code-block:: python
+            psi:MPS,  # 当前态
+            position:int,   # 优化 postion 位置的张量
+            direction:str,   # 方向 'left' 或 'right'
+            svd_alg:str,    # update MPS 中张量的方法
+            chi_max:int,  # MPS 中最大的 bond 维度
+            svd_min:float,  # MPS 中奇异谱最小值
+            backend:str,   # 计算有效哈密顿量基态的方法，"default", "larpack", "lanczos"
+            max_trunc_err:float  # 最大的误差
         """
         # prepare_update_local
         self.set_position_(psi, position)

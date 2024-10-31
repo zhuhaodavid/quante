@@ -2,30 +2,8 @@
 # @Author: hzhu
 # @Date:   2024-08-19 12:52:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-14 22:48:42
-
-"""
-生成算符（`Oper`类）
-- 算符的加减、乘法、幂运算, 以及将 x,y 用 +,- 展开(`expandxy`)
-- 转化为 quspin 接受的格式(`quspin_form`)
-- 算符生成矩阵(`to_matrix`)、MPO(`automata`)
-- 最近邻相互作用的二体门分解(`gate2_decomposition`, `trotter_suzuki_decomposition`)
-- 其他方便的函数(`copy`, `each_term`, `sort_posn`)
-
-算符的数据结构：
-```python
-    data = {
-        operator_1: {position1: coefficient1, 
-                     position2: coefficient2,
-                     ...},
-        operator_2: {position1: coefficient3, 
-                     position2: coefficient4,
-                     ...}, 
-        ...
-    }
-```
-"""
-        
+# @Last Modified time: 2024-10-31 18:55:48
+   
 #!! 包里的其他文件不要 import 这个 operas.py !!!!
 
 import numpy as _np
@@ -46,21 +24,32 @@ class Oper:
     算符类: 该类用于表示和操作量子系统的算符。
     
     提供最重要的功能包括:
-    - 算符的加减、乘法、幂运算, 以及将 x,y 用 +,- 展开(`expandxy`)
-    - 转化为 quspin 接受的格式(`quspin_form`)
-    - 算符生成矩阵(`to_matrix`)、MPO(`automata`)
-    - 最近邻相互作用的二体门分解(`gate2_decomposition`, `suzuki_trotter_decomposition`)
-    - 其他方便的函数(`copy`, `each_term`)
+    
+    - 算符的加减、乘法、幂运算, 以及将 x,y 用 +,- 展开 (`expandxy`)
+
+    - 转化为 quspin 接受的格式 (`quspin_form`)
+
+    - 算符生成矩阵 (`to_matrix`) 、MPO (`automata`)
+
+    - 最近邻相互作用的二体门分解 (`gate2_decomposition`,  `suzuki_trotter_decomposition`)
+
+    - 其他方便的函数 (`copy`, `each_term`)
+
+    算符的数据结构：
+    
+    .. code-block:: python
+    
+        data = {
+            operator_1: {position1: coefficient1, 
+                        position2: coefficient2,
+                        ...},
+            operator_2: {position1: coefficient3, 
+                        position2: coefficient4,
+                        ...}, 
+            ...
+        }
     """
     def __init__(self, data:OperDataType, type:str = "s") -> None:  # todo 处理费米子系统
-        """
-        Attributes
-        ----------
-        data : dict
-            存储算符的字典，键为算符名称，值为位置和系数的字典。
-        type : str
-            算符的类型，可以是 "s"（标量）或 "f"（费米子）。
-        """
         self.data = data
         self.type = type
         
@@ -98,7 +87,8 @@ class Oper:
     def each_term(self) -> Generator[tuple[str, tuple[int], Union[float, complex]], None, None]:
         """
         
-        Example:
+        示例:
+        --------
         >>> ham = op.heisenberg_operator(L=10)
         >>> for opnm, posn, coef in ham.each_term():
         >>>    print(opnm, posn, coef)
@@ -240,7 +230,8 @@ class Oper:
         
         展开之后，应当只包含 `p`, `m`, `i`, `Z` 这三种算符
         
-        Example:
+        示例:
+        --------
         >>> ham = op.heisenberg_operator(L=4)
         >>> ham = ham.expandxy()
         >>> ham.show_string_form()
@@ -297,7 +288,8 @@ class Oper:
         """
         返回 quspin 可以接受的格式
         
-        Example
+        示例:
+        --------
         >>> from quspin.operators import hamiltonian
         >>> from quspin.basis import spin_basis_1d
         >>> ham = sum(xx(i,i+1) + yy(i,i+1) for i in range(5))
@@ -319,7 +311,8 @@ class Oper:
         
         #!! 注意：这个函数不检查哈密顿量是否有对称性。如果哈密顿量没有对称性，那么这个函数会返回错误的结果，而不会报错。
         
-        Example:
+        示例:
+        --------
         >>> L = 10
         >>> basis = qt.generate.basis.spin_basis(L=L, Nup=5)
         >>> ham = qt.generate.operas.heisenberg_operator(L=L)
@@ -327,14 +320,16 @@ class Oper:
         >>> print(mat)
         
         其他生成矩阵的方法:
-        -----------------
+        ---------------------
         时间对比参考 example/exact_diagonalization.ipynb
         
         对于**没有对称性**的基矢，automata 收缩是最快的方法：
+        
         >>> from quante.tensor.automata import get_sparse_matrix
         >>> mat = get_sparse_matrix(L, *ham.split_data(), pauli=pauli, usecuda=True)
         
         对于**没有对称性**的基矢，也可以使用 `to_matrix_cuda` 来实现：
+        
         >>> from quante.torch_utils.symmetry import to_matrix_cuda
         >>> eachterm, hascomplex = ham.expandxy(False)._convert_to_quick_form()
         >>> mat = to_matrix_cuda(basis, eachterm, hascomplex)
@@ -342,6 +337,7 @@ class Oper:
         有对称性的,也可以这么使用,但是加速并不明显.
         
         如果反复生成也可以将 to_matrix 拆开来：
+        
         >>> eachterm, hascomplex = ham.expandxy(pauli=pauli)._convert_to_quick_form()
         >>> mat = basis._sparse_matrix(eachterm, hascomplex)
         
@@ -410,7 +406,8 @@ class Oper:
         """
         生成算符的 mpo 形式
 
-        Example:
+        示例:
+        --------
         >>> L = 10
         >>> ham = op.heisenberg_operator(L)
         >>> basis = (L, pauli=False)
@@ -420,12 +417,16 @@ class Oper:
         ----------
         L : int
             系统的长度，即量子比特的数量。
+            
         pauli : bool, optional
             是否使用 Pauli 矩阵作为局部矩阵。默认为 False，即使用常规矩阵。
+            
         d : int, optional
             局部矩阵的维度。默认为 2，即二维矩阵。
+            
         gen_matrix : Optional[Callable[[str], _np.ndarray]], optional
             用于生成局部矩阵的函数。如果提供，该函数将根据字符串参数生成对应的局部矩阵。默认为 None，即使用默认的局部矩阵生成方式。
+            
         dtype : Type[_np.complex128], optional
             局部矩阵的数据类型。默认为 _np.complex128，即复数类型。
         """
@@ -447,28 +448,31 @@ class Oper:
     def gate2_decomposition(self, L:int, tau:float, form="ladder", pauli:bool=True) -> tuple[list[int],list[_np.ndarray]]:
         r"""
         用最简单的方法（ladder/brick）将哈密顿量的演化拆分成一些列局域两体门：
-        ```
-        : ladder:
-        :    |    |    |    |  ╭-┴----┴-╮
-        :    |    |    |    |  ╰-┬----┬-╯
-        :    |    |    |  ╭-┴----┴-╮  |  
-        :    |    |    |  ╰-┬----┬-╯  |  
-        :    |    |  ╭-┴----┴-╮  |    |  
-        :    |    |  ╰-┬----┬-╯  |    |  
-        :    |  ╭-┴----┴-╮  |    |    |  
-        :    |  ╰-┬----┬-╯  |    |    |  
-        :  ╭-┴----┴-╮  |    |    |    |  
-        :  ╰-┬----┬-╯  |    |    |    |  
-        : 
-        : brick:
-        :    |  ╭-┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮  |   
-        :    |  ╰-┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯  |   
-        : ╭--┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮ 
-        : ╰--┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯ 
-        ```
         
-        Example:
-        ---------
+        .. code-block:: text
+        
+            ladder:
+               |    |    |    |  ╭-┴----┴-╮
+               |    |    |    |  ╰-┬----┬-╯
+               |    |    |  ╭-┴----┴-╮  |  
+               |    |    |  ╰-┬----┬-╯  |  
+               |    |  ╭-┴----┴-╮  |    |  
+               |    |  ╰-┬----┬-╯  |    |  
+               |  ╭-┴----┴-╮  |    |    |  
+               |  ╰-┬----┬-╯  |    |    |  
+             ╭-┴----┴-╮  |    |    |    |  
+             ╰-┬----┬-╯  |    |    |    |  
+
+        .. code-block:: text
+        
+            brick:
+               |  ╭-┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮  |   
+               |  ╰-┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯  |   
+            ╭--┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮ 
+            ╰--┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯ 
+        
+        示例:
+        --------
         >>> import quante as qt
         >>> import numpy as np
         >>> import torch as tc
@@ -525,23 +529,32 @@ class Oper:
         使用 Trotter-Suzuki 分解将给定的哈密顿量分解为一系列局部操作，并按照给定的时间步长 tau 进行演化。
         
         NOTE:
+        ----------
             该函数只支持最近邻相互作用的哈密顿量。
 
         Args:
-            L (int): 系统的长度，即量子比特的数量。
-            tau (float): 时间步长，用于控制演化的速度。
-            order (str): Trotter 分解的阶数，决定了分解的精度。``1, 2, 4, '4_opt'``
-                         Order ``1`` approximation is simply :math:`e^A a^B`.
-                         Order ``2`` is the "leapfrog" `e^{A/2} e^B e^{A/2}`.
-                         Order ``4`` is the fourth-order from :cite:`suzuki1991`
-            evolve_type (str): 演化的类型，可以是 "time" 或 "temporal"
-            N_step (int): 演化的总步数，总演化时间为 N_step * tau。
-            pauli (bool): 是否使用 Pauli 矩阵作为局部矩阵。默认为 True，即使用 Pauli 矩阵。
+        ----------
+        L (int): 系统的长度，即量子比特的数量。
+        
+        tau (float): 时间步长，用于控制演化的速度。
+        
+        order (str): Trotter 分解的阶数，决定了分解的精度。``1, 2, 4, '4_opt'``
+                        Order ``1`` approximation is simply :math:`e^A a^B`.
+                        Order ``2`` is the "leapfrog" `e^{A/2} e^B e^{A/2}`.
+                        Order ``4`` is the fourth-order from `[suzuki1991] <https://doi.org/10.1063/1.529425>`_
+                        
+        evolve_type (str): 演化的类型，可以是 "time" 或 "temporal"
+        
+        N_step (int): 演化的总步数，总演化时间为 N_step * tau。
+        
+        pauli (bool): 是否使用 Pauli 矩阵作为局部矩阵。默认为 True，即使用 Pauli 矩阵。
 
         Returns:
-            tuple[list[int], list[_np.ndarray]] : 位置列表, 对应的局部操作
+        ----------
+        tuple[list[int], list[_np.ndarray]] : 位置列表, 对应的局部操作
         
-        Example:
+        示例:
+        --------
         >>> gates = ham.trotter_gates(L, tau=tau, order='2', evolve_type='time', pauli=False)
         >>> U_tau = MPO.eye(L)
         >>> for pos_cur, gate in zip(*gates):
@@ -617,8 +630,7 @@ class Oper:
         return site_positions, local_hamiltonians
 
     def local(self, site_position:int, L:int, pauli:bool=True) -> _np.ndarray:
-        """根据 Oper 的实例得到作用在 position 和 position+1 这两个格点上的局域哈密顿量
-        """
+        """根据 Oper 的实例得到作用在 position 和 position+1 这两个格点上的局域哈密顿量"""
         assert site_position < L-1, "site_position should be less than L-1"
         from .matrix import pauli_matrix
         c_one = 2. if pauli else 1.
@@ -797,10 +809,12 @@ def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> Oper:
     生成 heisenberg 模型的哈密顿量，返回一个 'Oper' 的实例
     
     这个实例可以 automata, local_matrix, to_matrix 等方法
+
+    .. math::
+        \sum_{i=1}^{N-1} j * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1} + s^z_i s^z_{i+1}) + \sum_i^N h * s^z_i
     
-    \sum_{i=1}^{N-1} j * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1} + s^z_i s^z_{i+1}) + \sum_i^N h * s^z_i
-    
-    Example:
+    示例:
+    --------
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=1.0, h=0.0) # heisenberg model
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(1.0, 1.0, 0.0), h=0.0)  # xy model
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(0.0, 0.0, 1.0), h=(1.0, 0.0, 0.0))  # ising model

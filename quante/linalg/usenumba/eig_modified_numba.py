@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-11-29 10:54:30
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-12 14:23:17
+# @Last Modified time: 2024-10-31 19:22:13
 
 import numpy as _np
 from .numba_settings import njit, prange, pnjit
@@ -58,7 +58,6 @@ def compute_blocks(ix, jx, d):  # pragma: no cover
 
     Examples
     --------
-
     >>> H = ham_hubbard_hardcore(4, sparse=True)
     >>> ix, jx = H.nonzero()
     >>> d = H.shape[0]
@@ -99,7 +98,7 @@ def subselect(A, p):  # pragma: no cover
 
         Examples
         --------
-    >>> A = _np.arange(25).reshape(5, 5)
+        >>> A = _np.arange(25).reshape(5, 5)
         >>> A
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
@@ -135,7 +134,7 @@ def subselect_set(A, B, p):  # pragma: no cover
     p : sequence of size dp
         The basis indices.
 
-    Examples
+    示例:
     --------
     >>> A = _np.zeros((5, 5))
     >>> B = _np.random.randn(3, 3)

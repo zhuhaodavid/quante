@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-30 22:03:01
+# @Last Modified time: 2024-10-31 18:55:02
 """
 生成矩阵：(`np.ndarray`)
 - `pauli_matrix`
@@ -77,7 +77,8 @@ def pauli_matrix(
     - `x2y3!5` -> `iixyi`
     - `xy!5` -> `iiixy+iixyi+ixyii+xyiii`
     
-    Example:
+    示例:
+    --------
     >>> op.pauli_matrix("x")
     >>> op.pauli_matrix("xx+yy")
     >>> op.pauli_matrix("xx+3*yy")
@@ -200,25 +201,40 @@ def random_matrix(dim, type="simple", seed=None):
     如果需要 njit 请使用内部的 _random_simple_matrix 等函数
     
     - type: 
+    
         - "simple" -> 每个矩阵元实数高斯分布
+        
         - "simple_real" -> 每个矩阵元实数高斯分布
+        
         - "GOE"/"symm" -> 实对称矩阵
+        
         - "GUE"/"herm" -> Hermite 矩阵
+        
         - "CUE"/"unit" -> 幺正矩阵
+        
         - "COE"/"orth" -> 正交矩阵(COE)
+        
         - "CRE" -> 正交矩阵(CRE)
+        
         - "positive" -> 正定矩阵
+        
         - "normal" -> 正规矩阵
+        
         - "noninv" -> 不可逆矩阵
+        
         - "realeig" -> 实本征值的矩阵
+        
         - "singular" -> 奇异矩阵
+        
         - "rho" -> 密度矩阵
+        
     
     矩阵（方阵）的分类：
-    ----------
+    -----------------------
     - **简单矩阵** (可以相似对角化)
         
        - **正规矩阵** (M.H @ M = M @ M.H,  可以幺正相似对角化)
+       
         （**幺正矩阵**、**厄密矩阵**、**对角矩阵**，但这三者没有包含关系）
         
        - **非正规矩阵** (可以相似对角化，但不可以幺正相似对角化)
@@ -227,11 +243,14 @@ def random_matrix(dim, type="simple", seed=None):
 
     注：
     - 本征值始终是存在的，无论是不是简单矩阵。
+    
     - 本征值为实数的矩阵可以是：不简单矩阵、非正规矩阵、厄密矩阵。
+    
     - 如果正规矩阵的本征值是实数，则该正规矩阵必定为厄密矩阵。
     
+    
     随机矩阵的分类：
-    --------
+    --------------------
     =========== ======================== ======================= ================== ===========
     ensemble    matrix class drawn from  measure                 invariant under    beta
     =========== ======================== ======================= ================== ===========
@@ -252,39 +271,65 @@ def random_matrix(dim, type="simple", seed=None):
     
     
     随机矩阵的概率性质：
-    --------
+    ---------------------
     - 简单矩阵（复数或实数）：    
+    
         - 以概率 1 可相似对角化;
+        
         - 以概率 1 不可酉相似对角化
-        - 概率 1 可逆
-    
-    - 正规矩阵（厄密矩阵，对称矩阵，幺正矩阵，实正交阵）：
-        - 必可以相似对角化
-        - 必可以酉相似对角化
-        - 概率 1 可逆
-    
-    - 非正规矩阵：
-        - 必可以相似对角化
-        - 概率 1 可逆
-    
-    - 不简单矩阵：
-        - 不可以相似对角化
-        - 只能相似到Jordan型上
-    
-    - 奇异矩阵：
-        - 不能被相似对角化（用来对角化的矩阵的逆矩阵矩阵元发散。）
-        - 不能被酉相似对角化
+        
         - 概率 1 可逆
         
+    
+    - 正规矩阵（厄密矩阵，对称矩阵，幺正矩阵，实正交阵）：
+    
+        - 必可以相似对角化
+        
+        - 必可以酉相似对角化
+        
+        - 概率 1 可逆
+        
+    
+    - 非正规矩阵：
+    
+        - 必可以相似对角化
+        
+        - 概率 1 可逆
+        
+    
+    - 不简单矩阵：
+    
+        - 不可以相似对角化
+        
+        - 只能相似到Jordan型上
+        
+    
+    - 奇异矩阵：
+    
+        - 不能被相似对角化（用来对角化的矩阵的逆矩阵矩阵元发散。）
+        
+        - 不能被酉相似对角化
+        
+        - 概率 1 可逆
+        
+        
     - 不可以逆矩阵：
+    
         - 必不可逆 或者 逆矩阵发散
+        
         - 以概率 1 可相似对角化
+        
         - 以概率 1 不可酉相似对角化
+        
     
     - 实本征值单阵
+    
         - 以概率 1 可相似对角化
+
         - 以概率 1 不可酉相似对角化
+
         - 以概率 1 可逆
+
         
     生成随机数的方法参见：https://numpy.org/doc/stable/reference/random/generator.html#
     """
@@ -469,6 +514,8 @@ def parallel_build_matrix(hlocals, positions, coefficients, L, S, pauli=False, s
     """
     通过直积生成矩阵，效率并不是否高，可以用于验证
     
+    示例:
+    --------
     >>> from quante.generate.matrix import parallel_build_matrix
     >>> mat = parallel_build_matrix(*ham.split_data(), L, S, pauli=False, sparse=False, parallel=True, nthreads=4)
     """
@@ -522,6 +569,7 @@ def heisenberg_matrix(L, j: Union[float, tuple]=1.0, h: Union[float, tuple] = 0.
     总是生成矩阵，而不是稀疏矩阵
     
     等价于：
+    
     >>> ham = qt.generate.operas.heisenberg_operator(L, j, h, cyclic)
     >>> basis = qt.generate.basis.spin_basis(...)
     >>> mat = ham.to_matrix(basis, pauli, sparse=False)
@@ -598,12 +646,16 @@ def local_hamiltonian_spin_1D(model_key:str, pauli:bool=True, **kwargs) -> _np.n
     
     Parameters
     ----------
-    - XXZ: `J`(xx+yy+`Δ`zz)+`h`z
-    - XX: `J`(xx+yy)+`h`z
-    - TFI: `J`zz + `h`x
-    - TLFI: `J`zz + `g`x + `h`z
+    - XXZ: `J` (xx+yy+ `Δ` zz)+ `h` z
     
-    Example:
+    - XX: `J` (xx+yy)+ `h` z
+    
+    - TFI: `J` zz + `h` x
+    
+    - TLFI: `J` zz + `g` x + `h` z
+    
+    示例:
+    --------
     >>> qt.generate.matrix.local_hamiltonian_spin_1D("XXZ", J = 0.1, Δ = 1,h = 0.1)
     >>> qt.generate.matrix.local_hamiltonian_spin_1D("XX", J = 0.1, h = 0.1)
     >>> qt.generate.matrix.local_hamiltonian_spin_1D("TFI", J = 0.1, h = 0.1)
@@ -614,7 +666,7 @@ def local_hamiltonian_spin_1D(model_key:str, pauli:bool=True, **kwargs) -> _np.n
     ----
     The filde terms need divide 2 in the input.
 
-    **params would convert inputs (such as x=1., y=2.) into a dictionary (such as {'x': 1., 'y': 2.})
+    params would convert inputs (such as x=1., y=2.) into a dictionary (such as {'x': 1., 'y': 2.})
     """
     model_dict = {
         "XX": "{J}*(XX+YY) + {h}*(ZI+IZ)",

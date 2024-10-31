@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-15 14:19:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 03:57:41
+# @Last Modified time: 2024-10-31 19:21:47
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -132,7 +132,8 @@ def observe_states(vecs:_np.ndarray, O:_np.ndarray) -> _np.ndarray:
     """
     计算 vecs 的观测值：
     
-    Example:
+    示例:
+    --------
     >>> mat = qla.rdmat(100, dtype=np.complex128)
     >>> eigs = qla.rdmat(100, dtype=np.complex128)
     >>> qla.observe_states(eigs, mat)
@@ -261,7 +262,8 @@ def ikron(
     """
     多个单位一起生成
     
-    Example:
+    示例:
+    --------
     >>> xy = op.pauli_matrix('xy')
     >>> dims = (2, ) * 10
     >>> mat = qla.ikron(xy, dims, [3,4])
@@ -372,13 +374,15 @@ def partial_trace(p, dims, keep):
     """
     计算 p 的部分迹，dims 是各个格点的维数，keep 是要保留的格点位置
     
-    Example:
+    示例:
+    --------
     >>> L = 4
     >>> vec = np.random.rand(2**L)  # 对稀疏向量存在问题
     >>> rho_red = qla.partial_trace(vec, [2]*L, [1])
     >>> print(rho_red)  # np.einsum('abcdaecd->be', rho.reshape([2]*(2*L)))
     
     以及对矩阵：
+    
     >>> L = 4
     >>> vec = ed.rdmat_rho(2**L, sparse=True)  # 或 False，必须是厄密的
     >>> rho_red = qla.partial_trace(vec, [2]*L, [1])
@@ -591,6 +595,7 @@ def fit(xs: list, ys: list, polynomial_degree: int) -> tuple:
     tuple: 包含两个元素的元组，第一个元素是拟合后的 y 值数组，第二个元素是拟合多项式的系数
     
     示例:
+    --------
     >>> xs = [1, 2, 3, 4, 5]
     >>> ys = [1, 4, 9, 16, 25]
     >>> polynomial_degree = 2

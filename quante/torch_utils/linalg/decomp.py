@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-27 20:25:38
+# @Last Modified time: 2024-10-31 19:29:29
 
 
 import numpy as np
@@ -31,20 +31,20 @@ def truncate(S, chi_max=None, svd_min=None, trunc_cut=None):
 def svd(tsr:tc.Tensor, *, lr_indx=None, trunc_para=(None, None, None), full_matrices:bool = False) -> tuple[tc.Tensor, tc.Tensor, tc.Tensor, TruncationError]:
     r"""张量 svd 分解，返回 A, S, B, error
 
-    ```
-    :   ║          │     │
-    : --⬜--  ->  --▷--◇--⨞--
-    :   ║          │     │
-    ```
+    .. code-block:: text
+    
+        . ║          │     │
+        --⬜--  ->  --▷--◇--⨞--
+          ║          │     │
 
     Parameters
     ----------
 
     lrdims 左右指标
 
-    - `None` 从正中间的指标分开做 svd
-    - `(left_indx, right_indx)`: 
-        left_indx 为左指标，right_indx 为右指标
+    `None` 从正中间的指标分开做 svd
+    
+    (`left_indx`, `right_indx`): left_indx 为左指标，right_indx 为右指标
 
     chi_max 保留的奇异值数目
 
@@ -57,7 +57,8 @@ def svd(tsr:tc.Tensor, *, lr_indx=None, trunc_para=(None, None, None), full_matr
     full_matrices 是否返回完整的矩阵
 
 
-    Example:
+    示例:
+    --------
     >>> tsr = tc.randn(3,7,5,2,dtype=tc.float64)
     >>> u,s,v,e = svd(tsr, lr_indx=[[1,2],[0,3]])
     >>> u.shape
@@ -107,24 +108,25 @@ def svd(tsr:tc.Tensor, *, lr_indx=None, trunc_para=(None, None, None), full_matr
 def qr(tsr:tc.Tensor, *, lr_indx=None) -> tuple[tc.Tensor, tc.Tensor]:
     r"""
 
-    ```
-    :        |                           |
-    :       (b)                         (b)
-    :        |            QR             |
-    : --(a)--⬜--(c)--    ---->    --(a)--▷--(d)--⬜--(c)--
-    :        W                           A       S
-    ```
+    .. code-block:: text
+    
+               |                           |
+              (b)                         (b)
+               |            QR             |
+        --(a)--⬜--(c)--    ---->    --(a)--▷--(d)--⬜--(c)--
+               W                           A       S
 
     Parameters
     ----------
 
     lrdims 左右指标
 
-    - `None` 从正中间的指标分开做 svd
-    - `(left_indx, right_indx)`: 
-        left_indx 为左指标，right_indx 为右指标
+    `None` 从正中间的指标分开做 svd
 
-    Example:
+    (`left_indx`, `right_indx`): left_indx 为左指标，right_indx 为右指标
+
+    示例:
+    --------
     >>> tsr = tc.randn(3,7,5,2,dtype=tc.float64)
     >>> q, r = qr(tsr, lr_indx=[[1,2],[0,3]])
     >>> print(q.shape, r.shape)
@@ -159,23 +161,22 @@ def qr(tsr:tc.Tensor, *, lr_indx=None) -> tuple[tc.Tensor, tc.Tensor]:
 
 def rq(tsr:tc.Tensor, *, lr_indx=None) -> tuple[tc.Tensor, tc.Tensor]:
     """
-    ```
-    :                |                       |         
-    :               (b)                     (b)        
-    :                |           QR          |         
-    : --(a)--⬜--(d)--⨞--(c)--   <---  --(a)--⬜--(c)--    
-    :        S       A                       W
-    ```
+    .. code-block:: text
+    
+                       |                       |         
+                      (b)                     (b)        
+                       |           QR          |         
+        --(a)--⬜--(d)--⨞--(c)--   <---  --(a)--⬜--(c)--    
+               S       A                       W
 
     Parameters
     ----------
 
     lrdims 左右指标
 
-    - `None` 从正中间的指标分开做 svd
-    - `(left_indx, right_indx)`: 
-        left_indx 为左指标，right_indx 为右指标
-
+    `None` 从正中间的指标分开做 svd
+    
+    (`left_indx`, `right_indx`): left_indx 为左指标，right_indx 为右指标
     """
     shp = tsr.shape
 
@@ -205,42 +206,43 @@ def eigh(tsr:tc.Tensor, *, lr_indx=None, direction=None, trunc_para=(None, None,
     但总之 tsr = U @ V
 
     本征分解的原理如图所示（direction="left"为例）：
-    ```
-    :目标 - 利用本征分解实现（包含裁剪）：
-    :         ║                          |        |        
-    :       (bc)                        (b)      (c)       
-    :         ║                          |        |        
-    : --(a)---⬜---(d)--     -->   --(a)--▷--(e)---⬜--(d)-- 
-    :         W                          U        A 
-    :
-    :
-    :本征分解是指（得到的上面要的 U，并且通过 S 裁剪）：
-    : --(a′)---⬜═════╗ 
-    :        W |     ║                  |               |
-    :        (b′)    ║                 (b)             (b′)
-    :   rho    |     ║      eig         |               |
-    :               (cd)    -->  --(a)--▷--(e)--◇--(e)--⨞--(a′)--
-    :          |     ║                  U      S^2   U.conj()
-    :         (b)    ║                  
-    :        W |     ║                     S 为 svd 得到的奇异值
-    : --(a)----⬜═════╝   
-    : 
-    :
-    :那么为了得到 A 只需要对第一个式子两边同乘：
-    :        U.conj()              U.conj()                       
-    :    ╭----▷--(e)--        ╭-----▷--(e)--     
-    :    |    |               |     |        |        
-    :   (a)  (b)         ==  (a)   (b)      (c)        
-    :    |    |               |     |        |        
-    :    ╰----⬜══(cd)══       ╰-----▷--(e)---⬜--(d)-- 
-    :         W                     U        A        
-    :
-    :                               |      
-    :                              (e)     
-    :                               |      
-    :                    ==  --(d)--⬜--(b)-- 
-    :                               A    
-    ```  
+
+    .. code-block:: text
+    
+        目标 - 利用本征分解实现（包含裁剪）：
+                 ║                          |        |        
+               (bc)                        (b)      (c)       
+                 ║                          |        |        
+         --(a)---⬜---(d)--     -->   --(a)--▷--(e)---⬜--(d)-- 
+                 W                          U        A 
+
+
+        本征分解是指（得到的上面要的 U，并且通过 S 裁剪）：
+         --(a′)---⬜═════╗ 
+                W |     ║                  |               |
+                (b′)    ║                 (b)             (b′)
+           rho    |     ║      eig         |               |
+                       (cd)    -->  --(a)--▷--(e)--◇--(e)--⨞--(a′)--
+                  |     ║                  U      S^2   U.conj()
+                 (b)    ║                  
+                W |     ║                     S 为 svd 得到的奇异值
+         --(a)----⬜═════╝   
+
+
+        那么为了得到 A 只需要对第一个式子两边同乘：
+                U.conj()              U.conj()                       
+            ╭----▷--(e)--        ╭-----▷--(e)--     
+            |    |               |     |        |        
+           (a)  (b)         ==  (a)   (b)      (c)        
+            |    |               |     |        |        
+            ╰----⬜══(cd)══       ╰-----▷--(e)---⬜--(d)-- 
+                 W                     U        A        
+
+                                       |      
+                                      (e)     
+                                       |      
+                            ==  --(d)--⬜--(b)-- 
+                                       A    
     """
     chi_max, svd_min, trunc_cut = trunc_para
     shp = tsr.shape
@@ -307,7 +309,7 @@ def eigh(tsr:tc.Tensor, *, lr_indx=None, direction=None, trunc_para=(None, None,
 
     return U.reshape(*ab, -1), S, V.reshape(-1, *cd), trunc_err, direction
 
-def tensor_train_decompose(tsr:tc.Tensor, phys_dim:int|list, trunc_para:tuple=(None,None,None)):
+def tt_decompose(tsr:tc.Tensor, phys_dim:int|list, trunc_para:tuple=(None,None,None)):
     """
     执行 tt 分解，是 full_contract 的逆过程
     
@@ -315,7 +317,8 @@ def tensor_train_decompose(tsr:tc.Tensor, phys_dim:int|list, trunc_para:tuple=(N
     
     返回 tt, Ss, lognm
     
-    Example:
+    示例:
+    --------
     >>> tsr = tc.randn(2**10, dtype=tc.complex128)
     >>> tt, s, lognm = tensor_train_decompose(tsr, 2)
     >>> tc.dist(tn.full_contract(tt)*tc.exp(lognm), tsr)

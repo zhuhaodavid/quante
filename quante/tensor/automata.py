@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2023-12-04 14:38:49
-# @Last Modified by:   dzwang
-# @Last Modified time: 2024-10-16 15:45:21
+# @Last Modified by:   hzhu
+# @Last Modified time: 2024-10-31 15:17:33
 
 import numpy as _np
 from ..generate.matrix import pauli_matrix
@@ -344,7 +344,7 @@ def get_sparse_matrix(
 
     """
     Ws = automata_mpo(L, hlocals, positions, coefficients, pauli=pauli)
-
+    assert L % 2 == 0, "L must be even"
     mid = len(Ws) // 2
 
     # 从左到右收缩

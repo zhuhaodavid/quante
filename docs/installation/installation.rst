@@ -1,6 +1,6 @@
 .. _installation-label:
 
-Installation
+安装说明
 ============
 
 quante 需要 `numpy <https://numpy.org/doc/stable/reference/index.html#reference>`_, `scipy <https://docs.scipy.org/doc/scipy/reference/index.html#scipy-api>`_, `numba <https://numba.readthedocs.io/en/stable/index.html>`_, `h5py <https://docs.h5py.org/en/stable/index.html>`_, `matplotlib <https://matplotlib.org/stable/users/index.html>`_, `torch <https://pytorch.org/docs/stable/index.html>`_ (optional), `line_profiler <https://kernprof.readthedocs.io/en/latest/>`_ (optional), `cupy <https://docs.cupy.dev/en/stable/user_guide/index.html>`_ (optional), `tenpy <https://tenpy.readthedocs.io/en/latest/>`_ (optional) 等库的支持，安装下面步骤配置环境。
