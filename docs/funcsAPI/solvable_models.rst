@@ -1,0 +1,1 @@
+.. automodule:: quante.solvable_models

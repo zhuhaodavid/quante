@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-06 10:23:56
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-30 14:57:31
+# @Last Modified time: 2024-10-31 19:20:49
 
 from typing import Union, Optional
 from ...basis_class import SpinHalfBasis
@@ -60,6 +60,9 @@ class SpinHalfBasisSU2(SpinHalfBasis):
         !! 相同 J 不同 m 的矩阵是相同的
         
         如下代码可以验证维数：
+        
+        示例:
+        --------
         >>> L = 10
         >>> dim = 0
         >>> for J in np.arange(L/2, -1/2, -1):
@@ -89,7 +92,7 @@ class SpinHalfBasisSU2(SpinHalfBasis):
         tmp = J - m # tmp 应该为整数
         assert int(tmp) == tmp and -J <= m <= J, "m should be -J, -J+1, ..., J-1, J"
     
-    def _sparse_matrix(self, op_list, hascomplex):
+    def _sparse_matrix(self, op_list, hascomplex, savememory=None):
         from ..Nup.defclass import SpinHalfBasisNup
         basis_Nup = SpinHalfBasisNup(self.L, self.Nup)
         matrix_Nup = basis_Nup._sparse_matrix(op_list, hascomplex)

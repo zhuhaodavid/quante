@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-05 09:31:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-14 23:22:13
+# @Last Modified time: 2024-10-31 19:20:13
 
 from typing import Union
 import inspect
@@ -66,8 +66,9 @@ class SpinBasis:
     def where_codes(self, method_name: str = None):
         """
         返回某个实例所属，以及其方法，所在文件的路径和行号。
-        
-        Example:
+            
+        示例:
+        --------
         >>> basis = qt.generate.basis.spin_basis(L=10, zblock=1)
         >>> basis.where_codes()
         >>> basis.where_codes("_matrix")
@@ -170,7 +171,8 @@ class SpinBasis:
     def to_full_space(self, index:int) -> np.ndarray:
         """生成基矢的第 i 个向量在全空间中的表示
         
-        Example:
+        示例:
+        --------
         >>> L = 10
         >>> basis = qt.generate.basis.spin_basis(L=10, Nup=2)
         >>> for i in range(basis.Ns):
@@ -183,7 +185,8 @@ class SpinBasis:
         将全空间/Nup空间的态投影到某个子空间 #!! 核心代码，get_state, projection_matrix 都是基于 recover 实现的
         
         
-        Example:
+        示例:
+        --------
         >>> L = 10
         >>> basis = qt.generate.basis.spin_basis(L=10, Nup=2)
         >>> state = np.random.rand(basis.Ns)
@@ -195,7 +198,8 @@ class SpinBasis:
         """
         投影算符，（2^L, Ns) 维的矩阵，将全空间的态投影到某个子空间的矩阵
         
-        Example:
+        示例:
+        --------
         >>> L = 10
         >>> ham = qt.generate.operas.heisenberg_operator(L, cyclic=True)
         >>> basis = qt.generate.basis.spin_basis(L=L, kblock=1)
@@ -222,7 +226,8 @@ class SpinBasis:
         """
         输出不同子空间的维数
         
-        Example:
+        示例:
+        --------
         >>> basis = qt.generate.basis.spin_basis(L=10)
         >>> basis.print_dims(L=10)
         """

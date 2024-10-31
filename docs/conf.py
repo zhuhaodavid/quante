@@ -3,7 +3,7 @@
 # @Author: hzhu
 # @Date:   2024-10-30 21:12:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 04:00:49
+# @Last Modified time: 2024-10-31 20:39:56
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -76,6 +76,8 @@ source_suffix = ".rst"
 # The master toctree document.
 master_doc = "index"
 
+nbsphinx_execute = 'never'  # 禁止 Sphinx 执行 Jupyter Notebook 中的代码
+nbsphinx_allow_errors = True  # 允许包含错误的 Notebook 继续生成
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -162,8 +164,13 @@ html_static_path = ['_static']
 # or fully qualified paths (eg. https://...)
 html_css_files = [
     'css/py_class_property_fix.css',
+    "css/custom.css"
 ]
 
+html_theme_options = {
+    'display_version': True,
+    'body_max_width': 'auto',  # Adjusts body width on larger screens
+}
 
 # -- Options for HTMLHelp output ------------------------------------------
 

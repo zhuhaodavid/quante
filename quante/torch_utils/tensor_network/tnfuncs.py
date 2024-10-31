@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-24 22:58:15
+# @Last Modified time: 2024-10-31 20:45:58
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -66,12 +66,13 @@ def add(
 
 def _add_each(tsrs: list[tc.Tensor]) -> tc.Tensor:
     """
-    ```
-    :        |                  |                         |
-    :       (b)                (b)                       (b)
-    :        |                  |                         |
-    : --(a)--W1--(d)-- + --(e)--W2--(f)--  --->  --(a+e)--W--(d+f)--
-    ```
+    .. code-block:: text
+    
+        .      |                  |                         |
+              (b)                (b)                       (b)
+               |                  |                         |
+        --(a)--W1--(d)-- + --(e)--W2--(f)--  --->  --(a+e)--W--(d+f)--
+
     对 MPS MPO 都适用
     W1, W2 只要有一个的追踪了梯度，那返回的结果就追踪梯度
     """
@@ -95,14 +96,14 @@ def _add_each(tsrs: list[tc.Tensor]) -> tc.Tensor:
 
 def _full_contract_right_mps(res: tc.Tensor, Wsi: tc.Tensor):
     """
-    ```
-    :         |         |                         |
-    :        (b)       (b)          --->         (bd)
-    :         |         |                         |
-    : --(a)--res--(c)--Wsi--(e)--         --(a)--res--(e)--
-    ```
+    .. code-block:: text
     
-    res = tc.einsum("abc,cde->abde", res, Ws[i])
+        .       |         |                         |
+               (b)       (b)          --->         (bd)
+                |         |                         |
+        --(a)--res--(c)--Wsi--(e)--         --(a)--res--(e)--
+    
+    >>> res = tc.einsum("abc,cde->abde", res, Ws[i])
     """
     a, _, c = res.shape
     c, _, e = Wsi.shape
@@ -111,33 +112,35 @@ def _full_contract_right_mps(res: tc.Tensor, Wsi: tc.Tensor):
 
 def _local_apply(res: tc.Tensor, Wsi: tc.Tensor):
     """
-    ```
-    :          |
-    :          ⬜
-    :          |
-    :         (b)
-    :          |
-    :  --(a)--res--(c)--
-    ```
+    .. code-block:: text
+    
+        .       |
+                ◻
+                |
+               (b)
+                |
+        --(a)--res--(c)--
     """
     a, b, *c = res.shape
     return (Wsi @ res.swapaxes(0,1).reshape(b,-1)).reshape(b, a, *c).swapaxes(0,1)
 
 def _local_apply2(res: tc.Tensor, Ws1: tc.Tensor, Ws2: tc.Tensor):
     """
-    ```
-    :          |
-    :          ⬜
-    :          |
-    :         (b)
-    :          |
-    :  --(a)--res--(c)--
-    :          |
-    :         (d)
-    :          |
-    :          ⬜
-    :          |
-    ```
+    .. code-block:: text
+    
+        _local_apply2:
+                |
+                ◻
+                |
+               (b)
+                |
+        --(a)--res--(c)--
+                |
+               (d)
+                |
+                ◻
+                |
+        
     """
     a, b, d, c = res.shape
     res = res.swapaxes(0,1).swapaxes(2,3)  # (b,a,c,d)
@@ -147,12 +150,13 @@ def _local_apply2(res: tc.Tensor, Ws1: tc.Tensor, Ws2: tc.Tensor):
 
 def _full_contract_right_mps2(res: tc.Tensor, Wsi: tc.Tensor):
     """
-    ```
-    :         |         |                         ║
-    :        (b)       (d)          --->        (b)(d)
-    :         |         |                         ║
-    : --(a)--res--(c)--Wsi--(e)--         --(a)--res--(e)--
-    ```
+    .. code-block:: text
+    
+        _full_contract_right_mps2:
+                |         |                         ║
+               (b)       (d)          --->        (b)(d)
+                |         |                         ║
+        --(a)--res--(c)--Wsi--(e)--         --(a)--res--(e)--
     
     res = tc.einsum("abc,cde->abde", res, Ws[i])
     """
@@ -172,15 +176,17 @@ def _full_contract_mps(Ws):
 
 def _full_contract_right_mpo(res: tc.Tensor, Wsi: tc.Tensor):
     """
-    ```
-    :         |         |                         |
-    :        (b)       (e)                       (be)
-    :         |         |                         |
-    : --(a)--res--(d)--Wsi--(g)--  --->   --(a)--res--(g)--
-    :         |         |                         |
-    :        (c)       (f)                       (cf)
-    :         |         |                         |
-    ```
+    .. code-block:: text
+    
+        _full_contract_right_mpo:
+                |         |                         |
+               (b)       (e)                       (be)
+                |         |                         |
+        --(a)--res--(d)--Wsi--(g)--  --->   --(a)--res--(g)--
+                |         |                         |
+               (c)       (f)                       (cf)
+                |         |                         |
+    
     >>> res = tc.einsum("abcd,defg->abecfg", res, Ws[i])
     """
     a, b, c, d = res.shape
@@ -223,15 +229,16 @@ def full_contract(Ws: list[tc.Tensor]) -> tc.Tensor:
 
 def _reshape2mps(ts: tc.Tensor, transpose=False):
     """
-    ```
-    :        |                           |                    |
-    :       (b)                        (bc)                  (cb)
-    :        |                           |                    |
-    : --(a)--W--(d)--    ---->    --(a)--W--(d)--  or  --(a)--W--(d)--
-    :        |
-    :       (c)                    not transpose          transpose
-    :        |
-    ```
+    .. code-block:: text
+    
+        _reshape2mps:
+               |                           |                    |
+              (b)                        (bc)                  (cb)
+               |                           |                    |
+        --(a)--W--(d)--    ---->    --(a)--W--(d)--  or  --(a)--W--(d)--
+               |
+              (c)                    not transpose          transpose
+               |
     """
     if transpose:
         ts = ts.permute([0, 2, 1, 3])
@@ -250,13 +257,13 @@ def _pre_local_tensor(Ws1i, Ws2i, conj_at_1, ismpo):
 
 def _contract_init_pbc(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
     """
-    ```
-    : --(a)--Ws1i--(c)--         --(a)--┬--(c)--
-    :         |                         |
-    :        (b)          --->         Lenv
-    :         |                         |
-    : --(d)--Ws2i--(e)--         --(d)--┴--(e)--
-    ```
+    .. code-block:: text
+    
+        --(a)--Ws1i--(c)--         --(a)--┬--(c)--
+                |                         |
+               (b)          --->         Lenv
+                |                         |
+        --(d)--Ws2i--(e)--         --(d)--┴--(e)--
     
     >>> Lenv = tc.einsum("abc,dbe->adce", Ws1i, Ws2i)
     """
@@ -272,13 +279,13 @@ def _contract_init_pbc(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
 
 def _inner_contract_right_pbc(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor):
     """
-    ```
-    : --(a)--┬--(c)--Ws1i--(f)--         --(a)--┬--(c)--
-    :        |        |                         |
-    :      Lenv      (b)          --->         Lenv
-    :        |        |                         |
-    : --(d)--┴--(e)--Ws2i--(g)--         --(d)--┴--(e)--
-    ```
+    .. code-block:: text
+        
+        --(a)--┬--(c)--Ws1i--(f)--         --(a)--┬--(c)--
+               |        |                         |
+             Lenv      (b)          --->         Lenv
+               |        |                         |
+        --(d)--┴--(e)--Ws2i--(g)--         --(d)--┴--(e)--
 
     >>> Lenv = tc.einsum("adce,cbf,ebg->adfg", Lenv, Ws1i, Ws2i)
     """
@@ -296,13 +303,13 @@ def _inner_contract_right_pbc(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor)
 
 def _contract_init_obc(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
     """
-    ```
-    : ╭--(a)--Ws1i--(c)--           ╭--(c)--
-    : |       |                     |  
-    : |      (b)          --->     Lenv
-    : |       |                     |  
-    : ╰--(a)--Ws2i--(e)--           ╰--(e)--
-    ```
+    .. code-block:: text
+        
+        ╭--(a)--Ws1i--(c)--           ╭--(c)--
+        |       |                     |  
+        |      (b)          --->     Lenv
+        |       |                     |  
+        ╰--(a)--Ws2i--(e)--           ╰--(e)--
 
     >>> Lenv = tc.einsum("abc,abe->ce", Ws1i, Ws2i)
     """
@@ -317,13 +324,13 @@ def _contract_init_obc(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
 
 def _inner_contract_right_obc(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor):
     """
-    ```
-    :  ╭--(c)--Ws1i--(f)--          ╭--(c)--
-    :  |        |                   |  
-    : Lenv     (b)          --->   Lenv
-    :  |        |                   |  
-    :  ╰--(e)--Ws2i--(g)--          ╰--(e)--
-    ```
+    .. code-block:: text
+        
+         ╭--(c)--Ws1i--(f)--          ╭--(c)--
+         |        |                   |  
+        Lenv     (b)          --->   Lenv
+         |        |                   |  
+         ╰--(e)--Ws2i--(g)--          ╰--(e)--
 
     >>> Lenv = tc.einsum("adce,cbf,ebg->adfg", Lenv, Ws1i, Ws2i)
     """
@@ -341,14 +348,15 @@ def _inner_contract_right_obc(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor)
 
 def _trace_Lenv(Lenv):
     """
-    ```
-    : ╭--(a)--┬--(c)--╮
-    : ╰       |       ╯
-    :       Lenv            ---->  number
-    :         |
-    : ╭--(d)--┴--(e)--╮
-    : ╰               ╯
-    ```
+    .. code-block:: text
+        
+        ╭--(a)--┬--(c)--╮
+        ╰       |       ╯
+              Lenv            ---->  number
+                |
+        ╭--(d)--┴--(e)--╮
+        ╰               ╯
+    
     >>> Lenv = tc.einsum("adad->", Lenv)
     """
     a, d, _, _ = Lenv.shape
@@ -373,7 +381,9 @@ def tn_inner_pbc(
     - 如果 conj_at_1 = True 那么计算 Ws1.conj() 与 Ws2 的收缩
 
     计算图：
-        Ws1 ┌---┬--...┬---┐ \n
+    .. code-block:: text
+    
+        Ws1 ┌---┬--...┬---┐
         Ws2 └---┴--...┴---┘
     """
     ismpo = Ws1[0].ndim == 4  # 判断是否是 MPO
@@ -403,7 +413,9 @@ def tn_inner_obc(
     - 如果 conj_at_1 = True 那么计算 Ws1.conj() 与 Ws2 的收缩
 
     计算图：
-        Ws1 ┌---┬--...┬---┐ \n
+    .. code-block:: text
+    
+        Ws1 ┌---┬--...┬---┐
         Ws2 └---┴--...┴---┘
     """
     ismpo = Ws1[0].ndim == 4  # 判断是否是 MPO
@@ -439,8 +451,10 @@ def tn_norm(Ws: list[tc.Tensor], lognorm=False, pbc=False) -> tc.Tensor:
     如果 lognorm = True 那么就返回模的对数值
 
     计算图：
-        Ws† ┌---┬--...┬---┐ \n
-        Ws  └---┴--...┴---┘
+    .. code-block:: text
+    
+        Ws1 ┌---┬--...┬---┐
+        Ws2 └---┴--...┴---┘
     """
     norm2 = tn_inner(Ws, Ws, logscale=lognorm, conj_at_1=True, pbc=pbc)
     if tc.is_complex(norm2):
@@ -451,13 +465,15 @@ def tn_norm(Ws: list[tc.Tensor], lognorm=False, pbc=False) -> tc.Tensor:
 
 def _left2right_QR_step(W1:tc.Tensor, W2:tc.Tensor)->tuple[tc.Tensor,tc.Tensor]:
     """
-    ```
-    :        |       |                         |       |
-    :       (b)     (d)                       (b)     (d)
-    :        |       |           QR            |       |
-    : --(a)--⬜--(c)--⬜--(e)--   ---->   --(a)--▷--(f)--⬜--(e)-- 
-    :        W1      W2                        W1p    W2p
-    ```
+    .. code-block:: text
+        _left2right_QR_step
+        
+               |       |                         |       |
+              (b)     (d)                       (b)     (d)
+               |       |           QR            |       |
+        --(a)--◻--(c)--◻--(e)--   ---->   --(a)--▷--(f)--◻--(e)-- 
+               W1      W2                        W1p    W2p
+    
     MPS MPO 都可以
     """
     W1p, S = qr(W1)
@@ -485,13 +501,15 @@ def _left2right_QR(Ws, L, qrnormalize=False)->tuple[tc.Tensor,tc.Tensor]:
 
 def _right2left_QR_step(W1:tc.Tensor, W2:tc.Tensor):
     """
-    ```
-    :        |       |                        |       |        
-    :       (b)     (d)                      (b)     (d)       
-    :        |       |           QR           |       |        
-    : --(a)--⬜--(f)--⨞--(e)--   <----  --(a)--⬜--(c)--⬜--(e)-- 
-    :        W1p    W2p                       W1      W2       
-    ```
+    .. code-block:: text
+        
+        .
+               |       |                        |       |        
+              (b)     (d)                      (b)     (d)       
+               |       |           QR           |       |        
+        --(a)--◻--(f)--⨞--(e)--   <----  --(a)--◻--(c)--◻--(e)-- 
+               W1p    W2p                       W1      W2       
+    
     MPS MPO 都可以
     """
     S, W2p = rq(W2)
@@ -502,13 +520,15 @@ def _right2left_QR_step(W1:tc.Tensor, W2:tc.Tensor):
 
 def _SVD_constract_right(A, U, S):
     """
-    ```
-    :        |                                      |
-    :       (b)                                    (b)
-    :        |                                      |
-    : --(a)--A--(c)--U--(d)--S--(e)  ---->   --(a)--W--(e)--
-    ```
+    .. code-block:: text
+        
+        .      |                                      |
+              (b)                                    (b)
+               |                                      |
+        --(a)--A--(c)--U--(d)--S--(e)  ---->   --(a)--W--(e)--
+    
     MPS MPO 都可以
+    
     >>> tc.einsum("abc,cd,de->abe", A, U, S)
     """
     *a, c = A.shape
@@ -518,13 +538,13 @@ def _SVD_constract_right(A, U, S):
 
 def _right2left_SVD(As, L, trunc_para=(None,None,None)):
     """
-    ```
-    :                        |                        |
-    :                       (b)                      (b)
-    :                        |          SVD           |
-    : --(a)--▷--(d)--◇--(e)--⨞--(c)--  <----   --(a)--⬜--(c)--
-    :        U       S       B                        W
-    ```
+    .. code-block:: text
+
+        .                     |                        |
+                              (b)                      (b)
+                               |          SVD           |
+        --(a)--▷--(d)--◇--(e)--⨞--(c)--  <----   --(a)--◻--(c)--
+               U       S       B                        W
     """
     Ss, Bs = [None] * (L + 1), [None] * L
     trunc_err_sum = TruncationError(0.0, 1.0)
@@ -553,13 +573,13 @@ def canonicalize(
 
 def orthogonalize(Ws:list[tc.Tensor], j: int)->list[tc.Tensor]:
     """
-    ```
-    :         |      |      |      |      |      |      |
-    :    -----▷------▷------▷------⬜------⨞------⨞------⨞-----
-    :        Ws[0]  Ws[1]  Ws[2]  Ws[3]  Ws[4]  Ws[5]  Ws[6]
-    :                              ↑ 
-    :                             j=3
-    ```
+    .. code-block:: text
+        
+        .    |      |      |      |      |      |      |
+        -----▷------▷------▷------◻------⨞------⨞------⨞-----
+            Ws[0]  Ws[1]  Ws[2]  Ws[3]  Ws[4]  Ws[5]  Ws[6]
+                                  ↑ 
+                                 j=3
     """
     L = len(Ws)
     newWs = clone_list(Ws)
@@ -572,17 +592,18 @@ def orthogonalize(Ws:list[tc.Tensor], j: int)->list[tc.Tensor]:
 
 def _apply_2b_gate_mps(W1:tc.Tensor, W2:tc.Tensor, gate_2b:tc.Tensor) -> tc.Tensor:
     """
-    ```
-    :        |         |
-    :       (c)       (f)
-    :        |         |
-    :        ├-gate2_b-┤
-    :        |         |                       |         
-    :       (b)       (e)                     (cf)       
-    :        |         |                       |         
-    : --(a)--⬜---(d)---⬜--(g)--  ----> --(a)---⬜---(g)-- 
-    :        W1        W2                             
-    ```
+    .. code-block:: text
+        
+        .      |         |
+              (c)       (f)
+               |         |
+               ├-gate2_b-┤
+               |         |                       |         
+              (b)       (e)                     (cf)       
+               |         |                       |         
+        --(a)--◻---(d)---◻--(g)--  ----> --(a)---◻---(g)-- 
+               W1        W2                             
+    
     >>> tc.einsum("abd,deg,cfbe->acfg", W1, W2, gate_2b)
     """
     a, b, d = W1.shape
@@ -603,20 +624,20 @@ def _apply_2b_gate_mps(W1:tc.Tensor, W2:tc.Tensor, gate_2b:tc.Tensor) -> tc.Tens
 
 def _apply_2b_gate_mpo_from_top(W1:tc.Tensor, W2:tc.Tensor, gate_2b:tc.Tensor) -> tc.Tensor:
     """
-    ```
-    :        |         | 
-    :       (c)       (f)
-    :        |         | 
-    :        ├-gate2_b-┤ 
-    :        |         |                        |        
-    :       (b)       (e)                      (cf)       
-    :        |         |                        |        
-    : --(a)--⬜---(d)---⬜--(g)--  ---->  --(a)---▷---(j)--
-    :        |         |                        |        
-    :       (h)       (i)                      (hi)       
-    :        |         |                        |        
-    :        W1        W2            
-    ```
+    .. code-block:: text
+        
+        .      |         | 
+              (c)       (f)
+               |         | 
+               ├-gate2_b-┤ 
+               |         |                        |        
+              (b)       (e)                      (cf)       
+               |         |                        |        
+        --(a)--◻---(d)---◻--(g)--  ---->  --(a)---▷---(j)--
+               |         |                        |        
+              (h)       (i)                      (hi)       
+               |         |                        |        
+               W1        W2            
     """
     a, b, h, d = W1.shape
     d, e, i, g = W2.shape
@@ -633,20 +654,20 @@ def _apply_2b_gate_mpo_from_top(W1:tc.Tensor, W2:tc.Tensor, gate_2b:tc.Tensor) -
 
 def _apply_2b_gate_mpo_from_bottom(W1:tc.Tensor, W2:tc.Tensor, gate_2b:tc.Tensor) -> tc.Tensor:
     """
-    ```
-    :        W1        W2                             
-    :        |         |                        |        
-    :       (b)       (e)                      (be)       
-    :        |         |                        |        
-    : --(a)--⬜---(d)---⬜--(g)--  ---->  --(a)---⬜---(j)--
-    :        |         |                        |        
-    :       (h)       (i)                      (cf)        
-    :        |         |                        |          
-    :        ├-gate2_b-┤
-    :        |         |
-    :       (c)       (f)
-    :        |         |
-    ```
+    .. code-block:: text
+        
+        .      W1        W2                             
+               |         |                        |        
+              (b)       (e)                      (be)       
+               |         |                        |        
+        --(a)--◻---(d)---◻--(g)--  ---->  --(a)---◻---(j)--
+               |         |                        |        
+              (h)       (i)                      (cf)        
+               |         |                        |          
+               ├-gate2_b-┤
+               |         |
+              (c)       (f)
+               |         |
     """
     a, b, h, d = W1.shape
     d, e, i, g = W2.shape
@@ -663,23 +684,23 @@ def _apply_2b_gate_mpo_from_bottom(W1:tc.Tensor, W2:tc.Tensor, gate_2b:tc.Tensor
 
 def _apply_2b_gate_mpo_from_topbottom(W1:tc.Tensor, W2:tc.Tensor, gate_2b_tp:tc.Tensor, gate_2b_bt:tc.Tensor) -> tuple[list[tc.Tensor], list[tc.Tensor]]:
     """
-    ```
-    :        |          | 
-    :       (c)        (f)
-    :        |          | 
-    :        ├gate_2b_tp┤                           
-    :        |          |                       |         
-    :       (b)        (e)                    (cf)      
-    :      W1|        W2|                       |       
-    : --(a)--⬜---(d)----⬜--(g)--  ---->  --(a)--⬜--(g)--
-    :        |          |                       |       
-    :       (h)        (i)                     (jk)     
-    :        |          |                       |        
-    :        ├gate_2b_bt┤
-    :        |          |
-    :       (j)        (k)
-    :        |          |
-    ```
+    .. code-block:: text
+        
+        .      |          | 
+              (c)        (f)
+               |          | 
+               ├gate_2b_tp┤                           
+               |          |                       |         
+              (b)        (e)                    (cf)      
+             W1|        W2|                       |       
+        --(a)--◻---(d)----◻--(g)--  ---->  --(a)--◻--(g)--
+               |          |                       |       
+              (h)        (i)                     (jk)     
+               |          |                       |        
+               ├gate_2b_bt┤
+               |          |
+              (j)        (k)
+               |          |
     """
     a, b, h, d = W1.shape
     d, e, i, g = W2.shape
@@ -700,15 +721,16 @@ def _apply_2b_gate_mpo_from_topbottom(W1:tc.Tensor, W2:tc.Tensor, gate_2b_tp:tc.
 
 def _resume_canonical_mps(W, V):
     """
-    ```
-    :                V.conj()
-    :         --(e)--⨞--(d)-╮                |     
-    :        |       |      |               (b)
-    :       (b)     (c)     |                | 
-    :        |       |      |   -->   --(a)--⨞--(e)--
-    : --(a)--╘═══════╛--(d)-╯         
-    :            W
-    ```
+    .. code-block:: text
+        
+        .              V.conj()
+                --(e)--⨞--(d)-╮                |     
+               |       |      |               (b)
+              (b)     (c)     |                | 
+               |       |      |   -->   --(a)--⨞--(e)--
+        --(a)--╘═══════╛--(d)-╯         
+                   W
+    
     tc.einsum('abcd,ecd->abe', W, V.conj())
     """
     a, b, c, d = W.shape
@@ -717,34 +739,35 @@ def _resume_canonical_mps(W, V):
 
 def _resume_canonical_mpo(W, V):
     """
-    ```
-    :                 ╭╮
-    :                 |
-    :                (g)
-    :         V.conj()|
-    :          --(e)--⨞--(d)-╮                |     
-    :         |       |      |               (b)
-    :        (b)     (c)     |                | 
-    :         |       |      |   -->   --(a)--⨞--(e)--
-    :  --(a)--⨞-------⨞--(d)-╯                |
-    :         |       |                      (f)
-    :        (f)     (g)
-    :         |       |
-    :                 ╰╯
-    :             W
-    ```
-    tc.einsum('abfcgd,ecgd->abfe', W, V.conj())
+    .. code-block:: text
+        
+        .               ╭╮
+                        |
+                       (g)
+                V.conj()|
+                 --(e)--⨞--(d)-╮                |     
+                |       |      |               (b)
+               (b)     (c)     |                | 
+                |       |      |   -->   --(a)--⨞--(e)--
+         --(a)--⨞-------⨞--(d)-╯                |
+                |       |                      (f)
+               (f)     (g)
+                |       |
+                        ╰╯
+                    W
+    
+    >>> tc.einsum('abfcgd,ecgd->abfe', W, V.conj())
     """
     a,b,f,c,g,d = W.shape
     return (W.reshape(-1, c*g*d) @ V.conj().reshape(-1, c*g*d).T).reshape(a,b,f,-1)
 
 def unitarize(gate_2b:tc.Tensor)->tc.Tensor:
     """
-    ```
-    : │         │      └--▽--┘
-    : ├─gate_2b─┤  -->    │
-    : │         │      ┌--△--┐
-    ```
+    .. code-block:: text
+        
+        │         │      └--▽--┘
+        ├─gate_2b─┤  -->    │
+        │         │      ┌--△--┐
     """
     a, b, c, d = gate_2b.shape
     gate_2b = gate_2b.reshape(a*b, -1)
@@ -756,24 +779,25 @@ def unitarize(gate_2b:tc.Tensor)->tc.Tensor:
 
 def _diagonal_contract_step(A, M):
     """
-    ```
-    :         M
-    : -(a)--┬--(c)------
-    :      (b)
-    :       |
-    :       ├---┐              -->   --(ad)--⬜---(ce)--
-    :      (b) (b)           
-    : -(d)--┼---|--(e)--
-    :      A╰---╯     
-    :     
-    : -(a)-┬--(c)----
-    :     (b)
-    :      |
-    :      ├---┐
-    :     (b) (b)
-    : -(d)-┼---┼--(e)--
-    :      ╰---╯
-    ```
+    .. code-block:: text
+        
+        .       M
+        -(a)--┬--(c)------
+             (b)
+              |
+              ├---┐              -->   --(ad)--◻---(ce)--
+             (b) (b)           
+        -(d)--┼---|--(e)--
+             A╰---╯     
+
+        -(a)-┬--(c)----
+            (b)
+             |
+             ├---┐
+            (b) (b)
+        -(d)-┼---┼--(e)--
+             ╰---╯
+    
     >>> tc.einsum('dbbe,abc->adce', eig_mpo[n], eig_mps[n])
     """
     d, b, _, e = A.shape
@@ -803,24 +827,23 @@ def mpo_eye(L, local_dims, dtype=tc.complex128, device=None) -> list[tc.Tensor]:
 
 def _dm_left2right_mps(Lenv:tc.Tensor, B:tc.Tensor, A:tc.Tensor):
     """
-    ```
-    :  Lenv
-    :            ╭╮          
-    :            |          
-    :  ╭-╮      (f) B             ╭-╮       
-    :  | ├--(d)--┼--(e)--         | ├--(e)--
-    :  | |      (b)               | |       
-    :  | |       | A              | |       
-    :  | ├--(a)--┴--(c)--         | ├--(c)--
-    :  | ├--(g)--┬--(i)--    -->  | ├--(i)--
-    :  | |       | A.conj()       | |       
-    :  | |      (h)               | |       
-    :  | ├--(j)--┼--(l)--         | ├--(l)--
-    :  ╰-╯       | B.conj()       ╰-╯       
-    :           (f)         
-    :            |          
-    :            ╰╯         
-    ```
+    .. code-block:: text
+    
+        .         ╭╮          
+                  |          
+        ╭-╮      (f) B             ╭-╮       
+        | ├--(d)--┼--(e)--         | ├--(e)--
+        | |      (b)               | |       
+        | |       | A              | |       
+        | ├--(a)--┴--(c)--         | ├--(c)--
+        | ├--(g)--┬--(i)--    -->  | ├--(i)--
+        | |       | A.conj()       | |       
+        | |      (h)               | |       
+        | ├--(j)--┼--(l)--         | ├--(l)--
+        ╰-╯       | B.conj()       ╰-╯       
+                 (f)         
+                  |          
+                  ╰╯         
     tc.einsum("adgj,dfbe,abc,ghi,jkhl->ceil", Lenv, B, A, A.conj(), B.conj())
     """
     d,f,b,e = B.shape
@@ -839,18 +862,18 @@ def _dm_left2right_mps(Lenv:tc.Tensor, B:tc.Tensor, A:tc.Tensor):
 
 def _dm_get_R_mps(B:tc.Tensor, A:tc.Tensor, R:tc.Tensor, V:tc.Tensor):
     """
-    ```
-    :                  |
-    :                 (c)
-    :                  |
-    :                  ⬜ V.conj()
-    :        |         | 
-    :       (g) B     (j)
-    : --(b)--┼--(h)----┤R          
-    :       (e)        |      -->  --(a,b)--⬜--(gc)--
-    :        | A       | 
-    : --(a)--┴--(f)----╯
-    ```
+    .. code-block:: text
+    
+        .                |
+                        (c)
+                         |
+                         ◻ V.conj()
+               |         | 
+              (g) B     (j)
+        --(b)--┼--(h)----┤R          
+              (e)        |      -->  --(a,b)--◻--(gc)--
+               | A       | 
+        --(a)--┴--(f)----╯
     """
     a, e, f = A.shape
     b, g, e, h = B.shape
@@ -865,21 +888,22 @@ def _dm_get_R_mps(B:tc.Tensor, A:tc.Tensor, R:tc.Tensor, V:tc.Tensor):
 
 def _dm_get_rho(Lenv:tc.Tensor, R:tc.Tensor):
     """
-    ```
-    :    Lenv               
-    :              | 
-    :    ╭-╮      (g)
-    :    | ├--(b)--┤
-    :    | |       |R                         |
-    :    | |       |                         (g)
-    :    | ├--(a)--┘                          |
-    :    | ├--(c)--┐                    --->  ⬜
-    :    | |       |R.conj()                  |
-    :    | |       |                         (f)
-    :    | ├--(d)--┤                          |
-    :    ╰-╯       |
-    :             (f)
-    :              |
+    .. code-block:: text
+        
+        Lenv               
+                  | 
+        ╭-╮      (g)
+        | ├--(b)--┤
+        | |       |R                         |
+        | |       |                         (g)
+        | ├--(a)--┘                          |
+        | ├--(c)--┐                    --->  ◻
+        | |       |R.conj()                  |
+        | |       |                         (f)
+        | ├--(d)--┤                          |
+        ╰-╯       |
+                 (f)
+                  |
     ```
     tc.einsum("abcd,abg,cdf->gf", E[-1], R, R.conj())
     """
@@ -899,16 +923,16 @@ def _dm_get_Lenvs_mps(Ws_mpo, Ws, n, dtype):
 
 def _apply_on_mps_step(B:tc.Tensor, A:tc.Tensor):
     """
-    ```
-    :        |         
-    :       (e)
-    :        |  B       
-    : --(d)--┼---(f)---                  |
-    :        |                          (e)
-    :       (b)         -->              |
-    :        |  A                --(ad)--⬜--(cf)--
-    : --(a)--⬜---(c)---
-    ```
+    .. code-block:: text
+        
+        .      |         
+              (e)
+               |  B       
+        --(d)--┼---(f)---                  |
+               |                          (e)
+              (b)         -->              |
+               |  A                --(ad)--◻--(cf)--
+        --(a)--◻---(c)---
     """
     a, b, c = A.shape
     d, e, b, f = B.shape
@@ -921,19 +945,19 @@ def _apply_on_mps_step(B:tc.Tensor, A:tc.Tensor):
 
 def _apply_on_mpo_step(B:tc.Tensor, A:tc.Tensor):
     """
-    ```
-    :        |         
-    :       (e)
-    :        |  B       
-    : --(d)--┼---(f)---                  |
-    :        |                          (e)
-    :       (b)         -->              |
-    :        |  A                --(ad)--⬜--(cf)--
-    : --(a)--⬜---(c)---                  |
-    :        |                          (g)
-    :       (g)                          |
-    :        |
-    ```
+    .. code-block:: text
+        
+        .      |         
+              (e)
+               |  B       
+        --(d)--┼---(f)---                  |
+               |                          (e)
+              (b)         -->              |
+               |  A                --(ad)--◻--(cf)--
+        --(a)--◻---(c)---                  |
+               |                          (g)
+              (g)                          |
+               |
     """
     a, b, g, c = A.shape
     d, e, b, f = B.shape
@@ -946,28 +970,28 @@ def _apply_on_mpo_step(B:tc.Tensor, A:tc.Tensor):
 
 def _dm_left2right_mpo(Lenv:tc.Tensor, B:tc.Tensor, A:tc.Tensor):
     """
-    ```
-    :  Lenv
-    :            ╭╮          
-    :            |          
-    :  ╭-╮      (f) B             ╭-╮       
-    :  | ├--(d)--┼--(e)--         | ├--(e)--
-    :  | |      (b)               | |       
-    :  | |       | A              | |       
-    :  | ├--(a)--┼--(c)--         | ├--(c)--
-    :  | |       |                | |
-    :  | |      (k)               | |
-    :  | |       |                | |
-    :  | ├--(g)--┼--(i)--    -->  | ├--(i)--
-    :  | |       | A.conj()       | |       
-    :  | |      (h)               | |       
-    :  | ├--(j)--┼--(l)--         | ├--(l)--
-    :  ╰-╯       | B.conj()       ╰-╯       
-    :           (f)         
-    :            |          
-    :            ╰╯         
-    ```
-    tc.einsum("adgj,dfbe,abc,ghi,jkhl->ceil", Lenv, B, A, A.conj(), B.conj())
+    .. code-block:: text
+        
+        .         ╭╮          
+                  |          
+        ╭-╮      (f) B             ╭-╮       
+        | ├--(d)--┼--(e)--         | ├--(e)--
+        | |      (b)               | |       
+        | |       | A              | |       
+        | ├--(a)--┼--(c)--         | ├--(c)--
+        | |       |                | |
+        | |      (k)               | |
+        | |       |                | |
+        | ├--(g)--┼--(i)--    -->  | ├--(i)--
+        | |       | A.conj()       | |       
+        | |      (h)               | |       
+        | ├--(j)--┼--(l)--         | ├--(l)--
+        ╰-╯       | B.conj()       ╰-╯       
+                 (f)         
+                  |          
+                  ╰╯         
+    
+    >>> tc.einsum("adgj,dfbe,abc,ghi,jkhl->ceil", Lenv, B, A, A.conj(), B.conj())
     """
     d,f,b,e = B.shape
     a,d,g,j = Lenv.shape
@@ -985,21 +1009,22 @@ def _dm_left2right_mpo(Lenv:tc.Tensor, B:tc.Tensor, A:tc.Tensor):
 
 def _dm_get_R_mpo(B:tc.Tensor, A:tc.Tensor, R:tc.Tensor, V:tc.Tensor):
     """
-    ```
-    :                  |
-    :                 (c)
-    :                  |
-    :                  ⬜ V.conj()
-    :        |         | 
-    :       (g) B     (j)
-    : --(b)--┼--(h)----┤R          
-    :       (e)        |      -->  --(a,b)--⬜--(g,k,c)--
-    :        | A       | 
-    : --(a)--┼--(f)----╯
-    :       (k)
-    :        │
-    ```
-    tc.einsum("bgeh,aekf,fhj,jc->abgkc", B, A, R, V.conj)
+    .. code-block:: text
+        
+        .                |
+                        (c)
+                         |
+                         ◻ V.conj()
+               |         | 
+              (g) B     (j)
+        --(b)--┼--(h)----┤R          
+              (e)        |      -->  --(a,b)--◻--(g,k,c)--
+               | A       | 
+        --(a)--┼--(f)----╯
+              (k)
+               │
+    
+    >>> tc.einsum("bgeh,aekf,fhj,jc->abgkc", B, A, R, V.conj)
     """
     a, e, k, f = A.shape
     b, g, e, h = B.shape
@@ -1025,18 +1050,19 @@ def _dm_get_Lenvs_mpo(Ws_mpo, Ws, n, dtype):
 
 def _up_bottom_tr(tsr):
     """
-    ```
-    :        ╭╮
-    :        │
-    :       (b)
-    :        │
-    : --(a)--┼--(d)--  ⟶  --(a)--⬜--(d)--
-    :        │
-    :       (b)
-    :        │
-    :        ╰╯
-    ```
-    tc.einsum('abbc->ac',tsr)
+    .. code-block:: text
+        
+        .      ╭╮
+               │
+              (b)
+               │
+        --(a)--┼--(d)--  ⟶  --(a)--◻--(d)--
+               │
+              (b)
+               │
+               ╰╯
+    
+    >>> tc.einsum('abbc->ac',tsr)
     """
     diag_elements = tsr.permute([0,3,1,2]).diagonal(offset=0, dim1=-2, dim2=-1)
     return diag_elements.sum(-1)
@@ -1044,20 +1070,21 @@ def _up_bottom_tr(tsr):
 
 def _contract_right_env(H:tc.Tensor, psi:tc.Tensor, Renv:tc.Tensor) -> tc.Tensor:
     """
-    ```
-    :         ╭-╮          psi.conj()╭-╮
-    :  --(a)--┤ │     --(a)--⬜--(b)--┤ │
-    :         │ │            │       │ │
-    :         │ │           (c)      │ │
-    :         │ │            │H      │ │
-    :  --(d)--┤ │ <-  --(d)--⬜--(e)--┤ │
-    :         │ │            │       │ │
-    :         │ │           (f)      │ │
-    :         │ │            │       │ │
-    :  --(g)--┤ │     --(g)--⬜--(h)--┤ │
-    :         ╰-╯          psi       ╰-╯
-    ```  
-    tc.einsum("acb,dcfe,gfh,beh->adg", psi.conj(), H, psi, Renv)
+    .. code-block:: text
+        
+        .      ╭-╮          psi.conj()╭-╮
+        --(a)--┤ │     --(a)--◻--(b)--┤ │
+               │ │            │       │ │
+               │ │           (c)      │ │
+               │ │            │H      │ │
+        --(d)--┤ │ <-  --(d)--◻--(e)--┤ │
+               │ │            │       │ │
+               │ │           (f)      │ │
+               │ │            │       │ │
+        --(g)--┤ │     --(g)--◻--(h)--┤ │
+               ╰-╯          psi       ╰-╯
+     
+    >>> tc.einsum("acb,dcfe,gfh,beh->adg", psi.conj(), H, psi, Renv)
     """
     b, e, h = Renv.shape
     g, f, h = psi.shape
@@ -1076,19 +1103,20 @@ def _contract_right_env(H:tc.Tensor, psi:tc.Tensor, Renv:tc.Tensor) -> tc.Tensor
 
 def _contract_left_env(H:tc.Tensor, psi:tc.Tensor, Lenv:tc.Tensor) -> tc.Tensor:
     """
-    ```
-    : ╭-╮   psi.conj()          ╭-╮       
-    : │ ├--(a)--⬜--(b)--        │ ├--(b)--
-    : │ │       │               │ │       
-    : │ │      (c)              │ │       
-    : │ │       │H              │ │       
-    : │ ├--(d)--⬜--(e)--  --->  │ ├--(e)--
-    : │ │       │               │ │       
-    : │ │      (f)              │ │       
-    : │ │       │               │ │       
-    : │ ├--(g)--⬜--(h)--        │ ├--(h)--
-    : ╰-╯     psi               ╰-╯       
-    ```  
+    .. code-block:: text
+        
+        ╭-╮   psi.conj()          ╭-╮       
+        │ ├--(a)--◻--(b)--        │ ├--(b)--
+        │ │       │               │ │       
+        │ │      (c)              │ │       
+        │ │       │H              │ │       
+        │ ├--(d)--◻--(e)--  --->  │ ├--(e)--
+        │ │       │               │ │       
+        │ │      (f)              │ │       
+        │ │       │               │ │       
+        │ ├--(g)--◻--(h)--        │ ├--(h)--
+        ╰-╯     psi               ╰-╯       
+     
     tc.einsum("adg,acb,dcfe,gfh->beh", Lenv, psi.conj(), H, psi)
     """
     a, d, g = Lenv.shape
@@ -1107,20 +1135,21 @@ def _contract_left_env(H:tc.Tensor, psi:tc.Tensor, Lenv:tc.Tensor) -> tc.Tensor:
 
 def _matrix_vector_product0(Lenv, Renv, v):
     """
-    ```
-    : ╭-╮                 ╭-╮ 
-    : │ ├--(a)-     -(c)--┤ │ 
-    : │ │                 │ │ 
-    : │ │                 │ │ 
-    : │ │                 │ │              
-    : │ ├--(f)-------(h)--┤ │  -->    --(a)--(c)-         
-    : │ │                 │ │     
-    : │ │                 │ │ 
-    : │ │                 │ │ 
-    : │ ├--(k)---⬜---(m)--┤ │ 
-    : ╰-╯       psi       ╰-╯ 
-    : Lenv                Renv
-    ```
+    .. code-block:: text
+    
+        ╭-╮                 ╭-╮ 
+        │ ├--(a)-     -(c)--┤ │ 
+        │ │                 │ │ 
+        │ │                 │ │ 
+        │ │                 │ │              
+        │ ├--(f)-------(h)--┤ │  -->    --(a)--(c)-         
+        │ │                 │ │     
+        │ │                 │ │ 
+        │ │                 │ │ 
+        │ ├--(k)---◻---(m)--┤ │ 
+        ╰-╯       psi       ╰-╯ 
+        Lenv                Renv
+    
     输入：
     
     Lenv: (a, fk)
@@ -1130,6 +1159,7 @@ def _matrix_vector_product0(Lenv, Renv, v):
     v: (km)
     
     前期准备：
+    ----------
     >>> Lenv = np.ascontiguousarray(Lenv.reshape(Lenv.shape[0], -1))
     >>> H12 = np.einsum("fdig,gejh->defijh", H1, H2)
     >>> d, e, f, *ijh = H12.shape
@@ -1150,20 +1180,21 @@ def _matrix_vector_product0(Lenv, Renv, v):
 
 def _trace_matrix_vector_product0(Lenv, Renv):
     """
-    ```
-    : ╭-╮                 ╭-╮ 
-    : │ ├--(a)-╯   ╰-(c)--┤ │ 
-    : │ │                 │ │ 
-    : │ │                 │ │ 
-    : │ │                 │ │              
-    : │ ├--(f)-------(h)--┤ │  -->    --(a)--(c)-         
-    : │ │                 │ │     
-    : │ │                 │ │ 
-    : │ │                 │ │ 
-    : │ ├--(a)-╮   ╭-(c)--┤ │ 
-    : ╰-╯                 ╰-╯ 
-    : Lenv                Renv
-    ```
+    .. code-block:: text
+    
+        ╭-╮                 ╭-╮ 
+        │ ├--(a)-╯   ╰-(c)--┤ │ 
+        │ │                 │ │ 
+        │ │                 │ │ 
+        │ │                 │ │              
+        │ ├--(f)-------(h)--┤ │  -->    --(a)--(c)-         
+        │ │                 │ │     
+        │ │                 │ │ 
+        │ │                 │ │ 
+        │ ├--(a)-╮   ╭-(c)--┤ │ 
+        ╰-╯                 ╰-╯ 
+        Lenv                Renv
+    
     输入：
     
     Lenv: (a, fk)
@@ -1173,6 +1204,7 @@ def _trace_matrix_vector_product0(Lenv, Renv):
     v: (km)
     
     前期准备：
+    ----------
     >>> Lenv = np.ascontiguousarray(Lenv.reshape(Lenv.shape[0], -1))
     >>> H12 = np.einsum("fdig,gejh->defijh", H1, H2)
     >>> d, e, f, *ijh = H12.shape
@@ -1193,20 +1225,21 @@ def _trace_matrix_vector_product0(Lenv, Renv):
 
 def _trace_matrix_vector_product(Lenv, H12, Renv):
     """
-    ```
-    : ╭-╮                       ╭-╮ 
-    : │ ├--(a)-╯         ╰-(c)--┤ │ 
-    : │ │       │       │       │ │ 
-    : │ │      (d)     (e)      │ │ 
-    : │ │       │H1     │H2     │ │              │       │
-    : │ ├--(f)--⬜--(g)--⬜--(h)--┤ │  -->        (d)     (e)
-    : │ │       │       │       │ │       --(a)--┴-------┴--(c)- 
-    : │ │      (i)     (j)      │ │ 
-    : │ │       │       │       │ │ 
-    : │ ├--(k)-╮         ╭-(m)--┤ │ 
-    : ╰-╯         psi           ╰-╯ 
-    : Lenv                      Renv
-    ```
+    .. code-block:: text
+    
+        ╭-╮                       ╭-╮ 
+        │ ├--(a)-╯         ╰-(c)--┤ │ 
+        │ │       │       │       │ │ 
+        │ │      (d)     (e)      │ │ 
+        │ │       │H1     │H2     │ │              │       │
+        │ ├--(f)--◻--(g)--◻--(h)--┤ │  -->        (d)     (e)
+        │ │       │       │       │ │       --(a)--┴-------┴--(c)- 
+        │ │      (i)     (j)      │ │ 
+        │ │       │       │       │ │ 
+        │ ├--(k)-╮         ╭-(m)--┤ │ 
+        ╰-╯         psi           ╰-╯ 
+        Lenv                      Renv
+    
     输入：
     
     Lenv: (a, fk)
@@ -1218,6 +1251,7 @@ def _trace_matrix_vector_product(Lenv, H12, Renv):
     v: (kijm)
     
     前期准备：
+    ----------
     >>> Lenv = np.ascontiguousarray(Lenv.swapaxes(1,2).reshape(Lenv.shape[0], -1))
     >>> H12 = np.einsum("fdig,gejh->defijh", H1, H2)
     >>> d, e, f, *ijh = H12.shape
@@ -1243,25 +1277,23 @@ def _trace_matrix_vector_product(Lenv, H12, Renv):
     return tc.einsum("afa->f",Lenv) @ tc.einsum("abac->bc", H12) @ tc.einsum("afa->f",Renv)
     
 
-
-
-
 def _matrix_vector_product(Lenv, H12, Renv, v):
     """
-    ```
-    : ╭-╮                       ╭-╮ 
-    : │ ├--(a)-           -(c)--┤ │ 
-    : │ │       │       │       │ │ 
-    : │ │      (d)     (e)      │ │ 
-    : │ │       │H1     │H2     │ │              │       │
-    : │ ├--(f)--⬜--(g)--⬜--(h)--┤ │  -->        (d)     (e)
-    : │ │       │       │       │ │       --(a)--┴-------┴--(c)- 
-    : │ │      (i)     (j)      │ │ 
-    : │ │       │       │       │ │ 
-    : │ ├--(k)--┴-------┴--(m)--┤ │ 
-    : ╰-╯         psi           ╰-╯ 
-    : Lenv                      Renv
-    ```
+    .. code-block:: text
+    
+        ╭-╮                       ╭-╮ 
+        │ ├--(a)-           -(c)--┤ │ 
+        │ │       │       │       │ │ 
+        │ │      (d)     (e)      │ │ 
+        │ │       │H1     │H2     │ │              │       │
+        │ ├--(f)--◻--(g)--◻--(h)--┤ │  -->        (d)     (e)
+        │ │       │       │       │ │       --(a)--┴-------┴--(c)- 
+        │ │      (i)     (j)      │ │ 
+        │ │       │       │       │ │ 
+        │ ├--(k)--┴-------┴--(m)--┤ │ 
+        ╰-╯         psi           ╰-╯ 
+        Lenv                      Renv
+    
     输入：
     
     Lenv: (a, fk)
@@ -1273,6 +1305,7 @@ def _matrix_vector_product(Lenv, H12, Renv, v):
     v: (kijm)
     
     前期准备：
+    ----------
     >>> Lenv = np.ascontiguousarray(Lenv.swapaxes(1,2).reshape(Lenv.shape[0], -1))
     >>> H12 = np.einsum("fdig,gejh->defijh", H1, H2)
     >>> d, e, f, *ijh = H12.shape
@@ -1291,20 +1324,21 @@ def _matrix_vector_product(Lenv, H12, Renv, v):
 
 def make_matrix(Lenv:tc.Tensor, H12:tc.Tensor, Renv:tc.Tensor):
     """
-    ```
-    : ╭-╮                ╭-╮ 
-    : │ ├--(a)-    -(c)--┤ │ 
-    : │ │       │        │ │ 
-    : │ │      (d)       │ │ 
-    : │ │       │H12     │ │              │    │    │
-    : │ ├--(f)--⬜--(g)---┤ │  -->        (a)  (d)  (c)
-    : │ │       │        │ │              ├----┼----┤
-    : │ │      (i)       │ │             (k)  (i)  (m)
-    : │ │       │        │ │              │    │    │
-    : │ ├--(k)--  --(m)--┤ │ 
-    : ╰-╯                ╰-╯ 
-    : Lenv                      Renv
-    ```
+    .. code-block:: text
+    
+        ╭-╮                ╭-╮ 
+        │ ├--(a)-    -(c)--┤ │ 
+        │ │       │        │ │ 
+        │ │      (d)       │ │ 
+        │ │       │H12     │ │              │    │    │
+        │ ├--(f)--◻--(g)---┤ │  -->        (a)  (d)  (c)
+        │ │       │        │ │              ├----┼----┤
+        │ │      (i)       │ │             (k)  (i)  (m)
+        │ │       │        │ │              │    │    │
+        │ ├--(k)--  --(m)--┤ │ 
+        ╰-╯                ╰-╯ 
+        Lenv                      Renv
+    
     a,fk
     df,ig
     m,gc
@@ -1334,20 +1368,21 @@ def make_matrix(Lenv:tc.Tensor, H12:tc.Tensor, Renv:tc.Tensor):
 
 def make_matrix0(Lenv:tc.Tensor, Renv:tc.Tensor):
     """
-    ```
-    : ╭-╮                ╭-╮ 
-    : │ ├--(a)-    -(c)--┤ │ 
-    : │ │                │ │ 
-    : │ │                │ │ 
-    : │ │                │ │              │    │
-    : │ ├--(f)-----(g)---┤ │  -->        (a)  (c)
-    : │ │                │ │              ├----┤
-    : │ │                │ │             (k)  (m)
-    : │ │                │ │              │    │
-    : │ ├--(k)-    -(m)--┤ │ 
-    : ╰-╯                ╰-╯ 
-    : Lenv                      Renv
-    ```
+    .. code-block:: text
+    
+        ╭-╮                ╭-╮ 
+        │ ├--(a)-    -(c)--┤ │ 
+        │ │                │ │ 
+        │ │                │ │ 
+        │ │                │ │              │    │
+        │ ├--(f)-----(g)---┤ │  -->        (a)  (c)
+        │ │                │ │              ├----┤
+        │ │                │ │             (k)  (m)
+        │ │                │ │              │    │
+        │ ├--(k)-    -(m)--┤ │ 
+        ╰-╯                ╰-╯ 
+        Lenv                      Renv
+    
     a,fk
     m,gc
     
@@ -1369,17 +1404,17 @@ def make_matrix0(Lenv:tc.Tensor, Renv:tc.Tensor):
 
 def _prepare_solve_ground_state(H1:tc.Tensor, H2:tc.Tensor) -> tc.Tensor:
     """
-    ```
-    :         |       |
-    :        (d)     (e)
-    :         |       |
-    :  --(f)--⬜--(g)--⬜--(h)--
-    :         |       |
-    :        (i)     (j)
-    :         |       |
-    ```
+    .. code-block:: text
     
-    tc.einsum("fdig,gejh->defijh", H1, H2)
+        .      |       |
+              (d)     (e)
+               |       |
+        --(f)--◻--(g)--◻--(h)--
+               |       |
+              (i)     (j)
+               |       |
+    
+    >>> tc.einsum("fdig,gejh->defijh", H1, H2)
     """
     f,d,i,g = H1.shape
     g,e,j,h = H2.shape
@@ -1399,20 +1434,24 @@ def add_many(
     这样得到的 MPS 是右正则形式，但不能获得奇异谱
 
     计算：
+    .. code-block:: text
+    
+        |    |   |   |     |    |   |   |
+        └-...┴---┴---┘  +  └-...┴---┴---┘
 
-    |    |   |   |     |    |   |   |
-    └-...┴---┴---┘  +  └-...┴---┴---┘
+    计算过程：
+    .. code-block:: text
+    
+        1). 最后一个格点：
+                                              |
+                  |                  |        ▽ V1
+        ψ1[-1]  ╭-┘        ψ2[-1]  ╭-┘        |
+        ψ1[-1]† ╰-┐  +     ψ2[-1]† ╰-┐   ->   ◇         记录：  --⨞--
+                  |                  |        |                  V1
+                                              △
+                                              |
 
-    1). 最后一个格点：
-                                             |
-                 |                  |        ▽ V1
-       ψ1[-1]  ╭-┘        ψ2[-1]  ╭-┘        |
-       ψ1[-1]† ╰-┐  +     ψ2[-1]† ╰-┐   ->   ◇         记录：  --⨞--
-                 |                  |        |                  V1
-                                             △
-                                             |
-
-    2). 倒数第二个格点：
+        2). 倒数第二个格点：
 
               ┌-╨-┐            ┌-╨-┐       ║
               |   △            |   △       ▽ V2
@@ -1422,7 +1461,7 @@ def add_many(
               └-╥-┘            └-╥-┘       △
                                            ║
 
-    3). 倒数第三个格点：
+        3). 倒数第三个格点：
 
           ┌--╨--┐          ┌--╨--┐
           |     △          |     △
@@ -1435,18 +1474,18 @@ def add_many(
           |     ▽          |     ▽         ║
           └--╥--┘          └--╥--┘
 
-    ... 依次类推
+        ... 依次类推
 
-    4). 最后一个格点： 
+        4). 最后一个格点： 
 
           |     |          |     |
           |     △          |     △
           |   ┌-╨-...      |   ┌-╨-...                       |     |  |  |
-          |   |        +   |   |        ->   --⬜--     记录： ⬜-...-⨞--⨞--⨞--
+          |   |        +   |   |        ->   --◻--     记录： ◻-...-⨞--⨞--⨞--
           └---┴---...      └---┴---...                            V3  V2  V1
 
-    Example
-    -------
+    示例:
+    --------
     >>> N = 5
     >>> linkdims = [1] + [4] * (N-1) + [1]
     >>> ψ1 = [tc.randn(linkdims[i],2,linkdims[i+1], dtype=tc.complex128) for i in range(N)]
@@ -1565,55 +1604,43 @@ def canonicalize_infinite(tsr:tc.Tensor):
     """
     tsr 是一个三阶张量，将它变换成正则形式
     
-    初始平移不变：
-    ```
-    :    │   │   │
-    : ───◻───◻───◻───
-    ```
+    .. code-block:: text
     
-    求解本征问题：
-    ```
-    :  ╭╮                  ╭╮         
-    :  │├──◻──             │├─   ┌◻─
-    :  ││  │   = \lamdba_l ││  = │
-    :  │├──◻──             │├─   └◻─
-    :  ╰╯                  ╰╯     Y  
-    ```
+        初始平移不变：
+           │   │   │
+        ───◻───◻───◻───
+    
+        求解本征问题：
+        ╭╮                  ╭╮         
+        │├──◻──             │├─   ┌◻─
+        ││  │   = \lamdba_l ││  = │
+        │├──◻──             │├─   └◻─
+        ╰╯                  ╰╯     Y  
 
-    以及
-    ```
-    :       ╭╮              ╭╮      
-    :  ──◻──┤│             ─┤│   ─◻┐
-    :    │  ││ = \lamdba_r  ││ =   │
-    :  ──◻──┤│             ─┤│   ─◻┘
-    :       ╰╯              ╰╯    X 
-    ```
+             ╭╮              ╭╮      
+        ──◻──┤│             ─┤│   ─◻┐
+          │  ││ = \lamdba_r  ││ =   │
+        ──◻──┤│             ─┤│   ─◻┘
+             ╰╯              ╰╯    X 
     
-    插入：
-    ```
-    :    │              │              │
-    : ───◻──◻──◻──◻──◻──◻──◻──◻──◻──◻──◻───
-    :      Y⁻¹ Y  X X⁻¹    Y⁻¹ Y  X X⁻¹
-    ```
+        插入：
     
-    svd 分解
-    ```
-    : ──◻──◻── = ──▷──◇──⨞──
-    :   Y  X       U  S  V
-    ```
+           │              │              │
+        ───◻──◻──◻──◻──◻──◻──◻──◻──◻──◻──◻───
+             Y⁻¹ Y  X X⁻¹    Y⁻¹ Y  X X⁻¹
     
-    那么：
-    ```
-    :    │                     │                     │
-    : ───◻──◻──▷─  ─◇─  ─⨞──◻──◻──◻──▷─  ─◇─  ─⨞──◻──◻───
-    :      Y⁻¹ U    S    V  X⁻¹   Y⁻¹ U    S    V  X⁻¹
-    :               ↑   └─────────────┘   ↑
-    :                         res
-    ```
+        svd 分解：
+        ──◻──◻── = ──▷──◇──⨞──
+          Y  X       U  S  V
+    
+        那么：
+           │                     │                     │
+        ───◻──◻──▷─  ─◇─  ─⨞──◻──◻──◻──▷─  ─◇─  ─⨞──◻──◻───
+             Y⁻¹ U    S    V  X⁻¹   Y⁻¹ U    S    V  X⁻¹
+                      ↑   └─────────────┘   ↑
+                                res
     
     这样 `s * res` 是左正交形式，`res * s` 是右正交形式
-    
-    
     """
     # 拿到转移矩阵：
     tsf_mat = _contract_init_pbc(tsr.conj(), tsr)

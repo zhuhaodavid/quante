@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:25
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-29 01:56:30
+# @Last Modified time: 2024-10-31 18:57:05
 
 """
 生成一些常用的态（`np.ndarray`）
@@ -66,8 +66,8 @@ def basis_state(i, dim, dtype=complex):
     dim : int
         Total size of hilbert space.
 
-    Example
-    -------
+    示例:
+    --------
     >>> qt.generate.state.basis_state(1,4)
     [[0.+0.j]
      [1.+0.j]
@@ -88,7 +88,7 @@ def product_state(binary:list[str], dtype=float):
     binary : sequence of 0s and 1s
         The binary of the computation state.
 
-    Examples
+    示例:
     --------
     >>> qt.generate.state.computational("01")
     [[0.]
@@ -115,7 +115,8 @@ def neel(L:int, down_first=False, dtype=float, **kwargs):
     
     L 是链长，down_first 为 True 时，第一个是 down，否则是 up
     
-    Example:
+    示例:
+    --------
     >>> qt.generate.state.neel(2, down_first=False)
     [[0.]
      [1.]
@@ -131,7 +132,8 @@ def ghz(L):
     """
     生成 ghz 态，即所有自旋都是 up 或 down 的叠加态
     
-    Example:
+    示例:
+    --------
     >>> qt.generate.state.ghz(2)
     [[0.70710678]
      [0.        ]
@@ -145,7 +147,8 @@ def ghz(L):
 def w(L, dtype=complex):
     """生成 w 态，即只有一个 down 的态的叠加
     
-    Example:
+    示例:
+    --------
     >>> qt.generate.state.w(2)
     [[0.        +0.j]
      [0.70710678+0.j]
@@ -171,7 +174,8 @@ def random(dim: int, n: int = 1, dtype: type = complex, seed: int = None) -> _np
     - dtype (type, 可选): 数据类型，默认为complex。
     - seed (int, 可选): 随机数生成器的种子，用于复现结果。
     
-    Example:
+    示例:
+    --------
     >>> qt.generate.state.random(4)
     [[ 0.08615608]
      [-0.63327314]
@@ -194,13 +198,20 @@ def random_sparse(dim: int, n: int = 1, density: float = 1., dtype: type = compl
     生成一个稀疏的随机向量或矩阵，并归一化。
 
     参数:
+    -----
     - dim (int): 向量或矩阵的维度。
+    
     - n (int, 可选): 如果生成矩阵，则为矩阵的列数，默认为1。
+    
     - density (float, 可选): 稀疏矩阵的密度，范围在0到1之间。默认为1。
+    
     - dtype (type, 可选): 数据类型，默认为complex。
+    
     - seed (int, 可选): 随机数生成器的种子，用于复现结果。
     
-    Example:
+    
+    示例:
+    --------
     >>> qt.generate.state.random_sparse(4)
       (0, 0)        0.350909962928404
       (1, 0)        0.30461411299623736
@@ -222,12 +233,17 @@ def bloch(theta: float, phi: float, j: Union[int, float]) -> _np.ndarray:
     角动量相干态，生成一个纯态，其x,y,z测量值在theta,phi方向上。
     
     计算方法是：
+    
+    .. math:: 
         \left| \theta \phi \right> = \exp \left[ \mathrm{i} \theta (J_{x}\sin \phi - J_{y}\cos \phi) \right] \left| j \right>
 
     简化得到向量元为：
+    
+    .. math:: 
         \braket{ jm \vert \theta \phi } = (1 + \gamma \gamma ^* )^{ - j} \gamma^{j - m} \sqrt{\begin{pmatrix} 2j \\ j - m \end{pmatrix}}
     
-    Example
+    示例:
+    --------
     >>> j = 100
     >>> theta = np.arccos(np.random.uniform(-1, 1))
     >>> phi = np.random.uniform(0, 2*np.pi)
@@ -494,7 +510,7 @@ def antisymmetric(*args):
     vector or operator
         The permutation state, dimension same as ``kron(*ps)``.
 
-    Examples
+    示例:
     --------
     A singlet is the ``perm_state`` of up and down.
 

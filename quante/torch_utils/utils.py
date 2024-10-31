@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-25 22:20:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-24 22:39:05
+# @Last Modified time: 2024-10-31 20:46:36
 
 # 梯度下降的工具
 
@@ -169,7 +169,9 @@ class AdaptiveLRScheduler:
 def create_high_identity(dims, device, dtype=tc.float64) -> tc.Tensor:
     """
     生成一个高阶的 delta 张量，如
+
     >>> create_high_identity([2,2,2])
+    
     可以生成一个三阶二维的 delta 张量
     """
     assert tc.all(
@@ -195,7 +197,8 @@ def save_h5(filename:str, *data, group:Union[list[str],str] = [], mode:str='a') 
     """
     简化的 save_hdf5
 
-    Example:
+    示例:
+    --------
     >>> import numpy as np
     >>> import quante.basicfun as bf
     >>> mat = np.random.randn(10,10)
@@ -225,7 +228,8 @@ def load_h5(filename:str, *datanames, group=[]) -> Union[Dict[str, Any], list[An
     """
     简化的 load_hdf5
 
-    Example:
+    示例:
+    --------
     >>> import numpy as np
     >>> import quante.basicfun as bf
     >>> mat = np.random.randn(10,10)

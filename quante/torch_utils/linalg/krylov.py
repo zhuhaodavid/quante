@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-09 18:07:00
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-09 18:40:26
+# @Last Modified time: 2024-10-31 19:29:53
 
 import torch as tc
 
@@ -667,7 +667,8 @@ def lanczos_ground_state(linear_oper:Callable[[tc.Tensor],tc.Tensor], v:tc.Tenso
     
     否则只能前向传播
     
-    Example:
+    示例:
+    --------
     >>> import torch
     >>> import quante.torch_utils.tclinalg as qtc
     >>> mat = torch.randn(100, 100, dtype=torch.float64)
@@ -699,7 +700,8 @@ def lanczos_evolve_state(linear_oper:Callable[[tc.Tensor],tc.Tensor], v:tc.Tenso
     
     否则只能前向传播
     
-    Example:
+    示例:
+    --------
     >>> import torch
     >>> import quante.torch_utils.tclinalg as qtc
     >>> mat = torch.randn(100, 100, dtype=torch.float64)

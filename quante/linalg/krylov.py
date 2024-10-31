@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-26 17:09:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 03:18:05
+# @Last Modified time: 2024-10-31 20:44:17
 
 # todo: 实现 Arnoldi method 对角化非厄密矩阵；LanczosEvolution 计算 :math:`exp(delta H) |psi0>`
 
@@ -25,7 +25,8 @@ def lanczos_ground_state(matvec:Callable[[np.ndarray], np.ndarray], psi0:np.ndar
     
     # todo，如果 psi0 是 list[ndarray] 的结构，如何实现？
     
-    Example:
+    示例:
+    --------
     >>> dim = 10000
     >>> H = np.random.randn(dim,dim)
     >>> psi0 = np.random.randn(dim)
@@ -136,7 +137,8 @@ def lanczos_evolve_state(matvec:Callable[[np.ndarray], np.ndarray], psi0:np.ndar
     
     其中 `e_0 = (1, 0, 0, ...)`
     
-    Example:
+    示例:
+    --------
     >>> dim = 10000
     >>> H = np.random.randn(dim,dim)
     >>> psi0 = np.random.randn(dim)

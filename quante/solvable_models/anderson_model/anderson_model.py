@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-15 10:30:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-11 15:24:44
+# @Last Modified time: 2024-10-31 19:22:42
 
 import numpy as np
 
@@ -18,7 +18,8 @@ def anderson_matrix(T:np.ndarray, W:np.ndarray) -> np.ndarray:
     """
     生成安德森模型的矩阵
     
-    Example:
+    示例:
+    --------
     >>> q, l = 2, 1000
     >>> T = np.random.randn(q)
     >>> W = np.random.randn(l)
@@ -33,6 +34,7 @@ def anderson_matrix(T:np.ndarray, W:np.ndarray) -> np.ndarray:
     ----------
     T : np.ndarray
         onsite 能量
+    
     W : np.ndarray
         hopping 能量
 
@@ -58,7 +60,8 @@ def anderson_kmat(T:np.ndarray, W:np.ndarray, k:int) -> np.ndarray:
     """
     画出 anderson 模型第 k 个矩阵
     
-    Example
+    示例:
+    --------
     >>> q, l = 2, 1000
     >>> T = np.random.randn(q)
     >>> W = np.random.randn(l)
@@ -73,6 +76,7 @@ def anderson_kmat(T:np.ndarray, W:np.ndarray, k:int) -> np.ndarray:
     ----------
     T : np.ndarray
         onsite 能量
+        
     W : np.ndarray
         hopping 能量
 
@@ -99,7 +103,8 @@ def anderson_eigstate(T:int, W:int, vec:np.ndarray, k:int):
     """
     获得第 k 个矩阵，vec 对应的本征态
     
-    Example:
+    示例:
+    --------
     >>> q, l = 2, 1000
     >>> T = np.random.randn(q)
     >>> W = np.random.randn(l)
@@ -130,7 +135,8 @@ def anderson_energies(T:np.ndarray, W:np.ndarray) -> np.ndarray:
     """
     返回 anderson 模型的所有本征能量（矩阵，每一行为一个能带）
     
-    Example
+    示例:
+    --------
     >>> q, l = 1000, 1000
     >>> T = np.random.randn(q)
     >>> W = np.random.randn(l)
@@ -145,6 +151,7 @@ def anderson_energies(T:np.ndarray, W:np.ndarray) -> np.ndarray:
     ----------
     T : np.ndarray
         onsite 能量
+        
     W : np.ndarray
         hopping 能量
 
@@ -174,7 +181,8 @@ def plot_anderson_band(T:np.ndarray, W:np.ndarray) -> None:
     """
     画出 anderson 模型的能带
     
-    Example
+    示例:
+    --------
     >>> q, l = 2, 1000
     >>> T = np.random.randn(q)
     >>> W = np.random.randn(l)
@@ -189,6 +197,7 @@ def plot_anderson_band(T:np.ndarray, W:np.ndarray) -> None:
     ----------
     T : np.ndarray
         onsite 能量
+        
     W : np.ndarray
         hopping 能量
     """

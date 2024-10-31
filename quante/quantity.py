@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 04:16:08
+# @Last Modified time: 2024-10-31 20:47:07
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -16,7 +16,6 @@ __all__ = [
     "entanglement_spectrum",
     "cg_coef",
     "mean_level_spacing",
-    "avg_ratio"
 ]
 
 __all__ += [
@@ -29,7 +28,8 @@ def entanglement_spectrum(state:_np.ndarray, L:int, left_number:int, basis=None)
     """计算纯态纠缠熵
     basis 表示 state 所处的对称性空间
     
-    Example:
+    示例:
+    --------
     >>> L = 10
     >>> ham = qt.generate.operas.heisenberg_operator(L=10)
     >>> basis = qt.generate.basis.spin_basis(L=L, Nup=5, kblock=1)
@@ -52,7 +52,8 @@ def entropy(a, rank=None, base=_np.e) -> _np.float64:
     """
     计算 von Neumann 熵 (- tr a log a) ，rank 表示使用 eigs
 
-    Example:
+    示例:
+    --------
     >>> L = 6
     >>> mat = ed.rdmat_rho(2**L, sparse=True, density=0.5)
     >>> etp = qla.entropy(mat)
@@ -82,7 +83,8 @@ def entropy_page(Dim_sub:int, Dim_tot:int) -> _np.float64:
     Calculate the page entropy, i.e. 
        expected entropy for a subsytem of a random state in Hilbert space.
     
-    Example:
+    示例:
+    --------
     >>> L = 12
     >>> vals = qla.entropy_page(2**(L//2), 2**L)
     >>> print(vals)

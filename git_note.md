@@ -6,14 +6,20 @@
 
 如何需要同步库的内容按如下操作：
 
-1. 先切换到 dev 分支：
+1. git checkout dev
 
-2. 创建 share 分支
+2. 将 share 文件夹中的内容复制到 share 分支
 
-3. 将 share 文件夹中的内容复制到 share 分支
+3. add commit share
 
-4. add commit share 中的所有内容
+4. 
+    git checkout share
+    git merge dev
 
-<!-- 4. 通过文件对比，逐条通过：add 那些不想传到 share 文件夹中的内容，其他的更新
+    手动解决冲突
 
-5.  -->
+5. 
+    git checkout dev
+    git merge share
+
+这样就完成了一次更新

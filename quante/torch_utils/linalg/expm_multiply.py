@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-12 01:15:15
+# @Last Modified time: 2024-10-31 19:29:37
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -15,7 +15,7 @@ import numpy as np
 import scipy.linalg  # type: ignore
 import scipy.sparse.linalg  # type: ignore
 import torch as tc
-from .sparse import trace, norm, eye
+from ..sparse import trace, norm, eye
 
 __all__ = ['expm_multiply', 'evolve_engine']
 
@@ -48,7 +48,8 @@ def evolve_engine(A:tc.Tensor, scale=1., n0=1, herm=False):
     """
     用 evolve engine 的形式，用法如下：
     
-    Example:
+    示例:
+    --------
     >>> import quante as qt
     >>> from quante.torch_utils.linalg import evolve_engine, to_csr
     >>> import torch as tc

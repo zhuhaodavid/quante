@@ -26,21 +26,17 @@ quante - 一个用于量子物理的Python库
     :maxdepth: 1
 
     ./installation/installation
+    ./installation/usage
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Jupyter Notebooks
-   
-   ./examples/evolve
 
 .. toctree::
     :caption: 函数 API
     :maxdepth: 1
     
-    basicfun
-    linalg
-    generate
-    solvable_models
-    tensor
-    torch_utils
-    quantity
+    ./funcsAPI/basicfun
+    ./funcsAPI/linalg
+    ./funcsAPI/generate
+    ./funcsAPI/solvable_models
+    ./funcsAPI/tensor
+    ./funcsAPI/torch_utils
+    ./funcsAPI/quantity

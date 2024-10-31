@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 01:30:34
+# @Last Modified time: 2024-10-31 20:42:00
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -44,25 +44,32 @@ def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, k
     -----------
     L: int
         链的长度/站点数量，需要小于 63。
+
     Nup: int, 可选
         总磁化强度，:math:`\\sum_j S^z_j`，投影。
+        
     S: {str, int}, 可选
         局部自旋自由度的大小。可以是任何（半）整数：
         "1/2","1","3/2",...
+        
     kblock: int, 可选
         指定动量块。可以从 0 到 L-1 的整数。
+        
     pblock: int, 可选，可取 [-1, 1]
         指定奇偶块。此对称性变换的物理表现是关于链的中点反射。
+        
     zblock: int, 可选，可取 [-1, 1]
         指定自旋反转对称性块。此对称性变换的物理表现是翻转自旋-z 分量的符号。
+        
     pzblock: int, 可选，可取 [-1, 1]
         指定自旋反转和奇偶块。此对称性变换的物理表现是翻转自旋-z 分量的符号和关于链的中点反射。
+        
     jmblock: {int, tuple[int, int]}, 可选
         指定 SU(2) 对称性块。第一个参数是 J，第二个参数是 m。J 取值从 L/2 到 1/2，m 取值从 J 到 -J。
         如果只传入一个参数，则默认 m = J。
         
-    实例:
-    ---------
+    示例:
+    --------
     >>> basis = qt.generate.basis.spin_basis(L=10, Nup=5, kblock=1)
     >>> print(basis.Ns)
     
@@ -70,21 +77,36 @@ def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, k
     ---------
     目前支持的组合有：
     - spin-1/2
+    
         - noblock
+
         - Nup
+
         - kblock
+
         - pblock
+
         - zblock
+
         - pzblock
+
         - Nup + kblock
+
         - Nup + pblock
+
         - Nup + zblock: 这个组合下 Nup 只能从 0 取到 N//2 （基矢为 Nup 与 N - Nup 的叠加态）
+
         - Nup + pzblock: 同上
+
         - Nup + kblock + pblock: 这个组合下 kblock 只能从 0 到 L//2,(基矢为 k 和 -k 的叠加)；与 quspin 中的代表元取法不同，因此得到矩阵相差一个排列，但本征值是相同的！
+
         - Nup + kblock + pblock + zblock: 同上，并且此时 Nup 只能取 N//2，且 N 为偶数；与 quspin 中的代表元取法不同，因此得到矩阵相差一个排列，但本征值是相同的！
+
         - jmblock
+
     - spin-high
         - noblock
+        
         - Nup
     
     SpinBasis
@@ -92,23 +114,33 @@ def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, k
     返回结果的代码提示总是 `SpinBasis` 类型，如果需要查看具体代码，可以通过 `where_codes` 方法定位代码位置。
     其功能包括：
     - 获得基矢：`get_state`，返回基矢在全空间中的表示
+    
     - 恢复态：`recover`，将子空间态恢复为全空间态
+    
     - 投影算符：`projection_matrix`，返回投影矩阵
+    
     - 态投影：`project`，将态投影到子空间
+    
     - 打印维度：`print_dims`，打印不同子空间的维数
     
     新增对称性类需要做的事情：
-    ----------
+    ------------------------------
     如果需要增加新的对称性，或者新的组合，需要：
     
     - 在 ./symmetry 中增加新的对称性类文件夹，文件夹中需要包含 `general_hamiltonian`, `xxx_basis.py` 和 `xxx_basis_class.py` 三个文件，如果有可以简化生成基的模型，也可以增加单独的文件，如 `heisenberg.py`。
     
     - 在 `xxx_class.py` 中实现对称性的方法（需要的 numba 函数在 `xxx_basis.py` 中）：
+    
         - 生成矩阵：`_matrix`
+        
         - 获得基矢：`get_state`
+        
         - 投影算符：`projection_matrix`
+        
         - 打印维度：`print_dims`
+        
         - 态投影：`project`
+        
         - 态恢复：`recover`
     
     - 在 `spin_basis` 函数中的参数增加对称性参数，如 `kblock`

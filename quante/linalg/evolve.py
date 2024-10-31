@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2024-10-31 04:44:24
+# # @Last Modified time: 2024-10-31 20:42:10
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
@@ -67,8 +67,8 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
            19. 159-208. ISSN 0962-4929
            http://eprints.ma.man.ac.uk/1451/
            
-    Example:
-    ----------
+    示例:
+    --------
     >>> import quante as qt
     >>> L = 10
     >>> mat = qt.generate.matrix.heisenberg_matrix(L)
@@ -101,7 +101,7 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
             hasshifted = True
             
         
-        from ..torch_utils.linalg.sparse import to_csr
+        from ..torch_utils.sparse import to_csr
         from ..torch_utils.linalg.expm_multiply import expm_multiply
         import torch as tc
         
@@ -286,7 +286,8 @@ def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.nd
     Returns:
         _np.ndarray: 时间演化量子态矩阵
         
-    Example:
+    示例:
+    --------
     >>> import quante as qt
     >>> L = 10
     >>> mat = qt.generate.matrix.heisenberg_matrix(L)

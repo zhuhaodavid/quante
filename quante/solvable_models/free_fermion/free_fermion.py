@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-07-14 15:28:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-06 20:31:44
+# @Last Modified time: 2024-10-31 17:39:34
 from ...linalg import eigvalsh
 import numpy as _np
 import scipy as _sp
@@ -37,21 +37,29 @@ def XY_gdenergy(
     r"""
     计算 **开边界条件** 下的 xy 模型的 **基态能量**
 
-    H = \sum_{i = 0}^{L - 2} 
-            j_{xx} s^{x}_{i} s^{x}_{i + 1} + 
-            j_{yy} s^{y}_{i} s^{y}_{i + 1} + 
-            j_{xy} s^{x}_{i} s^{y}_{i + 1} + 
-            j_{yx} s^{y}_{i} s^{x}_{i + 1} + 
-        \sum_{i = 0}^{L - 1} h_{z} s^{z}_{i}
+    .. math:: 
+        H = \sum_{i = 0}^{L - 2} 
+                j_{xx} s^{x}_{i} s^{x}_{i + 1} + 
+                j_{yy} s^{y}_{i} s^{y}_{i + 1} + 
+                j_{xy} s^{x}_{i} s^{y}_{i + 1} + 
+                j_{yx} s^{y}_{i} s^{x}_{i + 1} + 
+            \sum_{i = 0}^{L - 1} h_{z} s^{z}_{i}
 
     参数:
         L: 系统的大小。如果为np.inf，则计算无穷大系统的能量。
+        
         jxx: x方向的交换常数。
+        
         jyy: y方向的交换常数。
+        
         jxy: 交叉耦合常数。
+        
         jyx: 另一种交叉耦合常数。
+        
         hz: 外磁场的z分量。
+        
         pauli: 表示Pauli矩阵的选择，取值为-1、0或1。
+        
 
     返回:
         系统的基态能量值。
