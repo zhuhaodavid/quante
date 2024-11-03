@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:25
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 18:57:05
+# @Last Modified time: 2024-11-03 13:27:27
 
 """
 生成一些常用的态（`np.ndarray`）
@@ -80,7 +80,7 @@ def basis_state(i, dim, dtype=complex):
     return x
 
 
-def product_state(binary:list[str], dtype=float):
+def product_state(updns:list[str], dtype=float):
     """通过字符串生成态
     
     Parameters
@@ -90,26 +90,26 @@ def product_state(binary:list[str], dtype=float):
 
     示例:
     --------
-    >>> qt.generate.state.computational("01")
+    >>> qt.generate.state.product_state(["up", "dn"])
     [[0.]
      [1.]
      [0.]
      [0.]]
     """
     tmp = ""
-    for i, b in enumerate(binary):
+    for b in updns:
         if b == "up":
             tmp += "0"
-        elif b == "down":
+        elif b == "dn":
             tmp += "1"
         else:
             raise ValueError(f"Invalid value {b} in binary string.")
-    result = _np.zeros((2**len(binary), 1), dtype=dtype)
+    result = _np.zeros((2**len(updns), 1), dtype=dtype)
     result[int(tmp, 2)] = 1.0
     return result
 
 
-def neel(L:int, down_first=False, dtype=float, **kwargs):
+def neel(L:int, down_first=False, dtype=float):
     """
     生成 Neel 态
     
@@ -123,10 +123,12 @@ def neel(L:int, down_first=False, dtype=float, **kwargs):
      [0.]
      [0.]]
     """
-    binary = "01" * (L // 2) + (L % 2 == 1) * "0"
+    updns = "01" * (L // 2) + (L % 2 == 1) * "0"
     if down_first:
-        binary = "1" + binary[:-1]
-    return product_state(binary, dtype=dtype, **kwargs)
+        updns = "1" + updns[:-1]
+    result = _np.zeros((2**len(updns), 1), dtype=dtype)
+    result[int(updns, 2)] = 1.0
+    return result
 
 def ghz(L):
     """

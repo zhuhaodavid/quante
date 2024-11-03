@@ -3,7 +3,7 @@
 # @Author: hzhu
 # @Date:   2024-10-30 21:12:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 20:39:56
+# @Last Modified time: 2024-11-01 00:19:32
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -168,7 +168,7 @@ html_css_files = [
 ]
 
 html_theme_options = {
-    'display_version': True,
+    # 'display_version': True,
     'body_max_width': 'auto',  # Adjusts body width on larger screens
 }
 
