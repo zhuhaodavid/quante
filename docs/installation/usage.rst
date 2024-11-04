@@ -7,6 +7,7 @@
     :caption: 演化
     :maxdepth: 2
 
+    examples/basicfun
     examples/exact_diagonalization
     examples/evolve
     examples/tc_tensor_network

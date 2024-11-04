@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 20:47:00
+# @Last Modified time: 2024-11-04 16:22:37
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -14,10 +14,12 @@ import numpy as _np
 import scipy as _sp
 import time as _time
 import h5py as _h5py
+import json as _json
 import ctypes as _ctypes
 import inspect as _inspect
 import logging as _logging
 import platform as _platform
+from dataclasses import is_dataclass, asdict
 
 from itertools import chain
 from collections import deque
@@ -29,7 +31,7 @@ __all__ = ["test_time", "test_memory"]  # 测试工具
 
 __all__ += ["clear", "get_free_space", "create_folder"]  # 系统层面的函数
 
-__all__ += ["save_hdf5", "load_hdf5", "view_hdf5"]  # hdf5 工具
+__all__ += ["save_hdf5", "load_hdf5", "_save_hdf5", "_load_hdf5", "view_hdf5"]  # hdf5 工具
 
 __all__ += ["set_logging", "println"]  # 日志工具
 
@@ -286,7 +288,26 @@ def _save_main(h5group:_h5py.Group, data_dic: Dict[str, Any]) -> None:
             save_func(h5group, keystr, value)
 
 def _default_save(h5group:_h5py.Group, key:str, value) -> None:
-    h5group.create_dataset(key, data=value)
+    if is_dataclass(value):
+        # 如果是 dataclass 转为字符串储存
+        data = _json.dumps(asdict(value), indent=4)
+        dataset = h5group.create_dataset(key, data=data)
+        # 记录dataset 的名字
+        dataset.attrs["object_type"] = "dataclass"
+        dataset.attrs["dataset_name"] = value.__class__.__name__
+    else:
+        try:
+            # 尝试直接保存
+            h5group.create_dataset(key, data=value)
+        except (ValueError, TypeError):
+            # 如果失败，尝试序列化，但会失去可视化的能力
+            import pickle as _pickle
+                        
+            # 将 value 序列化为字节流
+            serialized_params = _pickle.dumps(value)
+            dataset = h5group.create_dataset(key, data=_np.void(serialized_params))
+            dataset.attrs["object_type"] = "serialized_bytes"
+            
 
 def _save_csr(h5group:_h5py.Group, key:str, csrdata) -> None:
     subgroup = h5group.create_group(key)
@@ -379,9 +400,25 @@ def _load_csr(data_location: _h5py.Group) -> _sp.sparse.csr_array:
     return _sp.sparse.csr_array((data, indices, indptr), shape=shape, dtype=data.dtype)
 
 
+def _load_dataclass(data_location: _h5py.Group) -> Any:
+    data_str = data_location[()]
+    data_dict = _json.loads(data_str)
+    from collections import namedtuple
+    Parameters = namedtuple(data_location.attrs["dataset_name"], data_dict.keys())
+    return Parameters(**data_dict)
+
+
+def _load_serialized_bytes(data_location: _h5py.Group) -> Any:
+    serialized_bytes = data_location[()]
+    import pickle
+    return pickle.loads(serialized_bytes)
+    
+
 _LOAD_FUNC: Dict[str, Callable[[_h5py.Group], Any]] = {
     "dict": _load_dict,
     "csr": _load_csr,
+    "dataclass": _load_dataclass,
+    "serialized_bytes": _load_serialized_bytes
 }
 
 
@@ -423,6 +460,81 @@ def view_hdf5(filename:str, group:str, depth=1):
     with _h5py.File(filename.encode("utf-8"), "r") as f:
         f[group].visititems(_print_attrs)
 
+# 下面两个是更高级的 save, load 用法
+# 功能实现起来比较复杂，图方便的时候可以用
+
+def _save_hdf5(filename:str, *data, group:Union[list[str],str] = None, mode:str='a') -> None:
+    """
+    简化的 save_hdf5
+
+    示例:
+    --------
+    >>> import numpy as np
+    >>> import quante.basicfun as bf
+    >>> mat = np.random.randn(10,10)
+    >>> bf.save_h5("data.h5", mat)
+    """
+    assert filename[-3:] == ".h5", "use h5 for consistance"
+    if len(data) == 1 and isinstance(data[0], dict):
+        data_dic = data[0]
+    else:
+        current_frame = _inspect.currentframe()
+        assert current_frame is not None and current_frame.f_back is not None, "Can't get the caller's frame"
+        paraname = PrintLn._get_paraname(current_frame.f_back)
+        data_dic = dict()
+        for i, arg in enumerate(data):
+            if type(arg).__name__ == "type":
+                data_dic[paraname[i+1]] = arg()
+            else:
+                data_dic[paraname[i+1]] = arg
+    if group is None:
+        group = []
+    elif isinstance(group, str):
+        group = [group]
+    assert isinstance(group, list) and "/" not in group
+    group_name = "/".join(group)
+    save_hdf5(filename, group_name, data_dic, mode=mode)
+
+
+def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], list[Any]]:
+    """
+    简化的 load_hdf5
+
+    示例:
+    --------
+    >>> import numpy as np
+    >>> import quante.basicfun as bf
+    >>> mat = np.random.randn(10,10)
+    >>> bf.save_h5("data.h5", mat)
+    >>> mat, = bf.saveh5("data.h5", "mat")
+    """
+    _logging.info("Loading from " + _os.path.abspath(filename) + " ... ")
+    if group is None:
+        group = []
+    elif isinstance(group, str):
+        group = [group]
+    assert isinstance(group, list) and "/" not in group
+    group = "/".join(group)
+    
+    with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
+        group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
+        group_location = f[group]  # 获取组对象
+        if len(datanames) == 0:
+            data: Union[Dict[str, Any], list[Any]] = _load_dict(group_location)
+        else:
+            data = []
+            for dataname in datanames:
+                group_location = f[group]  # 获取组对象
+                data_location = group_location[dataname]
+                data_type_str = data_location.attrs.get("object_type", None)
+                if data_type_str is None and isinstance(data_location, _h5py.Group):
+                    data_type_str = 'dict'
+                load_func = _LOAD_FUNC.get(data_type_str, _default_load)
+                data.append(load_func(data_location))
+            if len(datanames) == 1:
+                data = data[0]
+    _logging.info("Load done")
+    return data
 
 #############################################################
 #  日志工具
