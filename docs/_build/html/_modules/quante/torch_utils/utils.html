@@ -7,7 +7,7 @@
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=2a6f3bb3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=ea1cf9a5" />
 
   
   <!--[if lt IE 9]>
@@ -90,12 +90,11 @@
 <span class="c1"># @Author: hzhu</span>
 <span class="c1"># @Date:   2024-07-25 22:20:58</span>
 <span class="c1"># @Last Modified by:   hzhu</span>
-<span class="c1"># @Last Modified time: 2024-10-31 20:46:36</span>
+<span class="c1"># @Last Modified time: 2024-11-04 16:19:34</span>
 
 <span class="c1"># 梯度下降的工具</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;AdaptiveLRScheduler&#39;</span><span class="p">,</span> <span class="s1">&#39;open_grad&#39;</span><span class="p">,</span> <span class="s1">&#39;close_grad&#39;</span><span class="p">,</span> <span class="s1">&#39;to_numpy_array&#39;</span><span class="p">,</span> <span class="s1">&#39;convert_to_torch&#39;</span><span class="p">,</span> <span class="s1">&#39;clone_list&#39;</span><span class="p">]</span>
-<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;save_h5&#39;</span><span class="p">,</span> <span class="s1">&#39;load_h5&#39;</span><span class="p">]</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">torch</span> <span class="k">as</span> <span class="nn">tc</span>
@@ -295,90 +294,6 @@
         <span class="n">delta_tensor</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">tc</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">delta_tensor</span>
-
-<span class="c1"># 一个简化的 save_hdf5 和 load_hdf5</span>
-
-<span class="kn">import</span> <span class="nn">os</span> <span class="k">as</span> <span class="nn">_os</span>
-<span class="kn">import</span> <span class="nn">inspect</span> <span class="k">as</span> <span class="nn">_inspect</span>
-<span class="kn">import</span> <span class="nn">logging</span> <span class="k">as</span> <span class="nn">_logging</span>
-<span class="kn">import</span> <span class="nn">h5py</span> <span class="k">as</span> <span class="nn">_h5py</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span>
-<span class="kn">from</span> <span class="nn">..basicfun</span> <span class="kn">import</span> <span class="n">PrintLn</span><span class="p">,</span> <span class="n">save_hdf5</span><span class="p">,</span> <span class="n">_LOAD_FUNC</span><span class="p">,</span> <span class="n">_load_dict</span><span class="p">,</span> <span class="n">_default_load</span>
-
-<div class="viewcode-block" id="save_h5">
-<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.torch_utils.save_h5.html#quante.torch_utils.save_h5">[文档]</a>
-<span class="k">def</span> <span class="nf">save_h5</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">data</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span> <span class="n">mode</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    简化的 save_hdf5</span>
-
-<span class="sd">    示例:</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
-<span class="sd">    &gt;&gt;&gt; import quante.basicfun as bf</span>
-<span class="sd">    &gt;&gt;&gt; mat = np.random.randn(10,10)</span>
-<span class="sd">    &gt;&gt;&gt; bf.save_h5(&quot;data.h5&quot;, mat)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">assert</span> <span class="n">filename</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span> <span class="o">==</span> <span class="s2">&quot;.h5&quot;</span><span class="p">,</span> <span class="s2">&quot;use h5 for consistance&quot;</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="n">data_dic</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">current_frame</span> <span class="o">=</span> <span class="n">_inspect</span><span class="o">.</span><span class="n">currentframe</span><span class="p">()</span>
-        <span class="k">assert</span> <span class="n">current_frame</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">current_frame</span><span class="o">.</span><span class="n">f_back</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t get the caller&#39;s frame&quot;</span>
-        <span class="n">paraname</span> <span class="o">=</span> <span class="n">PrintLn</span><span class="o">.</span><span class="n">_get_paraname</span><span class="p">(</span><span class="n">current_frame</span><span class="o">.</span><span class="n">f_back</span><span class="p">)</span>
-        <span class="n">data_dic</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">arg</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
-            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span>
-                <span class="n">data_dic</span><span class="p">[</span><span class="n">paraname</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">arg</span><span class="p">()</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">data_dic</span><span class="p">[</span><span class="n">paraname</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">arg</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="n">group</span> <span class="o">=</span> <span class="p">[</span><span class="n">group</span><span class="p">]</span>
-    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;/&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">group</span>
-    <span class="n">group_name</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
-    <span class="n">save_hdf5</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">group_name</span><span class="p">,</span> <span class="n">data_dic</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span></div>
-
-
-
-<div class="viewcode-block" id="load_h5">
-<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.torch_utils.load_h5.html#quante.torch_utils.load_h5">[文档]</a>
-<span class="k">def</span> <span class="nf">load_h5</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">datanames</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="p">[])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    简化的 load_hdf5</span>
-
-<span class="sd">    示例:</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
-<span class="sd">    &gt;&gt;&gt; import quante.basicfun as bf</span>
-<span class="sd">    &gt;&gt;&gt; mat = np.random.randn(10,10)</span>
-<span class="sd">    &gt;&gt;&gt; bf.save_h5(&quot;data.h5&quot;, mat)</span>
-<span class="sd">    &gt;&gt;&gt; mat, = bf.saveh5(&quot;data.h5&quot;, &quot;mat&quot;)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">_logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Loading from &quot;</span> <span class="o">+</span> <span class="n">_os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; ... &quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="n">group</span> <span class="o">=</span> <span class="p">[</span><span class="n">group</span><span class="p">]</span>
-    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;/&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">group</span>
-    <span class="n">group</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
-    
-    <span class="k">with</span> <span class="n">_h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>  <span class="c1"># `f` is a type `h5py.File`</span>
-        <span class="n">group</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">group</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>  <span class="c1"># # 规范化组路径 &quot;/xxx/xxx/...&quot;</span>
-        <span class="n">group_location</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="n">group</span><span class="p">]</span>  <span class="c1"># 获取组对象</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datanames</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_load_dict</span><span class="p">(</span><span class="n">group_location</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">for</span> <span class="n">dataname</span> <span class="ow">in</span> <span class="n">datanames</span><span class="p">:</span>
-                <span class="n">group_location</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="n">group</span><span class="p">]</span>  <span class="c1"># 获取组对象</span>
-                <span class="n">data_location</span> <span class="o">=</span> <span class="n">group_location</span><span class="p">[</span><span class="n">dataname</span><span class="p">]</span>
-                <span class="n">data_type_str</span> <span class="o">=</span> <span class="n">data_location</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;object_type&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">data_type_str</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data_location</span><span class="p">,</span> <span class="n">_h5py</span><span class="o">.</span><span class="n">Group</span><span class="p">):</span>
-                    <span class="n">data_type_str</span> <span class="o">=</span> <span class="s1">&#39;dict&#39;</span>
-                <span class="n">load_func</span> <span class="o">=</span> <span class="n">_LOAD_FUNC</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">data_type_str</span><span class="p">,</span> <span class="n">_default_load</span><span class="p">)</span>
-                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">load_func</span><span class="p">(</span><span class="n">data_location</span><span class="p">))</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datanames</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">_logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Load done&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">data</span></div>
-
 
 
 </pre></div>

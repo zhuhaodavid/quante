@@ -29,6 +29,8 @@ basicfun (:mod:`quante.basicfun`)
    quante.basicfun.create_folder
    quante.basicfun.save_hdf5
    quante.basicfun.load_hdf5
+   quante.basicfun._save_hdf5
+   quante.basicfun._load_hdf5
 
 日志工具
 -------- 

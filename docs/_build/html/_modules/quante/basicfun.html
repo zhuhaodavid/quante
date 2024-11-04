@@ -7,7 +7,7 @@
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
-      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=2a6f3bb3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=ea1cf9a5" />
 
   
   <!--[if lt IE 9]>
@@ -90,7 +90,7 @@
 <span class="c1"># @Author: hzhu</span>
 <span class="c1"># @Date:   2024-05-02 14:52:59</span>
 <span class="c1"># @Last Modified by:   hzhu</span>
-<span class="c1"># @Last Modified time: 2024-10-31 20:47:00</span>
+<span class="c1"># @Last Modified time: 2024-11-04 16:22:37</span>
 
 <span class="c1">#!! 这个文件不应该 import quante 中的任何其他文件！</span>
 
@@ -102,10 +102,12 @@
 <span class="kn">import</span> <span class="nn">scipy</span> <span class="k">as</span> <span class="nn">_sp</span>
 <span class="kn">import</span> <span class="nn">time</span> <span class="k">as</span> <span class="nn">_time</span>
 <span class="kn">import</span> <span class="nn">h5py</span> <span class="k">as</span> <span class="nn">_h5py</span>
+<span class="kn">import</span> <span class="nn">json</span> <span class="k">as</span> <span class="nn">_json</span>
 <span class="kn">import</span> <span class="nn">ctypes</span> <span class="k">as</span> <span class="nn">_ctypes</span>
 <span class="kn">import</span> <span class="nn">inspect</span> <span class="k">as</span> <span class="nn">_inspect</span>
 <span class="kn">import</span> <span class="nn">logging</span> <span class="k">as</span> <span class="nn">_logging</span>
 <span class="kn">import</span> <span class="nn">platform</span> <span class="k">as</span> <span class="nn">_platform</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">is_dataclass</span><span class="p">,</span> <span class="n">asdict</span>
 
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">chain</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">deque</span>
@@ -117,7 +119,7 @@
 
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;clear&quot;</span><span class="p">,</span> <span class="s2">&quot;get_free_space&quot;</span><span class="p">,</span> <span class="s2">&quot;create_folder&quot;</span><span class="p">]</span>  <span class="c1"># 系统层面的函数</span>
 
-<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;save_hdf5&quot;</span><span class="p">,</span> <span class="s2">&quot;load_hdf5&quot;</span><span class="p">,</span> <span class="s2">&quot;view_hdf5&quot;</span><span class="p">]</span>  <span class="c1"># hdf5 工具</span>
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;save_hdf5&quot;</span><span class="p">,</span> <span class="s2">&quot;load_hdf5&quot;</span><span class="p">,</span> <span class="s2">&quot;_save_hdf5&quot;</span><span class="p">,</span> <span class="s2">&quot;_load_hdf5&quot;</span><span class="p">,</span> <span class="s2">&quot;view_hdf5&quot;</span><span class="p">]</span>  <span class="c1"># hdf5 工具</span>
 
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;set_logging&quot;</span><span class="p">,</span> <span class="s2">&quot;println&quot;</span><span class="p">]</span>  <span class="c1"># 日志工具</span>
 
@@ -386,7 +388,26 @@
             <span class="n">save_func</span><span class="p">(</span><span class="n">h5group</span><span class="p">,</span> <span class="n">keystr</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">_default_save</span><span class="p">(</span><span class="n">h5group</span><span class="p">:</span><span class="n">_h5py</span><span class="o">.</span><span class="n">Group</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">h5group</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="c1"># 如果是 dataclass 转为字符串储存</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">_json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">asdict</span><span class="p">(</span><span class="n">value</span><span class="p">),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">h5group</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        <span class="c1"># 记录dataset 的名字</span>
+        <span class="n">dataset</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;object_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dataclass&quot;</span>
+        <span class="n">dataset</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;dataset_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># 尝试直接保存</span>
+            <span class="n">h5group</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="c1"># 如果失败，尝试序列化，但会失去可视化的能力</span>
+            <span class="kn">import</span> <span class="nn">pickle</span> <span class="k">as</span> <span class="nn">_pickle</span>
+                        
+            <span class="c1"># 将 value 序列化为字节流</span>
+            <span class="n">serialized_params</span> <span class="o">=</span> <span class="n">_pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">h5group</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">_np</span><span class="o">.</span><span class="n">void</span><span class="p">(</span><span class="n">serialized_params</span><span class="p">))</span>
+            <span class="n">dataset</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;object_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;serialized_bytes&quot;</span>
+            
 
 <span class="k">def</span> <span class="nf">_save_csr</span><span class="p">(</span><span class="n">h5group</span><span class="p">:</span><span class="n">_h5py</span><span class="o">.</span><span class="n">Group</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="n">csrdata</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">subgroup</span> <span class="o">=</span> <span class="n">h5group</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
@@ -482,9 +503,25 @@
     <span class="k">return</span> <span class="n">_sp</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_array</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">indptr</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 
 
+<span class="k">def</span> <span class="nf">_load_dataclass</span><span class="p">(</span><span class="n">data_location</span><span class="p">:</span> <span class="n">_h5py</span><span class="o">.</span><span class="n">Group</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="n">data_str</span> <span class="o">=</span> <span class="n">data_location</span><span class="p">[()]</span>
+    <span class="n">data_dict</span> <span class="o">=</span> <span class="n">_json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data_str</span><span class="p">)</span>
+    <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+    <span class="n">Parameters</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="n">data_location</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;dataset_name&quot;</span><span class="p">],</span> <span class="n">data_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">Parameters</span><span class="p">(</span><span class="o">**</span><span class="n">data_dict</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_load_serialized_bytes</span><span class="p">(</span><span class="n">data_location</span><span class="p">:</span> <span class="n">_h5py</span><span class="o">.</span><span class="n">Group</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="n">serialized_bytes</span> <span class="o">=</span> <span class="n">data_location</span><span class="p">[()]</span>
+    <span class="kn">import</span> <span class="nn">pickle</span>
+    <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">serialized_bytes</span><span class="p">)</span>
+    
+
 <span class="n">_LOAD_FUNC</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">_h5py</span><span class="o">.</span><span class="n">Group</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;dict&quot;</span><span class="p">:</span> <span class="n">_load_dict</span><span class="p">,</span>
     <span class="s2">&quot;csr&quot;</span><span class="p">:</span> <span class="n">_load_csr</span><span class="p">,</span>
+    <span class="s2">&quot;dataclass&quot;</span><span class="p">:</span> <span class="n">_load_dataclass</span><span class="p">,</span>
+    <span class="s2">&quot;serialized_bytes&quot;</span><span class="p">:</span> <span class="n">_load_serialized_bytes</span>
 <span class="p">}</span>
 
 
@@ -525,6 +562,87 @@
     
     <span class="k">with</span> <span class="n">_h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">f</span><span class="p">[</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">visititems</span><span class="p">(</span><span class="n">_print_attrs</span><span class="p">)</span>
+
+<span class="c1"># 下面两个是更高级的 save, load 用法</span>
+<span class="c1"># 功能实现起来比较复杂，图方便的时候可以用</span>
+
+<div class="viewcode-block" id="_save_hdf5">
+<a class="viewcode-back" href="../../funcsAPI/_autosummary/quante.basicfun._save_hdf5.html#quante.basicfun._save_hdf5">[文档]</a>
+<span class="k">def</span> <span class="nf">_save_hdf5</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">data</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    简化的 save_hdf5</span>
+
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; import quante.basicfun as bf</span>
+<span class="sd">    &gt;&gt;&gt; mat = np.random.randn(10,10)</span>
+<span class="sd">    &gt;&gt;&gt; bf.save_h5(&quot;data.h5&quot;, mat)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">filename</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span> <span class="o">==</span> <span class="s2">&quot;.h5&quot;</span><span class="p">,</span> <span class="s2">&quot;use h5 for consistance&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">data_dic</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">current_frame</span> <span class="o">=</span> <span class="n">_inspect</span><span class="o">.</span><span class="n">currentframe</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">current_frame</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">current_frame</span><span class="o">.</span><span class="n">f_back</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t get the caller&#39;s frame&quot;</span>
+        <span class="n">paraname</span> <span class="o">=</span> <span class="n">PrintLn</span><span class="o">.</span><span class="n">_get_paraname</span><span class="p">(</span><span class="n">current_frame</span><span class="o">.</span><span class="n">f_back</span><span class="p">)</span>
+        <span class="n">data_dic</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">arg</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span>
+                <span class="n">data_dic</span><span class="p">[</span><span class="n">paraname</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">arg</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data_dic</span><span class="p">[</span><span class="n">paraname</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">arg</span>
+    <span class="k">if</span> <span class="n">group</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">group</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">group</span> <span class="o">=</span> <span class="p">[</span><span class="n">group</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;/&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">group</span>
+    <span class="n">group_name</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+    <span class="n">save_hdf5</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">group_name</span><span class="p">,</span> <span class="n">data_dic</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="_load_hdf5">
+<a class="viewcode-back" href="../../funcsAPI/_autosummary/quante.basicfun._load_hdf5.html#quante.basicfun._load_hdf5">[文档]</a>
+<span class="k">def</span> <span class="nf">_load_hdf5</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">datanames</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    简化的 load_hdf5</span>
+
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; import quante.basicfun as bf</span>
+<span class="sd">    &gt;&gt;&gt; mat = np.random.randn(10,10)</span>
+<span class="sd">    &gt;&gt;&gt; bf.save_h5(&quot;data.h5&quot;, mat)</span>
+<span class="sd">    &gt;&gt;&gt; mat, = bf.saveh5(&quot;data.h5&quot;, &quot;mat&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Loading from &quot;</span> <span class="o">+</span> <span class="n">_os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; ... &quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">group</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">group</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">group</span> <span class="o">=</span> <span class="p">[</span><span class="n">group</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;/&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">group</span>
+    <span class="n">group</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+    
+    <span class="k">with</span> <span class="n">_h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>  <span class="c1"># `f` is a type `h5py.File`</span>
+        <span class="n">group</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">group</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>  <span class="c1"># # 规范化组路径 &quot;/xxx/xxx/...&quot;</span>
+        <span class="n">group_location</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="n">group</span><span class="p">]</span>  <span class="c1"># 获取组对象</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datanames</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_load_dict</span><span class="p">(</span><span class="n">group_location</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">dataname</span> <span class="ow">in</span> <span class="n">datanames</span><span class="p">:</span>
+                <span class="n">group_location</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="n">group</span><span class="p">]</span>  <span class="c1"># 获取组对象</span>
+                <span class="n">data_location</span> <span class="o">=</span> <span class="n">group_location</span><span class="p">[</span><span class="n">dataname</span><span class="p">]</span>
+                <span class="n">data_type_str</span> <span class="o">=</span> <span class="n">data_location</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;object_type&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">data_type_str</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data_location</span><span class="p">,</span> <span class="n">_h5py</span><span class="o">.</span><span class="n">Group</span><span class="p">):</span>
+                    <span class="n">data_type_str</span> <span class="o">=</span> <span class="s1">&#39;dict&#39;</span>
+                <span class="n">load_func</span> <span class="o">=</span> <span class="n">_LOAD_FUNC</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">data_type_str</span><span class="p">,</span> <span class="n">_default_load</span><span class="p">)</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">load_func</span><span class="p">(</span><span class="n">data_location</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datanames</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">_logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Load done&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">data</span></div>
 
 
 <span class="c1">#############################################################</span>
