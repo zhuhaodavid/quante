@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.linalg.svd_robust &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=ea1cf9a5" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">模块代码</a></li>
+      <li class="breadcrumb-item active">quante.linalg.svd_robust</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>quante.linalg.svd_robust 源代码</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># @Author: hzhu</span>
+<span class="c1"># @Date:   2023-09-19 22:25:55</span>
+<span class="c1"># @Last Modified by:   dzwang</span>
+<span class="c1"># @Last Modified time: 2024-10-16 19:00:42</span>
+<span class="c1"># This is from tenpy</span>
+
+<span class="kn">import</span> <span class="nn">scipy.linalg</span> <span class="k">as</span> <span class="nn">sla</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;svd&#39;</span><span class="p">,</span> <span class="s1">&#39;svd_truncate&#39;</span><span class="p">,</span> <span class="s1">&#39;truncate&#39;</span><span class="p">,</span> <span class="s1">&#39;TruncationError&#39;</span><span class="p">]</span>
+
+
+<span class="c1"># 我们经常需要执行奇异值分解（SVD）。</span>
+<span class="c1"># 通常，SVD 是一种矩阵分解，它总是定义良好并且也应该适用于病态矩阵。</span>
+<span class="c1"># 但遗憾的是，`numpy.linalg.svd` 和 `scipy.linalg.svd` 有时会失败，</span>
+<span class="c1"># 抛出 ``LinalgError(&quot;SVD did not converge&quot;)``。</span>
+<span class="c1"># 原因是它们都调用了 LAPACK 函数 `#gesdd`</span>
+<span class="c1"># （其中 `#` 取决于数据类型），该函数采用迭代方法，可能会失败。</span>
+<span class="c1"># 然而，它通常比替代方案（且稳定的）`#gesvd` 快得多。</span>
+
+<span class="c1"># 我们的解决方法如下：我们提供一个函数 `svd`，其调用签名与 scipy 的 svd 相同。</span>
+<span class="c1"># 这个函数基本上只是 scipy 的 svd 的包装器，即我们继续调用更快的 `dgesdd`。</span>
+<span class="c1"># 但如果失败，我们仍然可以使用 `dgesvd` 作为备份。</span>
+
+<span class="c1"># 遗憾的是，`dgesvd` 和 `zgesvd` 直到 scipy 版本 &#39;0.18.0&#39; 才被包含进来（numpy 中也没有），</span>
+<span class="c1"># 对于版本高于 &#39;0.18.0&#39; 的 scipy，我们使用 svd 的新关键字 &#39;lapack_driver&#39;</span>
+<div class="viewcode-block" id="svd">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.svd.html#quante.linalg.svd">[文档]</a>
+<span class="k">def</span> <span class="nf">svd</span><span class="p">(</span><span class="n">a</span><span class="p">,</span>
+        <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">compute_uv</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">overwrite_a</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">check_finite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">lapack_driver</span><span class="o">=</span><span class="s1">&#39;gesdd&#39;</span><span class="p">,</span>
+        <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    (更)稳定的奇异值分解（包装 :func:`scipy.linalg.svd`，如何是 hermitian 矩阵使用 `numpy.linalg.svd` 效率更高）</span>
+<span class="sd">    </span>
+<span class="sd">    将矩阵 `a` 分解为两个酉矩阵 ``U`` 和 ``Vh``，以及一个奇异值（实数，非负）的 1-D 数组 ``s``，</span>
+<span class="sd">    使得 ``a == U @ S @ Vh``，其中 ``S`` 是一个适当形状的零矩阵，主对角线为 ``s``。</span>
+
+<span class="sd">    带有 `gesvd` 备份计划。如果 `gesdd` 失败，尝试通过使用 lapack_driver `gesvd` 来避免引发 LinAlgError。</span>
+
+<span class="sd">    参数</span>
+<span class="sd">    ----------</span>
+<span class="sd">    a : (M, N) 类数组</span>
+<span class="sd">        要分解的矩阵。</span>
+<span class="sd">    full_matrices : bool, 可选</span>
+<span class="sd">        如果为 True（默认），`U` 和 `Vh` 的形状为 ``(M, M)``，``(N, N)``。</span>
+<span class="sd">        如果为 False，形状为 ``(M, K)`` 和 ``(K, N)``，其中 ``K = min(M, N)``。</span>
+<span class="sd">    compute_uv : bool, 可选</span>
+<span class="sd">        是否计算 ``U`` 和 ``Vh``，除了 ``s`` 之外。默认是 True。</span>
+<span class="sd">    overwrite_a : bool, 可选</span>
+<span class="sd">        是否覆盖 `a`；可能会提高性能。默认是 False。</span>
+<span class="sd">        如果 ``lapack_driver=&#39;gesdd&#39;``，则忽略（即设置为 ``False``）。</span>
+<span class="sd">    check_finite : bool, 可选</span>
+<span class="sd">        是否检查输入矩阵仅包含有限数字。禁用可能会提高性能，但如果输入包含无穷大或 NaN，可能会导致问题（崩溃、非终止）。</span>
+<span class="sd">    lapack_driver : {&#39;gesdd&#39;, &#39;gesvd&#39;}, 可选</span>
+<span class="sd">        是否使用更高效的分治方法（``&#39;gesdd&#39;``）</span>
+<span class="sd">        或通用矩形方法（``&#39;gesvd&#39;``）来计算 SVD。</span>
+<span class="sd">        MATLAB 和 Octave 使用 ``&#39;gesvd&#39;`` 方法。</span>
+<span class="sd">        默认是 ``&#39;gesdd&#39;``。</span>
+<span class="sd">        如果 ``&#39;gesdd&#39;`` 失败，则使用 ``&#39;gesvd&#39;`` 作为备份。</span>
+
+<span class="sd">        .. versionadded:: 0.18</span>
+<span class="sd">    warn : bool</span>
+<span class="sd">        当 SVD 失败时是否创建警告。</span>
+
+<span class="sd">    返回值</span>
+<span class="sd">    -------</span>
+<span class="sd">    U : ndarray</span>
+<span class="sd">        具有左奇异向量作为列的酉矩阵。形状为 ``(M, M)`` 或 ``(M, K)``，取决于 `full_matrices`。</span>
+<span class="sd">    s : ndarray</span>
+<span class="sd">        按非递增顺序排序的奇异值。形状为 (K,) ，其中 ``K = min(M, N)``。</span>
+<span class="sd">    Vh : ndarray</span>
+<span class="sd">        具有右奇异向量作为行的酉矩阵。形状为 ``(N, N)`` 或 ``(K, N)``，取决于 `full_matrices`。</span>
+
+<span class="sd">    如果 ``compute_uv=False``，则仅返回 ``s``。</span>
+
+<span class="sd">    抛出</span>
+<span class="sd">    ------</span>
+<span class="sd">    LinAlgError</span>
+<span class="sd">        如果 SVD 计算不收敛。</span>
+
+<span class="sd">    参见</span>
+<span class="sd">    --------</span>
+<span class="sd">    svdvals : 计算矩阵的奇异值。</span>
+<span class="sd">    diagsvd : 给定向量 s 构造 Sigma 矩阵。</span>
+
+<span class="sd">    示例</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; from scipy import linalg</span>
+<span class="sd">    &gt;&gt;&gt; rng = np.random.default_rng()</span>
+<span class="sd">    &gt;&gt;&gt; m, n = 9, 6</span>
+<span class="sd">    &gt;&gt;&gt; a = rng.standard_normal((m, n)) + 1.j*rng.standard_normal((m, n))</span>
+<span class="sd">    &gt;&gt;&gt; U, s, Vh = linalg.svd(a)</span>
+<span class="sd">    &gt;&gt;&gt; U.shape,  s.shape, Vh.shape</span>
+<span class="sd">    ((9, 9), (6,), (6, 6))</span>
+
+<span class="sd">    从分解中重构原始矩阵：</span>
+
+<span class="sd">    &gt;&gt;&gt; sigma = np.zeros((m, n))</span>
+<span class="sd">    &gt;&gt;&gt; for i in range(min(m, n)):</span>
+<span class="sd">    ...     sigma[i, i] = s[i]</span>
+<span class="sd">    &gt;&gt;&gt; a1 = np.dot(U, np.dot(sigma, Vh))</span>
+<span class="sd">    &gt;&gt;&gt; np.allclose(a, a1)</span>
+<span class="sd">    True</span>
+
+<span class="sd">    或者，使用 ``full_matrices=False``（注意此时 ``U`` 的形状为 ``(m, n)`` 而不是 ``(m, m)``）：</span>
+
+<span class="sd">    &gt;&gt;&gt; U, s, Vh = linalg.svd(a, full_matrices=False)</span>
+<span class="sd">    &gt;&gt;&gt; U.shape, s.shape, Vh.shape</span>
+<span class="sd">    ((9, 6), (6,), (6, 6))</span>
+<span class="sd">    &gt;&gt;&gt; S = np.diag(s)</span>
+<span class="sd">    &gt;&gt;&gt; np.allclose(a, np.dot(U, np.dot(S, Vh)))</span>
+<span class="sd">    True</span>
+
+<span class="sd">    &gt;&gt;&gt; s2 = linalg.svd(a, compute_uv=False)</span>
+<span class="sd">    &gt;&gt;&gt; np.allclose(s, s2)</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">lapack_driver</span> <span class="o">==</span> <span class="s1">&#39;gesdd&#39;</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">sla</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">full_matrices</span><span class="p">,</span> <span class="n">compute_uv</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">check_finite</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+            <span class="c1"># &#39;gesdd&#39; failed to converge, so we continue with the backup plan</span>
+            <span class="k">if</span> <span class="n">warn</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;SVD with lapack_driver &#39;gesdd&#39; failed. Use backup &#39;gesvd&#39;&quot;</span><span class="p">,</span>
+                              <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">pass</span>
+    <span class="k">if</span> <span class="n">lapack_driver</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;gesdd&#39;</span><span class="p">,</span> <span class="s1">&#39;gesvd&#39;</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid `lapack_driver`: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">lapack_driver</span><span class="p">))</span>
+    <span class="c1"># &#39;gesvd&#39; lapack driver</span>
+    <span class="k">return</span> <span class="n">sla</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">full_matrices</span><span class="p">,</span> <span class="n">compute_uv</span><span class="p">,</span> <span class="n">overwrite_a</span><span class="p">,</span> <span class="n">check_finite</span><span class="p">,</span> <span class="n">lapack_driver</span><span class="o">=</span><span class="s1">&#39;gesvd&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="svd_truncate">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.svd_truncate.html#quante.linalg.svd_truncate">[文档]</a>
+<span class="k">def</span> <span class="nf">svd_truncate</span><span class="p">(</span><span class="n">mat</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Dc</span><span class="p">:</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="p">:</span><span class="nb">float</span><span class="o">=</span><span class="mf">1e-15</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">svd</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 如果要用 numba 只需把 svd 换成 np.linalg.svd</span>
+    <span class="n">D_update</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">s</span> <span class="o">&gt;=</span> <span class="n">eps</span><span class="p">)</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">Dc</span><span class="p">,</span> <span class="n">D_update</span><span class="p">)</span> <span class="k">if</span> <span class="n">Dc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">D_update</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">u</span><span class="p">[:,</span> <span class="p">:</span><span class="n">D</span><span class="p">],</span> <span class="n">s</span><span class="p">[:</span><span class="n">D</span><span class="p">],</span> <span class="n">v</span><span class="p">[:</span><span class="n">D</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="k">return</span> <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">v</span></div>
+
+
+
+<div class="viewcode-block" id="TruncationError">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.TruncationError.html#quante.linalg.TruncationError">[文档]</a>
+<span class="k">class</span> <span class="nc">TruncationError</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    .. 警告 ::</span>
+<span class="sd">            对于虚时间演化，这不是你感兴趣的误差！</span>
+
+<span class="sd">    参数</span>
+<span class="sd">    ----------</span>
+<span class="sd">    eps : float</span>
+<span class="sd">        所有被丢弃的施密特值平方和的总和。</span>
+<span class="sd">        注意，如果你保留的奇异值达到 1.e-14（即比 64 位浮点数的机器精度稍高），</span>
+<span class="sd">        `eps` 大约是 1.e-28（由于平方的原因）！</span>
+<span class="sd">    ov : float</span>
+<span class="sd">        重叠的下界 :math:`|\langle \psi_{trunc} | \psi_{correct} \rangle|^2`</span>
+<span class="sd">        （假设两个状态都归一化）。</span>
+<span class="sd">        这可能是你真正感兴趣的量。</span>
+<span class="sd">        考虑了 `TEBD 维基百科文章 &lt;https://en.wikipedia.org/wiki/Time-evolving_block_decimation&gt;` 中误差部分解释的因子 2。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="TruncationError.__init__">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.TruncationError.html#quante.linalg.TruncationError.__init__">[文档]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eps</span><span class="p">:</span><span class="nb">float</span> <span class="o">=</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">ov</span><span class="p">:</span><span class="nb">float</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="n">eps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ov</span> <span class="o">=</span> <span class="n">ov</span></div>
+
+    
+    <span class="k">def</span> <span class="fm">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">TruncationError</span><span class="p">()</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">eps</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">ov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ov</span> <span class="o">*</span> <span class="n">other</span><span class="o">.</span><span class="n">ov</span>
+        <span class="k">return</span> <span class="n">res</span>
+    
+    <span class="k">def</span> <span class="fm">__iadd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">+=</span> <span class="n">other</span><span class="o">.</span><span class="n">eps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ov</span> <span class="o">*=</span> <span class="n">other</span><span class="o">.</span><span class="n">ov</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="truncate">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.truncate.html#quante.linalg.truncate">[文档]</a>
+<span class="k">def</span> <span class="nf">truncate</span><span class="p">(</span><span class="n">S</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">chi_max</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">svd_min</span><span class="p">:</span><span class="nb">float</span><span class="p">,</span> <span class="n">trunc_cut</span><span class="p">:</span><span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">TruncationError</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; 输入保证 S 需要是降序排列，且全都是正数！ &quot;&quot;&quot;</span>
+    <span class="n">good</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">S</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">chi_max</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">good2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">S</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+        <span class="n">good2</span><span class="p">[:</span><span class="n">chi_max</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">good</span> <span class="o">=</span> <span class="n">good</span> <span class="o">&amp;</span> <span class="n">good2</span>
+    <span class="k">if</span> <span class="n">svd_min</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">good</span> <span class="o">=</span> <span class="n">good</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">S</span> <span class="o">&gt;</span> <span class="n">svd_min</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">trunc_cut</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">revert_cumsum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">S</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">good</span> <span class="o">=</span> <span class="n">good</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">revert_cumsum</span> <span class="o">&gt;</span> <span class="n">trunc_cut</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">eps</span> <span class="o">=</span> <span class="n">S</span><span class="p">[</span><span class="o">~</span><span class="n">good</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">ov</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">-</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">eps</span>
+    <span class="k">return</span> <span class="n">good</span><span class="p">,</span> <span class="n">TruncationError</span><span class="p">(</span><span class="n">eps</span><span class="p">,</span> <span class="n">ov</span><span class="p">)</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

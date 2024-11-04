@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.torch_utils.linalg.qr &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=ea1cf9a5" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="quante.torch_utils.linalg.rq" href="quante.torch_utils.linalg.rq.html" />
+    <link rel="prev" title="quante.torch_utils.linalg.svd" href="quante.torch_utils.linalg.svd.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../torch_utils.html#id1">分解操作</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="quante.torch_utils.linalg.truncate.html">quante.torch_utils.linalg.truncate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.torch_utils.linalg.svd.html">quante.torch_utils.linalg.svd</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">quante.torch_utils.linalg.qr</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#quante.torch_utils.linalg.qr"><code class="docutils literal notranslate"><span class="pre">qr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="quante.torch_utils.linalg.rq.html">quante.torch_utils.linalg.rq</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.torch_utils.linalg.eigh.html">quante.torch_utils.linalg.eigh</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.torch_utils.linalg.tt_decompose.html">quante.torch_utils.linalg.tt_decompose</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../torch_utils.html#id2">指数作用</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../torch_utils.html#id3">稀疏工具</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../torch_utils.html#id4">梯度工具</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../torch_utils.html#id5">张量网络工具</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+      <li class="breadcrumb-item active">quante.torch_utils.linalg.qr</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/funcsAPI/_autosummary/quante.torch_utils.linalg.qr.rst.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quante-torch-utils-linalg-qr">
+<h1>quante.torch_utils.linalg.qr<a class="headerlink" href="#quante-torch-utils-linalg-qr" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="quante.torch_utils.linalg.qr">
+<span class="sig-prename descclassname"><span class="pre">quante.torch_utils.linalg.</span></span><span class="sig-name descname"><span class="pre">qr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tsr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lr_indx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/quante/torch_utils/linalg/decomp.html#qr"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.torch_utils.linalg.qr" title="Link to this definition"></a></dt>
+<dd><div class="highlight-text notranslate"><div class="highlight"><pre><span></span>       |                           |
+      (b)                         (b)
+       |            QR             |
+--(a)--⬜--(c)--    ----&gt;    --(a)--▷--(d)--⬜--(c)--
+       W                           A       S
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">参数<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>左右指标</strong> (<em>lrdims</em>)</p></li>
+<li><p><strong>svd</strong> (<em>None 从正中间的指标分开做</em>)</p></li>
+<li><p><strong>(</strong><strong>left_indx</strong> (<em>left_indx 为左指标，right_indx 为右指标</em>)</p></li>
+<li><p><strong>right_indx</strong><strong>)</strong> (<em>left_indx 为左指标，right_indx 为右指标</em>)</p></li>
+<li><p><strong>示例</strong></p></li>
+<li><p><strong>--------</strong></p></li>
+<li><p><strong>tc.randn</strong><strong>(</strong><strong>3</strong> (<em>&gt;&gt;&gt; tsr =</em>)</p></li>
+<li><p><strong>7</strong></p></li>
+<li><p><strong>5</strong></p></li>
+<li><p><strong>2</strong></p></li>
+<li><p><strong>dtype=tc.float64</strong><strong>)</strong></p></li>
+<li><p><strong>q</strong> (<em>&gt;&gt;&gt;</em>)</p></li>
+<li><p><strong>qr</strong><strong>(</strong><strong>tsr</strong> (<em>r =</em>)</p></li>
+<li><p><strong>lr_indx=</strong><strong>[</strong><strong>[</strong><strong>1</strong></p></li>
+<li><p><strong>2</strong><strong>]</strong></p></li>
+<li><p><strong>[</strong><strong>0</strong></p></li>
+<li><p><strong>3</strong><strong>]</strong><strong>]</strong><strong>)</strong></p></li>
+<li><p><strong>print</strong><strong>(</strong><strong>q.shape</strong> (<em>&gt;&gt;&gt;</em>)</p></li>
+<li><p><strong>r.shape</strong><strong>)</strong></p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">警告</p>
+<p><cite>R</cite> 的对角线元素不一定为正。
+因此，返回的 QR 分解仅在 <cite>R</cite> 的对角线符号上是唯一的。
+因此，不同的平台（如 NumPy）或不同设备上的输入，
+可能会产生不同的有效分解。</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">警告</p>
+<p>QR 分解仅在每个矩阵的前 <cite>k = min(m, n)</cite> 列线性无关时才有定义。
+如果不满足此条件，不会抛出错误，但生成的 QR 可能不正确，
+其自动微分可能会失败或产生不正确的结果。</p>
+</div>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="页脚">
+        <a href="quante.torch_utils.linalg.svd.html" class="btn btn-neutral float-left" title="quante.torch_utils.linalg.svd" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> 上一页</a>
+        <a href="quante.torch_utils.linalg.rq.html" class="btn btn-neutral float-right" title="quante.torch_utils.linalg.rq" accesskey="n" rel="next">下一页 <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

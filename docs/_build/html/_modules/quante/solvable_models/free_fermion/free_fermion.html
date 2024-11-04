@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.solvable_models.free_fermion.free_fermion &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=ea1cf9a5" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../funcsAPI/basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../funcsAPI/linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../funcsAPI/generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../funcsAPI/solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../funcsAPI/tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../funcsAPI/torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../funcsAPI/quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">模块代码</a></li>
+      <li class="breadcrumb-item active">quante.solvable_models.free_fermion.free_fermion</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>quante.solvable_models.free_fermion.free_fermion 源代码</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># @Author: hzhu</span>
+<span class="c1"># @Date:   2023-07-14 15:28:26</span>
+<span class="c1"># @Last Modified by:   hzhu</span>
+<span class="c1"># @Last Modified time: 2024-10-31 17:39:34</span>
+<span class="kn">from</span> <span class="nn">...linalg</span> <span class="kn">import</span> <span class="n">eigvalsh</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">_np</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="k">as</span> <span class="nn">_sp</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;XY_gdenergy&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XY_energies&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XY_free_energy&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XY_internal_energy&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XY_specific_heat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XY_magnetization&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XXX_gdenergy_pbc_approx&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XXZ_gdenergy_inf&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<span class="c1">#######################################</span>
+<span class="c1"># XY 通过自由费米子解</span>
+<span class="c1">######################################</span>
+
+<div class="viewcode-block" id="XY_gdenergy">
+<a class="viewcode-back" href="../../../../funcsAPI/_autosummary/quante.solvable_models.free_fermion.XY_gdenergy.html#quante.solvable_models.free_fermion.XY_gdenergy">[文档]</a>
+<span class="k">def</span> <span class="nf">XY_gdenergy</span><span class="p">(</span>
+    <span class="n">L</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>  <span class="c1"># 默认为无穷大尺寸的系统</span>
+    <span class="n">jxx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jyy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jxy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">jyx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">hz</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">pauli</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    计算 **开边界条件** 下的 xy 模型的 **基态能量**</span>
+
+<span class="sd">    .. math:: </span>
+<span class="sd">        H = \sum_{i = 0}^{L - 2} </span>
+<span class="sd">                j_{xx} s^{x}_{i} s^{x}_{i + 1} + </span>
+<span class="sd">                j_{yy} s^{y}_{i} s^{y}_{i + 1} + </span>
+<span class="sd">                j_{xy} s^{x}_{i} s^{y}_{i + 1} + </span>
+<span class="sd">                j_{yx} s^{y}_{i} s^{x}_{i + 1} + </span>
+<span class="sd">            \sum_{i = 0}^{L - 1} h_{z} s^{z}_{i}</span>
+
+<span class="sd">    参数:</span>
+<span class="sd">        L: 系统的大小。如果为np.inf，则计算无穷大系统的能量。</span>
+<span class="sd">        </span>
+<span class="sd">        jxx: x方向的交换常数。</span>
+<span class="sd">        </span>
+<span class="sd">        jyy: y方向的交换常数。</span>
+<span class="sd">        </span>
+<span class="sd">        jxy: 交叉耦合常数。</span>
+<span class="sd">        </span>
+<span class="sd">        jyx: 另一种交叉耦合常数。</span>
+<span class="sd">        </span>
+<span class="sd">        hz: 外磁场的z分量。</span>
+<span class="sd">        </span>
+<span class="sd">        pauli: 表示Pauli矩阵的选择，取值为-1、0或1。</span>
+<span class="sd">        </span>
+
+<span class="sd">    返回:</span>
+<span class="sd">        系统的基态能量值。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># 检查L是否为无穷大，如果是则计算无穷大系统的能量</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+        <span class="n">_XY_gdenergy_inf</span><span class="p">(</span><span class="n">jxx</span><span class="o">=</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hz</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="n">pauli</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># 对于有限尺寸系统，计算能量谱omega并返回其总和的负值</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="n">_XY_omega</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">jxx</span><span class="o">=</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hz</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="n">pauli</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">omega</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_XY_gdenergy_inf</span><span class="p">(</span>
+    <span class="n">jxx</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jyy</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jxy</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">jyx</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">hz</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">pauli</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;计算无穷大尺寸下系统的基态能量&quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">_np</span><span class="o">.</span><span class="n">all</span><span class="p">([</span><span class="n">_np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span><span class="p">]])</span>
+    
+    <span class="k">if</span> <span class="n">pauli</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">pauli</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span> <span class="o">=</span> <span class="n">jxx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jxy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">hz</span> <span class="o">*</span> <span class="mi">2</span>
+
+    <span class="n">λ</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">+</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">-</span> <span class="n">jxy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+    <span class="n">γ</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">-</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">+</span> <span class="n">jxy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">hz</span> <span class="o">/</span> <span class="mi">2</span>
+    
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">λ</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">γ</span><span class="p">)</span> <span class="o">/</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">γ</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">λ</span><span class="p">)</span> <span class="o">/</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">λ</span><span class="p">)</span> <span class="o">/</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">_sp</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">ellipe</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">γ</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">λ</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> 
+                    <span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">γ</span><span class="p">)</span> <span class="o">/</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">_sp</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">ellipe</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">λ</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">γ</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="k">return</span> <span class="n">_sp</span><span class="o">.</span><span class="n">integrate</span><span class="o">.</span><span class="n">quad</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">h</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">λ</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">x</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span>
+            <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">γ</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">x</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="p">),</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,)[</span><span class="mi">0</span><span class="p">]</span>
+    
+    
+<span class="k">def</span> <span class="nf">_XY_omega</span><span class="p">(</span>
+    <span class="n">L</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">jxx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jyy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jxy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">jyx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">hz</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">pauli</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    计算有限尺寸系统的激发谱。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">jxxlist</span> <span class="o">=</span> <span class="n">_to_array</span><span class="p">(</span><span class="n">jxx</span><span class="p">,</span> <span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">jyylist</span> <span class="o">=</span> <span class="n">_to_array</span><span class="p">(</span><span class="n">jyy</span><span class="p">,</span> <span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">jxylist</span> <span class="o">=</span> <span class="n">_to_array</span><span class="p">(</span><span class="n">jxy</span><span class="p">,</span> <span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">jyxlist</span> <span class="o">=</span> <span class="n">_to_array</span><span class="p">(</span><span class="n">jyx</span><span class="p">,</span> <span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">hzlist</span> <span class="o">=</span> <span class="n">_to_array</span><span class="p">(</span><span class="n">hz</span><span class="p">,</span> <span class="n">L</span><span class="p">)</span>
+
+    <span class="c1"># 如果 pauli 为 -1 或 1，放大所有耦合常数和磁场强度</span>
+    <span class="k">if</span> <span class="n">pauli</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">pauli</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">jxxlist</span><span class="p">,</span> <span class="n">jyylist</span><span class="p">,</span> <span class="n">jxylist</span><span class="p">,</span> <span class="n">jyxlist</span><span class="p">,</span> <span class="n">hzlist</span> <span class="o">=</span> <span class="n">jxxlist</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyylist</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jxylist</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyxlist</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">hzlist</span> <span class="o">*</span> <span class="mi">2</span>
+
+    <span class="c1"># 检查是否满足简化计算激发谱的条件</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">jxylist</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">jyxlist</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">jxxlist</span><span class="p">,</span> <span class="n">jyylist</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">jxxlist</span><span class="p">,</span> <span class="n">jxxlist</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="n">λ</span> <span class="o">=</span> <span class="n">jxxlist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hzlist</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="c1"># 计算激发谱，使用离散正弦变换解</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">([</span><span class="n">λ</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="n">L</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">-</span> <span class="n">h</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">)])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># 一般情况下，通过哈密顿量矩阵计算</span>
+        <span class="n">H</span> <span class="o">=</span> <span class="n">_get_spin_BdG_mat</span><span class="p">(</span>
+            <span class="n">L</span><span class="p">,</span> <span class="n">jxx</span><span class="o">=</span><span class="n">jxxlist</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">jyylist</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">jxylist</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">jyxlist</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hzlist</span><span class="p">,</span> <span class="n">reduce</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="n">eigvalue</span> <span class="o">=</span> <span class="n">eigvalsh</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>  <span class="c1"># 计算哈密顿量矩阵的特征值</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">eigvalue</span><span class="p">)</span> <span class="o">==</span> <span class="n">L</span><span class="p">:</span>
+            <span class="n">omega</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">eigvalue</span><span class="p">))</span>  <span class="c1"># 如果特征值数量等于系统大小</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">omega</span> <span class="o">=</span> <span class="n">eigvalue</span><span class="p">[</span><span class="n">L</span><span class="p">:]</span> <span class="c1"># 提取正的特征值部分</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">omega</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_to_array</span><span class="p">(</span><span class="n">param</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    将标量参数转换为数组，以便统一处理</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">param</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">param</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">)</span> <span class="o">==</span> <span class="n">size</span><span class="p">,</span> <span class="s2">&quot;Array length must match system size L or L-1.&quot;</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">param</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_spin_BdG_mat</span><span class="p">(</span>
+    <span class="n">L</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">jxx</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">jyy</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">hz</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">jxy</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">jyx</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">reduce</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="c1"># 计算 BdG 哈密顿量的参数</span>
+    <span class="n">lbdalist</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">+</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">/</span> <span class="mi">8</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">-</span> <span class="n">jxy</span><span class="p">)</span>
+    <span class="n">gammalist</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">-</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">/</span> <span class="mi">8</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">+</span> <span class="n">jxy</span><span class="p">)</span>
+    <span class="n">hlist</span> <span class="o">=</span> <span class="n">hz</span> <span class="o">/</span> <span class="mi">2</span>
+    
+    <span class="c1"># 标记是否所有参数均为实数</span>
+    <span class="n">is_real_lbdalist</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">isreal</span><span class="p">(</span><span class="n">lbdalist</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">is_real_gammalist</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">isreal</span><span class="p">(</span><span class="n">gammalist</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">is_real_lbdalist</span><span class="p">:</span>
+        <span class="n">lbdalist</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lbdalist</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">is_real_gammalist</span><span class="p">:</span>
+        <span class="n">gammalist</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">gammalist</span><span class="p">)</span>
+    <span class="n">is_real</span> <span class="o">=</span> <span class="n">is_real_lbdalist</span> <span class="ow">and</span> <span class="n">is_real_gammalist</span>
+
+    <span class="c1"># 构造 H22 矩阵（哈密顿量的对角块）</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">float64</span> <span class="k">if</span> <span class="n">is_real</span> <span class="k">else</span> <span class="n">_np</span><span class="o">.</span><span class="n">complex128</span>
+    <span class="n">H22</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">L</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">H22</span> <span class="o">+=</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">hlist</span><span class="p">)</span>
+    <span class="n">H22</span> <span class="o">+=</span> <span class="n">_np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">lbdalist</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">H22</span> <span class="o">+=</span> <span class="n">_np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">lbdalist</span><span class="o">.</span><span class="n">conj</span><span class="p">(),</span> <span class="n">k</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="c1"># 构造 H21 矩阵（哈密顿量的对角块）</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">float64</span> <span class="k">if</span> <span class="n">is_real</span> <span class="k">else</span> <span class="n">_np</span><span class="o">.</span><span class="n">complex128</span>
+    <span class="n">H21</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">L</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">H21</span> <span class="o">+=</span> <span class="n">_np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">gammalist</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">H21</span> <span class="o">+=</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">gammalist</span><span class="p">,</span> <span class="n">k</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="c1"># 如果所有参数均为实数且 reduce 为 True，则返回化简后的结果</span>
+    <span class="k">if</span> <span class="n">is_real</span> <span class="ow">and</span> <span class="n">reduce</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">H21</span> <span class="o">-</span> <span class="n">H22</span><span class="p">)</span> <span class="o">@</span> <span class="p">(</span><span class="n">H21</span> <span class="o">+</span> <span class="n">H22</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># 返回完整的 BdG 哈密顿量矩阵</span>
+        <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">H22</span><span class="p">),</span> <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">H21</span><span class="p">)],</span>
+                          <span class="p">[</span>           <span class="n">H21</span><span class="p">,</span>            <span class="n">H22</span><span class="p">]])</span>
+
+
+<div class="viewcode-block" id="XY_energies">
+<a class="viewcode-back" href="../../../../funcsAPI/_autosummary/quante.solvable_models.free_fermion.XY_energies.html#quante.solvable_models.free_fermion.XY_energies">[文档]</a>
+<span class="k">def</span> <span class="nf">XY_energies</span><span class="p">(</span>
+    <span class="n">L</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">jxx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jyy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jxy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">jyx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">hz</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">pauli</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.free_fermion_numba</span> <span class="kn">import</span> <span class="n">_get_full_sprem</span>
+    <span class="n">omega</span> <span class="o">=</span> <span class="n">_XY_omega</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">jxx</span><span class="o">=</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hz</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="n">pauli</span><span class="p">)</span>
+    <span class="n">gdeng</span> <span class="o">=</span> <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">omega</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">_get_full_sprem</span><span class="p">(</span><span class="n">gdeng</span><span class="p">,</span> <span class="n">omega</span><span class="p">,</span> <span class="n">L</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="XY_free_energy">
+<a class="viewcode-back" href="../../../../funcsAPI/_autosummary/quante.solvable_models.free_fermion.XY_free_energy.html#quante.solvable_models.free_fermion.XY_free_energy">[文档]</a>
+<span class="k">def</span> <span class="nf">XY_free_energy</span><span class="p">(</span>
+    <span class="n">L</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>  <span class="c1"># 默认为无穷大尺寸的系统</span>
+    <span class="n">jxx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jyy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jxy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">jyx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">hz</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pauli</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.free_fermion_numba</span> <span class="kn">import</span> <span class="n">_logcosh</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">_np</span><span class="o">.</span><span class="n">all</span><span class="p">([</span><span class="n">_np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span><span class="p">]])</span>
+        
+        <span class="k">if</span> <span class="n">pauli</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">pauli</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span> <span class="o">=</span> <span class="n">jxx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jxy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">hz</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="kn">import</span> <span class="n">quad</span>
+
+        <span class="n">lamb</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">+</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">-</span> <span class="n">jxy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">-</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">+</span> <span class="n">jxy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hz</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">h</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lamb</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">gamma</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="p">)</span> <span class="o">+</span> <span class="n">_np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">lamb</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">integral</span> <span class="o">=</span> <span class="n">quad</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">_logcosh</span><span class="p">(</span><span class="n">beta</span> <span class="o">*</span> <span class="n">omega</span><span class="p">(</span><span class="n">k</span><span class="p">)),</span>
+            <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+            <span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">beta</span> <span class="o">-</span> <span class="n">integral</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">beta</span>
+    <span class="n">omega</span> <span class="o">=</span> <span class="n">_XY_omega</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">jxx</span><span class="o">=</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hz</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="n">pauli</span><span class="p">)</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">beta</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">_logcosh</span><span class="p">(</span><span class="n">beta</span> <span class="o">*</span> <span class="n">omega</span><span class="p">))</span> <span class="o">/</span> <span class="n">beta</span> <span class="o">/</span> <span class="n">L</span></div>
+
+
+
+<div class="viewcode-block" id="XY_internal_energy">
+<a class="viewcode-back" href="../../../../funcsAPI/_autosummary/quante.solvable_models.free_fermion.XY_internal_energy.html#quante.solvable_models.free_fermion.XY_internal_energy">[文档]</a>
+<span class="k">def</span> <span class="nf">XY_internal_energy</span><span class="p">(</span>
+    <span class="n">L</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>  <span class="c1"># 默认为无穷大尺寸的系统</span>
+    <span class="n">jxx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jyy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jxy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">jyx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">hz</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pauli</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;有限尺寸为开边界结果&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">pauli</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">pauli</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span> <span class="o">=</span> <span class="n">jxx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jxy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">hz</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="kn">import</span> <span class="n">quad</span>
+
+        <span class="n">lamb</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">+</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">-</span> <span class="n">jxy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">-</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">+</span> <span class="n">jxy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hz</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">h</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lamb</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">gamma</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="p">)</span> <span class="o">+</span> <span class="n">_np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">lamb</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">integral</span> <span class="o">=</span> <span class="n">quad</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">omega</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">beta</span> <span class="o">*</span> <span class="n">omega</span><span class="p">(</span><span class="n">k</span><span class="p">)),</span>
+            <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+            <span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">integral</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span>
+    <span class="n">omega</span> <span class="o">=</span> <span class="n">_XY_omega</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">jxx</span><span class="o">=</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hz</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="n">pauli</span><span class="p">)</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">beta</span> <span class="o">*</span> <span class="n">omega</span><span class="p">))</span> <span class="o">/</span> <span class="n">L</span></div>
+
+
+
+<div class="viewcode-block" id="XY_specific_heat">
+<a class="viewcode-back" href="../../../../funcsAPI/_autosummary/quante.solvable_models.free_fermion.XY_specific_heat.html#quante.solvable_models.free_fermion.XY_specific_heat">[文档]</a>
+<span class="k">def</span> <span class="nf">XY_specific_heat</span><span class="p">(</span>
+    <span class="n">L</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>  <span class="c1"># 默认为无穷大尺寸的系统</span>
+    <span class="n">jxx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jyy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jxy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">jyx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">hz</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pauli</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;有限尺寸为开边界结果&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">pauli</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">pauli</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span> <span class="o">=</span> <span class="n">jxx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jxy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">hz</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="kn">import</span> <span class="n">quad</span>
+
+        <span class="n">lamb</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">+</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">-</span> <span class="n">jxy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">-</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">+</span> <span class="n">jxy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hz</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">h</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lamb</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">gamma</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="p">)</span> <span class="o">+</span> <span class="n">_np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">lamb</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">integral</span> <span class="o">=</span> <span class="n">quad</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">omega</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">beta</span> <span class="o">*</span> <span class="n">omega</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">),</span>
+            <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+            <span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="o">-</span><span class="p">(</span><span class="n">beta</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">integral</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span>
+    <span class="n">omega</span> <span class="o">=</span> <span class="n">_XY_omega</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">jxx</span><span class="o">=</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hz</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="n">pauli</span><span class="p">)</span>
+    <span class="k">return</span> <span class="o">-</span><span class="p">(</span><span class="n">beta</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">omega</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">beta</span> <span class="o">*</span> <span class="n">omega</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="XY_magnetization">
+<a class="viewcode-back" href="../../../../funcsAPI/_autosummary/quante.solvable_models.free_fermion.XY_magnetization.html#quante.solvable_models.free_fermion.XY_magnetization">[文档]</a>
+<span class="k">def</span> <span class="nf">XY_magnetization</span><span class="p">(</span>
+    <span class="n">L</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>  <span class="c1"># 默认为无穷大尺寸的系统</span>
+    <span class="n">jxx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jyy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> 
+    <span class="n">jxy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">jyx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">hz</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+    <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pauli</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;有限尺寸为开边界结果&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">pauli</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">pauli</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span> <span class="o">=</span> <span class="n">jxx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jxy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">hz</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="kn">import</span> <span class="n">quad</span>
+
+        <span class="n">lamb</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">+</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">-</span> <span class="n">jxy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">-</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">jyx</span> <span class="o">+</span> <span class="n">jxy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hz</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">h</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lamb</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">gamma</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="p">)</span> <span class="o">+</span> <span class="n">_np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">lamb</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">domega_dhz</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="p">(</span><span class="n">h</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lamb</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="o">/</span> <span class="n">omega</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">integral</span> <span class="o">=</span> <span class="n">quad</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">domega_dhz</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">beta</span> <span class="o">*</span> <span class="n">omega</span><span class="p">(</span><span class="n">k</span><span class="p">)),</span>
+            <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+            <span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">integral</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span>
+    <span class="c1"># 只有开边界 λ (xx + yy) 可以用离散正弦变换严格解</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">jxy</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">jyx</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">pauli</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">pauli</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span> <span class="o">=</span> <span class="n">jxx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jxy</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">jyx</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">hz</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="n">λ</span> <span class="o">=</span> <span class="p">(</span><span class="n">jxx</span> <span class="o">+</span> <span class="n">jyy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hz</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">([</span><span class="n">λ</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="n">L</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">-</span> <span class="n">h</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">beta</span> <span class="o">*</span> <span class="n">omega</span><span class="p">)</span> <span class="o">*</span> <span class="n">beta</span><span class="p">)</span> <span class="o">/</span> <span class="n">beta</span> <span class="o">/</span> <span class="n">L</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">omega1</span> <span class="o">=</span> <span class="n">_XY_omega</span><span class="p">(</span>
+            <span class="n">L</span><span class="p">,</span> <span class="n">jxx</span><span class="o">=</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hz</span> <span class="o">+</span> <span class="mf">0.00005</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="n">pauli</span>
+        <span class="p">)</span>
+        <span class="n">omega2</span> <span class="o">=</span> <span class="n">_XY_omega</span><span class="p">(</span>
+            <span class="n">L</span><span class="p">,</span> <span class="n">jxx</span><span class="o">=</span><span class="n">jxx</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">jyy</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">jyx</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hz</span> <span class="o">-</span> <span class="mf">0.00005</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="n">pauli</span>
+        <span class="p">)</span>
+        <span class="n">domega_dhz</span> <span class="o">=</span> <span class="p">(</span><span class="n">omega1</span> <span class="o">-</span> <span class="n">omega2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">0.0001</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">_np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">beta</span> <span class="o">*</span> <span class="n">omega1</span><span class="p">)</span> <span class="o">*</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">domega_dhz</span><span class="p">)</span> <span class="o">/</span> <span class="n">beta</span> <span class="o">/</span> <span class="n">L</span></div>
+
+    
+<span class="c1">#######################################</span>
+<span class="c1"># XXX 通过自由费米子解</span>
+<span class="c1">######################################</span>
+
+<div class="viewcode-block" id="XXX_gdenergy_pbc_approx">
+<a class="viewcode-back" href="../../../../funcsAPI/_autosummary/quante.solvable_models.free_fermion.XXX_gdenergy_pbc_approx.html#quante.solvable_models.free_fermion.XXX_gdenergy_pbc_approx">[文档]</a>
+<span class="k">def</span> <span class="nf">XXX_gdenergy_pbc_approx</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Assumes the heisenberg model is defined with spin</span>
+<span class="sd">    operators not pauli matrices (overall factor of 2 smaller). Taken from [1].</span>
+
+<span class="sd">    [1] Nickel, Bernie. &quot;Scaling corrections to the ground state energy</span>
+<span class="sd">    of the spin-½ isotropic anti-ferromagnetic Heisenberg chain.&quot; Journal of</span>
+<span class="sd">    Physics Communications 1.5 (2017): 055021</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    energy : float</span>
+<span class="sd">        The ground state energy. 误差在 o( 1/ln^3(L) )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Einf</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="n">L</span>
+    <span class="n">Efinite</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">6</span> <span class="o">*</span> <span class="n">L</span><span class="p">)</span>
+    <span class="n">correction</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="mf">0.375</span> <span class="o">/</span> <span class="n">_np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">L</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">Einf</span> <span class="o">-</span> <span class="n">Efinite</span> <span class="o">*</span> <span class="n">correction</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span></div>
+
+
+
+<div class="viewcode-block" id="XXZ_gdenergy_inf">
+<a class="viewcode-back" href="../../../../funcsAPI/_autosummary/quante.solvable_models.free_fermion.XXZ_gdenergy_inf.html#quante.solvable_models.free_fermion.XXZ_gdenergy_inf">[文档]</a>
+<span class="k">def</span> <span class="nf">XXZ_gdenergy_inf</span><span class="p">(</span><span class="n">j</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">Delta</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">η</span> <span class="o">=</span> <span class="o">-</span> <span class="n">_np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="o">-</span><span class="n">Delta</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+    <span class="n">E1</span> <span class="o">=</span> <span class="n">Delta</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">j</span>
+    <span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="kn">import</span> <span class="n">quad</span>
+    <span class="n">E2</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="mi">4</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">η</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">pi</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">η</span><span class="p">)</span> <span class="o">*</span> <span class="n">quad</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">λ</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">cosh</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">λ</span><span class="o">/</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">pi</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">η</span><span class="p">))</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">cosh</span><span class="p">(</span><span class="n">λ</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">η</span><span class="p">)</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">cosh</span><span class="p">(</span><span class="n">λ</span> <span class="o">-</span> <span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">η</span><span class="p">)),</span>
+            <span class="o">-</span><span class="mi">1000</span><span class="p">,</span>
+            <span class="mi">1000</span><span class="p">,</span>
+        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">E1</span> <span class="o">-</span> <span class="n">E2</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+    <span class="kn">from</span> <span class="nn">quante</span> <span class="kn">import</span> <span class="n">matrix</span> <span class="k">as</span> <span class="n">ed</span>
+    <span class="kn">from</span> <span class="nn">generate</span> <span class="kn">import</span> <span class="n">operas</span> <span class="k">as</span> <span class="n">op</span>
+    <span class="kn">from</span> <span class="nn">quante</span> <span class="kn">import</span> <span class="n">linalg</span> <span class="k">as</span> <span class="n">qla</span>
+    <span class="kn">from</span> <span class="nn">basicfun</span> <span class="kn">import</span> <span class="n">println</span>
+    
+    <span class="n">sitenum</span> <span class="o">=</span> <span class="mi">10</span>
+
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+    <span class="n">Jx</span><span class="p">,</span> <span class="n">Jy</span><span class="p">,</span> <span class="n">Jxy</span><span class="p">,</span> <span class="n">Jyx</span><span class="p">,</span> <span class="n">hz</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">sitenum</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">sitenum</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">sitenum</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">sitenum</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">sitenum</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">ham</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">Oper</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">Jx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">op</span><span class="o">.</span><span class="n">xx</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">Jy</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">op</span><span class="o">.</span><span class="n">yy</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">Jxy</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">op</span><span class="o">.</span><span class="n">xy</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">Jyx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">op</span><span class="o">.</span><span class="n">yx</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sitenum</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="o">+</span> <span class="nb">sum</span><span class="p">(</span><span class="n">hz</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">op</span><span class="o">.</span><span class="n">z</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sitenum</span><span class="p">))</span>
+
+    <span class="n">basis</span> <span class="o">=</span> <span class="n">ed</span><span class="o">.</span><span class="n">get_spin_basis</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="n">sitenum</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">mat</span> <span class="o">=</span> <span class="n">ham</span><span class="o">.</span><span class="n">get_matrix</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+    <span class="n">println</span><span class="p">(</span><span class="n">qla</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">mat</span><span class="p">))</span>
+    <span class="n">println</span><span class="p">(</span><span class="n">XY_gdenergy</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="n">sitenum</span><span class="p">,</span> <span class="n">jxx</span><span class="o">=</span><span class="n">Jx</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">Jy</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">Jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">Jyx</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hz</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+    <span class="n">println</span><span class="p">(</span><span class="n">XY_energies</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="n">sitenum</span><span class="p">,</span> <span class="n">jxx</span><span class="o">=</span><span class="n">Jx</span><span class="p">,</span> <span class="n">jyy</span><span class="o">=</span><span class="n">Jy</span><span class="p">,</span> <span class="n">jxy</span><span class="o">=</span><span class="n">Jxy</span><span class="p">,</span> <span class="n">jyx</span><span class="o">=</span><span class="n">Jyx</span><span class="p">,</span> <span class="n">hz</span><span class="o">=</span><span class="n">hz</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

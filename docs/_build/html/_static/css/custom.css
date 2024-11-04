@@ -1,0 +1,24 @@
+/**
+ * @Author: hzhu
+ * @Date:   2024-10-31 14:45:49
+ * @Last Modified by:   hzhu
+ * @Last Modified time: 2024-11-04 16:31:10
+ */
+@font-face {
+    font-family: "Cascadia";
+    src: url("../fonts/CascadiaMono.woff2") format("woff2"); /* 使用 CascadiaMono */
+}
+
+body {
+    font-size: 20px;
+    zoom: 100%;
+}
+
+
+/* 使用更高优先级的选择器确保代码块的样式生效 */
+div.highlight pre,
+div.highlight .hll,
+div.highlight-text pre {
+    font-family: "Cascadia", monospace !important;
+    font-size: 1.5ex !important; /* 根据需要调整 */
+}

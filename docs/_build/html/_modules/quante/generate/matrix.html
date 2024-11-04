@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.generate.matrix &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=ea1cf9a5" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">模块代码</a></li>
+      <li class="breadcrumb-item active">quante.generate.matrix</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>quante.generate.matrix 源代码</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># @Author: hzhu</span>
+<span class="c1"># @Date:   2023-10-22 16:50:19</span>
+<span class="c1"># @Last Modified by:   hzhu</span>
+<span class="c1"># @Last Modified time: 2024-10-31 18:55:02</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">生成矩阵：(`np.ndarray`)</span>
+<span class="sd">- `pauli_matrix`</span>
+<span class="sd">- `heisenberg_matrix`</span>
+<span class="sd">- `random_matrix`</span>
+<span class="sd">- 其他的预设矩阵</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">functools</span>
+
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">_np</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="k">as</span> <span class="nn">_sparse</span>
+
+<span class="kn">from</span> <span class="nn">..linalg.operations</span> <span class="kn">import</span> <span class="n">kron</span><span class="p">,</span> <span class="n">ikron</span>
+<span class="kn">from</span> <span class="nn">.basis</span> <span class="kn">import</span> <span class="n">_check_spin_number</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;pauli_matrix&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="s2">&quot;random_matrix&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;random_orthorgonal_matrix_close_I&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;random_unitary_matrix_close_I&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;random_sparse_matrix&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+    
+
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="s2">&quot;hadamard_gate&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;phase_gate&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rotation_gate&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;heisenberg_matrix&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;random_phase_model&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;local_hamiltonian_spin_1D&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+
+<span class="n">_PAULI_MAT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;X&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">1.</span><span class="p">],[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;Y&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="o">-</span><span class="mf">1.</span><span class="n">j</span><span class="p">],[</span><span class="mf">1.</span><span class="n">j</span><span class="p">,</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;Z&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">0.</span><span class="p">],[</span><span class="mf">0.</span><span class="p">,</span><span class="o">-</span><span class="mf">1.</span><span class="p">]]),</span>
+    <span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">1.</span><span class="p">],[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">],[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;I&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">0.</span><span class="p">],[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">1.</span><span class="p">]]),</span>
+    <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.5</span><span class="p">],[</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="o">-</span><span class="mf">0.5</span><span class="n">j</span><span class="p">],[</span><span class="mf">0.5</span><span class="n">j</span><span class="p">,</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.</span><span class="p">],[</span><span class="mf">0.</span><span class="p">,</span><span class="o">-</span><span class="mf">0.5</span><span class="p">]]),</span>
+    <span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">1.</span><span class="p">],[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;m&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">],[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;+&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">1.</span><span class="p">],[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;-&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">0.</span><span class="p">],[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;i&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">0.</span><span class="p">],[</span><span class="mf">0.</span><span class="p">,</span><span class="mf">1.</span><span class="p">]]),</span>
+    <span class="s2">&quot;u&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.</span><span class="p">]]),</span>
+    <span class="s2">&quot;d&quot;</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.</span><span class="p">]]),</span>
+<span class="p">}</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Union</span>
+
+<div class="viewcode-block" id="pauli_matrix">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.pauli_matrix.html#quante.generate.matrix.pauli_matrix">[文档]</a>
+<span class="k">def</span> <span class="nf">pauli_matrix</span><span class="p">(</span>
+    <span class="n">stri</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">S</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1/2&#39;</span><span class="p">,</span>
+    <span class="n">view</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">csr_array</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    !! 多个算符的时候 `+`, `-`, `u`, `d` 这四个算符一定要十分小心，**最好不要用这四个算符**</span>
+<span class="sd">    </span>
+<span class="sd">    - `xx` -&gt; kron(pauli_x, pauli_x)</span>
+<span class="sd">    - `x3y3` -&gt; `xxxyyy`</span>
+<span class="sd">    - `x2y3!5` -&gt; `iixyi`</span>
+<span class="sd">    - `xy!5` -&gt; `iiixy+iixyi+ixyii+xyiii`</span>
+<span class="sd">    </span>
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; op.pauli_matrix(&quot;x&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; op.pauli_matrix(&quot;xx+yy&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; op.pauli_matrix(&quot;xx+3*yy&quot;)</span>
+
+<span class="sd">    Generates a Pauli operator matrix based on the input string.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    -----------</span>
+<span class="sd">        - `stri`: String specifying the Pauli operator configuration.</span>
+<span class="sd">        - `dtype`: Data type of the resulting matrix (default: np.complex128).</span>
+<span class="sd">        - `view`: If True, prints the intermediate result (default: False).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">_check_spin_number</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+
+    <span class="c1"># 定义获得单个算符的方法</span>
+    <span class="k">if</span> <span class="n">S</span> <span class="o">==</span> <span class="mf">0.5</span><span class="p">:</span>
+        <span class="n">_single_oper</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">_pauli_matrix_single</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">_single_oper</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">_spin_oper_single</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="n">S</span><span class="p">)</span>
+
+    <span class="c1"># 如果长度是 1, 直接返回结果</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stri</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">_single_oper</span><span class="p">(</span><span class="n">stri</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># 用正则表达式转化为可识别的形式</span>
+        <span class="n">evalable_string</span> <span class="o">=</span> <span class="n">_standardlize_string</span><span class="p">(</span><span class="n">stri</span><span class="p">)</span>  
+        <span class="k">if</span> <span class="n">view</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">evalable_string</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">_evaluate_string</span><span class="p">(</span><span class="n">evalable_string</span><span class="p">,</span> <span class="n">_single_oper</span><span class="p">,</span> <span class="n">kron</span><span class="p">)</span>  <span class="c1"># 运行字符串</span>
+        
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">real_if_close</span><span class="p">(</span><span class="n">res</span><span class="p">)</span></div>
+
+        
+<span class="k">def</span> <span class="nf">_pauli_matrix_single</span><span class="p">(</span><span class="n">stri</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">_PAULI_MAT</span><span class="p">[</span><span class="n">stri</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">_spin_oper_single</span><span class="p">(</span>
+    <span class="n">label</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
+    <span class="n">S</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">S</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">assert</span> <span class="n">D</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">D</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">S</span><span class="si">}</span><span class="s2"> 不是整数或半整数&quot;</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
+    <span class="n">op</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">D</span><span class="p">,</span> <span class="n">D</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+    <span class="n">ms</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="o">-</span><span class="n">S</span><span class="p">,</span> <span class="n">D</span><span class="p">)</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">}:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">D</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">S</span> <span class="o">*</span> <span class="p">(</span><span class="n">S</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">ms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">ms</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]))</span><span class="o">**</span><span class="mf">0.5</span>
+            <span class="n">op</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="n">j</span> <span class="o">*</span> <span class="n">c</span> <span class="k">if</span> <span class="p">(</span><span class="n">label</span> <span class="o">==</span> <span class="s1">&#39;y&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">c</span>
+            <span class="n">op</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="n">j</span> <span class="o">*</span> <span class="n">c</span> <span class="k">if</span> <span class="p">(</span><span class="n">label</span> <span class="o">==</span> <span class="s1">&#39;y&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">c</span>
+    <span class="k">elif</span> <span class="n">label</span> <span class="o">==</span> <span class="s1">&#39;z&#39;</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">D</span><span class="p">):</span>
+            <span class="n">op</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="s1">&#39;m&#39;</span><span class="p">}:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">D</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="p">(</span><span class="n">S</span> <span class="o">*</span> <span class="p">(</span><span class="n">S</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">ms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">ms</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]))</span><span class="o">**</span><span class="mf">0.5</span>
+            <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="s1">&#39;p&#39;</span><span class="p">}:</span>
+                <span class="n">op</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">c</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">op</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">c</span>
+    <span class="k">elif</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;i&#39;</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">}:</span>
+        <span class="n">_np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Label &#39;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&#39;&#39; not understood, should be one of &quot;</span>
+                         <span class="s2">&quot;``[&#39;X&#39;, &#39;Y&#39;, &#39;Z&#39;, &#39;+&#39;, &#39;-&#39;, &#39;I&#39;]``.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">op</span>
+
+<span class="k">def</span> <span class="nf">_standardlize_string</span><span class="p">(</span><span class="n">stri</span><span class="p">):</span>
+    <span class="n">new</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;([xyzpmiXYZPMIud]+[0-9]+)+\![0-9]+&quot;</span><span class="p">,</span> <span class="n">_term</span><span class="p">,</span> <span class="n">stri</span><span class="p">)</span>  <span class="c1"># x1y2!4 -&gt; ixyi</span>
+    <span class="n">new</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[xyzpmiXYZPMIud]+\![0-9]+&quot;</span><span class="p">,</span> <span class="n">_shift</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>  <span class="c1"># xy!4 -&gt; xy!5 -&gt; iiixy+iixyi+ixyii+xyiii</span>
+    <span class="n">new</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[xyzpmiXYZPMIud]+[0-9]+&quot;</span><span class="p">,</span> <span class="n">_duplicate</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>  <span class="c1"># x3y3 -&gt; xxxyyy</span>
+    <span class="n">new</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;[xyzpmiXYZPMIud]+&quot;</span><span class="p">,</span> <span class="n">_rpmethod</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">new</span>
+
+<span class="k">def</span> <span class="nf">_term</span><span class="p">(</span><span class="n">match</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">()</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\d+)&#39;</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;i&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">n</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">)</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_shift</span><span class="p">(</span><span class="n">match</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">()</span>
+    <span class="n">stri</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;!&quot;</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">stri</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">+=</span> <span class="p">(</span><span class="n">stri</span> <span class="o">+</span> <span class="s2">&quot;i&quot;</span><span class="o">*</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;+&quot;</span>
+    <span class="k">return</span> <span class="n">res</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">_duplicate</span><span class="p">(</span><span class="n">match</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">()</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">eval</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+<span class="k">def</span> <span class="nf">_rpmethod</span><span class="p">(</span><span class="n">match</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="s2">&quot;_kron(&quot;</span>
+    <span class="k">for</span> <span class="n">xi</span> <span class="ow">in</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">():</span>
+        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;_single_oper(&#39;&quot;</span> <span class="o">+</span>  <span class="n">xi</span> <span class="o">+</span> <span class="s2">&quot;&#39;),&quot;</span>
+    <span class="k">return</span> <span class="n">res</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span>
+
+<span class="k">def</span> <span class="nf">_evaluate_string</span><span class="p">(</span><span class="n">evalable_string</span><span class="p">,</span> <span class="n">_single_oper</span><span class="p">,</span> <span class="n">_kron</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_single_oper</span><span class="p">,</span> <span class="n">Callable</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_kron</span><span class="p">,</span> <span class="n">Callable</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">eval</span><span class="p">(</span><span class="n">evalable_string</span><span class="p">)</span>
+
+<span class="c1">##################################################</span>
+<span class="c1"># random matrix</span>
+<span class="c1">##################################################</span>
+
+<div class="viewcode-block" id="random_matrix">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.random_matrix.html#quante.generate.matrix.random_matrix">[文档]</a>
+<span class="k">def</span> <span class="nf">random_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;simple&quot;</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;生成随机矩阵</span>
+<span class="sd">    </span>
+<span class="sd">    这个函数本身不支持 njit （因为返回的数据类型不统一）</span>
+<span class="sd">    如果需要 njit 请使用内部的 _random_simple_matrix 等函数</span>
+<span class="sd">    </span>
+<span class="sd">    - type: </span>
+<span class="sd">    </span>
+<span class="sd">        - &quot;simple&quot; -&gt; 每个矩阵元实数高斯分布</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;simple_real&quot; -&gt; 每个矩阵元实数高斯分布</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;GOE&quot;/&quot;symm&quot; -&gt; 实对称矩阵</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;GUE&quot;/&quot;herm&quot; -&gt; Hermite 矩阵</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;CUE&quot;/&quot;unit&quot; -&gt; 幺正矩阵</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;COE&quot;/&quot;orth&quot; -&gt; 正交矩阵(COE)</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;CRE&quot; -&gt; 正交矩阵(CRE)</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;positive&quot; -&gt; 正定矩阵</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;normal&quot; -&gt; 正规矩阵</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;noninv&quot; -&gt; 不可逆矩阵</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;realeig&quot; -&gt; 实本征值的矩阵</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;singular&quot; -&gt; 奇异矩阵</span>
+<span class="sd">        </span>
+<span class="sd">        - &quot;rho&quot; -&gt; 密度矩阵</span>
+<span class="sd">        </span>
+<span class="sd">    </span>
+<span class="sd">    矩阵（方阵）的分类：</span>
+<span class="sd">    -----------------------</span>
+<span class="sd">    - **简单矩阵** (可以相似对角化)</span>
+<span class="sd">        </span>
+<span class="sd">       - **正规矩阵** (M.H @ M = M @ M.H,  可以幺正相似对角化)</span>
+<span class="sd">       </span>
+<span class="sd">        （**幺正矩阵**、**厄密矩阵**、**对角矩阵**，但这三者没有包含关系）</span>
+<span class="sd">        </span>
+<span class="sd">       - **非正规矩阵** (可以相似对角化，但不可以幺正相似对角化)</span>
+<span class="sd">        </span>
+<span class="sd">    - **不简单矩阵** (不可以相似对角化/只能相似到Jordan型上)</span>
+
+<span class="sd">    注：</span>
+<span class="sd">    - 本征值始终是存在的，无论是不是简单矩阵。</span>
+<span class="sd">    </span>
+<span class="sd">    - 本征值为实数的矩阵可以是：不简单矩阵、非正规矩阵、厄密矩阵。</span>
+<span class="sd">    </span>
+<span class="sd">    - 如果正规矩阵的本征值是实数，则该正规矩阵必定为厄密矩阵。</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    随机矩阵的分类：</span>
+<span class="sd">    --------------------</span>
+<span class="sd">    =========== ======================== ======================= ================== ===========</span>
+<span class="sd">    ensemble    matrix class drawn from  measure                 invariant under    beta</span>
+<span class="sd">    =========== ======================== ======================= ================== ===========</span>
+<span class="sd">    GOE         real, symmetric          ``~ exp(-n/4 tr(H^2))`` orthogonal O       1</span>
+<span class="sd">    ----------- ------------------------ ----------------------- ------------------ -----------</span>
+<span class="sd">    GUE         hermitian                ``~ exp(-n/2 tr(H^2))`` unitary U          2</span>
+<span class="sd">    ----------- ------------------------ ----------------------- ------------------ -----------</span>
+<span class="sd">    CRE         O(n)                     Haar                    orthogonal O       /</span>
+<span class="sd">    ----------- ------------------------ ----------------------- ------------------ -----------</span>
+<span class="sd">    COE         U in U(n) with U = U^T   Haar                    orthogonal O       1</span>
+<span class="sd">    ----------- ------------------------ ----------------------- ------------------ -----------</span>
+<span class="sd">    CUE         U(n)                     Haar                    unitary U          2</span>
+<span class="sd">    ----------- ------------------------ ----------------------- ------------------ -----------</span>
+<span class="sd">    O_close_1   O(n)                     ?                       /                  /</span>
+<span class="sd">    ----------- ------------------------ ----------------------- ------------------ -----------</span>
+<span class="sd">    U_close_1   U(n)                     ?                       /                  /</span>
+<span class="sd">    =========== ======================== ======================= ================== ===========</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    随机矩阵的概率性质：</span>
+<span class="sd">    ---------------------</span>
+<span class="sd">    - 简单矩阵（复数或实数）：    </span>
+<span class="sd">    </span>
+<span class="sd">        - 以概率 1 可相似对角化;</span>
+<span class="sd">        </span>
+<span class="sd">        - 以概率 1 不可酉相似对角化</span>
+<span class="sd">        </span>
+<span class="sd">        - 概率 1 可逆</span>
+<span class="sd">        </span>
+<span class="sd">    </span>
+<span class="sd">    - 正规矩阵（厄密矩阵，对称矩阵，幺正矩阵，实正交阵）：</span>
+<span class="sd">    </span>
+<span class="sd">        - 必可以相似对角化</span>
+<span class="sd">        </span>
+<span class="sd">        - 必可以酉相似对角化</span>
+<span class="sd">        </span>
+<span class="sd">        - 概率 1 可逆</span>
+<span class="sd">        </span>
+<span class="sd">    </span>
+<span class="sd">    - 非正规矩阵：</span>
+<span class="sd">    </span>
+<span class="sd">        - 必可以相似对角化</span>
+<span class="sd">        </span>
+<span class="sd">        - 概率 1 可逆</span>
+<span class="sd">        </span>
+<span class="sd">    </span>
+<span class="sd">    - 不简单矩阵：</span>
+<span class="sd">    </span>
+<span class="sd">        - 不可以相似对角化</span>
+<span class="sd">        </span>
+<span class="sd">        - 只能相似到Jordan型上</span>
+<span class="sd">        </span>
+<span class="sd">    </span>
+<span class="sd">    - 奇异矩阵：</span>
+<span class="sd">    </span>
+<span class="sd">        - 不能被相似对角化（用来对角化的矩阵的逆矩阵矩阵元发散。）</span>
+<span class="sd">        </span>
+<span class="sd">        - 不能被酉相似对角化</span>
+<span class="sd">        </span>
+<span class="sd">        - 概率 1 可逆</span>
+<span class="sd">        </span>
+<span class="sd">        </span>
+<span class="sd">    - 不可以逆矩阵：</span>
+<span class="sd">    </span>
+<span class="sd">        - 必不可逆 或者 逆矩阵发散</span>
+<span class="sd">        </span>
+<span class="sd">        - 以概率 1 可相似对角化</span>
+<span class="sd">        </span>
+<span class="sd">        - 以概率 1 不可酉相似对角化</span>
+<span class="sd">        </span>
+<span class="sd">    </span>
+<span class="sd">    - 实本征值单阵</span>
+<span class="sd">    </span>
+<span class="sd">        - 以概率 1 可相似对角化</span>
+
+<span class="sd">        - 以概率 1 不可酉相似对角化</span>
+
+<span class="sd">        - 以概率 1 可逆</span>
+
+<span class="sd">        </span>
+<span class="sd">    生成随机数的方法参见：https://numpy.org/doc/stable/reference/random/generator.html#</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">type_to_function</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;simple&quot;</span><span class="p">:</span> <span class="n">_random_simple_matrix</span><span class="p">,</span>
+        <span class="s2">&quot;realsimple&quot;</span><span class="p">:</span> <span class="n">_random_simple_real_matrix</span><span class="p">,</span>
+        <span class="s2">&quot;GOE&quot;</span><span class="p">:</span> <span class="n">_random_symmetric_matrix_goe</span><span class="p">,</span>
+        <span class="s2">&quot;GUE&quot;</span><span class="p">:</span> <span class="n">_random_hermition_matrix_gue</span><span class="p">,</span>
+        <span class="s2">&quot;CUE&quot;</span><span class="p">:</span> <span class="n">_random_unitary_matrix_cue</span><span class="p">,</span>
+        <span class="s2">&quot;COE&quot;</span><span class="p">:</span> <span class="n">_randomize_orthogonal_coe</span><span class="p">,</span>
+        <span class="s2">&quot;CRE&quot;</span><span class="p">:</span> <span class="n">_random_orthogonal_matrix_cre</span><span class="p">,</span>
+        <span class="s2">&quot;singular&quot;</span><span class="p">:</span> <span class="n">_random_singular_matrix</span><span class="p">,</span>
+        <span class="s2">&quot;normal&quot;</span><span class="p">:</span> <span class="n">_random_normal_matrix</span><span class="p">,</span>
+        <span class="s2">&quot;noninv&quot;</span><span class="p">:</span> <span class="n">_random_noninv_matrix</span><span class="p">,</span>
+        <span class="s2">&quot;realeig&quot;</span><span class="p">:</span> <span class="n">_random_real_eigen_matrix</span><span class="p">,</span>
+        <span class="s2">&quot;positive&quot;</span><span class="p">:</span> <span class="n">_random_positive_matrix</span><span class="p">,</span>
+        <span class="s2">&quot;rho&quot;</span><span class="p">:</span> <span class="n">_random_density_matrix</span>
+    <span class="p">}</span>
+
+    <span class="nb">type</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;herm&quot;</span><span class="p">,</span> <span class="s2">&quot;GUE&quot;</span><span class="p">)</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;unit&quot;</span><span class="p">,</span> <span class="s2">&quot;CUE&quot;</span><span class="p">)</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;symm&quot;</span><span class="p">,</span> <span class="s2">&quot;GOE&quot;</span><span class="p">)</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;orth&quot;</span><span class="p">,</span> <span class="s2">&quot;COE&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">type</span> <span class="ow">in</span> <span class="n">type_to_function</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">type_to_function</span><span class="p">[</span><span class="nb">type</span><span class="p">](</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown type &#39;</span><span class="si">{</span><span class="nb">type</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_simple_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">real_part</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span>
+    <span class="n">imag_part</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">real_part</span> <span class="o">+</span> <span class="n">imag_part</span> <span class="o">*</span> <span class="mf">1.0</span><span class="n">j</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_simple_real_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_symmetric_matrix_goe</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">):</span>
+    <span class="n">real_matrix</span> <span class="o">=</span> <span class="n">_random_simple_real_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">real_matrix</span> <span class="o">+</span> <span class="n">real_matrix</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_hermition_matrix_gue</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">):</span>
+    <span class="n">complex_matrix</span> <span class="o">=</span> <span class="n">_random_simple_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">complex_matrix</span> <span class="o">+</span> <span class="n">complex_matrix</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span> <span class="o">*</span> <span class="mf">0.5</span>
+
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_unitary_matrix_cue</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">):</span>
+    <span class="c1"># rng = _np.random.default_rng(seed=seed)</span>
+    <span class="c1"># A = rng.standard_normal((dim, dim)) + 1.j * rng.standard_normal((dim, dim))</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">_random_simple_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+    <span class="n">Q</span><span class="p">,</span> <span class="n">R</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+    <span class="c1"># Q-R is not unique; to make it unique ensure that the diagonal of R is positive</span>
+    <span class="c1"># Q&#39; = Q*L; R&#39; = L^{-1} *R, where L = diag(phase(diagonal(R)))</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+    <span class="n">L</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">L</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1.e-15</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+    <span class="n">Q</span> <span class="o">*=</span> <span class="n">L</span> <span class="o">/</span> <span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Q</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_randomize_orthogonal_coe</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">):</span>
+    <span class="n">U</span> <span class="o">=</span> <span class="n">_random_unitary_matrix_cue</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+    <span class="n">U_contiguous</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">U</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U_contiguous</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">U_contiguous</span><span class="p">)</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_orthogonal_matrix_cre</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">):</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">_random_simple_real_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+    <span class="n">Q</span><span class="p">,</span> <span class="n">R</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+    <span class="c1"># Q-R is not unique; to make it unique ensure that the diagonal of R is positive</span>
+    <span class="c1"># Q&#39; = Q*L; R&#39; = L^{-1} *R, where L = diag(phase(diagonal(R)))</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+    <span class="n">Q</span> <span class="o">*=</span> <span class="n">_np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Q</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_singular_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">n1</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">_np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">n1</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="n">n1</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">dim</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">n1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">n</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="n">_np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">@</span> <span class="n">a</span> <span class="o">@</span> <span class="n">u</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_normal_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">_random_simple_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">_random_unitary_matrix_cue</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">u_contiguous</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+    <span class="n">v_contiguous</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">u_contiguous</span> <span class="o">@</span> <span class="n">v_contiguous</span> <span class="o">@</span> <span class="n">u_contiguous</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_noninv_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+    <span class="n">poslis</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">v</span><span class="p">[</span><span class="n">poslis</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">poslis</span><span class="p">)))]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">))</span>
+    <span class="n">u_contiguous</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+    <span class="n">v_contiguous</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">u_contiguous</span><span class="p">)</span> <span class="o">@</span> <span class="n">v_contiguous</span> <span class="o">@</span> <span class="n">u_contiguous</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_real_eigen_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">):</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">_random_simple_real_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">_random_simple_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">)</span> <span class="o">@</span> <span class="n">u</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_positive_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">):</span>
+    <span class="n">mat</span> <span class="o">=</span> <span class="n">_random_simple_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mat</span> <span class="o">@</span> <span class="n">mat</span><span class="o">.</span><span class="n">conjugate</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+
+<span class="c1"># @njit</span>
+<span class="k">def</span> <span class="nf">_random_density_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">_random_positive_matrix</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">res</span><span class="p">))</span>
+    <span class="n">res</span><span class="p">[:]</span> <span class="o">/=</span> <span class="n">trace</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+
+<div class="viewcode-block" id="random_orthorgonal_matrix_close_I">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.random_orthorgonal_matrix_close_I.html#quante.generate.matrix.random_orthorgonal_matrix_close_I">[文档]</a>
+<span class="k">def</span> <span class="nf">random_orthorgonal_matrix_close_I</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;返回一个接近单位矩阵的随机正交矩阵。</span>
+
+<span class="sd">    参数 a 决定结果与单位矩阵的接近程度；</span>
+<span class="sd">    </span>
+<span class="sd">    当 :math:`a \rightarrow 0` 时，:math:`&lt;|O-E|&gt;_a = 0``（其中 `E` 是单位矩阵）。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">_random_symmetric_matrix_goe</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">dim</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span>  <span class="c1"># scale such that eigenvalues are in [-1, 1]</span>
+    <span class="n">E</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+    <span class="n">Q</span><span class="p">,</span> <span class="n">R</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">E</span> <span class="o">+</span> <span class="n">a</span> <span class="o">*</span> <span class="n">A</span><span class="p">)</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>  <span class="c1"># make QR decomposition unique &amp; ensure Q is close to one for small `a`</span>
+    <span class="n">Q</span> <span class="o">*=</span> <span class="n">_np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Q</span></div>
+
+
+
+<div class="viewcode-block" id="random_unitary_matrix_close_I">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.random_unitary_matrix_close_I.html#quante.generate.matrix.random_unitary_matrix_close_I">[文档]</a>
+<span class="k">def</span> <span class="nf">random_unitary_matrix_close_I</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;返回一个接近单位矩阵的随机正交矩阵。</span>
+
+<span class="sd">    接近单位矩阵的正交矩阵（对于小的 `a`）。</span>
+<span class="sd">    特征值是独立同分布的，形式为 ``exp(1.j*a*x)``，其中 `x` 在 [-1, 1] 区间内均匀分布。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">U</span> <span class="o">=</span> <span class="n">_random_unitary_matrix_cue</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">E</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">1.</span><span class="n">j</span> <span class="o">*</span> <span class="n">a</span> <span class="o">*</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span> <span class="o">*</span> <span class="mf">2.</span> <span class="o">-</span> <span class="mf">1.</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span> <span class="o">*</span> <span class="n">E</span><span class="p">,</span> <span class="n">U</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span></div>
+
+
+
+<div class="viewcode-block" id="random_sparse_matrix">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.random_sparse_matrix.html#quante.generate.matrix.random_sparse_matrix">[文档]</a>
+<span class="k">def</span> <span class="nf">random_sparse_matrix</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;生成一个稀疏矩阵</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">nnz</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">density</span> <span class="o">*</span> <span class="n">dim</span> <span class="o">*</span> <span class="n">dim</span><span class="p">)</span>
+    <span class="n">ijs</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="n">nnz</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">divmod</span><span class="p">(</span><span class="n">ijs</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">(</span><span class="n">nnz</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.</span><span class="n">j</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">(</span><span class="n">nnz</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">coo_matrix</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">))</span><span class="o">.</span><span class="n">asformat</span><span class="p">(</span><span class="s2">&quot;csr&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="c1">################################</span>
+<span class="c1"># 并行构建哈密顿量</span>
+<span class="c1">################################</span>
+
+<span class="k">def</span> <span class="nf">parallel_build_matrix</span><span class="p">(</span><span class="n">hlocals</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sparse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nthreads</span><span class="p">:</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    通过直积生成矩阵，效率并不是否高，可以用于验证</span>
+<span class="sd">    </span>
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from quante.generate.matrix import parallel_build_matrix</span>
+<span class="sd">    &gt;&gt;&gt; mat = parallel_build_matrix(*ham.split_data(), L, S, pauli=False, sparse=False, parallel=True, nthreads=4)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1"># 生成操作符字典</span>
+    <span class="k">if</span> <span class="n">S</span> <span class="o">==</span> <span class="mf">0.5</span><span class="p">:</span>
+        <span class="n">scale_factor</span> <span class="o">=</span> <span class="mf">2.</span> <span class="k">if</span> <span class="n">pauli</span> <span class="k">else</span> <span class="mf">1.</span>
+        <span class="n">OPER</span> <span class="o">=</span> <span class="p">{</span><span class="n">op</span><span class="p">:</span> <span class="n">pauli_matrix</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="n">S</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale_factor</span> <span class="k">if</span> <span class="n">op</span> <span class="ow">in</span> <span class="s1">&#39;xyZ&#39;</span> <span class="k">else</span> <span class="n">pauli_matrix</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="n">S</span><span class="p">)</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="s2">&quot;xyZzpmiI&quot;</span><span class="p">}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">OPER</span> <span class="o">=</span> <span class="p">{</span><span class="n">op</span><span class="p">:</span> <span class="n">pauli_matrix</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="n">S</span><span class="p">)</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="s2">&quot;xyzpmiI&quot;</span><span class="p">}</span>
+        <span class="n">OPER</span><span class="p">[</span><span class="s2">&quot;Z&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pauli_matrix</span><span class="p">(</span><span class="s2">&quot;Z&quot;</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="n">S</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span>
+        
+    
+    <span class="n">ikron_kws</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;sparse&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;stype&#39;</span><span class="p">:</span> <span class="s1">&#39;coo&#39;</span><span class="p">,</span> <span class="s1">&#39;coo_build&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+    <span class="n">dims</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">S</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),)</span> <span class="o">*</span> <span class="n">L</span>
+    
+    <span class="k">def</span> <span class="nf">gen_term</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+        <span class="n">opstr</span><span class="p">,</span> <span class="n">indx</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="k">return</span> <span class="n">j</span> <span class="o">*</span> <span class="n">ikron</span><span class="p">([</span><span class="n">_sparse</span><span class="o">.</span><span class="n">csc_array</span><span class="p">(</span><span class="n">OPER</span><span class="p">[</span><span class="n">oi</span><span class="p">])</span> <span class="k">for</span> <span class="n">oi</span> <span class="ow">in</span> <span class="n">opstr</span><span class="p">],</span> <span class="n">dims</span><span class="p">,</span> <span class="n">indx</span><span class="p">,</span> <span class="o">**</span><span class="n">ikron_kws</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">parallel</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">..linalg.usenumba.numba_settings</span> <span class="kn">import</span> <span class="n">get_thread_pool</span><span class="p">,</span> <span class="n">parallel_reduce</span>
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">get_thread_pool</span><span class="p">(</span><span class="n">nthreads</span><span class="p">)</span>
+        <span class="n">ham</span> <span class="o">=</span> <span class="n">parallel_reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span><span class="n">b</span> <span class="p">:</span> <span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="p">,</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">gen_term</span><span class="p">,</span> <span class="nb">zip</span><span class="p">(</span><span class="n">hlocals</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ham</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">gen_term</span><span class="p">,</span> <span class="nb">zip</span><span class="p">(</span><span class="n">hlocals</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)))</span>
+    
+    <span class="k">if</span> <span class="n">sparse</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ham</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+    
+    <span class="k">return</span> <span class="n">ham</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">_manual_array_split</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">num_blocks</span><span class="p">):</span>
+    <span class="n">avg_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">//</span> <span class="n">num_blocks</span>
+    <span class="n">remainder</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">%</span> <span class="n">num_blocks</span>
+    <span class="n">blocks</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_blocks</span><span class="p">):</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">avg_len</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">remainder</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">blocks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">end</span>
+    <span class="k">return</span> <span class="n">blocks</span>
+
+
+<span class="c1">################################</span>
+<span class="c1"># 一些常用的其他门与哈密顿量</span>
+<span class="c1">################################</span>
+
+<div class="viewcode-block" id="heisenberg_matrix">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.heisenberg_matrix.html#quante.generate.matrix.heisenberg_matrix">[文档]</a>
+<span class="k">def</span> <span class="nf">heisenberg_matrix</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">j</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">h</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">pauli</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">S</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">:</span><span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">Nup</span><span class="p">:</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kblock</span><span class="p">:</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pblock</span><span class="p">:</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">zblock</span><span class="p">:</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pzblock</span><span class="p">:</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">jmblock</span><span class="p">:</span><span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    总是生成矩阵，而不是稀疏矩阵</span>
+<span class="sd">    </span>
+<span class="sd">    等价于：</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; ham = qt.generate.operas.heisenberg_operator(L, j, h, cyclic)</span>
+<span class="sd">    &gt;&gt;&gt; basis = qt.generate.basis.spin_basis(...)</span>
+<span class="sd">    &gt;&gt;&gt; mat = ham.to_matrix(basis, pauli, sparse=False)</span>
+<span class="sd">    </span>
+<span class="sd">    对于维数较小的矩阵比较高效</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">.basis</span> <span class="kn">import</span> <span class="n">_check_spin_number</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">_check_spin_number</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+    <span class="kn">from</span> <span class="nn">.basis</span> <span class="kn">import</span> <span class="n">spin_basis</span>
+    <span class="n">basis</span> <span class="o">=</span> <span class="n">spin_basis</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="n">S</span><span class="p">,</span> <span class="n">Nup</span><span class="o">=</span><span class="n">Nup</span><span class="p">,</span> <span class="n">kblock</span><span class="o">=</span><span class="n">kblock</span><span class="p">,</span> <span class="n">pblock</span><span class="o">=</span><span class="n">pblock</span><span class="p">,</span> <span class="n">zblock</span><span class="o">=</span><span class="n">zblock</span><span class="p">,</span> <span class="n">pzblock</span><span class="o">=</span><span class="n">pzblock</span><span class="p">,</span> <span class="n">jmblock</span><span class="o">=</span><span class="n">jmblock</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># 尝试使用针对heisenberg链的方法</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">jx</span><span class="p">,</span> <span class="n">jy</span><span class="p">,</span> <span class="n">jz</span> <span class="o">=</span> <span class="n">j</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">jx</span> <span class="o">=</span> <span class="n">jy</span> <span class="o">=</span> <span class="n">jz</span> <span class="o">=</span> <span class="n">j</span>
+        <span class="k">assert</span> <span class="n">_np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">jx</span><span class="p">,</span> <span class="n">jy</span><span class="p">)</span> <span class="ow">and</span> <span class="n">h</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">S</span> <span class="o">==</span> <span class="mf">0.5</span>
+        <span class="k">if</span> <span class="n">pauli</span><span class="p">:</span>
+            <span class="n">jx</span> <span class="o">=</span> <span class="n">jx</span> <span class="o">*</span> <span class="mi">4</span>
+            <span class="n">jz</span> <span class="o">=</span> <span class="n">jz</span> <span class="o">*</span> <span class="mi">4</span>
+        <span class="k">return</span> <span class="n">basis</span><span class="o">.</span><span class="n">_heimat</span><span class="p">(</span><span class="n">jx</span><span class="p">,</span> <span class="n">jz</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="c1"># 如果失败使用一般方法</span>
+        <span class="kn">from</span> <span class="nn">.operas</span> <span class="kn">import</span> <span class="n">heisenberg_operator</span>
+        <span class="n">ham</span> <span class="o">=</span> <span class="n">heisenberg_operator</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ham</span><span class="o">.</span><span class="n">to_matrix</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="n">pauli</span><span class="p">,</span> <span class="n">sparse</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="hadamard_gate">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.hadamard_gate.html#quante.generate.matrix.hadamard_gate">[文档]</a>
+<span class="k">def</span> <span class="nf">hadamard_gate</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The Hadamard gate.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">],[</span><span class="mf">1.</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="o">**</span><span class="mf">0.5</span></div>
+
+
+<div class="viewcode-block" id="phase_gate">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.phase_gate.html#quante.generate.matrix.phase_gate">[文档]</a>
+<span class="k">def</span> <span class="nf">phase_gate</span><span class="p">(</span><span class="n">phi</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The generalized qubit phase-gate.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],[</span><span class="mf">0.</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">1.0</span><span class="n">j</span> <span class="o">*</span> <span class="n">phi</span><span class="p">)]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="rotation_gate">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.rotation_gate.html#quante.generate.matrix.rotation_gate">[文档]</a>
+<span class="k">def</span> <span class="nf">rotation_gate</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">xyz</span><span class="o">=</span><span class="s1">&#39;Z&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The single qubit rotation gate.&quot;&quot;&quot;</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">pauli_matrix</span><span class="p">(</span><span class="s1">&#39;I&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.0</span><span class="n">j</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">pauli_matrix</span><span class="p">(</span><span class="n">xyz</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="random_phase_model">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.random_phase_model.html#quante.generate.matrix.random_phase_model">[文档]</a>
+<span class="k">def</span> <span class="nf">random_phase_model</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">ε</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;随机相位模型，</span>
+<span class="sd">    </span>
+<span class="sd">    但 ε 不太确定，这里用 ε**2 似乎才能与文献对的比较好（q=3 -&gt; ε_c=0.25）</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># get W1</span>
+    <span class="n">Ui</span> <span class="o">=</span> <span class="p">[</span><span class="n">_random_unitary_matrix_cue</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">)]</span>
+    <span class="n">W1</span> <span class="o">=</span> <span class="n">kron</span><span class="p">(</span><span class="o">*</span><span class="n">Ui</span><span class="p">)</span>
+    
+    <span class="c1"># get W2</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="p">[</span><span class="n">ε</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="n">_random_simple_matrix</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">q</span><span class="o">**</span><span class="n">L</span>
+    <span class="n">W2</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">an</span> <span class="o">=</span> <span class="n">_spin_at_i</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="n">j</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">)</span>
+            <span class="n">anp1</span> <span class="o">=</span> <span class="n">_spin_at_i</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">)</span>
+            <span class="n">res</span> <span class="o">+=</span> <span class="n">phi</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">an</span><span class="p">,</span> <span class="n">anp1</span><span class="p">]</span>
+        <span class="n">W2</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">res</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">W2</span> <span class="o">@</span> <span class="n">W1</span></div>
+
+
+<span class="k">def</span> <span class="nf">_spin_at_i</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">L</span><span class="p">):</span>
+    <span class="n">idf</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">L</span> <span class="o">-</span> <span class="n">pos</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">state</span> <span class="o">&amp;</span> <span class="n">idf</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">1</span>
+
+
+<div class="viewcode-block" id="local_hamiltonian_spin_1D">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.matrix.local_hamiltonian_spin_1D.html#quante.generate.matrix.local_hamiltonian_spin_1D">[文档]</a>
+<span class="k">def</span> <span class="nf">local_hamiltonian_spin_1D</span><span class="p">(</span><span class="n">model_key</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="n">pauli</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get local Hamiltonian term of 1D spin chain.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    - XXZ: `J` (xx+yy+ `Δ` zz)+ `h` z</span>
+<span class="sd">    </span>
+<span class="sd">    - XX: `J` (xx+yy)+ `h` z</span>
+<span class="sd">    </span>
+<span class="sd">    - TFI: `J` zz + `h` x</span>
+<span class="sd">    </span>
+<span class="sd">    - TLFI: `J` zz + `g` x + `h` z</span>
+<span class="sd">    </span>
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; qt.generate.matrix.local_hamiltonian_spin_1D(&quot;XXZ&quot;, J = 0.1, Δ = 1,h = 0.1)</span>
+<span class="sd">    &gt;&gt;&gt; qt.generate.matrix.local_hamiltonian_spin_1D(&quot;XX&quot;, J = 0.1, h = 0.1)</span>
+<span class="sd">    &gt;&gt;&gt; qt.generate.matrix.local_hamiltonian_spin_1D(&quot;TFI&quot;, J = 0.1, h = 0.1)</span>
+<span class="sd">    &gt;&gt;&gt; qt.generate.matrix.local_hamiltonian_spin_1D(&quot;TLFI&quot;, J = 0.1, h = 0.1, g=1)</span>
+
+<span class="sd">        </span>
+<span class="sd">    NOTE</span>
+<span class="sd">    ----</span>
+<span class="sd">    The filde terms need divide 2 in the input.</span>
+
+<span class="sd">    params would convert inputs (such as x=1., y=2.) into a dictionary (such as {&#39;x&#39;: 1., &#39;y&#39;: 2.})</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;XX&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{J}</span><span class="s2">*(XX+YY) + </span><span class="si">{h}</span><span class="s2">*(ZI+IZ)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;XXZ&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{J}</span><span class="s2">*(XX+YY+</span><span class="si">{Δ}</span><span class="s2">*ZZ) + </span><span class="si">{h}</span><span class="s2">/2*(ZI+IZ)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;TFI&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{J}</span><span class="s2">*ZZ + </span><span class="si">{h}</span><span class="s2">/2*(XI+IX)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;tTFI&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{J}</span><span class="s2">*ZZ + </span><span class="si">{g}</span><span class="s2">/2*(ZI+IZ) + </span><span class="si">{h}</span><span class="s2">/2*(XI+IX)&quot;</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">model_key</span> <span class="ow">in</span> <span class="n">model_dict</span><span class="p">:</span>
+        <span class="n">model_value</span> <span class="o">=</span> <span class="n">model_dict</span><span class="p">[</span><span class="n">model_key</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">model_key</span><span class="si">}</span><span class="s2">&#39; is NOT in model list.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pauli</span><span class="p">:</span>
+        <span class="n">model_value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;Y&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;Z&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">)</span>
+    <span class="n">model_value</span> <span class="o">=</span> <span class="n">model_value</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pauli_matrix</span><span class="p">(</span><span class="n">model_value</span><span class="p">)</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

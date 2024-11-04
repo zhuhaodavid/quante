@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.torch_utils.utils &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=ea1cf9a5" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">模块代码</a></li>
+      <li class="breadcrumb-item active">quante.torch_utils.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>quante.torch_utils.utils 源代码</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># @Author: hzhu</span>
+<span class="c1"># @Date:   2024-07-25 22:20:58</span>
+<span class="c1"># @Last Modified by:   hzhu</span>
+<span class="c1"># @Last Modified time: 2024-11-04 16:19:34</span>
+
+<span class="c1"># 梯度下降的工具</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;AdaptiveLRScheduler&#39;</span><span class="p">,</span> <span class="s1">&#39;open_grad&#39;</span><span class="p">,</span> <span class="s1">&#39;close_grad&#39;</span><span class="p">,</span> <span class="s1">&#39;to_numpy_array&#39;</span><span class="p">,</span> <span class="s1">&#39;convert_to_torch&#39;</span><span class="p">,</span> <span class="s1">&#39;clone_list&#39;</span><span class="p">]</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span> <span class="k">as</span> <span class="nn">tc</span>
+
+
+<span class="k">if</span> <span class="n">tc</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">tc</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">tc</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+
+<span class="n">dtype</span> <span class="o">=</span> <span class="n">tc</span><span class="o">.</span><span class="n">complex128</span>
+
+
+
+<div class="viewcode-block" id="open_grad">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.torch_utils.open_grad.html#quante.torch_utils.open_grad">[文档]</a>
+<span class="k">def</span> <span class="nf">open_grad</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">:</span>
+            <span class="n">open_grad</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">tc</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="n">tensors</span><span class="o">.</span><span class="n">requires_grad</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Expected a list or a torch.Tensor&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="close_grad">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.torch_utils.close_grad.html#quante.torch_utils.close_grad">[文档]</a>
+<span class="k">def</span> <span class="nf">close_grad</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">:</span>
+            <span class="n">close_grad</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">tc</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="n">tensors</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Expected a list or a torch.Tensor&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="to_numpy_array">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.torch_utils.to_numpy_array.html#quante.torch_utils.to_numpy_array">[文档]</a>
+<span class="k">def</span> <span class="nf">to_numpy_array</span><span class="p">(</span><span class="n">input_var</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    将输入变量转换为 NumPy 数组。</span>
+
+<span class="sd">    参数:</span>
+<span class="sd">    input_var: 可能是 NumPy 数组、PyTorch 张量（带或不带梯度）的变量。</span>
+
+<span class="sd">    返回:</span>
+<span class="sd">    NumPy 数组。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_var</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="c1"># 如果输入已经是 NumPy 数组，则直接返回</span>
+        <span class="k">return</span> <span class="n">input_var</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_var</span><span class="p">,</span> <span class="n">tc</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="c1"># 如果输入是 PyTorch 张量，则将其转换为 NumPy 数组</span>
+        <span class="k">if</span> <span class="n">input_var</span><span class="o">.</span><span class="n">is_cuda</span><span class="p">:</span>
+            <span class="c1"># 如果张量在 GPU 上，则先将其移动到 CPU</span>
+            <span class="n">input_var</span> <span class="o">=</span> <span class="n">input_var</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">input_var</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">:</span>
+            <span class="c1"># 如果张量带有梯度，则先分离梯度</span>
+            <span class="n">input_var</span> <span class="o">=</span> <span class="n">input_var</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">input_var</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported input type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">input_var</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="convert_to_torch">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.torch_utils.convert_to_torch.html#quante.torch_utils.convert_to_torch">[文档]</a>
+<span class="k">def</span> <span class="nf">convert_to_torch</span><span class="p">(</span><span class="n">list_of_arrays</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">tc</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+    <span class="n">converted_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">array</span> <span class="ow">in</span> <span class="n">list_of_arrays</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">tensor</span> <span class="o">=</span> <span class="n">tc</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">array</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">converted_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">converted_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">array</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">converted_list</span></div>
+
+
+
+<div class="viewcode-block" id="clone_list">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.torch_utils.clone_list.html#quante.torch_utils.clone_list">[文档]</a>
+<span class="k">def</span> <span class="nf">clone_list</span><span class="p">(</span><span class="n">ini_tensor</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="n">len_list</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ini_tensor</span><span class="p">)</span>
+    <span class="n">new_list</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">len_list</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">len_list</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ini_tensor</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">new_list</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">ini_tensor</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1.0</span>
+    <span class="k">return</span> <span class="n">new_list</span></div>
+
+            <span class="c1"># print(f&#39;Increased learning rate to {new_lr}&#39;)</span>
+
+
+
+<div class="viewcode-block" id="AdaptiveLRScheduler">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.torch_utils.AdaptiveLRScheduler.html#quante.torch_utils.AdaptiveLRScheduler">[文档]</a>
+<span class="k">class</span> <span class="nc">AdaptiveLRScheduler</span><span class="p">:</span>
+<div class="viewcode-block" id="AdaptiveLRScheduler.__init__">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.torch_utils.AdaptiveLRScheduler.html#quante.torch_utils.AdaptiveLRScheduler.__init__">[文档]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="n">factor</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">patience</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span> <span class="n">cooldown</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">max_lr</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">increase_factor</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">increase_patience</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer</span>  <span class="c1"># 要调整学习率的优化器</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">factor</span> <span class="o">=</span> <span class="n">factor</span>  <span class="c1"># 学习率减小的比例</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">patience</span> <span class="o">=</span> <span class="n">patience</span>  <span class="c1"># 忍耐期，在这期间如果指标没有改善则不会调整学习率</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="o">=</span> <span class="n">threshold</span>  <span class="c1"># 指标变化的最小阈值，只有超过这个阈值的变化才会被认为是改善</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cooldown</span> <span class="o">=</span> <span class="n">cooldown</span>  <span class="c1"># 冷却时间，在这段时间内不会调整学习率</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="o">=</span> <span class="n">min_lr</span>  <span class="c1"># 学习率的下限</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_lr</span> <span class="o">=</span> <span class="n">max_lr</span>  <span class="c1"># 学习率的上限</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">increase_factor</span> <span class="o">=</span> <span class="n">increase_factor</span>  <span class="c1"># 学习率增加的比例</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">increase_patience</span> <span class="o">=</span> <span class="n">increase_patience</span>  <span class="c1"># 连续减小较小的次数，在这些次数内损失减小较小时才增加学习率</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cooldown_counter</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># 冷却计数器</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_bad_epochs</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># 记录指标没有改善的epoch数</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># 记录最近指标变化的队列</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># 记录指标的最优值</span></div>
+
+
+<div class="viewcode-block" id="AdaptiveLRScheduler.step">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.torch_utils.AdaptiveLRScheduler.html#quante.torch_utils.AdaptiveLRScheduler.step">[文档]</a>
+    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metrics</span><span class="p">):</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span>  <span class="c1"># 当前的指标值</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">best</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">best</span> <span class="o">=</span> <span class="n">current</span>  <span class="c1"># 初始化最优值为当前值</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+            <span class="k">return</span>
+        
+        <span class="c1"># 将当前损失添加到队列中</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">increase_patience</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cooldown_counter</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cooldown_counter</span> <span class="o">-=</span> <span class="mi">1</span>  <span class="c1"># 冷却期未结束时递减计数器</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_bad_epochs</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="n">current</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">best</span> <span class="o">=</span> <span class="n">current</span>  <span class="c1"># 更新最优值</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_bad_epochs</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_small_improvement_epochs</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_bad_epochs</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># 增加没有改善的epoch计数</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_bad_epochs</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">patience</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_reduce_lr</span><span class="p">()</span>  <span class="c1"># 如果没有改善的epoch计数达到忍耐期，减少学习率</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">best</span> <span class="o">=</span> <span class="n">current</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cooldown_counter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cooldown</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_bad_epochs</span> <span class="o">=</span> <span class="mi">0</span>
+            
+            
+        <span class="c1"># 检查队列中所有变化是否都小于阈值</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">increase_patience</span><span class="p">:</span>
+            <span class="c1"># all_small_improvements = (max(self.loss_queue) - min(self.loss_queue)) &lt; self.threshold</span>
+            <span class="n">all_small_improvements</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span>
+                <span class="nb">abs</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="p">))</span>
+            <span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="n">all_small_improvements</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_increase_lr</span><span class="p">()</span>
+                <span class="c1"># self.cooldown_counter = self.cooldown</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">num_bad_epochs</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loss_queue</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># 重置队列</span></div>
+
+
+
+    <span class="k">def</span> <span class="nf">_reduce_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">param_group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">:</span>
+            <span class="n">plr</span> <span class="o">=</span> <span class="n">param_group</span><span class="p">[</span><span class="s1">&#39;lr&#39;</span><span class="p">]</span>
+            <span class="n">new_lr</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">plr</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="p">,</span> <span class="n">tc</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">plr</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">plr</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>  <span class="c1"># 按比例减少学习率但不低于下限</span>
+            <span class="n">param_group</span><span class="p">[</span><span class="s1">&#39;lr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_lr</span>
+            <span class="c1"># print(f&#39;Reduced learning rate to {new_lr}&#39;)</span>
+
+    <span class="k">def</span> <span class="nf">_increase_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">param_group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">:</span>
+            <span class="n">plr</span> <span class="o">=</span> <span class="n">param_group</span><span class="p">[</span><span class="s1">&#39;lr&#39;</span><span class="p">]</span>
+            <span class="n">new_lr</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">plr</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">increase_factor</span><span class="p">,</span> <span class="n">tc</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_lr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">plr</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">plr</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>  <span class="c1"># 按比例增加学习率但不高于上限</span>
+            <span class="n">param_group</span><span class="p">[</span><span class="s1">&#39;lr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_lr</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">create_high_identity</span><span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tc</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">tc</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    生成一个高阶的 delta 张量，如</span>
+
+<span class="sd">    &gt;&gt;&gt; create_high_identity([2,2,2])</span>
+<span class="sd">    </span>
+<span class="sd">    可以生成一个三阶二维的 delta 张量</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">tc</span><span class="o">.</span><span class="n">all</span><span class="p">(</span>
+        <span class="n">tc</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span> <span class="o">==</span> <span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;elements in dims </span><span class="si">{</span><span class="n">dims</span><span class="si">}</span><span class="s2"> are supposed to be the same&quot;</span>
+
+    <span class="n">delta_tensor</span> <span class="o">=</span> <span class="n">tc</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="o">*</span><span class="n">dims</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="n">delta_tensor</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">tc</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">delta_tensor</span>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

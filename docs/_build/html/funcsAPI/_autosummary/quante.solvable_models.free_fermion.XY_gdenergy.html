@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.solvable_models.free_fermion.XY_gdenergy &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=ea1cf9a5" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="quante.solvable_models.free_fermion.XY_energies" href="quante.solvable_models.free_fermion.XY_energies.html" />
+    <link rel="prev" title="solvable_models (quante.solvable_models)" href="../solvable_models.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../solvable_models.html#id1">自由费米子</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">quante.solvable_models.free_fermion.XY_gdenergy</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#quante.solvable_models.free_fermion.XY_gdenergy"><code class="docutils literal notranslate"><span class="pre">XY_gdenergy()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="quante.solvable_models.free_fermion.XY_energies.html">quante.solvable_models.free_fermion.XY_energies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.solvable_models.free_fermion.XY_free_energy.html">quante.solvable_models.free_fermion.XY_free_energy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.solvable_models.free_fermion.XY_internal_energy.html">quante.solvable_models.free_fermion.XY_internal_energy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.solvable_models.free_fermion.XY_specific_heat.html">quante.solvable_models.free_fermion.XY_specific_heat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.solvable_models.free_fermion.XY_magnetization.html">quante.solvable_models.free_fermion.XY_magnetization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.solvable_models.free_fermion.XXX_gdenergy_pbc_approx.html">quante.solvable_models.free_fermion.XXX_gdenergy_pbc_approx</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.solvable_models.free_fermion.XXZ_gdenergy_inf.html">quante.solvable_models.free_fermion.XXZ_gdenergy_inf</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../solvable_models.html#anderson">Anderson 模型</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+      <li class="breadcrumb-item active">quante.solvable_models.free_fermion.XY_gdenergy</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/funcsAPI/_autosummary/quante.solvable_models.free_fermion.XY_gdenergy.rst.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quante-solvable-models-free-fermion-xy-gdenergy">
+<h1>quante.solvable_models.free_fermion.XY_gdenergy<a class="headerlink" href="#quante-solvable-models-free-fermion-xy-gdenergy" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="quante.solvable_models.free_fermion.XY_gdenergy">
+<span class="sig-prename descclassname"><span class="pre">quante.solvable_models.free_fermion.</span></span><span class="sig-name descname"><span class="pre">XY_gdenergy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">L</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jxx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jyy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jxy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jyx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pauli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="../../_modules/quante/solvable_models/free_fermion/free_fermion.html#XY_gdenergy"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.solvable_models.free_fermion.XY_gdenergy" title="Link to this definition"></a></dt>
+<dd><p>计算 <strong>开边界条件</strong> 下的 xy 模型的 <strong>基态能量</strong></p>
+<div class="math notranslate nohighlight">
+\[H = \sum_{i = 0}^{L - 2}
+        j_{xx} s^{x}_{i} s^{x}_{i + 1} +
+        j_{yy} s^{y}_{i} s^{y}_{i + 1} +
+        j_{xy} s^{x}_{i} s^{y}_{i + 1} +
+        j_{yx} s^{y}_{i} s^{x}_{i + 1} +
+    \sum_{i = 0}^{L - 1} h_{z} s^{z}_{i}\]</div>
+<dl>
+<dt>参数:</dt><dd><p>L: 系统的大小。如果为np.inf，则计算无穷大系统的能量。</p>
+<p>jxx: x方向的交换常数。</p>
+<p>jyy: y方向的交换常数。</p>
+<p>jxy: 交叉耦合常数。</p>
+<p>jyx: 另一种交叉耦合常数。</p>
+<p>hz: 外磁场的z分量。</p>
+<p>pauli: 表示Pauli矩阵的选择，取值为-1、0或1。</p>
+</dd>
+<dt>返回:</dt><dd><p>系统的基态能量值。</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="页脚">
+        <a href="../solvable_models.html" class="btn btn-neutral float-left" title="solvable_models (quante.solvable_models)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> 上一页</a>
+        <a href="quante.solvable_models.free_fermion.XY_energies.html" class="btn btn-neutral float-right" title="quante.solvable_models.free_fermion.XY_energies" accesskey="n" rel="next">下一页 <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

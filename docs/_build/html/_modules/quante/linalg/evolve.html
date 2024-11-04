@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.linalg.evolve &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=ea1cf9a5" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">模块代码</a></li>
+      <li class="breadcrumb-item active">quante.linalg.evolve</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>quante.linalg.evolve 源代码</h1><div class="highlight"><pre>
+<span></span><span class="c1"># # -*- coding: utf-8 -*-</span>
+<span class="c1"># # @Author: hzhu</span>
+<span class="c1"># # @Date:   2023-10-22 17:13:49</span>
+<span class="c1"># # @Last Modified by:   hzhu</span>
+<span class="c1"># # @Last Modified time: 2024-10-31 20:42:10</span>
+
+<span class="kn">import</span> <span class="nn">scipy.sparse.linalg</span> <span class="k">as</span> <span class="nn">_spalg</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="k">as</span> <span class="nn">_sparse</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">_np</span>
+<span class="kn">import</span> <span class="nn">warnings</span> <span class="k">as</span> <span class="nn">_warnings</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;evolve_engine_spexpm&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get_time_evolution_states_ED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;expm_multiply&quot;</span>
+<span class="p">]</span>
+
+<div class="viewcode-block" id="expm_multiply">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.expm_multiply.html#quante.linalg.expm_multiply">[文档]</a>
+<span class="k">def</span> <span class="nf">expm_multiply</span><span class="p">(</span><span class="n">mat</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]],</span> <span class="n">psi0</span><span class="p">:</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">traceA</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">herm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">usecuda</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    计算 `exp(matvec).dot(psi0)` 或 `exp(- 1j * matvec).dot(psi0)`</span>
+<span class="sd">    </span>
+<span class="sd">    (分别通过 `scale=1.` 和 `scale=-1.j` 来实现。)</span>
+<span class="sd">    </span>
+<span class="sd">    matvec 可以是：</span>
+<span class="sd">    </span>
+<span class="sd">    - 函数：</span>
+<span class="sd">        此时需要给定 `herm` 参数，`herm=True`，表示 `matvec` 是厄密算符，那么 `rmatvec = matvec`</span>
+<span class="sd">        如果不是厄密算符，那么就需要用 `herm` 传入伴随算符，`rmatvec = herm`</span>
+<span class="sd">        同时需要传入 `traceA`（`matvec` 的迹），否则内部会估计，影响结果精确度。</span>
+<span class="sd">        </span>
+<span class="sd">    - 矩阵（ `numpy` 或 `scipy.sparse` 格式，不能是 `torch` 格式）：</span>
+<span class="sd">        支持稀疏矩阵和密集矩阵，此时通过 `scale=-1.j` 可以在 `matvec` 是实矩阵的时候节约内存，同时加快计算。</span>
+<span class="sd">        此时如果指定 `herm=True`，可以稍微加快计算。</span>
+<span class="sd">    </span>
+<span class="sd">    `usecuda=True` 表示使用 torch GPU 加速计算，否则使用 CPU numpy 并行计算。或者使用 `torch_utils.linalg.expm_multiply` 函数。</span>
+<span class="sd">    </span>
+<span class="sd">    `start` `stop` `endpoint` 与 numpy.linspace 的参数兼容</span>
+<span class="sd">    </span>
+<span class="sd">    Notes</span>
+<span class="sd">    ------</span>
+<span class="sd">    `num` 在比较小的时候，与逐步迭代的效果相同</span>
+<span class="sd">    `num` 在比较大的时候，会使用不同的算符，当 `num` 取某些特定值 `n*s+1`（`n`是整数，`s` 是取决于矩阵模的整数的时候），效率会有一些降低，此时会给出警告，不影响结果。可以通过稍微改变 `num` 提高效率</span>
+<span class="sd">    </span>
+<span class="sd">    输出 ndarray `expm_A_B` 的形状可以是 1、2 或 3。</span>
+
+<span class="sd">    - 如果在单个时间点上计算 expm 对单个向量的作用，`ndim` 将是 `1`。</span>
+<span class="sd">    - 如果在多个时间点上计算 expm 对向量的作用，或者在单个时间点上计算 expm 对矩阵的作用，`ndim` 将是 `2`。</span>
+<span class="sd">    - 如果在多个时间点上对具有多列的矩阵进行作用，`ndim` 将是 `3`。</span>
+<span class="sd">    </span>
+<span class="sd">    如果计算多个时间点，expm_A_B[0] 将始终是 expm 在第一个时间点上的作用，无论作用是对向量还是矩阵。</span>
+<span class="sd">        </span>
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    - scipy https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.expm_multiply.html</span>
+<span class="sd">    </span>
+<span class="sd">    - Awad H. Al-Mohy and Nicholas J. Higham (2011)</span>
+<span class="sd">           &quot;Computing the Action of the Matrix Exponential,</span>
+<span class="sd">           with an Application to Exponential Integrators.&quot;</span>
+<span class="sd">           SIAM Journal on Scientific Computing,</span>
+<span class="sd">           33 (2). pp. 488-511. ISSN 1064-8275</span>
+<span class="sd">           http://eprints.ma.man.ac.uk/1591/</span>
+
+<span class="sd">    - Nicholas J. Higham and Awad H. Al-Mohy (2010)</span>
+<span class="sd">           &quot;Computing Matrix Functions.&quot;</span>
+<span class="sd">           Acta Numerica,</span>
+<span class="sd">           19. 159-208. ISSN 0962-4929</span>
+<span class="sd">           http://eprints.ma.man.ac.uk/1451/</span>
+<span class="sd">           </span>
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import quante as qt</span>
+<span class="sd">    &gt;&gt;&gt; L = 10</span>
+<span class="sd">    &gt;&gt;&gt; mat = qt.generate.matrix.heisenberg_matrix(L)</span>
+<span class="sd">    &gt;&gt;&gt; state = qt.generate.state.random(mat.shape[0], seed=42)</span>
+<span class="sd">    &gt;&gt;&gt; res = qt.linalg.expm_multiply(mat, state, -1.j, start=0, stop=10, num=100)</span>
+<span class="sd">    &gt;&gt;&gt; res.shape</span>
+<span class="sd">    (100, 1024, 1)</span>
+<span class="sd">    </span>
+<span class="sd">    更详细的示例，可以参考 example 文件夹下的 `evolve.ipynb` 文件。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">scale</span> <span class="o">==</span> <span class="mf">1.0</span> <span class="ow">or</span> <span class="n">scale</span> <span class="o">==</span> <span class="o">-</span> <span class="mi">1</span><span class="n">j</span><span class="p">,</span> <span class="s2">&quot;only scale=1.0 or scale=-1j is supported for now&quot;</span>
+    
+    <span class="k">if</span> <span class="n">usecuda</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">spmatrix</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">sparray</span><span class="p">)),</span> <span class="s2">&quot;cuda only support numpy.ndarray or scipy.sparse matrix&quot;</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">cupy</span>  <span class="c1"># 如果有 cupa,直接在 gpu 中计算 trace norm</span>
+            <span class="n">traceA</span><span class="p">,</span> <span class="n">norm1A</span> <span class="o">=</span> <span class="n">traceA</span><span class="p">,</span> <span class="kc">None</span>
+            <span class="n">hasshifted</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="c1"># 否则用 scipy 计算 trace norm</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                <span class="n">traceA</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span>
+                <span class="n">mat</span> <span class="o">=</span> <span class="n">mat</span> <span class="o">-</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span> <span class="o">/</span> <span class="n">mat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">mat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">norm1A</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="nb">ord</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">traceA</span> <span class="o">=</span> <span class="n">mat</span><span class="o">.</span><span class="n">trace</span><span class="p">()</span>
+                <span class="n">mat</span> <span class="o">=</span> <span class="n">mat</span> <span class="o">-</span> <span class="p">(</span><span class="n">mat</span><span class="o">.</span><span class="n">trace</span><span class="p">()</span> <span class="o">/</span> <span class="n">mat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">mat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">)</span>
+                <span class="n">norm1A</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">flat</span><span class="p">)</span>
+            <span class="n">hasshifted</span> <span class="o">=</span> <span class="kc">True</span>
+            
+        
+        <span class="kn">from</span> <span class="nn">..torch_utils.sparse</span> <span class="kn">import</span> <span class="n">to_csr</span>
+        <span class="kn">from</span> <span class="nn">..torch_utils.linalg.expm_multiply</span> <span class="kn">import</span> <span class="n">expm_multiply</span>
+        <span class="kn">import</span> <span class="nn">torch</span> <span class="k">as</span> <span class="nn">tc</span>
+        
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">tc</span><span class="o">.</span><span class="n">complex128</span> <span class="k">if</span> <span class="n">scale</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="ow">or</span> <span class="n">_np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">psi0</span><span class="p">)</span> <span class="k">else</span> <span class="n">tc</span><span class="o">.</span><span class="n">float64</span>
+        
+        <span class="n">res</span> <span class="o">=</span> <span class="n">expm_multiply</span><span class="p">(</span><span class="n">tc</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="n">to_csr</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda&#39;</span><span class="p">),</span> 
+                            <span class="n">tc</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">psi0</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">),</span>
+                            <span class="n">scale</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">num</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="n">endpoint</span><span class="p">,</span> 
+                            <span class="n">traceA</span><span class="o">=</span><span class="n">traceA</span><span class="p">,</span> <span class="n">herm</span><span class="o">=</span><span class="n">herm</span><span class="p">,</span> <span class="n">norm1A</span><span class="o">=</span><span class="n">norm1A</span><span class="p">,</span> <span class="n">hasshifted</span><span class="o">=</span><span class="n">hasshifted</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+        
+        <span class="n">tc</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">empty_cache</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+    
+    <span class="c1"># 如果 matvec 给的是函数</span>
+    <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">mat</span><span class="p">):</span>
+        <span class="c1"># 构造 scipy 的线性算符</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="n">psi0</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">psi0</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="k">if</span> <span class="n">herm</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">scale</span> <span class="o">==</span> <span class="mf">1.0</span><span class="p">:</span>
+                <span class="n">lo</span> <span class="o">=</span> <span class="n">_spalg</span><span class="o">.</span><span class="n">LinearOperator</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span><span class="n">dim</span><span class="p">),</span> <span class="n">matvec</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span> <span class="n">rmatvec</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">scale</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="n">j</span><span class="p">:</span>
+                <span class="n">lo</span> <span class="o">=</span> <span class="n">_spalg</span><span class="o">.</span><span class="n">LinearOperator</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span><span class="n">dim</span><span class="p">),</span> <span class="n">matvec</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span><span class="p">)</span> <span class="o">*</span> <span class="n">mat</span><span class="p">(</span><span class="n">v</span><span class="p">),</span> <span class="n">rmatvec</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="n">j</span><span class="p">)</span> <span class="o">*</span> <span class="n">mat</span><span class="p">(</span><span class="n">v</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">callable</span><span class="p">(</span><span class="n">herm</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="n">scale</span> <span class="o">==</span> <span class="mf">1.0</span>
+            <span class="n">lo</span> <span class="o">=</span> <span class="n">_spalg</span><span class="o">.</span><span class="n">LinearOperator</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span><span class="n">dim</span><span class="p">),</span> <span class="n">matvec</span><span class="o">=</span><span class="n">mat</span><span class="p">,</span> <span class="n">rmatvec</span><span class="o">=</span><span class="n">herm</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;herm should be 1 for hermitian or -1 for antihermitian or callable&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">spmatrix</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">sparray</span><span class="p">)),</span> <span class="s2">&quot;cuda only support numpy.ndarray or scipy.sparse matrix&quot;</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">complex128</span> <span class="k">if</span> <span class="n">scale</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="ow">or</span> <span class="n">_np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">psi0</span><span class="p">)</span> <span class="k">else</span> <span class="n">tc</span><span class="o">.</span><span class="n">float64</span>
+        <span class="n">psi0</span> <span class="o">=</span> <span class="n">psi0</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">lo</span> <span class="o">=</span> <span class="n">mat</span>
+    
+    <span class="c1"># 主要的工作:</span>
+    <span class="kn">from</span> <span class="nn">.usenumba.expm_multiply_numba</span> <span class="kn">import</span> <span class="n">_expm_multiply_numba</span>
+    <span class="k">return</span> <span class="n">_expm_multiply_numba</span><span class="p">(</span><span class="n">lo</span><span class="p">,</span> <span class="n">psi0</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">num</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">traceA</span><span class="o">=</span><span class="n">traceA</span><span class="p">)</span></div>
+
+    
+
+<div class="viewcode-block" id="evolve_engine_spexpm">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.evolve_engine_spexpm.html#quante.linalg.evolve_engine_spexpm">[文档]</a>
+<span class="k">class</span> <span class="nc">evolve_engine_spexpm</span><span class="p">:</span>
+<div class="viewcode-block" id="evolve_engine_spexpm.__init__">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.evolve_engine_spexpm.html#quante.linalg.evolve_engine_spexpm.__init__">[文档]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ham</span><span class="p">,</span> <span class="n">init_state</span><span class="p">,</span> <span class="n">ts</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">init_state</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">psi</span> <span class="o">=</span> <span class="n">init_state</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">psi</span> <span class="o">=</span> <span class="n">init_state</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">csr_mt</span> <span class="o">=</span> <span class="n">ham</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">csr_mt</span> <span class="o">=</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">csr_array</span><span class="p">(</span><span class="n">ham</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dts</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dts</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dts</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">evolved_time</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cur_step</span> <span class="o">=</span> <span class="mi">0</span></div>
+
+
+<div class="viewcode-block" id="evolve_engine_spexpm.run">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.evolve_engine_spexpm.html#quante.linalg.evolve_engine_spexpm.run">[文档]</a>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dts</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cur_step</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">_warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;t </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">evolved_time</span><span class="si">}</span><span class="s2"> has been reached, dt = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> will be used&quot;</span>
+            <span class="p">)</span>
+            <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cur_step</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">dt</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">psi</span> <span class="o">=</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">expm_multiply</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">csr_mt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">evolved_time</span> <span class="o">+=</span> <span class="n">dt</span></div>
+</div>
+
+            
+            
+<span class="c1"># ====================</span>
+<span class="c1">#   ED Time Evolution </span>
+<span class="c1"># ======================</span>
+
+<span class="c1"># -&gt; CPU</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">_np</span>
+
+<span class="k">def</span> <span class="nf">_change_dtype_CPU</span><span class="p">(</span><span class="n">eigenstates</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    确保 eigenstates 和 initial_state 的数据类型为 complex，如果其中之一是 complex128。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">eigenstates</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">complexfloating</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">initial_state</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">complexfloating</span><span class="p">):</span>
+        <span class="n">eigenstates</span> <span class="o">=</span> <span class="n">eigenstates</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+        <span class="n">initial_state</span> <span class="o">=</span> <span class="n">initial_state</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">eigenstates</span><span class="p">,</span> <span class="n">initial_state</span>
+
+<span class="k">def</span> <span class="nf">_cpu_complex_exp_method</span><span class="p">(</span><span class="n">times</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">udagger_psi</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">:</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    使用复指数计算时间演化态。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">times_E</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">times</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">eigenvalues</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">)))</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">eigenvalues</span>
+    <span class="n">exptimes_E</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">times_E</span><span class="p">)</span>
+    <span class="n">exptimeEpsi</span> <span class="o">=</span> <span class="n">exptimes_E</span> <span class="o">*</span> <span class="n">udagger_psi</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">eigenstates</span> <span class="o">@</span> <span class="n">exptimeEpsi</span><span class="o">.</span><span class="n">T</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+<span class="k">def</span> <span class="nf">_cpu_real_dtype_method</span><span class="p">(</span><span class="n">times</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">udagger_psi</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">:</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    使用实部和虚部计算时间演化态。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">times_E</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">eigenvalues</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">)))</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">eigenvalues</span>
+    <span class="n">real_part</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">times_E</span><span class="p">)</span> <span class="o">*</span> <span class="n">udagger_psi</span>
+    <span class="n">imag_part</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">times_E</span><span class="p">)</span> <span class="o">*</span> <span class="n">udagger_psi</span>
+    <span class="k">return</span> <span class="n">eigenstates</span> <span class="o">@</span> <span class="n">real_part</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">eigenstates</span> <span class="o">@</span> <span class="n">imag_part</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_in_CPU</span><span class="p">(</span><span class="n">initial_state</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">times</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="n">eigenstates</span><span class="p">,</span> <span class="n">initial_state</span> <span class="o">=</span> <span class="n">_change_dtype_CPU</span><span class="p">(</span><span class="n">eigenstates</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">)</span>
+    <span class="n">udagger_psi</span> <span class="o">=</span> <span class="p">(</span><span class="n">eigenstates</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">@</span> <span class="n">initial_state</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">_method</span> <span class="o">=</span> <span class="n">_cpu_complex_exp_method</span> <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">eigenstates</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">complexfloating</span><span class="p">)</span> <span class="k">else</span> <span class="n">_cpu_real_dtype_method</span>
+    <span class="n">time_evolution_states</span> <span class="o">=</span> <span class="n">_method</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">udagger_psi</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">time_evolution_states</span>
+
+
+<span class="c1"># -&gt; GPU</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>  <span class="c1"># 类型检查时，导入 torch</span>
+    <span class="kn">import</span> <span class="nn">torch</span> <span class="k">as</span> <span class="nn">_tc</span>
+
+<span class="k">def</span> <span class="nf">_data_to_GPU</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    将数据从 numpy 数组转换为 GPU 上的 torch.Tensor。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">torch</span> <span class="k">as</span> <span class="nn">_tc</span>
+    <span class="n">initial_state</span> <span class="o">=</span> <span class="n">_tc</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">initial_state</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+    <span class="n">eigenvalues</span> <span class="o">=</span> <span class="n">_tc</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">eigenvalues</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+    <span class="n">eigenstates</span> <span class="o">=</span> <span class="n">_tc</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">eigenstates</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">_tc</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">times</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">initial_state</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">,</span> <span class="n">times</span>
+
+<span class="k">def</span> <span class="nf">_change_dtype_GPU</span><span class="p">(</span><span class="n">eigenstates</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    确保 eigenstates 和 initial_state 的数据类型为 complex，如果其中之一是 complex128。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">torch</span> <span class="k">as</span> <span class="nn">_tc</span>
+    <span class="k">if</span> <span class="n">eigenstates</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">_tc</span><span class="o">.</span><span class="n">complex128</span> <span class="ow">or</span> <span class="n">initial_state</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">_tc</span><span class="o">.</span><span class="n">complex128</span><span class="p">:</span>
+        <span class="n">eigenstates</span> <span class="o">=</span> <span class="n">eigenstates</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">_tc</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+        <span class="n">initial_state</span> <span class="o">=</span> <span class="n">initial_state</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">_tc</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">eigenstates</span><span class="p">,</span> <span class="n">initial_state</span>
+
+<span class="k">def</span> <span class="nf">_gpu_complex_exp_method</span><span class="p">(</span><span class="n">times</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="n">udagger_psi</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    使用复指数计算时间演化态</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">torch</span> <span class="k">as</span> <span class="nn">_tc</span>
+    <span class="n">times_E</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">times</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">eigenvalues</span>
+    <span class="n">exp_timeE</span> <span class="o">=</span> <span class="n">_tc</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">times_E</span><span class="p">)</span>
+    <span class="n">exp_timeE_psi</span> <span class="o">=</span> <span class="n">exp_timeE</span> <span class="o">*</span> <span class="n">udagger_psi</span>
+    <span class="n">time_evolution_states</span> <span class="o">=</span> <span class="n">eigenstates</span> <span class="o">@</span> <span class="n">exp_timeE_psi</span><span class="o">.</span><span class="n">T</span>
+    <span class="k">return</span> <span class="n">time_evolution_states</span>
+
+<span class="k">def</span> <span class="nf">_gpu_real_dtype_method</span><span class="p">(</span><span class="n">times</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="n">udagger_psi</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    使用实部和虚部计算时间演化态（方法2）。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">torch</span> <span class="k">as</span> <span class="nn">_tc</span>
+    <span class="n">times_E</span> <span class="o">=</span> <span class="n">times</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">eigenvalues</span>
+    <span class="n">real_part</span> <span class="o">=</span> <span class="n">_tc</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">times_E</span><span class="p">)</span> <span class="o">*</span> <span class="n">udagger_psi</span>
+    <span class="n">imag_part</span> <span class="o">=</span> <span class="n">_tc</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">times_E</span><span class="p">)</span> <span class="o">*</span> <span class="n">udagger_psi</span>
+    <span class="k">return</span> <span class="n">eigenstates</span> <span class="o">@</span> <span class="n">real_part</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">eigenstates</span> <span class="o">@</span> <span class="n">imag_part</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_in_GPU</span><span class="p">(</span><span class="n">initial_state</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">,</span> <span class="n">times</span><span class="p">:</span> <span class="s1">&#39;_tc.Tensor&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    在 GPU 上计算初始态在不同时刻的时间演化态。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">torch</span> <span class="k">as</span> <span class="nn">_tc</span>
+    <span class="n">initial_state</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">,</span> <span class="n">times</span> <span class="o">=</span> <span class="n">_data_to_GPU</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span>
+    <span class="n">eigenstates</span><span class="p">,</span> <span class="n">initial_state</span> <span class="o">=</span> <span class="n">_change_dtype_GPU</span><span class="p">(</span><span class="n">eigenstates</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">)</span>
+    <span class="n">udagger_psi</span> <span class="o">=</span> <span class="n">eigenstates</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">@</span> <span class="n">initial_state</span>
+    <span class="n">_method</span> <span class="o">=</span> <span class="n">_gpu_complex_exp_method</span> <span class="k">if</span> <span class="n">udagger_psi</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">_tc</span><span class="o">.</span><span class="n">complex128</span> <span class="k">else</span> <span class="n">_gpu_real_dtype_method</span>
+    <span class="n">time_states</span> <span class="o">=</span> <span class="n">_method</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">udagger_psi</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">time_states</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+<div class="viewcode-block" id="get_time_evolution_states_ED">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.get_time_evolution_states_ED.html#quante.linalg.get_time_evolution_states_ED">[文档]</a>
+<span class="k">def</span> <span class="nf">get_time_evolution_states_ED</span><span class="p">(</span><span class="n">initial_state</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">times</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    基于严格对角化的时间演化</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        initial_state (_np.ndarray): 初始量子态</span>
+<span class="sd">        eigenvalues (_np.ndarray): 哈密顿量本征值</span>
+<span class="sd">        eigenstates (_np.ndarray): 哈密顿量本征态</span>
+<span class="sd">        times (_np.ndarray): 时间列表</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        _np.ndarray: 时间演化量子态矩阵</span>
+<span class="sd">        </span>
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import quante as qt</span>
+<span class="sd">    &gt;&gt;&gt; L = 10</span>
+<span class="sd">    &gt;&gt;&gt; mat = qt.generate.matrix.heisenberg_matrix(L)</span>
+<span class="sd">    &gt;&gt;&gt; state = qt.generate.state.random(mat.shape[0], seed=42)</span>
+<span class="sd">    &gt;&gt;&gt; eigresult = qt.linalg.eigh(mat)</span>
+<span class="sd">    &gt;&gt;&gt; times = np.linspace(0,10,100)</span>
+<span class="sd">    &gt;&gt;&gt; res = qt.linalg.get_time_evolution_states_ED(state,*eigresult,times)</span>
+<span class="sd">    &gt;&gt;&gt; res.shape</span>
+<span class="sd">    (1024, 100)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">initial_state</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">initial_state</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">time_states</span> <span class="o">=</span> <span class="n">_in_GPU</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fallback to CPU due to: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">time_states</span> <span class="o">=</span> <span class="n">_in_CPU</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">,</span> <span class="n">eigenstates</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">time_states</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

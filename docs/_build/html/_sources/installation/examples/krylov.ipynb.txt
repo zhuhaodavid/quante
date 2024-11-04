@@ -1,0 +1,626 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Lanczos\n",
+    "\n",
+    "给定厄密算符 $ H $ 计算它的基态"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import quante as qt\n",
+    "import numpy as np"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 幂法"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "幂法：\n",
+    "$$\n",
+    "    H^{\\Lambda} \\left| \\Psi  \\right> \\approx \\left| \\phi_{\\text{ground}}  \\right>\n",
+    "$$\n",
+    "当增加 ${ \\Lambda }$，左边将接近右边"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "True"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "dim = 4000\n",
+    "\n",
+    "# 生成随机的厄密矩阵\n",
+    "H = qt.generate.matrix.random_matrix(dim, type='herm') - 1 * np.eye(dim)\n",
+    "np.allclose(H, H.conj().T)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "-126.94309301556632"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "res = np.linalg.eigvalsh(H)\n",
+    "res[0]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "但实际需要的不是每个矩阵元，只要知道矩阵怎么作用到一个向量上就行了"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "True"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# 获取矩阵作用到向量上的方法：\n",
+    "matvec = H.dot\n",
+    "\n",
+    "v = np.random.randn(dim) + 1j * np.random.randn(dim)\n",
+    "v /= np.linalg.norm(v)\n",
+    "\n",
+    "np.allclose(matvec(v), H @ v)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "利用 matvec 反复作用就能得到基态"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "111.63329887154897"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "Hv = v\n",
+    "for i in range(20):\n",
+    "    Hv = matvec(Hv)\n",
+    "\n",
+    "# 可以近似基态能量\n",
+    "np.linalg.norm(Hv)**(1/20)  # exact: -126.94309301556632"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "增加 ${ \\Gamma }$ "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "126.43370521072795"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "iter_num = 100\n",
+    "\n",
+    "Hv = v\n",
+    "for i in range(iter_num):\n",
+    "    Hv = matvec(Hv)\n",
+    "    Hv /= np.linalg.norm(Hv)\n",
+    "\n",
+    "# # 可以近似基态能量\n",
+    "np.linalg.norm(matvec(Hv))  # exact: -126.94309301556632"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Krylov 方法"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "为减少迭代的次数，构建由下面这组基矢张成的空间：\n",
+    "$$\n",
+    "    \\left| \\psi  \\right>,  H \\left| \\psi  \\right>,  H^{2} \\left| \\psi  \\right>, \\cdots , H^{\\Lambda} \\left| \\psi  \\right>\n",
+    "$$\n",
+    "但是这一组基矢不正交，不能构建矩阵，所以需要正交化\n",
+    "\n",
+    "最简单的正交化方法是 QR 分解"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(4000, 20)"
+      ]
+     },
+     "execution_count": 20,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "bases = [v]\n",
+    "iter_num = 20\n",
+    "for i in range(iter_num-1):\n",
+    "    bases.append(matvec(bases[-1]))\n",
+    "\n",
+    "# 现在需要正交化 bases 中的基矢\n",
+    "bases = np.array(bases).T\n",
+    "bases.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(4000, 20)"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "res = np.linalg.qr(bases)\n",
+    "res.Q.shape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "证明 QR 就是正交化手续，要验证：\n",
+    "- Q 矩阵每列彼此正交\n",
+    "- bases 中的任何一个基矢能由 Q 中的各列叠加得到"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 验证正交性：\n",
+    "for i in range(res.Q.shape[0]):\n",
+    "    for j in range(i+1, res.Q.shape[1]):\n",
+    "        assert np.allclose(res.Q[:, i].conj() @ res.Q[:, j], 0)\n",
+    "\n",
+    "# 验证可以叠加出 bases 中的任何一个基矢：\n",
+    "for i in range(bases.shape[1]):\n",
+    "    rebuilt_base = sum(res.R[j, i] * res.Q[:, j] for j in range(res.Q.shape[1]))\n",
+    "                # \\sum_j     c_ij     newvec_j   == bases[i]\n",
+    "    assert np.allclose(rebuilt_base, bases[:, i])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "有了新的基矢：\n",
+    "$$\n",
+    "    \\left| \\phi_1  \\right>,  \\left| \\phi_2  \\right>, \\cdots , \\left| \\phi_{\\Lambda}  \\right>\n",
+    "$$\n",
+    "之后可以在这个子空间中写出厄密算符的矩阵（厄密算符在 Krylov 空间中的投影）\n",
+    "$$\n",
+    "    h_{ij} = \\langle \\phi_{i} | H | \\phi_{j} \\rangle\n",
+    "$$"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "True"
+      ]
+     },
+     "execution_count": 23,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# 填写矩阵元的方法：\n",
+    "h = np.zeros((iter_num, iter_num), dtype=complex)\n",
+    "\n",
+    "for i in range(iter_num):\n",
+    "    for j in range(iter_num):\n",
+    "        h[i, j] = res.Q[:, i].conj() @ matvec(res.Q[:, j])\n",
+    "\n",
+    "# 或者直接通过矩阵方法来得到\n",
+    "h_matmul = res.Q.conj().T @ matvec(res.Q)\n",
+    "\n",
+    "np.allclose(h_matmul, h)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "通过对角化这个矩阵，就可以得到基态能量更好的近似"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "-126.03867054066637"
+      ]
+     },
+     "execution_count": 24,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "res = np.linalg.eigh(h)\n",
+    "res.eigenvalues[0]  # 只乘了 20 次，精确到小数点后两位\n",
+    "# exact: -126.94309301556632"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "QR 还是慢了，可以进一步加快运算：\n",
+    "通过：\n",
+    "$$\n",
+    "    \\left| \\psi_{m + 1}  \\right> = H \\left| \\psi_{m}  \\right> - a_{m} \\left| \\psi_{m}  \\right> - b_{m - 1} \\left| \\psi_{m - 1}  \\right>\n",
+    "$$\n",
+    "的方法构建基矢：\n",
+    "$$\n",
+    "    \\left| \\psi_{1}  \\right>, \\left| \\psi_{2}  \\right>, \\cdots , \\left| \\psi_{\\Lambda} \\right>\n",
+    "$$\n",
+    "其中：\n",
+    "$$\n",
+    "    a_{m} = \\langle \\psi_{m} | H | \\psi_{m} \\rangle/\\langle \\psi_{m} | \\psi_{m} \\rangle ,\\quad\\;\\; b_{m - 1} = \\langle \\psi_{m} | \\psi_{m} \\rangle/\\langle \\psi_{m - 1} | \\psi_{m - 1} \\rangle\n",
+    "$$\n",
+    "并且前两个基矢为：${ \\left| \\psi_2  \\right> = H \\left| \\psi_{1}  \\right> - a_1 \\left| \\psi_{1}  \\right> }$ "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "newbases = []\n",
+    "\n",
+    "v1 = v/np.linalg.norm(v)\n",
+    "newbases.append(v1)\n",
+    "\n",
+    "a1 = v1.conj().T @ matvec(v1)\n",
+    "v2 = matvec(v1) - a1 * v1\n",
+    "newbases.append(v2)\n",
+    "\n",
+    "for i in range(2, iter_num):\n",
+    "    a2, b1 = (v2.conj().T @ matvec(v2)) / (v2.conj().T @ v2), (v2.conj().T @ v2)/(v1.conj().T @ v1)\n",
+    "    \n",
+    "    v3 = matvec(v2) - a2 * v2 - b1 * v1\n",
+    "    newbases.append(v3)\n",
+    "    v2, v1 = v3, v2\n",
+    "\n",
+    "newbases = [i/np.linalg.norm(i) for i in newbases] # 归一化"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 验证正交性：\n",
+    "for i in range(len(newbases)):\n",
+    "    for j in range(i+1, len(newbases)):\n",
+    "        assert np.allclose(newbases[i].conj() @ newbases[j], 0)\n",
+    "\n",
+    "# 因为基矢是由 H^n |psi> 叠加出的，所以必然在 Krylov 空间中："
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(4000, 20)"
+      ]
+     },
+     "execution_count": 27,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "newbases = np.array(newbases).T\n",
+    "newbases.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "-126.03867054065596"
+      ]
+     },
+     "execution_count": 28,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "h = newbases.conj().T @ matvec(newbases)\n",
+    "res = np.linalg.eigh(h)\n",
+    "res.eigenvalues[0]  # 结果一样"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "这时 h 是三对角的实矩阵："
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[-1.54549923+0.j, 62.75076237-0.j, -0.        -0.j, -0.        -0.j,  0.        +0.j, -0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j, -0.        -0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j],\n",
+       "       [62.75076237+0.j, -1.20113501-0.j, 63.74295463-0.j,  0.        -0.j, -0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j, -0.        +0.j],\n",
+       "       [-0.        +0.j, 63.74295463+0.j,  0.59033526-0.j, 63.33763659+0.j,  0.        -0.j, -0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        -0.j, -0.        +0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j, -0.        -0.j],\n",
+       "       [-0.        +0.j, -0.        +0.j, 63.33763659-0.j, -0.98602759-0.j, 63.47497973+0.j,  0.        +0.j, -0.        +0.j,  0.        -0.j, -0.        +0.j,  0.        -0.j,  0.        +0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        +0.j],\n",
+       "       [ 0.        -0.j, -0.        -0.j,  0.        -0.j, 63.47497973-0.j, -1.78306118+0.j, 63.94937263+0.j,  0.        -0.j, -0.        +0.j,  0.        -0.j,  0.        +0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        +0.j, -0.        -0.j],\n",
+       "       [-0.        -0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j, 63.94937263-0.j, -0.15440178+0.j, 63.09104169+0.j,  0.        -0.j, -0.        +0.j,  0.        -0.j,  0.        +0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        +0.j],\n",
+       "       [ 0.        -0.j,  0.        -0.j,  0.        -0.j, -0.        -0.j,  0.        +0.j, 63.09104169-0.j, -0.34253896+0.j, 63.00857322+0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j],\n",
+       "       [ 0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        +0.j, -0.        -0.j,  0.        +0.j, 63.00857322-0.j, -1.63314935+0.j, 63.05452455-0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j],\n",
+       "       [ 0.        -0.j,  0.        -0.j,  0.        -0.j, -0.        -0.j,  0.        +0.j, -0.        -0.j,  0.        +0.j, 63.05452455+0.j, -0.08379806-0.j, 63.49465399-0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j],\n",
+       "       [-0.        -0.j,  0.        -0.j, -0.        -0.j,  0.        +0.j,  0.        -0.j,  0.        +0.j, -0.        +0.j,  0.        +0.j, 63.49465399+0.j, -0.82825737+0.j, 61.94363238-0.j,  0.        -0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j],\n",
+       "       [-0.        +0.j, -0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        +0.j, 61.94363238+0.j, -1.2549534 -0.j, 63.0718626 -0.j,  0.        +0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j],\n",
+       "       [-0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        -0.j, 63.0718626 +0.j, -1.516854  +0.j, 63.24249939-0.j,  0.        +0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j],\n",
+       "       [ 0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        -0.j, 63.24249939+0.j, -0.55117142-0.j, 63.01821996-0.j,  0.        +0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j],\n",
+       "       [ 0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        -0.j, 63.01821996+0.j, -1.6613827 +0.j, 64.04976652-0.j,  0.        +0.j, -0.        -0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j],\n",
+       "       [ 0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        -0.j, 64.04976652+0.j, -0.8723493 -0.j, 62.7489073 -0.j,  0.        +0.j,  0.        -0.j,  0.        -0.j,  0.        -0.j],\n",
+       "       [ 0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        -0.j, 62.7489073 +0.j, -1.56596852+0.j, 63.667918  -0.j,  0.        +0.j,  0.        -0.j,  0.        -0.j],\n",
+       "       [ 0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        -0.j, 63.667918  +0.j, -2.91070357+0.j, 64.05411672-0.j,  0.        +0.j,  0.        -0.j],\n",
+       "       [ 0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, -0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        -0.j, 64.05411672+0.j, -1.19129239+0.j, 63.11912735-0.j,  0.        -0.j],\n",
+       "       [-0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        -0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        -0.j, 63.11912735+0.j, -2.67428825+0.j, 62.42237412-0.j],\n",
+       "       [ 0.        +0.j, -0.        -0.j, -0.        +0.j,  0.        -0.j, -0.        +0.j,  0.        -0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j,  0.        +0.j, 62.42237412+0.j, -0.2845667 -0.j]])"
+      ]
+     },
+     "execution_count": 29,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "h"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "实际上可以直接生成这个矩阵：\n",
+    "$$\n",
+    "\\begin{align*}\n",
+    "    \\langle \\psi_{m - 1} | H | \\psi_{m} \\rangle &= \\sqrt{b_{m - 1}}\\\\\n",
+    "    \\langle \\psi_{m} | H | \\psi_{m} \\rangle &= a_m \\\\\n",
+    "    \\langle \\psi_{m + 1} | H | \\psi_{m} \\rangle &= \\sqrt{b_{m}}\\\\\n",
+    "\\end{align*}\n",
+    "$$"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[-1.54549923, 62.75076237,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [62.75076237, -1.20113501, 63.74295463,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        , 63.74295463,  0.59033526, 63.33763659,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        , 63.33763659, -0.98602759, 63.47497973,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        , 63.47497973, -1.78306118, 63.94937263,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        , 63.94937263, -0.15440178, 63.09104169,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        , 63.09104169, -0.34253896, 63.00857322,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 63.00857322, -1.63314935, 63.05452455,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 63.05452455, -0.08379806, 63.49465399,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 63.49465399, -0.82825737, 61.94363238,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 61.94363238, -1.2549534 , 63.0718626 ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 63.0718626 , -1.516854  , 63.24249939,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 63.24249939, -0.55117142, 63.01821996,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 63.01821996, -1.6613827 , 64.04976652,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 64.04976652, -0.8723493 , 62.7489073 ,  0.        ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 62.7489073 , -1.56596852, 63.667918  ,  0.        ,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 63.667918  , -2.91070357, 64.05411672,  0.        ,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 64.05411672, -1.19129239, 63.11912735,  0.        ],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 63.11912735, -2.67428825, 62.42237412],\n",
+       "       [ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        , 62.42237412, -0.2845667 ]])"
+      ]
+     },
+     "execution_count": 30,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "h = np.zeros((iter_num, iter_num), dtype=float)\n",
+    "\n",
+    "v /= np.linalg.norm(v)\n",
+    "v1 = v\n",
+    "\n",
+    "a1 = np.real(v.conj().T @ matvec(v))\n",
+    "h[0, 0] = a1\n",
+    "\n",
+    "v2 = matvec(v) - a1 * v\n",
+    "b1 = np.real(v2.conj().T @ v2)\n",
+    "h[0, 1] = h[1, 0] = np.sqrt(b1)\n",
+    "\n",
+    "for i in range(1, iter_num-1):\n",
+    "    Hv2 = matvec(v2)\n",
+    "    \n",
+    "    a2 = np.real(v2.conj().T @ Hv2  / (v2.conj().T @ v2))\n",
+    "    h[i, i] = a2\n",
+    "    \n",
+    "    v3 = Hv2 - a2 * v2 - b1 * v1 \n",
+    "    b2 = np.real(v3.conj().T @ v3 / (v2.conj().T @ v2))\n",
+    "    h[i, i+1] = h[i+1, i] = np.sqrt(b2)\n",
+    "    \n",
+    "    v2, v1 = v3, v2\n",
+    "    b1 = b2\n",
+    "\n",
+    "Hv2 = matvec(v2)\n",
+    "a2 = np.real(v2.conj().T @ Hv2  / (v2.conj().T @ v2))\n",
+    "h[i+1, i+1] = a2\n",
+    "\n",
+    "h  # 得到了完全一样的矩阵 （一共只做了 20 次矩阵向量乘法）"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "-126.03867054065614"
+      ]
+     },
+     "execution_count": 31,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "res = np.linalg.eigh(h)\n",
+    "res.eigenvalues[0]  # 得到相同的结果"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "py311",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.10"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.linalg.operations &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=ea1cf9a5" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">模块代码</a></li>
+      <li class="breadcrumb-item active">quante.linalg.operations</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>quante.linalg.operations 源代码</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># @Author: hzhu</span>
+<span class="c1"># @Date:   2024-07-15 14:19:55</span>
+<span class="c1"># @Last Modified by:   hzhu</span>
+<span class="c1"># @Last Modified time: 2024-10-31 20:44:24</span>
+
+<span class="c1">#!! linalg 中不要 import linalg 之外的文件</span>
+
+<span class="c1"># todo: ikron 和 partial_trace 需要重写, partial_trace 存在问题</span>
+
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">_np</span>
+<span class="kn">import</span> <span class="nn">scipy.linalg</span> <span class="k">as</span> <span class="nn">_sla</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="k">as</span> <span class="nn">_sparse</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">numbers</span> <span class="kn">import</span> <span class="n">Integral</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;norm&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;expm&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sqrtm&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;logm&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="s2">&quot;uptrig&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;uptrig_inv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;uptrigindex&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;uptrigindex_inv&quot;</span><span class="p">,</span>
+    <span class="s1">&#39;observe_states&#39;</span>
+<span class="p">]</span>
+
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="s2">&quot;kron&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ikron&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;partial_trace&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="s2">&quot;log_Gauss&quot;</span><span class="p">,</span> <span class="s2">&quot;find_boundary&quot;</span><span class="p">,</span> <span class="s2">&quot;interp&quot;</span><span class="p">,</span> <span class="s2">&quot;fit&quot;</span><span class="p">,</span> 
+<span class="p">]</span>
+
+<div class="viewcode-block" id="norm">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.norm.html#quante.linalg.norm">[文档]</a>
+<span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;无论是 torch.Tensor, numpy.ndarray 还是 scipy.sparse.sparray，都可以计算范数&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">v</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span> 
+            <span class="k">return</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_eigh_hermitian_matrix</span><span class="p">(</span><span class="n">A</span><span class="p">:</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+    <span class="kn">from</span> <span class="nn">.eig_modified</span> <span class="kn">import</span> <span class="n">eigh</span>
+    <span class="k">return</span> <span class="n">eigh</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+
+<div class="viewcode-block" id="expm">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.expm.html#quante.linalg.expm">[文档]</a>
+<span class="k">def</span> <span class="nf">expm</span><span class="p">(</span><span class="n">A</span><span class="p">:</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">c</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">complex</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exponential Matrix, Hermitian matrix can be accelerated</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">is_herm</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">is_herm</span><span class="p">:</span>
+        <span class="n">eigenvalues</span><span class="p">,</span> <span class="n">eigenstates</span> <span class="o">=</span> <span class="n">_eigh_hermitian_matrix</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">isreal</span><span class="p">(</span><span class="n">A</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="n">_np</span><span class="o">.</span><span class="n">isreal</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
+            <span class="n">new_eigenvalues</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">eigenvalues</span> <span class="o">*</span> <span class="n">c</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_eigenvalues</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">eigenvalues</span> <span class="o">*</span> <span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">eigenstates</span> <span class="o">*</span> <span class="n">new_eigenvalues</span><span class="p">)</span> <span class="o">@</span> <span class="n">eigenstates</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_sla</span><span class="o">.</span><span class="n">expm</span><span class="p">(</span><span class="n">c</span><span class="o">*</span><span class="n">A</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="sqrtm">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.sqrtm.html#quante.linalg.sqrtm">[文档]</a>
+<span class="k">def</span> <span class="nf">sqrtm</span><span class="p">(</span><span class="n">A</span><span class="p">:</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Square root Matrix, Hermitian matrix can be accelerated</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        A (np.ndarray): Matrix</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: square root Matrix</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">is_herm</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">is_herm</span><span class="p">:</span>
+        <span class="n">eigenvalues</span><span class="p">,</span> <span class="n">eigenstates</span> <span class="o">=</span> <span class="n">_eigh_hermitian_matrix</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">eigenstates</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">eigenvalues</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">complex</span><span class="p">))</span> <span class="o">@</span> <span class="n">eigenstates</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_sla</span><span class="o">.</span><span class="n">sqrtm</span><span class="p">(</span><span class="n">A</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="logm">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.logm.html#quante.linalg.logm">[文档]</a>
+<span class="k">def</span> <span class="nf">logm</span><span class="p">(</span><span class="n">A</span><span class="p">:</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Logarithm Matrix, Hermitain can be accelerated</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        A (np.ndarray): Matrix</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: Logarithm matrix</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">is_herm</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">is_herm</span><span class="p">:</span>
+        <span class="n">eigenvalues</span><span class="p">,</span> <span class="n">eigenstates</span> <span class="o">=</span> <span class="n">_eigh_hermitian_matrix</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">eigenstates</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">eigenvalues</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">complex</span><span class="p">))</span> <span class="o">@</span> <span class="n">eigenstates</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_sla</span><span class="o">.</span><span class="n">logm</span><span class="p">(</span><span class="n">A</span><span class="p">)</span></div>
+
+
+
+<span class="c1">#####################################</span>
+<span class="c1"># 矩阵元的操作</span>
+<span class="c1">#####################################</span>
+
+<div class="viewcode-block" id="uptrig">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.uptrig.html#quante.linalg.uptrig">[文档]</a>
+<span class="k">def</span> <span class="nf">uptrig</span><span class="p">(</span><span class="n">mat</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;返回矩阵的对角元和上三角矩阵元&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">.usenumba.operations_numba</span> <span class="kn">import</span> <span class="n">uptri2list</span>
+    <span class="k">return</span> <span class="n">uptri2list</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="uptrig_inv">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.uptrig_inv.html#quante.linalg.uptrig_inv">[文档]</a>
+<span class="k">def</span> <span class="nf">uptrig_inv</span><span class="p">(</span><span class="n">lis</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;将 uptrig 上三角矩阵元素重新组装为上三角矩阵&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">.usenumba.operations_numba</span> <span class="kn">import</span> <span class="n">list2uptri</span>
+    <span class="k">return</span> <span class="n">list2uptri</span><span class="p">(</span><span class="n">lis</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="uptrigindex">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.uptrigindex.html#quante.linalg.uptrigindex">[文档]</a>
+<span class="k">def</span> <span class="nf">uptrigindex</span><span class="p">(</span><span class="n">row_indx</span><span class="p">:</span><span class="nb">list</span><span class="p">,</span> <span class="n">col_indx</span><span class="p">:</span><span class="nb">list</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span><span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;uptrig 将 (i,j) 指标变为生成的 list 的指标&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">.usenumba.operations_numba</span> <span class="kn">import</span> <span class="n">_uptrigindex</span>
+    <span class="k">return</span> <span class="n">_uptrigindex</span><span class="p">(</span><span class="n">row_indx</span><span class="p">,</span> <span class="n">col_indx</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="uptrigindex_inv">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.uptrigindex_inv.html#quante.linalg.uptrigindex_inv">[文档]</a>
+<span class="k">def</span> <span class="nf">uptrigindex_inv</span><span class="p">(</span><span class="n">indices</span><span class="p">:</span><span class="nb">list</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span><span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;uptrig 生成的 list 的指标变为上三角矩阵的指标&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">.usenumba.operations_numba</span> <span class="kn">import</span> <span class="n">_uptrigindex_inv</span>
+    <span class="k">return</span> <span class="n">_uptrigindex_inv</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="observe_states">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.observe_states.html#quante.linalg.observe_states">[文档]</a>
+<span class="k">def</span> <span class="nf">observe_states</span><span class="p">(</span><span class="n">vecs</span><span class="p">:</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">O</span><span class="p">:</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    计算 vecs 的观测值：</span>
+<span class="sd">    </span>
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; mat = qla.rdmat(100, dtype=np.complex128)</span>
+<span class="sd">    &gt;&gt;&gt; eigs = qla.rdmat(100, dtype=np.complex128)</span>
+<span class="sd">    &gt;&gt;&gt; qla.observe_states(eigs, mat)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span>  <span class="n">_np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">vecs</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">floating</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">O</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">floating</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">.usenumba.operations_numba</span> <span class="kn">import</span> <span class="n">observe_states_float</span>
+        <span class="k">return</span> <span class="n">observe_states_float</span><span class="p">(</span><span class="n">vecs</span><span class="p">,</span> <span class="n">O</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">.usenumba.operations_numba</span> <span class="kn">import</span> <span class="n">observe_states_complex</span>
+        <span class="k">return</span> <span class="n">observe_states_complex</span><span class="p">(</span><span class="n">vecs</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">complex</span><span class="p">),</span> <span class="n">O</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">complex</span><span class="p">))</span></div>
+
+    
+
+<span class="c1">#####################################</span>
+<span class="c1"># kron</span>
+<span class="c1">#####################################</span>
+
+<div class="viewcode-block" id="kron">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.kron.html#quante.linalg.kron">[文档]</a>
+<span class="k">def</span> <span class="nf">kron</span><span class="p">(</span>
+    <span class="o">*</span><span class="n">ops</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">sparray</span><span class="p">],</span>
+    <span class="n">stype</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># 后面的参数只有当输入有稀疏矩阵时才有用</span>
+    <span class="n">coo_build</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> 
+    <span class="n">chopped</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">parallel</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">sparray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    计算多个算符的克罗内克积(无论是密集矩阵/稀疏矩阵)。</span>
+<span class="sd">    只要有一个是稀疏的，结果就是稀疏的。</span>
+<span class="sd">    </span>
+<span class="sd">    示例:</span>
+<span class="sd">    ---------</span>
+<span class="sd">    &gt;&gt;&gt; op1 = np.array([[1, 2], [3, 4]])</span>
+<span class="sd">    &gt;&gt;&gt; op2 = np.array([[5, 6], [7, 8]])</span>
+<span class="sd">    &gt;&gt;&gt; kron(op1, op2)</span>
+<span class="sd">    array([[ 5,  6, 10, 12],</span>
+<span class="sd">           [15, 18, 20, 24],</span>
+<span class="sd">           [ 7,  8, 14, 16],</span>
+<span class="sd">           [21, 24, 28, 32]])</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    - ops (Union[_np.ndarray, _sparse.sparray]): 要计算克罗内克积的算符。</span>
+<span class="sd">    - stype (str, 可选): 返回的稀疏矩阵的类型，可以是 &quot;csr&quot; (压缩稀疏行)、&quot;bsr&quot; (块稀疏行)、&quot;csc&quot; (压缩稀疏列) 或 &quot;coo&quot; (坐标格式)。默认为None。</span>
+<span class="sd">    - chopped (bool, 可选): 是否在计算之前将算符中的零值设置为0。默认为True。</span>
+<span class="sd">    - parallel (bool, 可选): 是否使用并行计算。默认为False。</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tmp_stype</span> <span class="o">=</span> <span class="s2">&quot;coo&quot;</span> <span class="k">if</span> <span class="n">coo_build</span> <span class="ow">or</span> <span class="n">stype</span> <span class="o">==</span> <span class="s2">&quot;coo&quot;</span> <span class="k">else</span> <span class="kc">None</span>
+    
+    <span class="k">if</span> <span class="n">parallel</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">.usenumba.numba_settings</span> <span class="kn">import</span> <span class="n">parallel_reduce</span>
+        <span class="n">reducer</span> <span class="o">=</span> <span class="n">parallel_reduce</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">reducer</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">reduce</span>
+        
+    <span class="n">kron_fuc</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">kron_dispatch</span><span class="p">,</span> <span class="n">stype</span><span class="o">=</span><span class="n">tmp_stype</span><span class="p">,</span> <span class="n">chopped</span><span class="o">=</span><span class="n">chopped</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">reducer</span><span class="p">(</span><span class="n">kron_fuc</span><span class="p">,</span> <span class="n">ops</span><span class="p">)</span>  <span class="c1"># 通过 reduce 定义的程序将 kron 连续作用到 ops 上</span>
+    
+    <span class="k">if</span> <span class="n">stype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">X</span><span class="o">.</span><span class="n">asformat</span><span class="p">(</span><span class="n">stype</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">coo_build</span> <span class="ow">or</span> <span class="p">(</span><span class="n">_sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="ow">and</span> <span class="n">X</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="s2">&quot;coo&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">X</span><span class="o">.</span><span class="n">asformat</span><span class="p">(</span><span class="s2">&quot;csr&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">X</span></div>
+
+
+<span class="k">def</span> <span class="nf">kron_dispatch</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">stype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chopped</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_kron_sparse</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">stype</span><span class="o">=</span><span class="n">stype</span><span class="p">,</span> <span class="n">chopped</span><span class="o">=</span><span class="n">chopped</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_kron_dense</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_kron_dense</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_kron_sparse</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">stype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chopped</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">stype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">stype</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;bsr&quot;</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="n">b</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="s2">&quot;bsr&quot;</span>
+            <span class="k">else</span> <span class="n">b</span><span class="o">.</span><span class="n">format</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="k">else</span> <span class="s2">&quot;csc&quot;</span>
+            <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="s2">&quot;csc&quot;</span> <span class="ow">and</span> <span class="n">b</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="s2">&quot;csc&quot;</span>
+            <span class="k">else</span> <span class="s2">&quot;csr&quot;</span>
+        <span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span><span class="o">.</span><span class="n">asformat</span><span class="p">(</span><span class="n">stype</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">chopped</span><span class="p">:</span>
+        <span class="n">chop</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+<span class="k">def</span> <span class="nf">chop</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.0e-15</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    将密集或稀疏数组中小于某个阈值的值设置为0。</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    - qob (密集或稀疏向量或算符): 要处理的量子对象。</span>
+<span class="sd">    - tol (float, 可选): 低于该阈值的值将被设置为0，阈值是 ``max(abs(qob))`` 的分数。默认为1e-10。</span>
+<span class="sd">    - inplace (bool, 可选): 是否在输入数组上操作或返回副本。默认为False。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">minm</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">*</span> <span class="n">tol</span>  <span class="c1"># minimum value tolerated</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">real</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">real</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">minm</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">complexfloating</span><span class="p">):</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">imag</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">imag</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">minm</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">real</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">real</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">minm</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">imag</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">imag</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">minm</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="n">data</span>
+
+<span class="c1">#####################################</span>
+<span class="c1"># ikron</span>
+<span class="c1">#####################################</span>
+
+<span class="c1"># todo 重写这段代码</span>
+<div class="viewcode-block" id="ikron">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.ikron.html#quante.linalg.ikron">[文档]</a>
+<span class="k">def</span> <span class="nf">ikron</span><span class="p">(</span>
+    <span class="n">ops</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">sparray</span><span class="p">],</span>
+    <span class="n">dims</span><span class="p">:</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">inds</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">sparse</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">stype</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">coo_build</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">parallel</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">sparray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    多个单位一起生成</span>
+<span class="sd">    </span>
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; xy = op.pauli_matrix(&#39;xy&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; dims = (2, ) * 10</span>
+<span class="sd">    &gt;&gt;&gt; mat = qla.ikron(xy, dims, [3,4])</span>
+
+<span class="sd">    得到的就是 iiixyiiiii</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># 确保ops是一个列表</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ops</span><span class="p">,</span> <span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">spmatrix</span><span class="p">,</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">sparray</span><span class="p">)):</span>
+        <span class="n">ops</span> <span class="o">=</span> <span class="p">(</span><span class="n">ops</span><span class="p">,)</span>
+    <span class="c1"># 获取ops中所有操作数的数据类型</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">common_type</span><span class="p">(</span><span class="o">*</span><span class="n">ops</span><span class="p">)</span>
+    <span class="c1"># 确保维度和坐标已经被展平</span>
+    <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndim</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    <span class="c1"># 确保inds是一个列表</span>
+    <span class="k">elif</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndim</span><span class="p">(</span><span class="n">inds</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">inds</span> <span class="o">=</span> <span class="p">(</span><span class="n">inds</span><span class="p">,)</span>
+    <span class="c1"># 从ops列表中推断稀疏性</span>
+    <span class="k">if</span> <span class="n">sparse</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sparse</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">_sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">op</span><span class="p">)</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">)</span>
+    <span class="c1"># 去除重复的inds</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">inds</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inds</span><span class="p">):</span>
+        <span class="n">newops</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">newinds</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">indsi</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">inds</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">indsi</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">newinds</span><span class="p">:</span>
+                <span class="n">newops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ops</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">newinds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">indsi</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="n">newinds</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">indsi</span><span class="p">)</span>
+                <span class="n">newops</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">newops</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">@</span> <span class="n">ops</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">inds</span><span class="p">,</span> <span class="n">ops</span> <span class="o">=</span> <span class="n">newinds</span><span class="p">,</span> <span class="n">newops</span>
+    <span class="c1"># 创建一个按索引排序的操作数列表</span>
+    <span class="n">inds</span><span class="p">,</span> <span class="n">ops</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">inds</span><span class="p">,</span> <span class="n">itertools</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="n">ops</span><span class="p">))))</span>
+    <span class="n">inds</span><span class="p">,</span> <span class="n">ops</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">inds</span><span class="p">),</span> <span class="nb">iter</span><span class="p">(</span><span class="n">ops</span><span class="p">)</span>
+    <span class="n">eye_kws</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;sparse&quot;</span><span class="p">:</span> <span class="n">sparse</span><span class="p">,</span>
+        <span class="s2">&quot;stype&quot;</span><span class="p">:</span> <span class="s2">&quot;coo&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;dtype&quot;</span><span class="p">:</span> <span class="n">dtype</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">def</span> <span class="nf">gen_ops</span><span class="p">():</span>
+        <span class="n">cff_id</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># 记录压缩相邻的单位矩阵</span>
+        <span class="n">cff_ov</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># 记录叠加操作到多个维度</span>
+        <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dims</span><span class="p">):</span>
+            <span class="c1"># 检查是否在此放置操作数</span>
+            <span class="k">if</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">inds</span><span class="p">:</span>
+                <span class="c1"># 检查是否需要前置的单位矩阵</span>
+                <span class="k">if</span> <span class="n">cff_id</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">yield</span> <span class="n">eye</span><span class="p">(</span><span class="n">cff_id</span><span class="p">,</span> <span class="o">**</span><span class="n">eye_kws</span><span class="p">)</span>
+                    <span class="n">cff_id</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># 重置单位矩阵大小</span>
+                <span class="c1"># 检查是否是放置块中的第一个子系统</span>
+                <span class="k">if</span> <span class="n">cff_ov</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">op</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">ops</span><span class="p">)</span>
+                    <span class="n">sz_op</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="c1"># 最终维度（块或总维度）-&gt; 放置操作数</span>
+                <span class="k">if</span> <span class="n">cff_ov</span> <span class="o">*</span> <span class="n">dim</span> <span class="o">==</span> <span class="n">sz_op</span> <span class="ow">or</span> <span class="n">dim</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="k">yield</span> <span class="n">op</span>
+                    <span class="n">cff_ov</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="c1"># 累积子维度</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">cff_ov</span> <span class="o">*=</span> <span class="n">dim</span>
+            <span class="c1"># 检查是否在多个子系统中叠加操作数</span>
+            <span class="k">elif</span> <span class="n">cff_ov</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">cff_ov</span> <span class="o">*=</span> <span class="n">dim</span>
+            <span class="c1"># 否则累积相邻的单位矩阵</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cff_id</span> <span class="o">*=</span> <span class="n">dim</span>
+        <span class="c1"># 检查是否需要后置的单位矩阵</span>
+        <span class="k">if</span> <span class="n">cff_id</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">eye</span><span class="p">(</span><span class="n">cff_id</span><span class="p">,</span> <span class="o">**</span><span class="n">eye_kws</span><span class="p">)</span>
+    <span class="c1"># 返回克罗内克积</span>
+    <span class="k">return</span> <span class="n">kron</span><span class="p">(</span>
+        <span class="o">*</span><span class="n">gen_ops</span><span class="p">(),</span>
+        <span class="n">stype</span><span class="o">=</span><span class="n">stype</span><span class="p">,</span>
+        <span class="n">coo_build</span><span class="o">=</span><span class="n">coo_build</span><span class="p">,</span>
+        <span class="n">parallel</span><span class="o">=</span><span class="n">parallel</span>
+    <span class="p">)</span></div>
+
+
+<span class="n">_COMPLEX_DTYPES</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;complex64&quot;</span><span class="p">,</span> <span class="s2">&quot;complex128&quot;</span><span class="p">}</span>
+<span class="n">_DOUBLE_DTYPES</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;float64&quot;</span><span class="p">,</span> <span class="s2">&quot;complex128&quot;</span><span class="p">}</span>
+<span class="n">_DTYPE_MAP</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="s2">&quot;float32&quot;</span><span class="p">,</span>
+    <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span> <span class="s2">&quot;float64&quot;</span><span class="p">,</span>
+    <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="s2">&quot;complex64&quot;</span><span class="p">,</span>
+    <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span> <span class="s2">&quot;complex128&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">common_type</span><span class="p">(</span><span class="o">*</span><span class="n">arrays</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Quick compute the minimal dtype sufficient for ``arrays``.&quot;&quot;&quot;</span>
+    <span class="n">dtypes</span> <span class="o">=</span> <span class="p">{</span><span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">array</span> <span class="ow">in</span> <span class="n">arrays</span><span class="p">}</span>
+    <span class="n">has_complex</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">_COMPLEX_DTYPES</span><span class="o">.</span><span class="n">isdisjoint</span><span class="p">(</span><span class="n">dtypes</span><span class="p">)</span>
+    <span class="n">has_double</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">_DOUBLE_DTYPES</span><span class="o">.</span><span class="n">isdisjoint</span><span class="p">(</span><span class="n">dtypes</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_DTYPE_MAP</span><span class="p">[</span><span class="n">has_complex</span><span class="p">,</span> <span class="n">has_double</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">eye</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">sparse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">stype</span><span class="o">=</span><span class="s2">&quot;csr&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">sparse</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="n">stype</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    
+
+<span class="c1">#####################################</span>
+<span class="c1"># partial trace 这段代码来自 quimb</span>
+<span class="c1">#####################################</span>
+
+ <span class="c1"># todo quimb 写的太复杂，重写来实现这个功能</span>
+<div class="viewcode-block" id="partial_trace">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.partial_trace.html#quante.linalg.partial_trace">[文档]</a>
+<span class="k">def</span> <span class="nf">partial_trace</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">keep</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    计算 p 的部分迹，dims 是各个格点的维数，keep 是要保留的格点位置</span>
+<span class="sd">    </span>
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; L = 4</span>
+<span class="sd">    &gt;&gt;&gt; vec = np.random.rand(2**L)  # 对稀疏向量存在问题</span>
+<span class="sd">    &gt;&gt;&gt; rho_red = qla.partial_trace(vec, [2]*L, [1])</span>
+<span class="sd">    &gt;&gt;&gt; print(rho_red)  # np.einsum(&#39;abcdaecd-&gt;be&#39;, rho.reshape([2]*(2*L)))</span>
+<span class="sd">    </span>
+<span class="sd">    以及对矩阵：</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; L = 4</span>
+<span class="sd">    &gt;&gt;&gt; vec = ed.rdmat_rho(2**L, sparse=True)  # 或 False，必须是厄密的</span>
+<span class="sd">    &gt;&gt;&gt; rho_red = qla.partial_trace(vec, [2]*L, [1])</span>
+<span class="sd">    &gt;&gt;&gt; print(rho_red)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">ndim</span> <span class="o">=</span> <span class="n">dims</span><span class="o">.</span><span class="n">ndim</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">_find_shape_of_nested_int_array</span><span class="p">(</span><span class="n">dims</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">ndim</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+        <span class="c1"># dims, keep = dim_map(dims, keep)</span>
+
+    <span class="k">if</span> <span class="n">_sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">p</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_partial_trace_simple</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">keep</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_partial_trace_dense</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">keep</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_find_shape_of_nested_int_array</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Take a n-nested list/tuple of integers and find its array shape.&quot;&quot;&quot;</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)]</span>
+    <span class="n">sub_x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">_np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">sub_x</span><span class="p">),</span> <span class="n">_np</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
+        <span class="n">shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sub_x</span><span class="p">))</span>
+        <span class="n">sub_x</span> <span class="o">=</span> <span class="n">sub_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_partial_trace_simple</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">keep</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simple partial trace made up of consecutive single subsystem partial</span>
+<span class="sd">    traces, augmented by &#39;compressing&#39; the dimensions each time.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dims</span><span class="p">,</span> <span class="n">keep</span> <span class="o">=</span> <span class="n">dim_compress</span><span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="n">keep</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">keep</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_trace_keep</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="o">*</span><span class="n">keep</span><span class="p">)</span>
+    <span class="n">lmax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">dims</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">ix</span><span class="p">:</span> <span class="p">(</span><span class="n">ix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">keep</span><span class="p">)</span> <span class="o">*</span> <span class="n">ix</span><span class="p">[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">_trace_lose</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">lmax</span><span class="p">)</span>
+    <span class="n">dims</span> <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">dims</span><span class="p">[:</span><span class="n">lmax</span><span class="p">],</span> <span class="o">*</span><span class="n">dims</span><span class="p">[</span><span class="n">lmax</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:])</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="p">{(</span><span class="n">ind</span> <span class="k">if</span> <span class="n">ind</span> <span class="o">&lt;</span> <span class="n">lmax</span> <span class="k">else</span> <span class="n">ind</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">keep</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">_partial_trace_simple</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">keep</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">dim_compress</span><span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="n">inds</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compress neighbouring subsytem dimensions.</span>
+
+<span class="sd">    Take some dimensions and target indices and compress both, i.e.</span>
+<span class="sd">    merge adjacent dimensions that are both either in ``dims`` or not. For</span>
+<span class="sd">    example, if tensoring an operator onto a single site, with many sites</span>
+<span class="sd">    the identity, treat these as single large identities.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inds</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
+        <span class="n">inds</span> <span class="o">=</span> <span class="p">(</span><span class="n">inds</span><span class="p">,)</span>
+
+    <span class="n">dims</span><span class="p">,</span> <span class="n">inds</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">_dim_compressor</span><span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="n">inds</span><span class="p">))</span>
+    <span class="n">inds</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">inds</span><span class="p">)</span> <span class="k">if</span> <span class="n">b</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">dims</span><span class="p">,</span> <span class="n">inds</span>
+
+<span class="k">def</span> <span class="nf">_dim_compressor</span><span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="n">inds</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Helper function for ``dim_compress`` that does the heavy lifting.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dims : sequence of int</span>
+<span class="sd">        The subsystem dimensions.</span>
+<span class="sd">    inds : sequence of int</span>
+<span class="sd">        The indices of the &#39;marked&#39; subsystems.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    generator of (int, int)</span>
+<span class="sd">        Sequence of pairs of new dimension subsystem with marked flag {0, 1}.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">blocksize_id</span> <span class="o">=</span> <span class="n">blocksize_op</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">autoplace_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dims</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">blocksize_op</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="p">(</span><span class="n">blocksize_op</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">blocksize_op</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">blocksize_id</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="p">(</span><span class="n">blocksize_id</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">blocksize_id</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">autoplace_count</span> <span class="o">+=</span> <span class="n">dim</span>
+        <span class="k">elif</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">inds</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">blocksize_id</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="p">(</span><span class="n">blocksize_id</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">blocksize_id</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">autoplace_count</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="p">(</span><span class="n">autoplace_count</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">autoplace_count</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">blocksize_op</span> <span class="o">*=</span> <span class="n">dim</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">blocksize_op</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="p">(</span><span class="n">blocksize_op</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">blocksize_op</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">autoplace_count</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="p">(</span><span class="n">autoplace_count</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">autoplace_count</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">blocksize_id</span> <span class="o">*=</span> <span class="n">dim</span>
+    <span class="k">yield</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">blocksize_op</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">blocksize_op</span> <span class="o">&gt;</span> <span class="mi">1</span>
+        <span class="k">else</span> <span class="p">(</span><span class="n">blocksize_id</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">blocksize_id</span> <span class="o">&gt;</span> <span class="mi">1</span>
+        <span class="k">else</span> <span class="p">(</span><span class="n">autoplace_count</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_trace_keep</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">keep</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simple partial trace where the single subsytem</span>
+<span class="sd">    at ``keep`` is kept.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dims</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">dims</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">dims</span><span class="p">[:</span><span class="n">keep</span><span class="p">])</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">dims</span><span class="p">[</span><span class="n">keep</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:])</span>
+    <span class="n">rhos</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">s</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">_np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+                <span class="n">i_i</span> <span class="o">=</span> <span class="n">b</span> <span class="o">*</span> <span class="n">i</span> <span class="o">+</span> <span class="n">s</span> <span class="o">*</span> <span class="n">b</span> <span class="o">*</span> <span class="n">k</span>
+                <span class="n">i_f</span> <span class="o">=</span> <span class="n">b</span> <span class="o">*</span> <span class="n">i</span> <span class="o">+</span> <span class="n">s</span> <span class="o">*</span> <span class="n">b</span> <span class="o">*</span> <span class="n">k</span> <span class="o">+</span> <span class="n">b</span>
+                <span class="n">j_i</span> <span class="o">=</span> <span class="n">b</span> <span class="o">*</span> <span class="n">j</span> <span class="o">+</span> <span class="n">s</span> <span class="o">*</span> <span class="n">b</span> <span class="o">*</span> <span class="n">k</span>
+                <span class="n">j_f</span> <span class="o">=</span> <span class="n">b</span> <span class="o">*</span> <span class="n">j</span> <span class="o">+</span> <span class="n">s</span> <span class="o">*</span> <span class="n">b</span> <span class="o">*</span> <span class="n">k</span> <span class="o">+</span> <span class="n">b</span>
+                <span class="n">rhos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">p</span><span class="p">[</span><span class="n">i_i</span><span class="p">:</span><span class="n">i_f</span><span class="p">,</span> <span class="n">j_i</span><span class="p">:</span><span class="n">j_f</span><span class="p">]</span><span class="o">.</span><span class="n">trace</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">i</span><span class="p">:</span>
+                <span class="n">rhos</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">rhos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">conjugate</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">rhos</span>
+
+<span class="k">def</span> <span class="nf">_trace_lose</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">lose</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simple partial trace where the single subsytem at ``lose``</span>
+<span class="sd">    is traced out.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dims</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="n">dims</span><span class="p">[</span><span class="n">lose</span><span class="p">]</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">dims</span><span class="p">[:</span><span class="n">lose</span><span class="p">])</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">dims</span><span class="p">[</span><span class="n">lose</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:])</span>
+    <span class="n">rhos</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">*</span> <span class="n">b</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">_np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">a</span> <span class="o">*</span> <span class="n">b</span><span class="p">):</span>
+            <span class="n">i_i</span> <span class="o">=</span> <span class="n">e</span> <span class="o">*</span> <span class="n">b</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">//</span> <span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">%</span> <span class="n">b</span><span class="p">)</span>
+            <span class="n">i_f</span> <span class="o">=</span> <span class="n">e</span> <span class="o">*</span> <span class="n">b</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">//</span> <span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">%</span> <span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">e</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">b</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">j_i</span> <span class="o">=</span> <span class="n">e</span> <span class="o">*</span> <span class="n">b</span> <span class="o">*</span> <span class="p">(</span><span class="n">j</span> <span class="o">//</span> <span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">j</span> <span class="o">%</span> <span class="n">b</span><span class="p">)</span>
+            <span class="n">j_f</span> <span class="o">=</span> <span class="n">e</span> <span class="o">*</span> <span class="n">b</span> <span class="o">*</span> <span class="p">(</span><span class="n">j</span> <span class="o">//</span> <span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">j</span> <span class="o">%</span> <span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">e</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">b</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">rhos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="n">i_i</span><span class="p">:</span><span class="n">i_f</span><span class="p">:</span><span class="n">b</span><span class="p">,</span> <span class="n">j_i</span><span class="p">:</span><span class="n">j_f</span><span class="p">:</span><span class="n">b</span><span class="p">]</span><span class="o">.</span><span class="n">trace</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">i</span><span class="p">:</span>
+                <span class="n">rhos</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">rhos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">conjugate</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">rhos</span>
+
+<span class="k">def</span> <span class="nf">_partial_trace_dense</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">keep</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform partial trace of a dense matrix.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">keep</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="p">(</span><span class="n">keep</span><span class="p">,)</span>
+    <span class="n">shp</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">shp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="p">(</span><span class="n">shp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">shp</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)):</span>  <span class="c1"># p = psi</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span>
+        <span class="n">lose</span> <span class="o">=</span> <span class="n">ind_complement</span><span class="p">(</span><span class="n">keep</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span class="p">))</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">conj</span><span class="p">(),</span> <span class="p">(</span><span class="n">lose</span><span class="p">,</span> <span class="n">lose</span><span class="p">))</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">size</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">p</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">d</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">*</span><span class="n">dims</span><span class="p">,</span> <span class="o">*</span><span class="n">dims</span><span class="p">))</span>
+        <span class="n">total_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span>
+        <span class="n">lose</span> <span class="o">=</span> <span class="n">ind_complement</span><span class="p">(</span><span class="n">keep</span><span class="p">,</span> <span class="n">total_dims</span><span class="p">)</span>
+        <span class="n">lose2</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">ind</span> <span class="o">+</span> <span class="n">total_dims</span> <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">lose</span><span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">itrace</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="p">(</span><span class="n">lose</span><span class="p">,</span> <span class="n">lose2</span><span class="p">))</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">size</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">p</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">d</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">ind_complement</span><span class="p">(</span><span class="n">inds</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the indices below ``n`` not contained in ``inds``.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inds</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">itrace</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;slower than np.enisum&quot;&quot;&quot;</span>
+    <span class="c1"># Single index pair to trace out</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Integral</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis2</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis2</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># Multiple index pairs to trace out</span>
+    <span class="n">gone</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">axis1</span><span class="p">,</span> <span class="n">axis2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">axes</span><span class="p">):</span>
+        <span class="c1"># Modify indices to adjust for traced out dimensions</span>
+        <span class="n">mod1</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="n">axis1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">gone</span><span class="p">)</span>
+        <span class="n">mod2</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="n">axis2</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">gone</span><span class="p">)</span>
+        <span class="n">gone</span> <span class="o">|=</span> <span class="p">{</span><span class="n">axis1</span><span class="p">,</span> <span class="n">axis2</span><span class="p">}</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis1</span> <span class="o">-</span> <span class="n">mod1</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="n">axis2</span> <span class="o">-</span> <span class="n">mod2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">a</span>
+
+
+
+
+
+<span class="c1">########################################</span>
+<span class="c1"># 拟合</span>
+<span class="c1">########################################</span>
+
+
+<div class="viewcode-block" id="fit">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.fit.html#quante.linalg.fit">[文档]</a>
+<span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="n">xs</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">ys</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">polynomial_degree</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    将曲线光滑化</span>
+<span class="sd">    </span>
+<span class="sd">    参数:</span>
+<span class="sd">    xs (list): x 坐标的数据列表</span>
+<span class="sd">    ys (list): y 坐标的数据列表</span>
+<span class="sd">    polynomial_degree (int): 多项式的阶数，表示拟合曲线的复杂度</span>
+<span class="sd">    </span>
+<span class="sd">    返回:</span>
+<span class="sd">    tuple: 包含两个元素的元组，第一个元素是拟合后的 y 值数组，第二个元素是拟合多项式的系数</span>
+<span class="sd">    </span>
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; xs = [1, 2, 3, 4, 5]</span>
+<span class="sd">    &gt;&gt;&gt; ys = [1, 4, 9, 16, 25]</span>
+<span class="sd">    &gt;&gt;&gt; polynomial_degree = 2</span>
+<span class="sd">    &gt;&gt;&gt; fit(xs, ys, polynomial_degree)</span>
+<span class="sd">    (array([ 1.,  4.,  9., 16., 25.]), array([1., 0., 0.]))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Fit</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">polynomial</span><span class="o">.</span><span class="n">Polynomial</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">ys</span><span class="p">,</span> <span class="n">polynomial_degree</span><span class="p">)</span><span class="o">.</span><span class="n">convert</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">Fit</span><span class="p">(</span><span class="n">xs</span><span class="p">),</span> <span class="n">Fit</span><span class="o">.</span><span class="n">coef</span></div>
+
+
+
+<div class="viewcode-block" id="interp">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.interp.html#quante.linalg.interp">[文档]</a>
+<span class="k">def</span> <span class="nf">interp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;插值</span>
+<span class="sd">    Args:</span>
+<span class="sd">        x (list): x</span>
+<span class="sd">        y (list): y</span>
+<span class="sd">        x0 (list): x0</span>
+<span class="sd">        kind (string, optional): 插值类型。Defaults to &#39;linear&#39;.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        list: f(x0)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">interp1d</span>
+
+    <span class="k">return</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span> <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">)(</span><span class="n">x0</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="find_boundary">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.find_boundary.html#quante.linalg.find_boundary">[文档]</a>
+<span class="k">def</span> <span class="nf">find_boundary</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">zdata</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">clf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;找到 (x, y, z) 图中的二分类边界，一边 z &lt; a</span>
+<span class="sd">    默认使用 Gassian 过程分类：clf = GaussianProcessClassifier(1.0 * RBF(1.0))</span>
+
+<span class="sd">    常用的分类器还有：</span>
+<span class="sd">    # 支持向量机线性分类</span>
+<span class="sd">    clf = sklearn.svm.SVC(kernel=&quot;linear&quot;, C=0.025)</span>
+<span class="sd">    # 支持向量机分类</span>
+<span class="sd">    clf = sklearn.svm.SVC(gamma=2, C=1)</span>
+<span class="sd">    # 决策树分类</span>
+<span class="sd">    clf = sklearn.tree.DecisionTreeClassifier(max_depth=5)</span>
+<span class="sd">    # MLPC 分类</span>
+<span class="sd">    clf = sklearn.neural_network.MLPClassifier(alpha=1, max_iter=1000)</span>
+<span class="sd">    # 高斯朴素贝叶斯分类</span>
+<span class="sd">    clf = sklearn.naive_bayes.GaussianNB()</span>
+<span class="sd">    # 随机森林分类</span>
+<span class="sd">    clf = sklearn.ensemble.RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1)</span>
+<span class="sd">    # AdaBoost 分类</span>
+<span class="sd">    clf = sklearn.ensemble.AdaBoostClassifier()</span>
+<span class="sd">    # 二次判别分析算法</span>
+<span class="sd">    clf = sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis()</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (numpy.ndarray): 1-d 数组，x 方向数据</span>
+<span class="sd">        y (numpy.ndarray): 1-d 数组，y 方向数据</span>
+<span class="sd">        zdata (numpy.ndarray): 2-d 数组，z 方向数据</span>
+<span class="sd">        a (real): 分界线</span>
+<span class="sd">        clf (classifier, optional): 分类器。Defaults to None.</span>
+<span class="sd">        axes (list, optional): [x0, x1, y0, y1]. Defaults to None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (numpy.ndarray, numpy.ndarray): 边界的横纵坐标</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">_plt</span>
+    <span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">accuracy_score</span>
+
+    <span class="k">assert</span> <span class="n">_np</span><span class="o">.</span><span class="n">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">zdata</span><span class="p">]])</span>
+    <span class="k">assert</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">y</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">zdata</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="k">assert</span> <span class="n">zdata</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">pts</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">x</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">y</span><span class="p">])</span>
+    <span class="n">vls</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">zdata</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))])</span> <span class="o">&lt;</span> <span class="n">a</span>
+    <span class="k">if</span> <span class="n">clf</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">sklearn.svm</span> <span class="kn">import</span> <span class="n">SVC</span>
+
+        <span class="n">clf</span> <span class="o">=</span> <span class="n">SVC</span><span class="p">(</span><span class="n">gamma</span><span class="o">=</span><span class="s2">&quot;scale&quot;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">pts</span><span class="p">,</span> <span class="n">vls</span><span class="p">)</span>
+    <span class="n">pre_y</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">pts</span><span class="p">)</span>
+    <span class="n">accuracy</span> <span class="o">=</span> <span class="n">accuracy_score</span><span class="p">(</span><span class="n">vls</span><span class="p">,</span> <span class="n">pre_y</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;classify accuracy: </span><span class="si">{</span><span class="n">accuracy</span><span class="si">:</span><span class="s2">0.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">y</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">y</span><span class="o">.</span><span class="n">max</span><span class="p">()]</span>
+    <span class="n">x0s</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">2000</span><span class="p">)</span>
+    <span class="n">x1s</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">axes</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">2000</span><span class="p">)</span>
+    <span class="n">x0</span><span class="p">,</span> <span class="n">x1</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x0s</span><span class="p">,</span> <span class="n">x1s</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">x0</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">x1</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]</span>
+    <span class="n">y_pred</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">y_pred</span> <span class="o">=</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x0</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">_plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="s2">&quot;temp&quot;</span><span class="p">)</span>
+    <span class="n">cs</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">])</span>
+    <span class="n">_plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="s2">&quot;temp&quot;</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">cs</span><span class="o">.</span><span class="n">collections</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_paths</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">vertices</span>
+    <span class="k">return</span> <span class="n">v</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="log_Gauss">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.linalg.log_Gauss.html#quante.linalg.log_Gauss">[文档]</a>
+<span class="k">def</span> <span class="nf">log_Gauss</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">sigma2</span><span class="p">,</span> <span class="n">xlist</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;生成 xlist 对应的 log高斯分布数值&quot;&quot;&quot;</span>
+    <span class="n">ylist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">xi</span> <span class="ow">in</span> <span class="n">xlist</span><span class="p">:</span>
+        <span class="n">yi</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="mi">1</span>
+            <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">sigma2</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+            <span class="o">*</span> <span class="n">_np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">_np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">xi</span><span class="p">))</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma2</span><span class="p">))</span>
+            <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">xi</span><span class="p">)</span>
+            <span class="o">/</span> <span class="mi">2</span>
+        <span class="p">)</span>
+        <span class="n">ylist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">yi</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ylist</span></div>
+
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

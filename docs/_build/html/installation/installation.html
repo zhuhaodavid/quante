@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>安装说明 &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=ea1cf9a5" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="使用说明" href="usage.html" />
+    <link rel="prev" title="quante documentation" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">安装说明</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id2">配置环境</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#conda">安装 conda 环境</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#quante">配置 quante 环境</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#quspin">兼容 quspin 的配置方法</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id6">conda 中的常用命令</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#slepc4py">安装 slepc4py</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../funcsAPI/basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../funcsAPI/linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../funcsAPI/generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../funcsAPI/solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../funcsAPI/tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../funcsAPI/torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../funcsAPI/quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">安装说明</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/installation/installation.rst.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="installation-label">
+<span id="id1"></span><h1>安装说明<a class="headerlink" href="#installation-label" title="Link to this heading"></a></h1>
+<p>quante 需要 <a class="reference external" href="https://numpy.org/doc/stable/reference/index.html#reference">numpy</a>, <a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/index.html#scipy-api">scipy</a>, <a class="reference external" href="https://numba.readthedocs.io/en/stable/index.html">numba</a>, <a class="reference external" href="https://docs.h5py.org/en/stable/index.html">h5py</a>, <a class="reference external" href="https://matplotlib.org/stable/users/index.html">matplotlib</a>, <a class="reference external" href="https://pytorch.org/docs/stable/index.html">torch</a> (optional), <a class="reference external" href="https://kernprof.readthedocs.io/en/latest/">line_profiler</a> (optional), <a class="reference external" href="https://docs.cupy.dev/en/stable/user_guide/index.html">cupy</a> (optional), <a class="reference external" href="https://tenpy.readthedocs.io/en/latest/">tenpy</a> (optional) 等库的支持，安装下面步骤配置环境。</p>
+<section id="id2">
+<h2>配置环境<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<section id="conda">
+<h3>安装 conda 环境<a class="headerlink" href="#conda" title="Link to this heading"></a></h3>
+<p>Anaconda 是 python 的环境管理工具；miniconda 是 Anaconda 的轻量版本，可以用于快速安装和配置环境。</p>
+<p>它们的下载地址分别是：</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>anaconda：<a class="reference external" href="https://www.anaconda.com/download/success">https://www.anaconda.com/download/success</a></p></li>
+<li><p>miniconda：<a class="reference external" href="https://docs.conda.io/projects/miniconda/en/latest/miniconda-install.html">https://docs.conda.io/projects/miniconda/en/latest/miniconda-install.html</a></p></li>
+</ul>
+</div></blockquote>
+<p>windows 系统直接从上述网址下载安装即可</p>
+<p>Linux 系统（xxx 为版本号，可以在上述网址找到）:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><style type="text/css">
+span.prompt1:before {
+  content: "$ ";
+}
+</style><span class="prompt1">wget<span class="w"> </span>wget<span class="w"> </span>https://repo.anaconda.com/archive/Anaconda-xxx.sh</span>
+<span class="prompt1">chmod<span class="w"> </span>+x<span class="w"> </span>Anaconda3-xxx.sh</span>
+<span class="prompt1">./Anaconda3-xxx.sh</span>
+</pre></div></div></section>
+<section id="quante">
+<h3>配置 quante 环境<a class="headerlink" href="#quante" title="Link to this heading"></a></h3>
+<p>新建 <cite>conda</cite> 环境，这里名为 <cite>py311</cite>，可根据需要改变：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>py311<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11</span>
+</pre></div></div><p>进入 <cite>py311</cite> 环境：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>activate<span class="w"> </span>py311</span>
+</pre></div></div><p>安装依赖包（ <cite>numba</cite>, <cite>numpy</cite>, <cite>scipy</cite> 是必需的，其他的根据需要安装）：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>install<span class="w"> </span><span class="nv">numba</span><span class="o">=</span><span class="m">0</span>.60<span class="w"> </span><span class="nv">numpy</span><span class="o">=</span><span class="m">1</span>.<span class="w"> </span>scipy<span class="w"> </span>matplotlib<span class="w"> </span>h5py<span class="w"> </span>cytoolz<span class="w"> </span>psutil<span class="w"> </span>tqdm<span class="w"> </span>ipykernel<span class="w"> </span>ipympl<span class="w"> </span>line_profiler</span>
+</pre></div></div><p>安装 <cite>quante</cite> 库。首先要进入 <cite>quante</cite> 库所在目录：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1"><span class="nb">cd</span><span class="w"> </span>/path/to/quante</span>
+</pre></div></div><p>然后安装（这种安装方式会在` site-packages` 目录下建立到 <cite>quante</cite> 库的软链接，如果需要直接安装到 <cite>site-packages</cite> 目录下，可以用 <cite>pip install .</cite>）：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.</span>
+</pre></div></div><p>到此，quante 环境配置完成。下面是安装其他的库：</p>
+<p>安装 <cite>torch</cite>，参考 <a class="reference external" href="https://pytorch.org/get-started/locally/">torch 官方文档</a> 获得安装命令。如果需要 <cite>gpu</cite> 版本，可以通过：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">nvcc<span class="w"> </span>--version</span>
+</pre></div></div><p>查看 <cite>cuda</cite> 版本，然后安装对应版本的 <cite>torch</cite>， <cite>cpu</cite> 版本的命令为：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>install<span class="w"> </span>pytorch<span class="w"> </span>torchvision<span class="w"> </span>torchaudio<span class="w"> </span>cpuonly<span class="w"> </span>-c<span class="w"> </span>pytorch</span>
+</pre></div></div><p><cite>cupy</cite> 的安装(<a class="reference external" href="https://docs.cupy.dev/en/stable/install.html">cupy 官方文档</a>)：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>install<span class="w"> </span>--channel<span class="o">=</span>conda-forge<span class="w"> </span>cupy</span>
+</pre></div></div><p><cite>tenpy</cite> 的安装(<a class="reference external" href="https://tenpy.readthedocs.io/en/latest/INSTALL.html">tenpy 官方文档</a>)：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>install<span class="w"> </span>--channel<span class="o">=</span>conda-forge<span class="w"> </span>physics-tenpy</span>
+</pre></div></div><p><cite>qutip</cite> 的安装</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>install<span class="w"> </span>qutip</span>
+</pre></div></div></section>
+<section id="quspin">
+<h3>兼容 quspin 的配置方法<a class="headerlink" href="#quspin" title="Link to this heading"></a></h3>
+<p>由于 <cite>quspin 1.0.0</cite> 要求 <cite>numpy&gt;=2.0.0</cite>，而同时 <cite>torch</cite> 不能很好的兼容 <cite>numpy 2.0.0</cite>，因此不能安装在同一环境，下面时同时安装 <cite>quante</cite> 和 <cite>quspin</cite> 的方法。</p>
+<p>创建环境：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>py312<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.12</span>
+</pre></div></div><p>激活该环境：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>activate<span class="w"> </span>py312</span>
+</pre></div></div><p>安装依赖包：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>install<span class="w"> </span>--channel<span class="o">=</span>conda-forge<span class="w"> </span><span class="nv">numba</span><span class="o">=</span><span class="m">0</span>.60<span class="w"> </span><span class="nv">numpy</span><span class="o">=</span><span class="m">2</span><span class="w"> </span>scipy<span class="w"> </span>matplotlib<span class="w"> </span>h5py<span class="w"> </span>cytoolz<span class="w"> </span>psutil<span class="w"> </span>tqdm<span class="w"> </span>ipykernel<span class="w"> </span>ipympl<span class="w"> </span>line_profiler</span>
+</pre></div></div><p>使用 <cite>pip</cite> 安装` quspin`，同时保持 <cite>numpy</cite> 版本（ <cite>numba=0.60</cite> 最高支持到 <cite>numpy=2.0.1</cite>）：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">pip<span class="w"> </span>install<span class="w"> </span>quspin<span class="w"> </span><span class="nv">numpy</span><span class="o">==</span><span class="m">2</span>.0.1</span>
+</pre></div></div><p>进入 <cite>quante</cite> 库所在目录：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1"><span class="nb">cd</span><span class="w"> </span>/path/to/quante</span>
+</pre></div></div><p>安装 <cite>quante</cite> 库：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.</span>
+</pre></div></div><p>到此， <cite>quspin</cite> 环境配置完成。这个环境中安装如 <cite>torch</cite>, <cite>tenpy</cite> 都会失败</p>
+</section>
+</section>
+<section id="id6">
+<h2>conda 中的常用命令<a class="headerlink" href="#id6" title="Link to this heading"></a></h2>
+<ul>
+<li><p>查看已安装环境列表：</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>env<span class="w"> </span>list</span>
+</pre></div></div></div></blockquote>
+</li>
+<li><p>删除环境</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>remove<span class="w"> </span>-n<span class="w"> </span>envname<span class="w"> </span>--all</span>
+</pre></div></div></div></blockquote>
+</li>
+<li><p>删除环境</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>envnew<span class="w"> </span>--clone<span class="w"> </span>envold</span>
+</pre></div></div></div></blockquote>
+</li>
+<li><p>查看已安装的包：</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>list</span>
+</pre></div></div></div></blockquote>
+</li>
+<li><p>删除没有用的包：</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>clean<span class="w"> </span>-p</span>
+</pre></div></div></div></blockquote>
+</li>
+<li><p>查看安装历史：</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>list<span class="w"> </span>--revisions</span>
+</pre></div></div></div></blockquote>
+</li>
+<li><p>恢复安装历史：</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span class="prompt1">conda<span class="w"> </span>install<span class="w"> </span>--revision<span class="w"> </span>N</span>
+</pre></div></div></div></blockquote>
+</li>
+</ul>
+</section>
+<section id="slepc4py">
+<h2>安装 slepc4py<a class="headerlink" href="#slepc4py" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="页脚">
+        <a href="../index.html" class="btn btn-neutral float-left" title="quante documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> 上一页</a>
+        <a href="usage.html" class="btn btn-neutral float-right" title="使用说明" accesskey="n" rel="next">下一页 <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
