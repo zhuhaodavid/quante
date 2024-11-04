@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.generate.basis &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=2a6f3bb3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funcsAPI/quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">模块代码</a></li>
+      <li class="breadcrumb-item active">quante.generate.basis</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>quante.generate.basis 源代码</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># @Author: hzhu</span>
+<span class="c1"># @Date:   2023-10-22 16:51:39</span>
+<span class="c1"># @Last Modified by:   hzhu</span>
+<span class="c1"># @Last Modified time: 2024-10-31 20:42:00</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">生成有对称性的基矢(`SpinBasis`类）：</span>
+<span class="sd">- `spin_basis`</span>
+<span class="sd">- `show_spin_basis`</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">_np</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="c1"># !! 这个文件提供到 symmetry 中给个基矢的接口，涉及的 basis 类都在 symmetry 中</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;spin_basis&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;show_spin_basis&quot;</span>
+<span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_check_spin_number</span><span class="p">(</span><span class="n">value</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;检查 value 是不是整数或者半整数&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">fractions</span> <span class="kn">import</span> <span class="n">Fraction</span>
+        <span class="n">fraction</span> <span class="o">=</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>  <span class="c1"># 尝试将字符串转换为分数</span>
+        <span class="n">float_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">fraction</span><span class="p">)</span>  <span class="c1"># 转换为浮点数</span>
+        <span class="k">if</span> <span class="n">float_value</span><span class="o">.</span><span class="n">is_integer</span><span class="p">():</span>  <span class="c1"># 检查是否是整数</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">float_value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">float_value</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">is_integer</span><span class="p">():</span>  <span class="c1"># 检查是否是半整数</span>
+            <span class="k">return</span> <span class="n">float_value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;输入的值既不是整数也不是半整数&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;输入的值格式不正确&quot;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">.symmetry.basis_class</span> <span class="kn">import</span> <span class="n">SpinBasis</span>
+
+<div class="viewcode-block" id="spin_basis">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.basis.spin_basis.html#quante.generate.basis.spin_basis">[文档]</a>
+<span class="k">def</span> <span class="nf">spin_basis</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">S</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">Nup</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">kblock</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">pblock</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">zblock</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">pzblock</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">jmblock</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    参数</span>
+<span class="sd">    -----------</span>
+<span class="sd">    L: int</span>
+<span class="sd">        链的长度/站点数量，需要小于 63。</span>
+
+<span class="sd">    Nup: int, 可选</span>
+<span class="sd">        总磁化强度，:math:`\\sum_j S^z_j`，投影。</span>
+<span class="sd">        </span>
+<span class="sd">    S: {str, int}, 可选</span>
+<span class="sd">        局部自旋自由度的大小。可以是任何（半）整数：</span>
+<span class="sd">        &quot;1/2&quot;,&quot;1&quot;,&quot;3/2&quot;,...</span>
+<span class="sd">        </span>
+<span class="sd">    kblock: int, 可选</span>
+<span class="sd">        指定动量块。可以从 0 到 L-1 的整数。</span>
+<span class="sd">        </span>
+<span class="sd">    pblock: int, 可选，可取 [-1, 1]</span>
+<span class="sd">        指定奇偶块。此对称性变换的物理表现是关于链的中点反射。</span>
+<span class="sd">        </span>
+<span class="sd">    zblock: int, 可选，可取 [-1, 1]</span>
+<span class="sd">        指定自旋反转对称性块。此对称性变换的物理表现是翻转自旋-z 分量的符号。</span>
+<span class="sd">        </span>
+<span class="sd">    pzblock: int, 可选，可取 [-1, 1]</span>
+<span class="sd">        指定自旋反转和奇偶块。此对称性变换的物理表现是翻转自旋-z 分量的符号和关于链的中点反射。</span>
+<span class="sd">        </span>
+<span class="sd">    jmblock: {int, tuple[int, int]}, 可选</span>
+<span class="sd">        指定 SU(2) 对称性块。第一个参数是 J，第二个参数是 m。J 取值从 L/2 到 1/2，m 取值从 J 到 -J。</span>
+<span class="sd">        如果只传入一个参数，则默认 m = J。</span>
+<span class="sd">        </span>
+<span class="sd">    示例:</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; basis = qt.generate.basis.spin_basis(L=10, Nup=5, kblock=1)</span>
+<span class="sd">    &gt;&gt;&gt; print(basis.Ns)</span>
+<span class="sd">    </span>
+<span class="sd">    注：</span>
+<span class="sd">    ---------</span>
+<span class="sd">    目前支持的组合有：</span>
+<span class="sd">    - spin-1/2</span>
+<span class="sd">    </span>
+<span class="sd">        - noblock</span>
+
+<span class="sd">        - Nup</span>
+
+<span class="sd">        - kblock</span>
+
+<span class="sd">        - pblock</span>
+
+<span class="sd">        - zblock</span>
+
+<span class="sd">        - pzblock</span>
+
+<span class="sd">        - Nup + kblock</span>
+
+<span class="sd">        - Nup + pblock</span>
+
+<span class="sd">        - Nup + zblock: 这个组合下 Nup 只能从 0 取到 N//2 （基矢为 Nup 与 N - Nup 的叠加态）</span>
+
+<span class="sd">        - Nup + pzblock: 同上</span>
+
+<span class="sd">        - Nup + kblock + pblock: 这个组合下 kblock 只能从 0 到 L//2,(基矢为 k 和 -k 的叠加)；与 quspin 中的代表元取法不同，因此得到矩阵相差一个排列，但本征值是相同的！</span>
+
+<span class="sd">        - Nup + kblock + pblock + zblock: 同上，并且此时 Nup 只能取 N//2，且 N 为偶数；与 quspin 中的代表元取法不同，因此得到矩阵相差一个排列，但本征值是相同的！</span>
+
+<span class="sd">        - jmblock</span>
+
+<span class="sd">    - spin-high</span>
+<span class="sd">        - noblock</span>
+<span class="sd">        </span>
+<span class="sd">        - Nup</span>
+<span class="sd">    </span>
+<span class="sd">    SpinBasis</span>
+<span class="sd">    ----------</span>
+<span class="sd">    返回结果的代码提示总是 `SpinBasis` 类型，如果需要查看具体代码，可以通过 `where_codes` 方法定位代码位置。</span>
+<span class="sd">    其功能包括：</span>
+<span class="sd">    - 获得基矢：`get_state`，返回基矢在全空间中的表示</span>
+<span class="sd">    </span>
+<span class="sd">    - 恢复态：`recover`，将子空间态恢复为全空间态</span>
+<span class="sd">    </span>
+<span class="sd">    - 投影算符：`projection_matrix`，返回投影矩阵</span>
+<span class="sd">    </span>
+<span class="sd">    - 态投影：`project`，将态投影到子空间</span>
+<span class="sd">    </span>
+<span class="sd">    - 打印维度：`print_dims`，打印不同子空间的维数</span>
+<span class="sd">    </span>
+<span class="sd">    新增对称性类需要做的事情：</span>
+<span class="sd">    ------------------------------</span>
+<span class="sd">    如果需要增加新的对称性，或者新的组合，需要：</span>
+<span class="sd">    </span>
+<span class="sd">    - 在 ./symmetry 中增加新的对称性类文件夹，文件夹中需要包含 `general_hamiltonian`, `xxx_basis.py` 和 `xxx_basis_class.py` 三个文件，如果有可以简化生成基的模型，也可以增加单独的文件，如 `heisenberg.py`。</span>
+<span class="sd">    </span>
+<span class="sd">    - 在 `xxx_class.py` 中实现对称性的方法（需要的 numba 函数在 `xxx_basis.py` 中）：</span>
+<span class="sd">    </span>
+<span class="sd">        - 生成矩阵：`_matrix`</span>
+<span class="sd">        </span>
+<span class="sd">        - 获得基矢：`get_state`</span>
+<span class="sd">        </span>
+<span class="sd">        - 投影算符：`projection_matrix`</span>
+<span class="sd">        </span>
+<span class="sd">        - 打印维度：`print_dims`</span>
+<span class="sd">        </span>
+<span class="sd">        - 态投影：`project`</span>
+<span class="sd">        </span>
+<span class="sd">        - 态恢复：`recover`</span>
+<span class="sd">    </span>
+<span class="sd">    - 在 `spin_basis` 函数中的参数增加对称性参数，如 `kblock`</span>
+<span class="sd">    </span>
+<span class="sd">    - 修改：`block_name_list`, `block_value_list`, `block_combinations`，增加对应的参数名和参数值</span>
+<span class="sd">    </span>
+<span class="sd">    - 增加对应的处理函数，如 `_process_kblock`</span>
+<span class="sd">    </span>
+<span class="sd">    - 记得同步这里的注释和 .matrix.heisenberg 中的代码</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">_check_spin_number</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+    
+    <span class="n">block_name_list</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Nup&quot;</span><span class="p">,</span> <span class="s2">&quot;kblock&quot;</span><span class="p">,</span> <span class="s2">&quot;pblock&quot;</span><span class="p">,</span> <span class="s2">&quot;zblock&quot;</span><span class="p">,</span> <span class="s2">&quot;pzblock&quot;</span><span class="p">,</span> <span class="s2">&quot;jmblock&quot;</span><span class="p">]</span>
+    <span class="n">block_value_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">Nup</span><span class="p">,</span> <span class="n">kblock</span><span class="p">,</span> <span class="n">pblock</span><span class="p">,</span> <span class="n">zblock</span><span class="p">,</span> <span class="n">pzblock</span><span class="p">,</span> <span class="n">jmblock</span><span class="p">]</span>
+    <span class="c1"># 将块的状态转换为元组</span>
+    <span class="n">blocks_tuple</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">block</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">block_value_list</span><span class="p">)</span>
+    
+    
+    <span class="k">if</span> <span class="n">S</span> <span class="o">==</span> <span class="mf">0.5</span> <span class="ow">and</span> <span class="n">L</span> <span class="o">&lt;</span> <span class="mi">63</span><span class="p">:</span>
+        
+        <span class="c1"># 定义处理函数的映射</span>
+        <span class="n">block_combinations</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_full_basis</span><span class="p">,</span>
+            <span class="p">(</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_Nup_block</span><span class="p">,</span>
+            <span class="p">(</span><span class="kc">False</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_kblock</span><span class="p">,</span>
+            <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_pblock</span><span class="p">,</span>
+            <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_zblock</span><span class="p">,</span>
+            <span class="p">(</span> <span class="kc">True</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_Nup_kblock</span><span class="p">,</span>
+            <span class="p">(</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_Nup_pblock</span><span class="p">,</span>
+            <span class="p">(</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_Nup_zblock</span><span class="p">,</span>
+            <span class="p">(</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_Nup_pzblock</span><span class="p">,</span>
+            <span class="p">(</span> <span class="kc">True</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_Nup_kblock_pblock</span><span class="p">,</span>
+            <span class="p">(</span> <span class="kc">True</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_Nup_kblock_pblock_zblock</span><span class="p">,</span>
+            <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span>  <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_half_pzblock</span><span class="p">,</span>
+            <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span>  <span class="kc">True</span><span class="p">):</span> <span class="n">_process_spin_half_jmblock</span><span class="p">,</span>
+        <span class="p">}</span>
+        
+        
+        <span class="c1"># 查找对应的处理函数</span>
+        <span class="n">_process_func</span> <span class="o">=</span> <span class="n">block_combinations</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">blocks_tuple</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">_process_func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_process_func</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">block_name_list</span><span class="p">,</span> <span class="n">block_value_list</span><span class="p">)})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">wanted_blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span><span class="p">,</span> <span class="n">include</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">block_name_list</span><span class="p">,</span> <span class="n">blocks_tuple</span><span class="p">)</span> <span class="k">if</span> <span class="n">include</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The combination of blocks: </span><span class="si">{</span><span class="n">wanted_blocks</span><span class="si">}</span><span class="s2"> is not supported yet for spin-1/2&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        
+        <span class="c1"># 定义处理函数的映射</span>
+        <span class="n">block_combinations</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_high_full_basis</span><span class="p">,</span>
+            <span class="p">(</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span> <span class="n">_process_spin_high_Nup_block</span><span class="p">,</span>
+        <span class="p">}</span>
+        
+        
+        <span class="c1"># 查找对应的处理函数</span>
+        <span class="n">_process_func</span> <span class="o">=</span> <span class="n">block_combinations</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">blocks_tuple</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">_process_func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_process_func</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">block_name_list</span><span class="p">,</span> <span class="n">block_value_list</span><span class="p">)})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">wanted_blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span><span class="p">,</span> <span class="n">include</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">block_name_list</span><span class="p">,</span> <span class="n">blocks_tuple</span><span class="p">)</span> <span class="k">if</span> <span class="n">include</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The combination of blocks: </span><span class="si">{</span><span class="n">wanted_blocks</span><span class="si">}</span><span class="s2"> is not supported yet for spin-high&quot;</span><span class="p">)</span></div>
+
+        
+
+<span class="c1"># 处理不同block的函数部分</span>
+<span class="k">def</span> <span class="nf">_process_spin_half_full_basis</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.noblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisNoBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisNoBlock</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_Nup_block</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.Nup.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisNup</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisNup</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;Nup&#39;</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_kblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.kblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisKBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisKBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;kblock&#39;</span><span class="p">])</span>
+    
+<span class="k">def</span> <span class="nf">_process_spin_half_pblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.pblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisPBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisPBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;pblock&#39;</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_zblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.zblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisZBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisZBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;zblock&#39;</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_pzblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.pzblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisPZBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisPZBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;pzblock&#39;</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_Nup_kblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.Nup_kblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisNupKBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisNupKBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;Nup&#39;</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;kblock&#39;</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_Nup_pblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.Nup_pblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisNupPBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisNupPBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;Nup&#39;</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;pblock&#39;</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_Nup_zblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.Nup_zblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisNupZBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisNupZBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;Nup&#39;</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;zblock&#39;</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_Nup_pzblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.Nup_pzblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisNupPZBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisNupPZBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;Nup&#39;</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;pzblock&#39;</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_Nup_kblock_pblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.Nup_kblock_pblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisNupKPBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisNupKPBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;Nup&#39;</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;kblock&#39;</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;pblock&#39;</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_Nup_kblock_pblock_zblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.Nup_kblock_pblock_zblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisNupKPZBlock</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisNupKPZBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;Nup&#39;</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;kblock&#39;</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;pblock&#39;</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;zblock&#39;</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_half_jmblock</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_half.su2.defclass</span> <span class="kn">import</span> <span class="n">SpinHalfBasisSU2</span>
+    <span class="n">jm</span> <span class="o">=</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;jmblock&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">jm</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">j</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">jm</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">m</span> <span class="o">=</span> <span class="n">jm</span>
+    <span class="k">return</span> <span class="n">SpinHalfBasisSU2</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_high_full_basis</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">S</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_high.noblock.defclass</span> <span class="kn">import</span> <span class="n">SpinHighBasisNoBlock</span>
+    <span class="k">return</span> <span class="n">SpinHighBasisNoBlock</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_process_spin_high_Nup_block</span><span class="p">(</span><span class="n">L</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">S</span><span class="p">:</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">block_dic</span><span class="p">:</span><span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpinBasis</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.symmetry.spin_high.Nup.defclass</span> <span class="kn">import</span> <span class="n">SpinHighBasisNup</span>
+    <span class="k">return</span> <span class="n">SpinHighBasisNup</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">block_dic</span><span class="p">[</span><span class="s1">&#39;Nup&#39;</span><span class="p">])</span>
+
+<div class="viewcode-block" id="show_spin_basis">
+<a class="viewcode-back" href="../../../funcsAPI/_autosummary/quante.generate.basis.show_spin_basis.html#quante.generate.basis.show_spin_basis">[文档]</a>
+<span class="k">def</span> <span class="nf">show_spin_basis</span><span class="p">(</span><span class="n">vector</span><span class="p">:</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span><span class="o">-&gt;</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;向量转换为spin-1/2直积态求和形式 </span>
+<span class="sd">    </span>
+<span class="sd">    0 -&gt; ↑ = (1, 0), 1 -&gt; ↓ = (0, 1)</span>
+<span class="sd">    </span>
+<span class="sd">    [a, b, c, d] = a|00&gt; + .. + d|11&gt;</span>
+
+<span class="sd">    Args: quantum state</span>
+<span class="sd">    Returns: coefficients, basiss</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">vector</span><span class="o">.</span><span class="n">size</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">size</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Only can calculate spin-1/2 state: (2^N,)&quot;</span>
+    <span class="n">element_index</span> <span class="o">=</span> <span class="n">_np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">vector</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># elemenet is the non-zero element</span>
+    <span class="n">coefficients</span> <span class="o">=</span> <span class="p">[</span><span class="n">vector</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">element_index</span><span class="p">]</span>
+    <span class="n">basiss</span> <span class="o">=</span> <span class="p">[</span><span class="n">_np</span><span class="o">.</span><span class="n">binary_repr</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">_np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">size</span><span class="p">)))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">element_index</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">basis</span><span class="p">,</span> <span class="n">coef</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">basiss</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">_np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coef</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1.e-12</span><span class="p">:</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;0&#39;</span><span class="p">,</span> <span class="s1">&#39;↑&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="s1">&#39;↓&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;:&quot;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">coef</span><span class="p">)</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

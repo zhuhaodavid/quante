@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.generate.basis.spin_basis &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=2a6f3bb3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="quante.generate.basis.show_spin_basis" href="quante.generate.basis.show_spin_basis.html" />
+    <link rel="prev" title="quante.generate.operas.sum" href="quante.generate.operas.sum.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../generate.html#id1">生成算符</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../generate.html#id2">生成基矢</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">quante.generate.basis.spin_basis</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#quante.generate.basis.spin_basis"><code class="docutils literal notranslate"><span class="pre">spin_basis()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="quante.generate.basis.show_spin_basis.html">quante.generate.basis.show_spin_basis</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../generate.html#id3">生成矩阵</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generate.html#id4">生成量子态</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+      <li class="breadcrumb-item active">quante.generate.basis.spin_basis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/funcsAPI/_autosummary/quante.generate.basis.spin_basis.rst.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quante-generate-basis-spin-basis">
+<h1>quante.generate.basis.spin_basis<a class="headerlink" href="#quante-generate-basis-spin-basis" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="quante.generate.basis.spin_basis">
+<span class="sig-prename descclassname"><span class="pre">quante.generate.basis.</span></span><span class="sig-name descname"><span class="pre">spin_basis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">L</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">S</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Nup</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kblock</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pblock</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zblock</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pzblock</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jmblock</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SpinBasis</span></span></span><a class="reference internal" href="../../_modules/quante/generate/basis.html#spin_basis"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.basis.spin_basis" title="Link to this definition"></a></dt>
+<dd><section id="id1">
+<h2>参数<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>L: int</dt><dd><p>链的长度/站点数量，需要小于 63。</p>
+</dd>
+<dt>Nup: int, 可选</dt><dd><p>总磁化强度，<span class="math notranslate nohighlight">\(\sum_j S^z_j\)</span>，投影。</p>
+</dd>
+<dt>S: {str, int}, 可选</dt><dd><p>局部自旋自由度的大小。可以是任何（半）整数：
+&quot;1/2&quot;,&quot;1&quot;,&quot;3/2&quot;,...</p>
+</dd>
+<dt>kblock: int, 可选</dt><dd><p>指定动量块。可以从 0 到 L-1 的整数。</p>
+</dd>
+<dt>pblock: int, 可选，可取 [-1, 1]</dt><dd><p>指定奇偶块。此对称性变换的物理表现是关于链的中点反射。</p>
+</dd>
+<dt>zblock: int, 可选，可取 [-1, 1]</dt><dd><p>指定自旋反转对称性块。此对称性变换的物理表现是翻转自旋-z 分量的符号。</p>
+</dd>
+<dt>pzblock: int, 可选，可取 [-1, 1]</dt><dd><p>指定自旋反转和奇偶块。此对称性变换的物理表现是翻转自旋-z 分量的符号和关于链的中点反射。</p>
+</dd>
+<dt>jmblock: {int, tuple[int, int]}, 可选</dt><dd><p>指定 SU(2) 对称性块。第一个参数是 J，第二个参数是 m。J 取值从 L/2 到 1/2，m 取值从 J 到 -J。
+如果只传入一个参数，则默认 m = J。</p>
+</dd>
+</dl>
+</section>
+<section id="id2">
+<h2>示例:<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">basis</span> <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">generate</span><span class="o">.</span><span class="n">basis</span><span class="o">.</span><span class="n">spin_basis</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">Nup</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">kblock</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">Ns</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h2>注：<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<p>目前支持的组合有：
+- spin-1/2</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>noblock</p></li>
+<li><p>Nup</p></li>
+<li><p>kblock</p></li>
+<li><p>pblock</p></li>
+<li><p>zblock</p></li>
+<li><p>pzblock</p></li>
+<li><p>Nup + kblock</p></li>
+<li><p>Nup + pblock</p></li>
+<li><p>Nup + zblock: 这个组合下 Nup 只能从 0 取到 N//2 （基矢为 Nup 与 N - Nup 的叠加态）</p></li>
+<li><p>Nup + pzblock: 同上</p></li>
+<li><p>Nup + kblock + pblock: 这个组合下 kblock 只能从 0 到 L//2,(基矢为 k 和 -k 的叠加)；与 quspin 中的代表元取法不同，因此得到矩阵相差一个排列，但本征值是相同的！</p></li>
+<li><p>Nup + kblock + pblock + zblock: 同上，并且此时 Nup 只能取 N//2，且 N 为偶数；与 quspin 中的代表元取法不同，因此得到矩阵相差一个排列，但本征值是相同的！</p></li>
+<li><p>jmblock</p></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>spin-high</dt><dd><ul>
+<li><p>noblock</p></li>
+<li><p>Nup</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
+<section id="spinbasis">
+<h2>SpinBasis<a class="headerlink" href="#spinbasis" title="Link to this heading"></a></h2>
+<p>返回结果的代码提示总是 <cite>SpinBasis</cite> 类型，如果需要查看具体代码，可以通过 <cite>where_codes</cite> 方法定位代码位置。
+其功能包括：
+- 获得基矢：<cite>get_state</cite>，返回基矢在全空间中的表示</p>
+<ul class="simple">
+<li><p>恢复态：<cite>recover</cite>，将子空间态恢复为全空间态</p></li>
+<li><p>投影算符：<cite>projection_matrix</cite>，返回投影矩阵</p></li>
+<li><p>态投影：<cite>project</cite>，将态投影到子空间</p></li>
+<li><p>打印维度：<cite>print_dims</cite>，打印不同子空间的维数</p></li>
+</ul>
+</section>
+<section id="id4">
+<h2>新增对称性类需要做的事情：<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
+<p>如果需要增加新的对称性，或者新的组合，需要：</p>
+<ul>
+<li><p>在 ./symmetry 中增加新的对称性类文件夹，文件夹中需要包含 <cite>general_hamiltonian</cite>, <cite>xxx_basis.py</cite> 和 <cite>xxx_basis_class.py</cite> 三个文件，如果有可以简化生成基的模型，也可以增加单独的文件，如 <cite>heisenberg.py</cite>。</p></li>
+<li><p>在 <cite>xxx_class.py</cite> 中实现对称性的方法（需要的 numba 函数在 <cite>xxx_basis.py</cite> 中）：</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>生成矩阵：<cite>_matrix</cite></p></li>
+<li><p>获得基矢：<cite>get_state</cite></p></li>
+<li><p>投影算符：<cite>projection_matrix</cite></p></li>
+<li><p>打印维度：<cite>print_dims</cite></p></li>
+<li><p>态投影：<cite>project</cite></p></li>
+<li><p>态恢复：<cite>recover</cite></p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>在 <cite>spin_basis</cite> 函数中的参数增加对称性参数，如 <cite>kblock</cite></p></li>
+<li><p>修改：<cite>block_name_list</cite>, <cite>block_value_list</cite>, <cite>block_combinations</cite>，增加对应的参数名和参数值</p></li>
+<li><p>增加对应的处理函数，如 <cite>_process_kblock</cite></p></li>
+<li><p>记得同步这里的注释和 .matrix.heisenberg 中的代码</p></li>
+</ul>
+</section>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="页脚">
+        <a href="quante.generate.operas.sum.html" class="btn btn-neutral float-left" title="quante.generate.operas.sum" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> 上一页</a>
+        <a href="quante.generate.basis.show_spin_basis.html" class="btn btn-neutral float-right" title="quante.generate.basis.show_spin_basis" accesskey="n" rel="next">下一页 <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

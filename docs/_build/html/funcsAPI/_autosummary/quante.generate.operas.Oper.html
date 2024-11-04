@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.generate.operas.Oper &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=2a6f3bb3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="quante.generate.operas.heisenberg_operator" href="quante.generate.operas.heisenberg_operator.html" />
+    <link rel="prev" title="genetate (quante.generate)" href="../generate.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../generate.html#id1">生成算符</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">quante.generate.operas.Oper</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#quante.generate.operas.Oper"><code class="docutils literal notranslate"><span class="pre">Oper</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="quante.generate.operas.heisenberg_operator.html">quante.generate.operas.heisenberg_operator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.generate.operas.sum.html">quante.generate.operas.sum</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../generate.html#id2">生成基矢</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generate.html#id3">生成矩阵</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../generate.html#id4">生成量子态</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+      <li class="breadcrumb-item active">quante.generate.operas.Oper</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/funcsAPI/_autosummary/quante.generate.operas.Oper.rst.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quante-generate-operas-oper">
+<h1>quante.generate.operas.Oper<a class="headerlink" href="#quante-generate-operas-oper" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">quante.generate.operas.</span></span><span class="sig-name descname"><span class="pre">Oper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'s'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper" title="Link to this definition"></a></dt>
+<dd><p>基类：<code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>算符类: 该类用于表示和操作量子系统的算符。</p>
+<p>提供最重要的功能包括:</p>
+<ul class="simple">
+<li><p>算符的加减、乘法、幂运算, 以及将 x,y 用 +,- 展开 (<cite>expandxy</cite>)</p></li>
+<li><p>转化为 quspin 接受的格式 (<cite>quspin_form</cite>)</p></li>
+<li><p>算符生成矩阵 (<cite>to_matrix</cite>) 、MPO (<cite>automata</cite>)</p></li>
+<li><p>最近邻相互作用的二体门分解 (<cite>gate2_decomposition</cite>,  <cite>suzuki_trotter_decomposition</cite>)</p></li>
+<li><p>其他方便的函数 (<cite>copy</cite>, <cite>each_term</cite>)</p></li>
+</ul>
+<p>算符的数据结构：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">operator_1</span><span class="p">:</span> <span class="p">{</span><span class="n">position1</span><span class="p">:</span> <span class="n">coefficient1</span><span class="p">,</span>
+                <span class="n">position2</span><span class="p">:</span> <span class="n">coefficient2</span><span class="p">,</span>
+                <span class="o">...</span><span class="p">},</span>
+    <span class="n">operator_2</span><span class="p">:</span> <span class="p">{</span><span class="n">position1</span><span class="p">:</span> <span class="n">coefficient3</span><span class="p">,</span>
+                <span class="n">position2</span><span class="p">:</span> <span class="n">coefficient4</span><span class="p">,</span>
+                <span class="o">...</span><span class="p">},</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'s'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.__init__"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.__init__" title="quante.generate.operas.Oper.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(data[, type])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.automata" title="quante.generate.operas.Oper.automata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">automata</span></code></a>(L[, pauli, d, local_matrix, dtype])</p></td>
+<td><p>生成算符的 mpo 形式</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.copy" title="quante.generate.operas.Oper.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.dtype" title="quante.generate.operas.Oper.dtype"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dtype</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.each_term" title="quante.generate.operas.Oper.each_term"><code class="xref py py-obj docutils literal notranslate"><span class="pre">each_term</span></code></a>()</p></td>
+<td><p>示例:
+
+&gt;&gt;&gt; ham = op.heisenberg_operator(L=10)
+&gt;&gt;&gt; for opnm, posn, coef in ham.each_term():
+&gt;&gt;&gt;    print(opnm, posn, coef)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.expandxy" title="quante.generate.operas.Oper.expandxy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">expandxy</span></code></a>([pauli])</p></td>
+<td><p>展开算符中的 <cite>x</cite>,`y`，同时将 <cite>z</cite> 替换为 <cite>Z</cite> 其中 <cite>Z</cite> = <cite>pm</cite>-<cite>mp</cite>，这是为了 <cite>to_matrix</cite> 方便</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.gate2_decomposition" title="quante.generate.operas.Oper.gate2_decomposition"><code class="xref py py-obj docutils literal notranslate"><span class="pre">gate2_decomposition</span></code></a>(L, tau[, form, pauli])</p></td>
+<td><p>用最简单的方法（ladder/brick）将哈密顿量的演化拆分成一些列局域两体门：</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.load" title="quante.generate.operas.Oper.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(filename)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.local" title="quante.generate.operas.Oper.local"><code class="xref py py-obj docutils literal notranslate"><span class="pre">local</span></code></a>(site_position, L[, pauli])</p></td>
+<td><p>根据 Oper 的实例得到作用在 position 和 position+1 这两个格点上的局域哈密顿量</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.quspin_form" title="quante.generate.operas.Oper.quspin_form"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quspin_form</span></code></a>()</p></td>
+<td><p>返回 quspin 可以接受的格式</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.save" title="quante.generate.operas.Oper.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>([filename])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.show_string_form" title="quante.generate.operas.Oper.show_string_form"><code class="xref py py-obj docutils literal notranslate"><span class="pre">show_string_form</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.sort_posn" title="quante.generate.operas.Oper.sort_posn"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sort_posn</span></code></a>()</p></td>
+<td><p>将位置按照从小到大顺序排列</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.split_data" title="quante.generate.operas.Oper.split_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">split_data</span></code></a>()</p></td>
+<td><p>这个函数是为 automata 写的，但 parallel_matrix 等函数可能会用到</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.to_matrix" title="quante.generate.operas.Oper.to_matrix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_matrix</span></code></a>(basis[, pauli, sparse, savememory])</p></td>
+<td><p>生成哈密顿量在给定基矢下的矩阵，对于自旋 1/2 默认使用 symmetrize 的方法计算矩阵元</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.to_mpo" title="quante.generate.operas.Oper.to_mpo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_mpo</span></code></a>(L[, pauli, backend, device])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#quante.generate.operas.Oper.trotter_gates" title="quante.generate.operas.Oper.trotter_gates"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trotter_gates</span></code></a>(L, tau[, order, evolve_type, ...])</p></td>
+<td><p>获取局域演化门</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.copy">
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#quante.generate.operas.Oper" title="quante.generate.operas.Oper"><span class="pre">Oper</span></a></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.copy"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.copy" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.each_term">
+<span class="sig-name descname"><span class="pre">each_term</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Generator</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.each_term"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.each_term" title="Link to this definition"></a></dt>
+<dd><section id="id1">
+<h2>示例:<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ham</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">heisenberg_operator</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">opnm</span><span class="p">,</span> <span class="n">posn</span><span class="p">,</span> <span class="n">coef</span> <span class="ow">in</span> <span class="n">ham</span><span class="o">.</span><span class="n">each_term</span><span class="p">():</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="nb">print</span><span class="p">(</span><span class="n">opnm</span><span class="p">,</span> <span class="n">posn</span><span class="p">,</span> <span class="n">coef</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">生成器<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><em>Generator[tuple[str, tuple[int], Union[float, complex]], None, None]</em></p></li>
+<li><p><strong>注</strong> (<em>逐项返回算符的名称、位置和系数,但是只能使用一次, 不可重复使用</em>)</p></li>
+<li><p><em>如果要重复使用,需要 list(ham.each_term())</em></p></li>
+</ul>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.show_string_form">
+<span class="sig-name descname"><span class="pre">show_string_form</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.show_string_form"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.show_string_form" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'ham.h5'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.save"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.save" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.load">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#quante.generate.operas.Oper" title="quante.generate.operas.Oper"><span class="pre">Oper</span></a></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.load"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.load" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.sort_posn">
+<span class="sig-name descname"><span class="pre">sort_posn</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#quante.generate.operas.Oper" title="quante.generate.operas.Oper"><span class="pre">Oper</span></a></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.sort_posn"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.sort_posn" title="Link to this definition"></a></dt>
+<dd><p>将位置按照从小到大顺序排列</p>
+<p>Example:
+&gt;&gt;&gt; res = op.xx(2,1).sort_posn()</p>
+<p>注, 对费米子会报错</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.expandxy">
+<span class="sig-name descname"><span class="pre">expandxy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pauli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#quante.generate.operas.Oper" title="quante.generate.operas.Oper"><span class="pre">Oper</span></a></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.expandxy"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.expandxy" title="Link to this definition"></a></dt>
+<dd><p>展开算符中的 <cite>x</cite>,`y`，同时将 <cite>z</cite> 替换为 <cite>Z</cite>
+其中 <cite>Z</cite> = <cite>pm</cite>-<cite>mp</cite>，这是为了 <cite>to_matrix</cite> 方便</p>
+<p>展开之后，应当只包含 <cite>p</cite>, <cite>m</cite>, <cite>i</cite>, <cite>Z</cite> 这三种算符</p>
+<section id="id2">
+<h2>示例:<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ham</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">heisenberg_operator</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ham</span> <span class="o">=</span> <span class="n">ham</span><span class="o">.</span><span class="n">expandxy</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ham</span><span class="o">.</span><span class="n">show_string_form</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>注:只是自旋</p>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.dtype">
+<span class="sig-name descname"><span class="pre">dtype</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.dtype"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.dtype" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.quspin_form">
+<span class="sig-name descname"><span class="pre">quspin_form</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.quspin_form"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.quspin_form" title="Link to this definition"></a></dt>
+<dd><p>返回 quspin 可以接受的格式</p>
+<section id="id3">
+<h2>示例:<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">quspin.operators</span> <span class="kn">import</span> <span class="n">hamiltonian</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">quspin.basis</span> <span class="kn">import</span> <span class="n">spin_basis_1d</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ham</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">xx</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">yy</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">basis</span> <span class="o">=</span> <span class="n">spin_basis_1d</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mat</span> <span class="o">=</span> <span class="n">hamiltonian</span><span class="p">(</span><span class="n">ham</span><span class="o">.</span><span class="n">quspin_form</span><span class="p">(),</span> <span class="p">[],</span> <span class="n">basis</span><span class="o">=</span><span class="n">basis</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.to_matrix">
+<span class="sig-name descname"><span class="pre">to_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">basis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pauli</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sparse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">savememory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">csr_array</span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.to_matrix"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.to_matrix" title="Link to this definition"></a></dt>
+<dd><p>生成哈密顿量在给定基矢下的矩阵，对于自旋 1/2 默认使用 symmetrize 的方法计算矩阵元</p>
+<p>#!! 注意：这个函数不检查哈密顿量是否有对称性。如果哈密顿量没有对称性，那么这个函数会返回错误的结果，而不会报错。</p>
+<section id="id4">
+<h2>示例:<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">L</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">basis</span> <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">generate</span><span class="o">.</span><span class="n">basis</span><span class="o">.</span><span class="n">spin_basis</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">,</span> <span class="n">Nup</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ham</span> <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">generate</span><span class="o">.</span><span class="n">operas</span><span class="o">.</span><span class="n">heisenberg_operator</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mat</span> <span class="o">=</span> <span class="n">ham</span><span class="o">.</span><span class="n">to_matrix</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id5">
+<h2>其他生成矩阵的方法:<a class="headerlink" href="#id5" title="Link to this heading"></a></h2>
+<p>时间对比参考 example/exact_diagonalization.ipynb</p>
+<p>对于**没有对称性**的基矢，automata 收缩是最快的方法：</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">quante.tensor.automata</span> <span class="kn">import</span> <span class="n">get_sparse_matrix</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mat</span> <span class="o">=</span> <span class="n">get_sparse_matrix</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="o">*</span><span class="n">ham</span><span class="o">.</span><span class="n">split_data</span><span class="p">(),</span> <span class="n">pauli</span><span class="o">=</span><span class="n">pauli</span><span class="p">,</span> <span class="n">usecuda</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>对于**没有对称性**的基矢，也可以使用 <cite>to_matrix_cuda</cite> 来实现：</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">quante.torch_utils.symmetry</span> <span class="kn">import</span> <span class="n">to_matrix_cuda</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">eachterm</span><span class="p">,</span> <span class="n">hascomplex</span> <span class="o">=</span> <span class="n">ham</span><span class="o">.</span><span class="n">expandxy</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">_convert_to_quick_form</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mat</span> <span class="o">=</span> <span class="n">to_matrix_cuda</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="n">eachterm</span><span class="p">,</span> <span class="n">hascomplex</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>有对称性的,也可以这么使用,但是加速并不明显.</p>
+<p>如果反复生成也可以将 to_matrix 拆开来：</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">eachterm</span><span class="p">,</span> <span class="n">hascomplex</span> <span class="o">=</span> <span class="n">ham</span><span class="o">.</span><span class="n">expandxy</span><span class="p">(</span><span class="n">pauli</span><span class="o">=</span><span class="n">pauli</span><span class="p">)</span><span class="o">.</span><span class="n">_convert_to_quick_form</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mat</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">_sparse_matrix</span><span class="p">(</span><span class="n">eachterm</span><span class="p">,</span> <span class="n">hascomplex</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>可以反复使用 <cite>basis._sparse_matrix(eachterm, hascomplex)</cite></p>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.automata">
+<span class="sig-name descname"><span class="pre">automata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">L:</span> <span class="pre">int,</span> <span class="pre">pauli:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">d:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">2,</span> <span class="pre">local_matrix:</span> <span class="pre">~typing.Callable[[str],</span> <span class="pre">~numpy.ndarray]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">dtype:</span> <span class="pre">~typing.Type[~numpy.complex128]</span> <span class="pre">=</span> <span class="pre">&lt;class</span> <span class="pre">'numpy.complex128'&gt;</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.automata"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.automata" title="Link to this definition"></a></dt>
+<dd><p>生成算符的 mpo 形式</p>
+<section id="id6">
+<h2>示例:<a class="headerlink" href="#id6" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">L</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ham</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">heisenberg_operator</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">basis</span> <span class="o">=</span> <span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mpo</span> <span class="o">=</span> <span class="n">ham</span><span class="o">.</span><span class="n">automata</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">param L<span class="colon">:</span></dt>
+<dd class="field-odd"><p>系统的长度，即量子比特的数量。</p>
+</dd>
+<dt class="field-even">type L<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+<dt class="field-odd">param pauli<span class="colon">:</span></dt>
+<dd class="field-odd"><p>是否使用 Pauli 矩阵作为局部矩阵。默认为 False，即使用常规矩阵。</p>
+</dd>
+<dt class="field-even">type pauli<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool, optional</p>
+</dd>
+<dt class="field-odd">param d<span class="colon">:</span></dt>
+<dd class="field-odd"><p>局部矩阵的维度。默认为 2，即二维矩阵。</p>
+</dd>
+<dt class="field-even">type d<span class="colon">:</span></dt>
+<dd class="field-even"><p>int, optional</p>
+</dd>
+<dt class="field-odd">param gen_matrix<span class="colon">:</span></dt>
+<dd class="field-odd"><p>用于生成局部矩阵的函数。如果提供，该函数将根据字符串参数生成对应的局部矩阵。默认为 None，即使用默认的局部矩阵生成方式。</p>
+</dd>
+<dt class="field-even">type gen_matrix<span class="colon">:</span></dt>
+<dd class="field-even"><p>Optional[Callable[[str], _np.ndarray]], optional</p>
+</dd>
+<dt class="field-odd">param dtype<span class="colon">:</span></dt>
+<dd class="field-odd"><p>局部矩阵的数据类型。默认为 _np.complex128，即复数类型。</p>
+</dd>
+<dt class="field-even">type dtype<span class="colon">:</span></dt>
+<dd class="field-even"><p>Type[_np.complex128], optional</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.split_data">
+<span class="sig-name descname"><span class="pre">split_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">complex</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.split_data"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.split_data" title="Link to this definition"></a></dt>
+<dd><p>这个函数是为 automata 写的，但 parallel_matrix 等函数可能会用到</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.gate2_decomposition">
+<span class="sig-name descname"><span class="pre">gate2_decomposition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">L</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tau</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">form</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ladder'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pauli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.gate2_decomposition"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.gate2_decomposition" title="Link to this definition"></a></dt>
+<dd><p>用最简单的方法（ladder/brick）将哈密顿量的演化拆分成一些列局域两体门：</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>ladder:
+   |    |    |    |  ╭-┴----┴-╮
+   |    |    |    |  ╰-┬----┬-╯
+   |    |    |  ╭-┴----┴-╮  |
+   |    |    |  ╰-┬----┬-╯  |
+   |    |  ╭-┴----┴-╮  |    |
+   |    |  ╰-┬----┬-╯  |    |
+   |  ╭-┴----┴-╮  |    |    |
+   |  ╰-┬----┬-╯  |    |    |
+ ╭-┴----┴-╮  |    |    |    |
+ ╰-┬----┬-╯  |    |    |    |
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>brick:
+   |  ╭-┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮  |
+   |  ╰-┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯  |
+╭--┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮
+╰--┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯
+</pre></div>
+</div>
+<section id="id7">
+<h2>示例:<a class="headerlink" href="#id7" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">quante</span> <span class="k">as</span> <span class="nn">qt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch</span> <span class="k">as</span> <span class="nn">tc</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">L</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tau</span> <span class="o">=</span> <span class="mf">0.01</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ham</span> <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">generate</span><span class="o">.</span><span class="n">operas</span><span class="o">.</span><span class="n">heisenberg_operator</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gates</span> <span class="o">=</span> <span class="n">ham</span><span class="o">.</span><span class="n">gate2_decomposition</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">,</span> <span class="n">form</span><span class="o">=</span><span class="s1">&#39;ladder&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">U_tau</span> <span class="o">=</span> <span class="n">tcclass</span><span class="o">.</span><span class="n">MPO</span><span class="p">(</span><span class="n">tcfuncs</span><span class="o">.</span><span class="n">mpo_eye</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">L</span><span class="p">))</span>  <span class="c1"># 生成单位矩阵</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">pos_cur</span><span class="p">,</span> <span class="n">gate</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">gates</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">local_evolve</span> <span class="o">=</span> <span class="n">tc</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">gate</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">U_tau</span><span class="o">.</span><span class="n">apply_gate_2b</span><span class="p">(</span><span class="n">pos_cur</span><span class="p">,</span> <span class="n">local_evolve</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># 验证程序:</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">basis</span> <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">generate</span><span class="o">.</span><span class="n">basis</span><span class="o">.</span><span class="n">spin_basis</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mat</span> <span class="o">=</span> <span class="n">ham</span><span class="o">.</span><span class="n">to_matrix</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="n">sparse</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">evolve_operator</span> <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">expm</span><span class="p">(</span> <span class="o">-</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">tau</span><span class="o">*</span><span class="n">mat</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">evolve_operator</span> <span class="o">-</span> <span class="n">U_tau</span><span class="o">.</span><span class="n">full_contract</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()))</span>
+</pre></div>
+</div>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.trotter_gates">
+<span class="sig-name descname"><span class="pre">trotter_gates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">L</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tau</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'2'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evolve_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'time'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">N_step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pauli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.trotter_gates"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.trotter_gates" title="Link to this definition"></a></dt>
+<dd><p>获取局域演化门</p>
+<p>使用 Trotter-Suzuki 分解将给定的哈密顿量分解为一系列局部操作，并按照给定的时间步长 tau 进行演化。</p>
+<section id="note">
+<h2>NOTE:<a class="headerlink" href="#note" title="Link to this heading"></a></h2>
+<blockquote>
+<div><p>该函数只支持最近邻相互作用的哈密顿量。</p>
+</div></blockquote>
+</section>
+<section id="args">
+<h2>Args:<a class="headerlink" href="#args" title="Link to this heading"></a></h2>
+<p>L (int): 系统的长度，即量子比特的数量。</p>
+<p>tau (float): 时间步长，用于控制演化的速度。</p>
+<dl class="simple">
+<dt>order (str): Trotter 分解的阶数，决定了分解的精度。<code class="docutils literal notranslate"><span class="pre">1,</span> <span class="pre">2,</span> <span class="pre">4,</span> <span class="pre">'4_opt'</span></code></dt><dd><p>Order <code class="docutils literal notranslate"><span class="pre">1</span></code> approximation is simply <span class="math notranslate nohighlight">\(e^A a^B\)</span>.
+Order <code class="docutils literal notranslate"><span class="pre">2</span></code> is the &quot;leapfrog&quot; <cite>e^{A/2} e^B e^{A/2}</cite>.
+Order <code class="docutils literal notranslate"><span class="pre">4</span></code> is the fourth-order from <a class="reference external" href="https://doi.org/10.1063/1.529425">[suzuki1991]</a></p>
+</dd>
+</dl>
+<p>evolve_type (str): 演化的类型，可以是 &quot;time&quot; 或 &quot;temporal&quot;</p>
+<p>N_step (int): 演化的总步数，总演化时间为 N_step * tau。</p>
+<p>pauli (bool): 是否使用 Pauli 矩阵作为局部矩阵。默认为 True，即使用 Pauli 矩阵。</p>
+</section>
+<section id="returns">
+<h2>Returns:<a class="headerlink" href="#returns" title="Link to this heading"></a></h2>
+<p>tuple[list[int], list[_np.ndarray]] : 位置列表, 对应的局部操作</p>
+</section>
+<section id="id8">
+<h2>示例:<a class="headerlink" href="#id8" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">gates</span> <span class="o">=</span> <span class="n">ham</span><span class="o">.</span><span class="n">trotter_gates</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;2&#39;</span><span class="p">,</span> <span class="n">evolve_type</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="n">pauli</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">U_tau</span> <span class="o">=</span> <span class="n">MPO</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">pos_cur</span><span class="p">,</span> <span class="n">gate</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">gates</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">U_tau</span><span class="o">.</span><span class="n">apply_gate_</span><span class="p">(</span><span class="n">pos_cur</span><span class="p">,</span> <span class="n">gate</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.local">
+<span class="sig-name descname"><span class="pre">local</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">site_position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">L</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pauli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.local"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.local" title="Link to this definition"></a></dt>
+<dd><p>根据 Oper 的实例得到作用在 position 和 position+1 这两个格点上的局域哈密顿量</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="quante.generate.operas.Oper.to_mpo">
+<span class="sig-name descname"><span class="pre">to_mpo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">L</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pauli</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'torch'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/quante/generate/operas.html#Oper.to_mpo"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.generate.operas.Oper.to_mpo" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="页脚">
+        <a href="../generate.html" class="btn btn-neutral float-left" title="genetate (quante.generate)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> 上一页</a>
+        <a href="quante.generate.operas.heisenberg_operator.html" class="btn btn-neutral float-right" title="quante.generate.operas.heisenberg_operator" accesskey="n" rel="next">下一页 <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

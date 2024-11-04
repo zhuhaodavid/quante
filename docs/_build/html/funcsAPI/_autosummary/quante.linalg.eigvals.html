@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.linalg.eigvals &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=2a6f3bb3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="quante.linalg.eigvalsh" href="quante.linalg.eigvalsh.html" />
+    <link rel="prev" title="quante.linalg.eigh" href="quante.linalg.eigh.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../linalg.html#id1">本征值分解</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="quante.linalg.eig.html">quante.linalg.eig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.linalg.eigh.html">quante.linalg.eigh</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">quante.linalg.eigvals</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#quante.linalg.eigvals"><code class="docutils literal notranslate"><span class="pre">eigvals()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="quante.linalg.eigvalsh.html">quante.linalg.eigvalsh</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.linalg.eighbetween.html">quante.linalg.eighbetween</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#id2">奇异值分解</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#id3">其它线性代数操作</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#id4">矩阵元操作</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#id5">拟合与插值</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#id6">演化</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#krylov">krylov</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+      <li class="breadcrumb-item active">quante.linalg.eigvals</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/funcsAPI/_autosummary/quante.linalg.eigvals.rst.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quante-linalg-eigvals">
+<h1>quante.linalg.eigvals<a class="headerlink" href="#quante-linalg-eigvals" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="quante.linalg.eigvals">
+<span class="sig-prename descclassname"><span class="pre">quante.linalg.</span></span><span class="sig-name descname"><span class="pre">eigvals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">spmatrix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reload</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoblock</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unitary</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">which</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fallback_to_scipy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">backend_opts</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../../_modules/quante/linalg/eig_modified.html#eigvals"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.linalg.eigvals" title="Link to this definition"></a></dt>
+<dd><p>查找非厄米矩阵的算子的所有或部分特征值。</p>
+<section id="id1">
+<h2>参数<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>A<span class="classifier">operator</span></dt><dd><p>要分解的算子。</p>
+</dd>
+<dt>k<span class="classifier">int, 可选</span></dt><dd><p>如果为负数，查找所有特征值，否则执行部分特征分解并查找 <cite>k</cite> 对。</p>
+</dd>
+<dt>backend<span class="classifier">{'AUTO', 'NUMPY', 'SCIPY', 'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选</span></dt><dd><p>使用哪个求解器。('MATLAB' 用于 k=-1 的情况。)</p>
+</dd>
+<dt>save: bool, str, list, 可选</dt><dd><p>如果为 False，不保存。
+如果为 True，按默认路径保存，k=-1 时为 EigData，k&gt;0 时为 PartialEigData。
+如果为 str，该字符串被解释为保存的文件名。
+如果为列表 [path_save_to, file_name]，则路径和文件名都被指定。</p>
+</dd>
+<dt>reload: bool, 可选</dt><dd><p>如果为 False，不返回任何内容。</p>
+</dd>
+<dt>autoblock<span class="classifier">bool, 可选</span></dt><dd><p>如果为 True，自动识别并利用当前基中出现的对称性，通过行和列的置换形成块对角线。（仅适用于 k=-1）</p>
+</dd>
+<dt>which<span class="classifier">{'SA', 'LA', 'LM', 'SM', 'TR'}</span></dt><dd><p>从谱的哪个部分获取特征值（参见 <code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.sparse.linalg.eigsh()</span></code>）。</p>
+</dd>
+<dt>sigma<span class="classifier">float, 可选</span></dt><dd><p>目标谱的哪一部分，如果 which 为 None，则意味着 which='TR'。</p>
+</dd>
+<dt>ncv<span class="classifier">int, 可选</span></dt><dd><p>兰索斯向量的数量，可以用来优化速度。</p>
+</dd>
+<dt>tol<span class="classifier">None 或 float</span></dt><dd><p>查找特征值的容差。</p>
+</dd>
+<dt>v0<span class="classifier">None 或 类 1D-array</span></dt><dd><p>用于迭代的初始向量猜测。</p>
+</dd>
+<dt>sort<span class="classifier">bool, 可选</span></dt><dd><p>是否按升序显式排序特征值。</p>
+</dd>
+<dt>fallback_to_scipy<span class="classifier">bool, 可选</span></dt><dd><p>如果发生错误且未使用 scipy，尝试使用 scipy。</p>
+</dd>
+<dt>sort<span class="classifier">bool, 可选</span></dt><dd><p>是否按升序排序特征对。</p>
+</dd>
+<dt>P<span class="classifier">array_like, sparse_matrix, LinearOperator, 可选</span></dt><dd><p>在此投影算子定义的子空间中执行特征求解。（仅适用于 k=-1）</p>
+</dd>
+<dt>backend_opts</dt><dd><p>提供给后端求解器的选项。
+根据指定的求解器 backend 提供具体的参数</p>
+</dd>
+</dl>
+</section>
+<section id="id2">
+<h2>返回值<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>el<span class="classifier">(k,) 数组</span></dt><dd><p>特征值。</p>
+</dd>
+<dt>ev<span class="classifier">(d, k) 数组</span></dt><dd><p>对应的特征向量作为数组的列，使得 <cite>A &#64; ev == ev &#64; A</cite>。</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="页脚">
+        <a href="quante.linalg.eigh.html" class="btn btn-neutral float-left" title="quante.linalg.eigh" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> 上一页</a>
+        <a href="quante.linalg.eigvalsh.html" class="btn btn-neutral float-right" title="quante.linalg.eigvalsh" accesskey="n" rel="next">下一页 <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

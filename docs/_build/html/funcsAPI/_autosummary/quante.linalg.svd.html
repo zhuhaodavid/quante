@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quante.linalg.svd &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=2a6f3bb3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="quante.linalg.truncate" href="quante.linalg.truncate.html" />
+    <link rel="prev" title="quante.linalg.eighbetween" href="quante.linalg.eighbetween.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#id1">本征值分解</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../linalg.html#id2">奇异值分解</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">quante.linalg.svd</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#quante.linalg.svd"><code class="docutils literal notranslate"><span class="pre">svd()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="quante.linalg.truncate.html">quante.linalg.truncate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.linalg.svd_truncate.html">quante.linalg.svd_truncate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quante.linalg.TruncationError.html">quante.linalg.TruncationError</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#id3">其它线性代数操作</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#id4">矩阵元操作</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#id5">拟合与插值</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#id6">演化</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg.html#krylov">krylov</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torch_utils.html">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+      <li class="breadcrumb-item active">quante.linalg.svd</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/funcsAPI/_autosummary/quante.linalg.svd.rst.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quante-linalg-svd">
+<h1>quante.linalg.svd<a class="headerlink" href="#quante-linalg-svd" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="quante.linalg.svd">
+<span class="sig-prename descclassname"><span class="pre">quante.linalg.</span></span><span class="sig-name descname"><span class="pre">svd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">full_matrices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute_uv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite_a</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_finite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lapack_driver</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gesdd'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/quante/linalg/svd_robust.html#svd"><span class="viewcode-link"><span class="pre">[源代码]</span></span></a><a class="headerlink" href="#quante.linalg.svd" title="Link to this definition"></a></dt>
+<dd><p>(更)稳定的奇异值分解（包装 <code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.linalg.svd()</span></code>，如何是 hermitian 矩阵使用 <cite>numpy.linalg.svd</cite> 效率更高）</p>
+<p>将矩阵 <cite>a</cite> 分解为两个酉矩阵 <code class="docutils literal notranslate"><span class="pre">U</span></code> 和 <code class="docutils literal notranslate"><span class="pre">Vh</span></code>，以及一个奇异值（实数，非负）的 1-D 数组 <code class="docutils literal notranslate"><span class="pre">s</span></code>，
+使得 <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">==</span> <span class="pre">U</span> <span class="pre">&#64;</span> <span class="pre">S</span> <span class="pre">&#64;</span> <span class="pre">Vh</span></code>，其中 <code class="docutils literal notranslate"><span class="pre">S</span></code> 是一个适当形状的零矩阵，主对角线为 <code class="docutils literal notranslate"><span class="pre">s</span></code>。</p>
+<p>带有 <cite>gesvd</cite> 备份计划。如果 <cite>gesdd</cite> 失败，尝试通过使用 lapack_driver <cite>gesvd</cite> 来避免引发 LinAlgError。</p>
+<section id="id1">
+<h2>参数<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<dl>
+<dt>a<span class="classifier">(M, N) 类数组</span></dt><dd><p>要分解的矩阵。</p>
+</dd>
+<dt>full_matrices<span class="classifier">bool, 可选</span></dt><dd><p>如果为 True（默认），<cite>U</cite> 和 <cite>Vh</cite> 的形状为 <code class="docutils literal notranslate"><span class="pre">(M,</span> <span class="pre">M)</span></code>，<code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">N)</span></code>。
+如果为 False，形状为 <code class="docutils literal notranslate"><span class="pre">(M,</span> <span class="pre">K)</span></code> 和 <code class="docutils literal notranslate"><span class="pre">(K,</span> <span class="pre">N)</span></code>，其中 <code class="docutils literal notranslate"><span class="pre">K</span> <span class="pre">=</span> <span class="pre">min(M,</span> <span class="pre">N)</span></code>。</p>
+</dd>
+<dt>compute_uv<span class="classifier">bool, 可选</span></dt><dd><p>是否计算 <code class="docutils literal notranslate"><span class="pre">U</span></code> 和 <code class="docutils literal notranslate"><span class="pre">Vh</span></code>，除了 <code class="docutils literal notranslate"><span class="pre">s</span></code> 之外。默认是 True。</p>
+</dd>
+<dt>overwrite_a<span class="classifier">bool, 可选</span></dt><dd><p>是否覆盖 <cite>a</cite>；可能会提高性能。默认是 False。
+如果 <code class="docutils literal notranslate"><span class="pre">lapack_driver='gesdd'</span></code>，则忽略（即设置为 <code class="docutils literal notranslate"><span class="pre">False</span></code>）。</p>
+</dd>
+<dt>check_finite<span class="classifier">bool, 可选</span></dt><dd><p>是否检查输入矩阵仅包含有限数字。禁用可能会提高性能，但如果输入包含无穷大或 NaN，可能会导致问题（崩溃、非终止）。</p>
+</dd>
+<dt>lapack_driver<span class="classifier">{'gesdd', 'gesvd'}, 可选</span></dt><dd><p>是否使用更高效的分治方法（<code class="docutils literal notranslate"><span class="pre">'gesdd'</span></code>）
+或通用矩形方法（<code class="docutils literal notranslate"><span class="pre">'gesvd'</span></code>）来计算 SVD。
+MATLAB 和 Octave 使用 <code class="docutils literal notranslate"><span class="pre">'gesvd'</span></code> 方法。
+默认是 <code class="docutils literal notranslate"><span class="pre">'gesdd'</span></code>。
+如果 <code class="docutils literal notranslate"><span class="pre">'gesdd'</span></code> 失败，则使用 <code class="docutils literal notranslate"><span class="pre">'gesvd'</span></code> 作为备份。</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 0.18.</span></p>
+</div>
+</dd>
+<dt>warn<span class="classifier">bool</span></dt><dd><p>当 SVD 失败时是否创建警告。</p>
+</dd>
+</dl>
+</section>
+<section id="id2">
+<h2>返回值<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>U<span class="classifier">ndarray</span></dt><dd><p>具有左奇异向量作为列的酉矩阵。形状为 <code class="docutils literal notranslate"><span class="pre">(M,</span> <span class="pre">M)</span></code> 或 <code class="docutils literal notranslate"><span class="pre">(M,</span> <span class="pre">K)</span></code>，取决于 <cite>full_matrices</cite>。</p>
+</dd>
+<dt>s<span class="classifier">ndarray</span></dt><dd><p>按非递增顺序排序的奇异值。形状为 (K,) ，其中 <code class="docutils literal notranslate"><span class="pre">K</span> <span class="pre">=</span> <span class="pre">min(M,</span> <span class="pre">N)</span></code>。</p>
+</dd>
+<dt>Vh<span class="classifier">ndarray</span></dt><dd><p>具有右奇异向量作为行的酉矩阵。形状为 <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">N)</span></code> 或 <code class="docutils literal notranslate"><span class="pre">(K,</span> <span class="pre">N)</span></code>，取决于 <cite>full_matrices</cite>。</p>
+</dd>
+</dl>
+<p>如果 <code class="docutils literal notranslate"><span class="pre">compute_uv=False</span></code>，则仅返回 <code class="docutils literal notranslate"><span class="pre">s</span></code>。</p>
+</section>
+<section id="id3">
+<h2>抛出<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>LinAlgError</dt><dd><p>如果 SVD 计算不收敛。</p>
+</dd>
+</dl>
+</section>
+<section id="id4">
+<h2>参见<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
+<p>svdvals : 计算矩阵的奇异值。
+diagsvd : 给定向量 s 构造 Sigma 矩阵。</p>
+</section>
+<section id="id5">
+<h2>示例<a class="headerlink" href="#id5" title="Link to this heading"></a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">linalg</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">m</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">6</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span> <span class="o">+</span> <span class="mf">1.</span><span class="n">j</span><span class="o">*</span><span class="n">rng</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">U</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">Vh</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">U</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>  <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">Vh</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">((9, 9), (6,), (6, 6))</span>
+</pre></div>
+</div>
+<p>从分解中重构原始矩阵：</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)):</span>
+<span class="gp">... </span>    <span class="n">sigma</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">Vh</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">a1</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>或者，使用 <code class="docutils literal notranslate"><span class="pre">full_matrices=False``（注意此时</span> <span class="pre">``U</span></code> 的形状为 <code class="docutils literal notranslate"><span class="pre">(m,</span> <span class="pre">n)</span></code> 而不是 <code class="docutils literal notranslate"><span class="pre">(m,</span> <span class="pre">m)</span></code>）：</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">U</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">Vh</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">U</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">Vh</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">((9, 6), (6,), (6, 6))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">Vh</span><span class="p">)))</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">s2</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">compute_uv</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</section>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="页脚">
+        <a href="quante.linalg.eighbetween.html" class="btn btn-neutral float-left" title="quante.linalg.eighbetween" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> 上一页</a>
+        <a href="quante.linalg.truncate.html" class="btn btn-neutral float-right" title="quante.linalg.truncate" accesskey="n" rel="next">下一页 <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

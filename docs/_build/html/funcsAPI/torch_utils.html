@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>torch_utils (quante.torch_utils) &mdash; Quante 0.1.0 文档</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/py_class_property_fix.css?v=4cc9ef9a" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=2a6f3bb3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d786bb5c"></script>
+        <script src="../_static/doctools.js?v=9bcbadda"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../_static/translations.js?v=beaddf03"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="quante.torch_utils.linalg.truncate" href="_autosummary/quante.torch_utils.linalg.truncate.html" />
+    <link rel="prev" title="tensor (quante.tensor)" href="tensor.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Quante
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="搜索文档" aria-label="搜索文档" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="导航菜单">
+              <p class="caption" role="heading"><span class="caption-text">安装 &amp; 使用</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation/installation.html">安装说明</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/usage.html">使用说明</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">函数 API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="basicfun.html">basicfun (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.basicfun</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="linalg.html">linalg (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.linalg</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="generate.html">genetate (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.generate</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="solvable_models.html">solvable_models (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.solvable_models</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tensor.html">tensor (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.tensor</span></code>)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id1">分解操作</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.truncate.html">quante.torch_utils.linalg.truncate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.svd.html">quante.torch_utils.linalg.svd</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.qr.html">quante.torch_utils.linalg.qr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.rq.html">quante.torch_utils.linalg.rq</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.eigh.html">quante.torch_utils.linalg.eigh</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.tt_decompose.html">quante.torch_utils.linalg.tt_decompose</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">指数作用</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.expm_multiply.html">quante.torch_utils.linalg.expm_multiply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.evolve_engine.html">quante.torch_utils.linalg.evolve_engine</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">稀疏工具</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.sparse.to_csr.html">quante.torch_utils.sparse.to_csr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.sparse.eye.html">quante.torch_utils.sparse.eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.sparse.trace.html">quante.torch_utils.sparse.trace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.sparse.norm.html">quante.torch_utils.sparse.norm</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">梯度工具</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.AdaptiveLRScheduler.html">quante.torch_utils.AdaptiveLRScheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.open_grad.html">quante.torch_utils.open_grad</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.close_grad.html">quante.torch_utils.close_grad</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.to_numpy_array.html">quante.torch_utils.to_numpy_array</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.convert_to_torch.html">quante.torch_utils.convert_to_torch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.clone_list.html">quante.torch_utils.clone_list</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.save_h5.html">quante.torch_utils.save_h5</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.load_h5.html">quante.torch_utils.load_h5</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">张量网络工具</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.MPS.html">quante.torch_utils.MPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.MPO.html">quante.torch_utils.MPO</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.mpo_eye.html">quante.torch_utils.mpo_eye</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.full_contract.html">quante.torch_utils.full_contract</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.tn_inner.html">quante.torch_utils.tn_inner</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.tn_norm.html">quante.torch_utils.tn_norm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.canonicalize.html">quante.torch_utils.canonicalize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.orthogonalize.html">quante.torch_utils.orthogonalize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.add.html">quante.torch_utils.add</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.canonicalize_infinite.html">quante.torch_utils.canonicalize_infinite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/quante.torch_utils.periodic_trace.html">quante.torch_utils.periodic_trace</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quantity.html">quantity (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.quantity</span></code>)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="移动版导航菜单" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Quante</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="页面导航">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">torch_utils (<code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code>)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/funcsAPI/torch_utils.rst.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="torch-utils-quante-torch-utils">
+<span id="module-quante.torch_utils"></span><h1>torch_utils (<a class="reference internal" href="#module-quante.torch_utils" title="quante.torch_utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">quante.torch_utils</span></code></a>)<a class="headerlink" href="#torch-utils-quante-torch-utils" title="Link to this heading"></a></h1>
+<p><cite>torch</cite> 工具包，包含了一些常用的 <cite>torch</cite> 工具函数。</p>
+<p>包括 <cite>linalg</cite> 模块，包含了一些线性代数相关的函数；<cite>tensor_network</cite> 模块，包含了张量网络相关的函数。</p>
+<section id="id1">
+<h2>分解操作<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.truncate.html#quante.torch_utils.linalg.truncate" title="quante.torch_utils.linalg.truncate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">linalg.truncate</span></code></a>(S[, chi_max, svd_min, trunc_cut])</p></td>
+<td><p>S 需要是降序排列，且全都是正数！</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.svd.html#quante.torch_utils.linalg.svd" title="quante.torch_utils.linalg.svd"><code class="xref py py-obj docutils literal notranslate"><span class="pre">linalg.svd</span></code></a>(tsr, *[, lr_indx, trunc_para, ...])</p></td>
+<td><p>张量 svd 分解，返回 A, S, B, error</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.qr.html#quante.torch_utils.linalg.qr" title="quante.torch_utils.linalg.qr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">linalg.qr</span></code></a>(tsr, *[, lr_indx])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.rq.html#quante.torch_utils.linalg.rq" title="quante.torch_utils.linalg.rq"><code class="xref py py-obj docutils literal notranslate"><span class="pre">linalg.rq</span></code></a>(tsr, *[, lr_indx])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.eigh.html#quante.torch_utils.linalg.eigh" title="quante.torch_utils.linalg.eigh"><code class="xref py py-obj docutils literal notranslate"><span class="pre">linalg.eigh</span></code></a>(tsr, *[, lr_indx, direction, ...])</p></td>
+<td><p>注意！！ 虽然返回的是 U, S, V，但 U, V 不一定是半幺的！！ 如果 direction=&quot;right&quot;，那么 U 是半幺的，V 不是；如果 direction=&quot;left&quot;，那么 V 是半幺的，U 不是。 但总之 tsr = U &#64; V</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.tt_decompose.html#quante.torch_utils.linalg.tt_decompose" title="quante.torch_utils.linalg.tt_decompose"><code class="xref py py-obj docutils literal notranslate"><span class="pre">linalg.tt_decompose</span></code></a>(tsr, phys_dim[, trunc_para])</p></td>
+<td><p>执行 tt 分解，是 full_contract 的逆过程</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id2">
+<h2>指数作用<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.expm_multiply.html#quante.torch_utils.linalg.expm_multiply" title="quante.torch_utils.linalg.expm_multiply"><code class="xref py py-obj docutils literal notranslate"><span class="pre">linalg.expm_multiply</span></code></a>(A, B[, scale, start, ...])</p></td>
+<td><p>计算 <cite>exp(matvec).dot(psi0)</cite> 或 <cite>exp(- 1j * matvec).dot(psi0)</cite></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.linalg.evolve_engine.html#quante.torch_utils.linalg.evolve_engine" title="quante.torch_utils.linalg.evolve_engine"><code class="xref py py-obj docutils literal notranslate"><span class="pre">linalg.evolve_engine</span></code></a>(A[, scale, n0, herm])</p></td>
+<td><p>用 evolve engine 的形式，用法如下：</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id3">
+<h2>稀疏工具<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.sparse.to_csr.html#quante.torch_utils.sparse.to_csr" title="quante.torch_utils.sparse.to_csr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sparse.to_csr</span></code></a>(tsr, *[, device, dtype])</p></td>
+<td><p>将一个 scipy csr 格式转换为 torch csr 格式</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.sparse.eye.html#quante.torch_utils.sparse.eye" title="quante.torch_utils.sparse.eye"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sparse.eye</span></code></a>(n, *[, device, dtype])</p></td>
+<td><p>生成一个单位矩阵</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.sparse.trace.html#quante.torch_utils.sparse.trace" title="quante.torch_utils.sparse.trace"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sparse.trace</span></code></a>(tsr)</p></td>
+<td><p>计算一个 csr 格式的矩阵的迹</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.sparse.norm.html#quante.torch_utils.sparse.norm" title="quante.torch_utils.sparse.norm"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sparse.norm</span></code></a>(tsr[, ord])</p></td>
+<td><p>Norm of a sparse matrix</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id4">
+<h2>梯度工具<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.AdaptiveLRScheduler.html#quante.torch_utils.AdaptiveLRScheduler" title="quante.torch_utils.AdaptiveLRScheduler"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdaptiveLRScheduler</span></code></a>(optimizer[, factor, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.open_grad.html#quante.torch_utils.open_grad" title="quante.torch_utils.open_grad"><code class="xref py py-obj docutils literal notranslate"><span class="pre">open_grad</span></code></a>(tensors)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.close_grad.html#quante.torch_utils.close_grad" title="quante.torch_utils.close_grad"><code class="xref py py-obj docutils literal notranslate"><span class="pre">close_grad</span></code></a>(tensors)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.to_numpy_array.html#quante.torch_utils.to_numpy_array" title="quante.torch_utils.to_numpy_array"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_numpy_array</span></code></a>(input_var)</p></td>
+<td><p>将输入变量转换为 NumPy 数组。</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.convert_to_torch.html#quante.torch_utils.convert_to_torch" title="quante.torch_utils.convert_to_torch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">convert_to_torch</span></code></a>(list_of_arrays[, dtype, device])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.clone_list.html#quante.torch_utils.clone_list" title="quante.torch_utils.clone_list"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clone_list</span></code></a>(ini_tensor)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.save_h5.html#quante.torch_utils.save_h5" title="quante.torch_utils.save_h5"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_h5</span></code></a>(filename, *data[, group, mode])</p></td>
+<td><p>简化的 save_hdf5</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.load_h5.html#quante.torch_utils.load_h5" title="quante.torch_utils.load_h5"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_h5</span></code></a>(filename, *datanames[, group])</p></td>
+<td><p>简化的 load_hdf5</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id5">
+<h2>张量网络工具<a class="headerlink" href="#id5" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.MPS.html#quante.torch_utils.MPS" title="quante.torch_utils.MPS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MPS</span></code></a>(Ws[, Ss, llim, rlim, lognm, L])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.MPO.html#quante.torch_utils.MPO" title="quante.torch_utils.MPO"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MPO</span></code></a>(Ws[, Ss, llim, rlim, lognm, L])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.mpo_eye.html#quante.torch_utils.mpo_eye" title="quante.torch_utils.mpo_eye"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpo_eye</span></code></a>(L, local_dims[, dtype, device])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.full_contract.html#quante.torch_utils.full_contract" title="quante.torch_utils.full_contract"><code class="xref py py-obj docutils literal notranslate"><span class="pre">full_contract</span></code></a>(Ws)</p></td>
+<td><p>将 MPS(MPO) 完全收缩成为 向量(矩阵) 根据传入列表中每个张量的结束判断为 MPS(3阶张量) 还是 MPO(4阶张量)</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.tn_inner.html#quante.torch_utils.tn_inner" title="quante.torch_utils.tn_inner"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tn_inner</span></code></a>(Ws1, Ws2[, logscale, conj_at_1, pbc])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.tn_norm.html#quante.torch_utils.tn_norm" title="quante.torch_utils.tn_norm"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tn_norm</span></code></a>(Ws[, lognorm, pbc])</p></td>
+<td><p>计算 MPS(MPO) 的模（MPO 的模定义为： tr(M†M)）</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.canonicalize.html#quante.torch_utils.canonicalize" title="quante.torch_utils.canonicalize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">canonicalize</span></code></a>(Ws[, trunc_para, qrnormalize])</p></td>
+<td><p>将任意的 MPS/MPO Ws 变为标准正交的 MPS/MPO (Bs, Ss)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.orthogonalize.html#quante.torch_utils.orthogonalize" title="quante.torch_utils.orthogonalize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">orthogonalize</span></code></a>(Ws, j)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.add.html#quante.torch_utils.add" title="quante.torch_utils.add"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add</span></code></a>(Wss[, alphas])</p></td>
+<td><p>计算：α W1s + β W2s，默认 α = β = 1.0</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.canonicalize_infinite.html#quante.torch_utils.canonicalize_infinite" title="quante.torch_utils.canonicalize_infinite"><code class="xref py py-obj docutils literal notranslate"><span class="pre">canonicalize_infinite</span></code></a>(tsr)</p></td>
+<td><p>tsr 是一个三阶张量，将它变换成正则形式</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/quante.torch_utils.periodic_trace.html#quante.torch_utils.periodic_trace" title="quante.torch_utils.periodic_trace"><code class="xref py py-obj docutils literal notranslate"><span class="pre">periodic_trace</span></code></a>(tsr)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="页脚">
+        <a href="tensor.html" class="btn btn-neutral float-left" title="tensor (quante.tensor)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> 上一页</a>
+        <a href="_autosummary/quante.torch_utils.linalg.truncate.html" class="btn btn-neutral float-right" title="quante.torch_utils.linalg.truncate" accesskey="n" rel="next">下一页 <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2024, Hao Zhu, Dingzu Wang。</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用的 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a> 开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
