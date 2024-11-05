@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 20:45:58
+# @Last Modified time: 2024-11-04 17:49:40
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -26,7 +26,8 @@ __all__ = [
     "orthogonalize",
     "add",
     "canonicalize_infinite",
-    "periodic_trace"
+    "periodic_trace",
+    "batched_canonicalize"
 ]
 
 if tc.cuda.is_available():
@@ -1694,3 +1695,101 @@ def periodic_trace(tsr:list[tc.Tensor]):
     
     return add(psis)
 
+def _batched_left2right_QR_step(W1:tc.Tensor, W2:tc.Tensor)->tuple[tc.Tensor,tc.Tensor]:
+    """
+    .. code-block:: text
+
+        .
+                |       |                         |       |
+               (b)     (d)                       (b)     (d)
+                |       |           QR            |       |
+         --(a)--⬜--(c)--⬜--(e)--   ---->   --(a)--▷--(f)--⬜--(e)-- 
+    
+    MPS MPO 都可以
+    """
+    batch_size, *shp, c = W1.shape
+    W1p, S = tc.linalg.qr(W1.reshape(batch_size, -1, c))
+    # tc.cuda.synchronize()
+    batch_size, c, *e = W2.shape
+    W2p = tc.bmm(S, W2.reshape(batch_size, c, -1))
+    # tc.cuda.synchronize()
+    return W1p.reshape(batch_size, *shp, -1), W2p.reshape(batch_size, -1, *e)
+
+def _batched_left2right_QR(Ws, L, qrnormalize=False)->tuple[tc.Tensor,tc.Tensor]:
+    W1 = Ws[0]
+    batch_size = W1.shape[0]
+    As, lognm = [None] * L, tc.zeros(batch_size, dtype=tc.float64, device=Ws[0].device)
+    for i in range(L-1):
+        As[i], W1 = _batched_left2right_QR_step(W1, Ws[i+1])
+        if qrnormalize:
+            nm = tc.norm(W1.reshape(batch_size,-1), dim=1)
+            W1 = W1 / nm.reshape(-1,*([1]*(W1.ndim-1)))
+            lognm = tc.log(nm.reshape(-1)) + lognm
+    As[-1] = W1
+    if not qrnormalize:
+        nm = tc.norm(As[-1].reshape(batch_size,-1), dim=1)
+        As[-1] = As[-1] / nm.reshape(-1,*([1]*(As[-1].ndim-1)))
+        lognm = tc.log(nm.reshape(-1))
+    return As, lognm
+
+
+def _batched_right2left_SVD(As, L, trunc_para=(None,None,None)):
+    """
+    .. code-block:: text
+    
+        .                       |                        |
+                               (b)                      (b)
+                                |          SVD           |
+         --(a)--▷--(d)--◇--(e)--⨞--(c)--  <----   --(a)--⬜--(c)--
+                U       S       B                        W
+    """
+    cutdim0, svd_min, trunc_cut = trunc_para
+    Ss, Bs = [None] * (L + 1), [None] * L
+    trunc_err_sum = TruncationError(0.0, 1.0)
+    for i in range(L - 1, 0, -1):
+        batch_size, a, *shp = As[i].shape
+        U, S, B = tc.linalg.svd(As[i].reshape(batch_size, a, -1), full_matrices=False)
+        
+        cutdim = S.shape[1]
+        if svd_min is not None:
+            cutdim1 = tc.max(tc.sum(S > svd_min, dim=1))
+            cutdim = min(cutdim, cutdim1)
+        if trunc_cut is not None:
+            normS = S / tc.norm(S, dim=1, keepdim=True)
+            cutdim2 = tc.max(tc.sum(tc.flip((tc.cumsum(tc.flip(normS**2, [1]), 1)), [1]) > trunc_cut**2, 1))    
+            cutdim = min(cutdim, cutdim2)
+        if cutdim0 is not None:
+            cutdim = min(cutdim, cutdim0)
+        
+        eps = tc.max(tc.sum(S[:, cutdim:]**2, dim=1))
+        ov = 1. - 2. * eps
+        trunc_err_sum += TruncationError(eps, ov)
+        
+        U = U[:,:,:cutdim]
+        S = S[:,:cutdim]
+        
+        Ss[i] = S
+        Bs[i] = B[:,:cutdim,:].reshape(batch_size, cutdim, *shp)
+        U = U * S.unsqueeze(1)
+        
+        batch_size, *shp, a = As[i-1].shape
+        As[i - 1] = tc.bmm(As[i - 1].reshape(batch_size, -1, a), U).reshape(batch_size, *shp, -1)
+        
+    Bs[0] = As[0]
+    return Bs, Ss, trunc_err_sum
+
+
+
+def batched_canonicalize(
+    Ws: list[tc.Tensor], trunc_para=(None,None,None), qrnormalize=False
+):
+    """
+    将任意的 MPS/MPO Ws 变为标准正交的 MPS/MPO (Bs, Ss)
+    """
+    assert Ws[0].shape[1] == Ws[-1].shape[-1] == 1, "正则形式只对开边界mps有定义！"
+    L = len(Ws)
+    As, lognm = _batched_left2right_QR(Ws, L, qrnormalize=qrnormalize)
+    Bs, Ss, trunc_err = _batched_right2left_SVD(As, L, trunc_para=trunc_para)
+    batch_size = Ws[0].shape[0]
+    Ss[0] = Ss[-1] = tc.ones(batch_size, dtype=Ss[1].dtype, device=Ss[1].device)
+    return Bs, Ss, lognm, trunc_err
