@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 20:45:44
+# @Last Modified time: 2024-11-09 19:34:34
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -12,7 +12,7 @@
 #     - 所有改变类本身的方法都会加上下划线，如 `orthogonalize_`，`canonicalize_`，`apply_gate_2b_` 等
 
 import torch as tc
-from typing import Union, TypeVar
+from typing import Union, TypeVar, Optional
 
 from ..linalg.decomp import eigh, qr, rq, svd, truncate
 
@@ -41,7 +41,7 @@ __all__ = [
 T = TypeVar('T')
 
 class TensorTrain:
-    def __init__(self, Ws: list[tc.Tensor], Ss: list[tc.Tensor] = None, llim: int = None, rlim: int = None, lognm: float = None, L=None) -> None:
+    def __init__(self, Ws: list[tc.Tensor], Ss: Optional[list[tc.Tensor]] = None, llim: Optional[int] = None, rlim: Optional[int] = None, lognm: Optional[float] = None, L:Optional[int] = None) -> None:
         """
         .. code-block:: text
             
@@ -123,13 +123,15 @@ class TensorTrain:
         
         #!!! 因此改变 data 的值会影响原始张量
         
-        示例:
+        Examples
         --------
         >>> 𝜓1 = tn.MPS.random(4, linkdims=3, dtype=tc.float64)
         >>> print(𝜓1.data[0][0,1,0])
         >>> 𝜓2 = 2 * 𝜓1
         >>> 𝜓2.data[0][0,1,0] = 1.
         >>> print(𝜓1.data[0][0,1,0])
+        tensor(1.0229, dtype=torch.float64)
+        tensor(1., dtype=torch.float64)
         """
         try:
             lognmber = tc.log(number) + self.lognm
@@ -309,15 +311,16 @@ class TensorTrain:
         
         前从左到右 qr，再从右到左 svd
         
-        trunc_para 是一个包含三个数的元组，分别表示:
+        Parameters
+        ----------
+        trunc_para: tuple[int,float,float], optional
+            截断参数，默认 (None,None,None) 表示不截断。
+            第一个参数 chi_max 表示最大的奇异值数目，第二个参数 svd_min 表示最小的奇异值，第三个参数 trunc_cut 表示截断阈值。
+            例如 trunc_para=(10, 1E-10, 1E-12) 表示截断前 10 个奇异值，最小的奇异值大于 1E-10，截断阈值大于 1E-12。
+            截断参数仅对 svd 有效。
+        qrnormalize: bool, optional
+            是否对 qr 得到的矩阵进行归一化，默认 False。
         
-        :chi_max: int, 截断的最大值
-        
-        :svd_min: float, SVD 的最小值
-        
-        :trunc_cut: float, 截断的阈值
-    
-        因此 svd 过程中 Ss 的模自动是 1.0
         """
         self.data, self.Ss, lognm, trunc_err = tf.canonicalize(self.data, trunc_para, qrnormalize)
         self.llim = self.rlim = None
@@ -338,25 +341,38 @@ class TensorTrain:
         gate_range=2,
         unitary_gate=False,
     ):
-        """
-        - pos 指两体门左侧的位置
-                               
-        - dir 指的是作用后得到
+        """作用单体或两体门.
         
-            .. code-block:: text
-            
-                .  |   |                   |   |
-                ---▷---◻--- (right) 还是 ---◻---⨞---- (left)
+        Parameters
+        ----------
+        pos: int
+            作用在第 pos 格点上的门
+        gate: Union[tc.Tensor, tuple[tc.Tensor, str]]
+            门的矩阵表示，或者是 (矩阵, 方向) 的元组
+        direction: str, optional
+            作用方向，默认 None 表示作用在左边
+        svd_alg: str, optional
+            用于 SVD 的算法，默认 "svd"，可选 "eig"
+        trunc_para: tuple[int, float, float], optional
+            截断参数，默认 (None,None,None) 表示不截断。
+            第一个参数 chi_max 表示最大的奇异值数目，第二个参数 svd_min 表示最小的奇异值，第三个参数 trunc_cut 表示截断阈值。
+            例如 trunc_para=(10, 1E-10, 1E-12) 表示截断前 10 个奇异值，最小的奇异值大于 1E-10，截断阈值大于 1E-12。
+            截断参数仅对 svd 有效。
+        updateS: bool, optional
+            是否保存过程的中的奇异谱，默认 False
+        normalize: bool, optional
+            是否对矩阵进行归一化，默认 False
+        gate_range: int, optional
+            门的作用范围，默认 2 表示作用在两格点上
+        unitary_gate: bool, optional
+            门是否为幺正，默认 False
         
-        - updateS 表示是否保存过程的中的奇异谱
+        Returns
+        -------
+        TruncationError
         
-        - trunc_para 是一个包含三个数的元组，分别表示:
-        
-            - chi_max: int, 截断的最大值
-            
-            - svd_min: float, SVD 的最小值
-            
-            - trunc_cut: float, 截断的阈值
+        Note
+        ----
         
         .. code-block:: text
         
@@ -369,7 +385,7 @@ class TensorTrain:
                    |         |                      |         |            
             --(a)--⨞---(d)---⨞--(g)--  -->   --(a)--⨞---(d)---⨞--(g)-- 
         
-        示例:
+        Examples
         --------
         >>> gates = ham.trotter_gates(L, tau=tau, order='2', evolve_type='time', pauli=False)
         >>> U_tau = MPO.eye(L)
@@ -658,19 +674,32 @@ class TensorTrain:
                 updateS = True,
                 normalize = False,
             ) -> T:
-        """
-        density matrix method
+        r"""density matrix method
         
-        - trunc_para 是一个包含三个数的元组，分别表示:
+        Parameters
+        ----------
+        Ws_mpo: MPO
+            要作用到 self 的 MPO
+        trunc_para : tuple[int, float, float], optional
+            截断参数，包含以下元素：
+            - `chi_max` (int): 截断的最大值。
+            - `svd_min` (float): SVD 的最小值。
+            - `trunc_cut` (float): 截断的阈值。
+            默认为 `(None, None, None)`。
+        dtype: torch.dtype
+            计算的精度
+        updateS: bool
+            是否更新奇异值
+        normalize: bool
+            是否归一化
         
-            - chi_max: int, 截断的最大值
+        Returns
+        -------
+        TruncationError
             
-            - svd_min: float, SVD 的最小值
-            
-            - trunc_cut: float, 截断的阈值
-            
-        Notes:
-        --------------------
+        Notes
+        -----
+        
         .. code-block:: text
         
             收缩如下网络：
@@ -957,7 +986,7 @@ class MPS(TensorTrain):
         
         如果不是局域的测量，使用单体门作用后 inner 的方法计算
         
-        示例:
+        Examples
         --------
         >>> vec.measure("z", i)
         >>> vec.measure("zz", [i,i+1])
@@ -1222,29 +1251,43 @@ class MPO(TensorTrain):
             nsite=2,  # 几格点 dmrg, 1 或 2
             outputlevel=1, # 输出等级，0 表示不输出中间信息
             ):
-        r"""
-        DMRG 方法求解 MPO 的基态
+        r"""DMRG 方法求解 MPO 的基态
         
-        参数的含义为
-        ```
-        psi0:MPS, # 初始态
-        nsweep:int, # 扫多少次
-        chi_max:list[int],  # MPS 中最大的 bond 维度
-        cutoff:list[float],  # MPS 中奇异谱最小值
-        backend:str='default',  # 计算有效哈密顿量基态的方法，"default", "larpack", "lanczos"
-        svd_alg:str='svd',  # update MPS 中张量的方法
-        nsite=2,  # 几格点 dmrg, 1 或 2
-        outputlevel=1, # 输出等级，0 表示不输出中间信息
-        ```
+        Parameters
+        ----------
+        psi0 : MPS
+            初始态
+        nsweep : int
+            扫多少次
+        chi_max : list[int]
+            MPS 中最大的 bond 维度
+        cutoff : list[float]
+            MPS 中奇异谱最小值
+        backend : str, optional
+            计算有效哈密顿量基态的方法，"default", "larpack", "lanczos", by default 'default'
+        svd_alg : str, optional
+            update MPS 中张量的方法, by default'svd'
+        nsite : int, optional
+            几格点 dmrg, 1 或 2, by default 2
+        outputlevel : int, optional
+            输出等级，0 表示不输出中间信息, by default 1
         
-        注：
+        Returns
+        -------
+        energy : float
+            基态能量
+        psi : MPS
+            基态
+        
+        Notes
+        -----
         - `svd` 的速度会比 `eig` 快，但是 `eig` 会更稳定
         - `chi_max` 要从小增加，否则会出现 nan
         
         todo: eig pertube mixer 
         todo: dmrg 求第一激发态
         
-        示例:
+        Examples
         --------
         >>> from quante.torch_utils import tn
         >>> L = 100
@@ -1340,31 +1383,48 @@ class MPO(TensorTrain):
             order=2,  # 时间演化的阶数
             outputlevel=1,  # 输出等级，0 表示不输出中间信息
             ):
-        r"""
-        利用 tdvp 方法求解时间演化
+        r"""利用 tdvp 方法求解时间演化
         
-        https://arxiv.org/abs/1408.5056
+        Parameters
+        ----------
+        init : MPS
+            初始态
+        t : Number
+            总时间
+        time_step : Number
+            时间步长
+        chi_max : list[int]
+            MPS 中最大的 bond 维度
+        trunc_cut : list[float]
+            MPS 中奇异谱最小值
+        backend : str, optional
+            计算有效哈密顿量基态的方法，"default", "expm_multiply", "lanczos", by default 'default'
+        svd_alg : str, optional
+            update MPS 中张量的方法, by default'svd'
+        normalize : bool, optional
+            是否归一化, by default True
+        reverse_step : bool, optional
+            时间演化必须是 True，虚时演化 False 回到 DMRG, by default True
+        time_start : float, optional
+            起始时间, by default 0.0
+        nsite : int, optional
+            nsite = 1 不改变 bond dimension, nsite = 2 可以改变 bond dimension, by default 2
+        order : int, optional
+            时间演化的阶数, by default 2
+        outputlevel : int, optional
+            输出等级，0 表示不输出中间信息, by default 1
         
-        参数的含义如下：
+        Returns
+        -------
+        phis : list[tuple[float, MPS]]
+            时间演化的态
         
-        .. code-block:: python
+        Notes
+        -----
+        - `svd` 的速度会比 `eig` 快，但是 `eig` 会更稳定
+        - `chi_max` 要从小增加，否则会出现 nan
         
-            init: qtc.tn.MPS,  # 初始态
-            t: Number,  # 总时间
-            time_step: Number,  # 时间步长
-            chi_max: list[int],  # MPS 中最大的 bond 维度
-            trunc_cut: list[float],  # MPS 中奇异谱最小值
-            *,
-            backend='default',  # 计算有效哈密顿量基态的方法，"default", "expm_multiply", "lanczos"
-            svd_alg='svd',  #  update MPS 中张量的方法
-            normalize=True,  # 是否归一化
-            reverse_step=True, # 时间演化必须是 True，虚时演化 False 回到 DMRG
-            time_start=0.0, # 起始时间
-            nsite=2,  # nsite = 1 不改变 bond dimension, nsite = 2 可以改变 bond dimension
-            order=2,  # 时间演化的阶数
-            outputlevel=1,  # 输出等级，0 表示不输出中间信息
-        
-        示例:
+        Examples
         --------
         >>> L = 100
         >>> ham = qt.generate.operas.heisenberg_operator(L, j=(1, 1, 1))
@@ -1380,7 +1440,10 @@ class MPO(TensorTrain):
         >>>     Ss.append(phi.entanglement_entropy(bonds=[L//2])[0].item())
         >>> print(Ss)
         [0.017425858509214333, 0.05540147407158314, 0.10518787487322075, 0.16171880185660767, 0.22146216557201934, 0.2819921651885448, 0.34180493542491497, 0.40016281239278695, 0.4569178458476886, 0.5123157152579267]
-                
+        
+        References
+        ----------
+        https://arxiv.org/abs/1408.5056
         """
         # 参数检查
         nsweeps = int(np.real(t/time_step))

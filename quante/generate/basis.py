@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 20:42:00
+# @Last Modified time: 2024-11-09 17:36:19
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -39,42 +39,36 @@ def _check_spin_number(value:Union[str, float, int]) -> Union[float, int]:
 from .symmetry.basis_class import SpinBasis
 
 def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, kblock: Optional[int] = None, pblock: Optional[int] = None, zblock: Optional[int] = None, pzblock: Optional[int] = None,jmblock: Optional[Union[int, tuple[int,int]]] = None) -> SpinBasis:
-    """
-    参数
-    -----------
+    """计算自旋基矢
+    
+    Parameters
+    ----------
     L: int
         链的长度/站点数量，需要小于 63。
-
     Nup: int, 可选
         总磁化强度，:math:`\\sum_j S^z_j`，投影。
-        
     S: {str, int}, 可选
         局部自旋自由度的大小。可以是任何（半）整数：
         "1/2","1","3/2",...
-        
     kblock: int, 可选
         指定动量块。可以从 0 到 L-1 的整数。
-        
     pblock: int, 可选，可取 [-1, 1]
         指定奇偶块。此对称性变换的物理表现是关于链的中点反射。
-        
     zblock: int, 可选，可取 [-1, 1]
         指定自旋反转对称性块。此对称性变换的物理表现是翻转自旋-z 分量的符号。
-        
     pzblock: int, 可选，可取 [-1, 1]
         指定自旋反转和奇偶块。此对称性变换的物理表现是翻转自旋-z 分量的符号和关于链的中点反射。
-        
     jmblock: {int, tuple[int, int]}, 可选
         指定 SU(2) 对称性块。第一个参数是 J，第二个参数是 m。J 取值从 L/2 到 1/2，m 取值从 J 到 -J。
         如果只传入一个参数，则默认 m = J。
-        
-    示例:
+
+    Examples
     --------
     >>> basis = qt.generate.basis.spin_basis(L=10, Nup=5, kblock=1)
     >>> print(basis.Ns)
     
-    注：
-    ---------
+    Notes
+    -----
     目前支持的组合有：
     - spin-1/2
     
@@ -123,8 +117,8 @@ def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, k
     
     - 打印维度：`print_dims`，打印不同子空间的维数
     
-    新增对称性类需要做的事情：
-    ------------------------------
+    todos
+    -----------------------
     如果需要增加新的对称性，或者新的组合，需要：
     
     - 在 ./symmetry 中增加新的对称性类文件夹，文件夹中需要包含 `general_hamiltonian`, `xxx_basis.py` 和 `xxx_basis_class.py` 三个文件，如果有可以简化生成基的模型，也可以增加单独的文件，如 `heisenberg.py`。
@@ -180,7 +174,7 @@ def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, k
         
         
         # 查找对应的处理函数
-        _process_func = block_combinations.get(blocks_tuple, None)
+        _process_func = block_combinations.get(blocks_tuple, None) # type: ignore
 
         if _process_func is not None:
             return _process_func(L, {name: value for name, value in zip(block_name_list, block_value_list)})
@@ -197,7 +191,7 @@ def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, k
         
         
         # 查找对应的处理函数
-        _process_func = block_combinations.get(blocks_tuple, None)
+        _process_func = block_combinations.get(blocks_tuple, None) # type: ignore
 
         if _process_func is not None:
             return _process_func(L, S, {name: value for name, value in zip(block_name_list, block_value_list)})
@@ -272,7 +266,7 @@ def _process_spin_high_Nup_block(L:int, S:Union[int, float], block_dic:dict) -> 
     from .symmetry.spin_high.Nup.defclass import SpinHighBasisNup
     return SpinHighBasisNup(L, S, block_dic['Nup'])
 
-def show_spin_basis(vector:_np.ndarray)->tuple[list[_np.ndarray], list[str]]:
+def show_spin_basis(vector:_np.ndarray) -> None:
     """向量转换为spin-1/2直积态求和形式 
     
     0 -> ↑ = (1, 0), 1 -> ↓ = (0, 1)

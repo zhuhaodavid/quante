@@ -61,7 +61,7 @@ class SpinHalfBasisSU2(SpinHalfBasis):
         
         如下代码可以验证维数：
         
-        示例:
+        Examples
         --------
         >>> L = 10
         >>> dim = 0

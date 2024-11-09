@@ -16,7 +16,7 @@ def heisenberg_matrix_element(L:int, M:int, k:int, p:int, jxy:float, jz:float, s
     r"""
     \sum_{i=1}^N jxy * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1}) + jz * s^z_i s^z_{i+1}
 
-    Example:
+    Examples
     >>> L = 6
     >>> Nup = 3
     >>> k = 1

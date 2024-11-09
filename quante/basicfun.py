@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-04 16:22:37
+# @Last Modified time: 2024-11-09 17:55:18
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -24,7 +24,7 @@ from dataclasses import is_dataclass, asdict
 from itertools import chain
 from collections import deque
 from types import FunctionType
-from typing import Callable, Any, Dict, Union, Optional
+from typing import Callable, Any, Dict, Union
 
 
 __all__ = ["test_time", "test_memory"]  # 测试工具
@@ -35,9 +35,9 @@ __all__ += ["save_hdf5", "load_hdf5", "_save_hdf5", "_load_hdf5", "view_hdf5"]  
 
 __all__ += ["set_logging", "println"]  # 日志工具
 
-__all__ += ["idataclass", "NamedData"]  # 字典格式
+__all__ += ["idataclass", "todict"]  # 字典格式
 
-__all__ += ["set_matplotlib"]  # 画图预设
+__all__ += ["plt_style_use"]  # 画图预设
 
 
 import os
@@ -49,19 +49,27 @@ _np.set_printoptions(linewidth=1000000, suppress=True) # 为了让 print 出的�
 # =================
 #     测试工具
 # =================
-def test_time(func: Callable, *args, inner_func_list:list[Callable] = [], timer_unit: float =1e-7, save: bool=True, **kwargs) -> None:
-    """
-    测试函数每一行代码的执行时间。
+def test_time(func: Callable, *args, inner_func_list:list[Callable] = [], timer_unit: float =1e-7, save: bool=False, **kwargs) -> None:
+    """记录每行代码的执行时间.
     
-    另一个更高效的方法是，在文件最开始添加 os.environ["LINE_PROFILE"] = "1"
+    记录 `funcs` 以及 `inner_func_list` 中每行代码的执行时间，并打印统计信息。
     
-    然后在要测试的函数加上装饰器
-    
-    >>> from line_profiler import profile
-    
-    即可得到每一行代码的执行时间
-    
-    示例:
+    Parameters
+    ----------
+    func : Callable
+        需要测试的函数。
+    args : Any
+        传递给目标函数的参数。
+    inner_func_list : list[Callable], optional
+        要测试的内部函数列表，默认为空。
+    timer_unit : float, optional
+        时间单位，默认为 1e-7 秒（100 纳秒）。
+    save : bool, optional
+        是否保存日志文件，默认为 True。
+    **kwargs : Any
+        传递给目标函数的关键字参数。
+
+    Examples
     --------
     >>> import numpy as np
     >>> from quante.basicfun import test_time
@@ -73,15 +81,16 @@ def test_time(func: Callable, *args, inner_func_list:list[Callable] = [], timer_
     >>>         val, vec = np.linalg.eig(mat)
     >>>     return val
     >>> test_time(my_function, 100, inner_func_list=[func2], timer_unit=0.01)
-    
-    参数:
-    - func: 需要分析的目标函数。
-    - args: 传递给目标函数的参数。
-    - inner_func_list: 要分析的内部函数列表，默认为空。
-    - timer_unit: 时间单位，默认为 1e-7 秒（100 纳秒）。
 
-    返回:
-    - None: 该函数不返回值，仅打印每行代码的执行时间。
+    Notes
+    -----
+    另一个方法是：在文件最开始添加 os.environ["LINE_PROFILE"] = "1"，然后在要测试的函数加上装饰器，如
+    
+    >>> from line_profiler import profile
+    >>> @profile
+    >>> def ...:
+    
+    即可得到每一行代码的执行时间
     """
     from line_profiler import LineProfiler
     lp = LineProfiler()  # 初始化行分析器
@@ -100,22 +109,21 @@ def test_time(func: Callable, *args, inner_func_list:list[Callable] = [], timer_
         lp.print_stats(output_unit=timer_unit)
     
 
-def test_memory(obj: Any):
-    """ 
-    打印对象的占用空间的大小
+def test_memory(obj: Any) -> None:
+    """ 打印对象的占用空间的大小.
     
-    示例:
+    Parameters
+    ----------
+    obj : Any
+        需要测量内存占用的对象。
+    
+    Examples
     --------
     >>> import numpy as np
     >>> from quante.basicfun import test_memory
     >>> a = [np.random.randn(10,10) for i in range(100)]
     >>> test_memory(a)
-    
-    参数:
-    - obj: 需要测量内存占用的对象。
-    
-    返回:
-    - None: 该函数不返回值，仅打印对象的占用空间大小。
+    79.02 KB
     """
     dict_handler = lambda d: chain.from_iterable(d.items())
     all_handlers = {tuple: iter,
@@ -168,25 +176,27 @@ def _eachsize(obj: Any) -> int:
 # ===================================
 
 def clear(name: Any) -> None:
-    """只有当非常在意内存的时候才需要使用这个函数
-    因为强制清除内存会降低性能"""
+    """只有当非常在意内存的时候才需要使用这个函数，因为强制清除内存会降低性能"""
     del name
     _gc.collect()
 
 
 def get_free_space(folder: str) -> float:
-    """
-    获取磁盘剩余空间。
+    """获取磁盘剩余空间。
+    
+    Parameters
+    ----------
+    folder : str
+        磁盘路径，例如 "D:\\"。
+    
+    Returns
+    -------
+    float
+        剩余空间，单位为 GB。
 
-    示例:
+    Examples
     --------
     >>> get_free_space("D:\\")
-    
-    参数:
-    - folder (str): 磁盘路径，例如 "D:\\"。
-
-    返回:
-    - float: 剩余空间，单位为 GB。
     """
     if _platform.system() == "Windows":
         free_bytes = _ctypes.c_ulonglong(0)
@@ -203,22 +213,27 @@ def get_free_space(folder: str) -> float:
     
 
 def create_folder(path1:str, path2: Union[None, str]=None) -> str:
-    """
-    创建一个文件夹（包括路径中指定的所有父文件夹）。
+    """创建一个文件夹（包括路径中指定的所有父文件夹）。
     
-    示例:
+    Parameters
+    ----------
+    path1 : str
+        主路径，可以是类似 "xxx/xxx/..." 的格式。
+    path2 : Union[None, str], optional
+        子路径，必须为 None 或者类似 "xxx" 的字符串。
+    
+    Returns
+    -------
+    str
+        创建的完整路径，以斜杠结尾。
+    
+    Examples
     --------
     >>> import quante as qt
     >>> path1 = "data/entanglement"
     >>> path2 = "XXZ"
-    >>> test_memory(a)
-
-    参数:
-    - path1 (str): 主路径，可以是类似 "xxx/xxx/..." 的格式。
-    - path2 (str, 可选): 子路径，必须为 None 或者类似 "xxx" 的字符串。
-
-    返回:
-    - str: 创建的完整路径，以斜杠结尾。
+    >>> create_folder(path1, path2)
+    '.../data/entanglement/XXZ/'
     """
     whole_path = _os.path.abspath(path1).replace("\\", "/") + "/"  # 规范化主路径
     whole_path = _os.path.join(whole_path, path2).replace("\\", "/") if path2 else whole_path  # 如果提供了子路径，则加入到主路径中
@@ -231,28 +246,35 @@ def create_folder(path1:str, path2: Union[None, str]=None) -> str:
 
 # -> save
 
-def save_hdf5(filename:str, group:str, data: Dict[str, Any], mode: str = "a") -> tuple[str, str]:
+def save_hdf5(filename:str, group:str, data: dict[str, Any], mode: str = "a") -> tuple[str, str]:
     """
     将数据保存到 HDF5 文件中。
     
     mode = 'a' 是指 append group，但
-    **便是 append 模式下，相同group 也会被覆盖，所以要注意。**
+    **便是 append 模式下，相同 group 也会被覆盖，所以要注意。**
     
-    示例:
+    Parameters
+    ----------
+    filename : str
+        HDF5 文件的路径。
+    group : str
+        HDF5 文件中的组路径，例如 "mygroup1/mygroup11"。
+    data : Dict[str, Any]
+        要保存的数据字典，其中键为数据集名称，值为数据。
+    mode : str, optional
+        文件打开模式。默认为 "a"（追加模式），可选为 "w"（覆盖模式）。
+    
+    Returns
+    -------
+    tuple[str, str]
+        文件名和组路径。
+    
+    Examples
     --------
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5
     >>> mat = np.random.randn(10,10)
     >>> save_hdf5("data.h5", "", {"mat": mat})
-    
-    参数:
-        filename (str): HDF5 文件的路径。
-        group (str): HDF5 文件中的组路径，例如 "mygroup1/mygroup11"。
-        data (Dict[str, Any]): 要保存的数据字典，其中键为数据集名称，值为数据。
-        mode (str, optional): 文件打开模式。默认为 "a"（追加模式），可选为 "w"（覆盖模式）。
-    
-    返回:
-        tuple[str, str]: 文件名和组路径。
     """
     assert filename.endswith(".h5"), "Filename must to be `.h5` file."
     group = "/" + group.strip("/")  # make group to be "/xxx/xxx/..."
@@ -266,13 +288,16 @@ def save_hdf5(filename:str, group:str, data: Dict[str, Any], mode: str = "a") ->
 
 
 def _save_main(h5group:_h5py.Group, data_dic: Dict[str, Any]) -> None:
-    """"
-    递归地将数据保存到 HDF5 组中。
-
-    参数:
-        h5group (_h5py.Group): 要保存数据的 HDF5 组。
-        data_dic (Dict[str, Any]): 数据字典，其中键为数据集名称，值为数据。
-        overwrite_dataset (bool): 是否覆盖已存在的数据集。
+    """"递归地将数据保存到 HDF5 组中。
+    
+    Parameters
+    ----------
+    h5group : _h5py.Group
+        要保存数据的 HDF5 组。
+    data_dic : Dict[str, Any]
+        数据字典，其中键为数据集名称，值为数据。
+    overwrite_dataset : bool
+        是否覆盖已存在的数据集。
     """
     for key, value in data_dic.items():
         keystr = str(key)
@@ -288,13 +313,13 @@ def _save_main(h5group:_h5py.Group, data_dic: Dict[str, Any]) -> None:
             save_func(h5group, keystr, value)
 
 def _default_save(h5group:_h5py.Group, key:str, value) -> None:
-    if is_dataclass(value):
+    if is_dataclass(value) and isinstance(value, tuple):
         # 如果是 dataclass 转为字符串储存
         data = _json.dumps(asdict(value), indent=4)
         dataset = h5group.create_dataset(key, data=data)
         # 记录dataset 的名字
         dataset.attrs["object_type"] = "dataclass"
-        dataset.attrs["dataset_name"] = value.__class__.__name__
+        dataset.attrs["dataset_name"] = type(value).__name__
     else:
         try:
             # 尝试直接保存
@@ -342,31 +367,39 @@ _SAVE_FUNC: Dict[str, Callable[[_h5py.Group, str, Any], None]] = {
 # -> load
 
 def load_hdf5(filename:str, group:str, dataname:str) -> Any:
-    """
-    从 HDF5 文件中加载数据。
+    """从 HDF5 文件中加载数据。
+    
+    Parameters
+    ----------
+    filename : str
+        HDF5 文件的路径。
+    group : str
+        HDF5 文件中的组路径，例如 "/mygroup"。
+    dataname : str
+        要加载的数据名称。
+        
+    Returns
+    -------
+    Any
+        加载的数据。
 
-    示例:
+    Examples
     --------
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5, load_hdf5
     >>> mat = np.random.randn(10,10)
     >>> save_hdf5("data.h5", "/", {"mat": mat})
     >>> mat = load_hdf5("data.h5", "/", "mat")
-    
-    参数:
-        filename (str): HDF5 文件的路径。
-        group (str): HDF5 文件中的组路径，例如 "/mygroup"。
-        dataname (str): 要加载的数据名称。
-
-    返回:
-        Any: 加载的数据。
     """
     if not os.path.exists(filename):
         raise FileNotFoundError(f"File {filename} not found.")
     with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
         group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
-        group_location: _h5py.Group = f[group]  # 获取组对象
-        data_location = group_location[dataname]
+        group_location = f[group]  # 获取组对象
+        if isinstance(group_location, _h5py.Group):
+            data_location = group_location[dataname]
+        else:
+            raise ValueError(f"Group {group} not found in {filename}.")
         data_type_str = data_location.attrs.get("object_type", None)
         if data_type_str is None and isinstance(data_location, _h5py.Group):
             data_type_str = 'dict'
@@ -393,28 +426,30 @@ def _load_dict(h5group: _h5py.Group) -> Dict[str, Any]:
 
 
 def _load_csr(data_location: _h5py.Group) -> _sp.sparse.csr_array:
-    indptr = data_location["indptr"][()]
-    indices = data_location["indices"][()]
-    data = data_location["data"][()]
-    shape = data_location.attrs["shape"]
+    indptr: np.ndarray = data_location["indptr"][()] # type: ignore
+    indices: np.ndarray = data_location["indices"][()] # type: ignore
+    data: np.ndarray = data_location["data"][()] # type: ignore
+    shape: tuple = data_location.attrs["shape"] # type: ignore
     return _sp.sparse.csr_array((data, indices, indptr), shape=shape, dtype=data.dtype)
 
 
 def _load_dataclass(data_location: _h5py.Group) -> Any:
     data_str = data_location[()]
+    data_name = data_location.attrs["dataset_name"]
+    assert isinstance(data_str, str) and isinstance(data_name, str)
     data_dict = _json.loads(data_str)
     from collections import namedtuple
-    Parameters = namedtuple(data_location.attrs["dataset_name"], data_dict.keys())
+    Parameters = namedtuple(data_name, data_dict.keys())
     return Parameters(**data_dict)
 
 
 def _load_serialized_bytes(data_location: _h5py.Group) -> Any:
     serialized_bytes = data_location[()]
     import pickle
-    return pickle.loads(serialized_bytes)
-    
+    return pickle.loads(serialized_bytes) # type: ignore
 
-_LOAD_FUNC: Dict[str, Callable[[_h5py.Group], Any]] = {
+
+_LOAD_FUNC: Dict[Union[str,None], Callable]  = {
     "dict": _load_dict,
     "csr": _load_csr,
     "dataclass": _load_dataclass,
@@ -423,26 +458,29 @@ _LOAD_FUNC: Dict[str, Callable[[_h5py.Group], Any]] = {
 
 
 def view_hdf5(filename:str, group:str, depth=1):
-    """
-    显示 HDF5 文件中的目录结构。
+    """显示 HDF5 文件中的目录结构.
+    
+    Parameters
+    ----------
+    filename : str
+        HDF5 文件的路径。
+    group : str
+        HDF5 文件中的组路径，例如 "/mygroup"。
+    depth : int
+        控制显示的层次深度，默认为 1。
+    
+    Returns
+    -------
+    None: 该函数无返回值，直接在控制台输出目录结构。
 
-    示例:
+    Examples
     --------
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5, load_hdf5
     >>> mat = np.random.randn(10,10)
     >>> save_hdf5("data.h5", "/", {"mat": mat})
     >>> view_hdf5("data.h5", "/")
-    
-    参数:
-        filename (str): HDF5 文件的路径。
-        group (str): 要查看的组路径，例如 "/mygroup"。
-        depth (int): 控制显示的层次深度，默认为 1。
-
-    返回:
-        None: 该函数无返回值，直接在控制台输出目录结构。
     """
-    
     def _print_attrs(name, obj):
         shift = name.count("/") * "    "
         namelist = name.split("/")
@@ -458,21 +496,40 @@ def view_hdf5(filename:str, group:str, depth=1):
                 pass
     
     with _h5py.File(filename.encode("utf-8"), "r") as f:
-        f[group].visititems(_print_attrs)
+        gp = f[group]
+        if isinstance(gp, _h5py.Group):
+            gp.visititems(_print_attrs)
+        else:
+            raise ValueError(f"Group {group} not found in {filename}.")
 
 # 下面两个是更高级的 save, load 用法
 # 功能实现起来比较复杂，图方便的时候可以用
 
-def _save_hdf5(filename:str, *data, group:Union[list[str],str] = None, mode:str='a') -> None:
-    """
-    简化的 save_hdf5
+def _save_hdf5(filename:str, *data, group:Union[list[str],str, None] = None, mode:str='a') -> None:
+    """将数据保存为 .h5 文件
+    
+    Parameters
+    ----------
+    filename : str
+        保存的文件名，必须以.h5 结尾。
+    *data : Any
+        要保存的数据，可以是多个，也可以是字典。
+    group : Union[list[str],str, None], optional
+        保存到 HDF5 文件中的组路径，可以是字符串，也可以是列表。如果为 None，则保存到根目录。
+    mode : str, optional
+        文件打开模式，默认为 "a"（追加模式）。
+    
+    Returns
+    -------
+    None: 该函数无返回值。
 
-    示例:
+    Examples
     --------
     >>> import numpy as np
     >>> import quante.basicfun as bf
     >>> mat = np.random.randn(10,10)
-    >>> bf.save_h5("data.h5", mat)
+    >>> vec = np.random.randn(10)
+    >>> bf.save_h5("data.h5", mat, vec)
     """
     assert filename[-3:] == ".h5", "use h5 for consistance"
     if len(data) == 1 and isinstance(data[0], dict):
@@ -481,6 +538,8 @@ def _save_hdf5(filename:str, *data, group:Union[list[str],str] = None, mode:str=
         current_frame = _inspect.currentframe()
         assert current_frame is not None and current_frame.f_back is not None, "Can't get the caller's frame"
         paraname = PrintLn._get_paraname(current_frame.f_back)
+        if paraname is None:
+            raise ValueError("Can't get the caller's parameter name")
         data_dic = dict()
         for i, arg in enumerate(data):
             if type(arg).__name__ == "type":
@@ -497,10 +556,23 @@ def _save_hdf5(filename:str, *data, group:Union[list[str],str] = None, mode:str=
 
 
 def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], list[Any]]:
-    """
-    简化的 load_hdf5
+    """从 .h5 文件中加载数据.
+    
+    Parameters
+    ----------
+    filename : str
+        保存的文件名，必须以.h5 结尾。
+    *datanames : str
+        要加载的数据名称，可以是多个。
+    group : str, optional
+        保存到 HDF5 文件中的组路径，可以是字符串。如果为 None，则从根目录开始查找。
+    
+    Returns
+    -------
+    Union[Dict[str, Any], list[Any]]
+        加载的数据。
 
-    示例:
+    Examples
     --------
     >>> import numpy as np
     >>> import quante.basicfun as bf
@@ -519,12 +591,13 @@ def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], li
     with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
         group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
         group_location = f[group]  # 获取组对象
+        if not isinstance(group_location, _h5py.Group):
+            raise ValueError(f"Group {group} not found in {filename}.")
         if len(datanames) == 0:
             data: Union[Dict[str, Any], list[Any]] = _load_dict(group_location)
         else:
             data = []
             for dataname in datanames:
-                group_location = f[group]  # 获取组对象
                 data_location = group_location[dataname]
                 data_type_str = data_location.attrs.get("object_type", None)
                 if data_type_str is None and isinstance(data_location, _h5py.Group):
@@ -541,21 +614,26 @@ def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], li
 #############################################################
 
 def set_logging(level: int = _logging.WARNING, savelog: bool = False, filenameTime: bool = False, logtime: bool = False):
-    """
-    配置日志记录功能。
+    """配置日志记录功能.
     
-    实例：
+    Parameters
+    ----------
+    level : int, optional
+        日志记录的级别，默认为 `_logging.WARNING`。
+    savelog : bool, optional
+        是否将日志保存到文件中，默认为 `False`。
+    filenameTime : bool, optional
+        是否在日志文件名中包含时间戳，默认为 `False`。
+    logtime : bool, optional
+        是否在日志消息中包含时间戳，默认为 `False`。
     
+    Returns
+    -------
+    None: 该函数无返回值。
+    
+    Examples
+    --------
     >>> set_logging(savelog=True, logtime=True)
-
-    参数:
-        level (int): 设置日志记录的级别，默认为 `_logging.WARNING`。
-        savelog (bool): 是否将日志保存到文件中，默认为 `False`。
-        filenameTime (bool): 是否在日志文件名中包含时间戳，默认为 `False`。
-        logtime (bool): 是否在日志消息中包含时间戳，默认为 `False`。
-
-    返回:
-        None: 该函数无返回值。
     """
     if savelog:
         filename = "log/"
@@ -604,7 +682,7 @@ class PrintLn:
     
     todo: 整理这部分代码，实现多行输出，目前只能单行
 
-    示例:
+    Examples
     --------
     >>> a = "this is a test"
     >>> println(a)
@@ -612,13 +690,16 @@ class PrintLn:
     
     def __call__(self, *inputargs):
         try:
-            paraname: list[str] = PrintLn._get_paraname(_inspect.currentframe().f_back)
+            cf = _inspect.currentframe()  # 获取调用函数的栈帧
+            if cf is None:
+                raise ValueError("Can't get the caller's frame")
+            paraname = PrintLn._get_paraname(cf.f_back)
             out: str = self._constructArgumentOutput(paraname, inputargs)
+            _logging.warning(out)
         except SyntaxError as e:
             _logging.warning("SyntaxError")
-            out = inputargs
+            _logging.warning(inputargs)
         
-        _logging.warning(out)
         _logging.getLogger().handlers[0].flush()  # 立即刷新日志
 
     @staticmethod
@@ -626,6 +707,8 @@ class PrintLn:
         """利用 inspect 和 ast 模块获取变量名称"""
         # 获取调用函数的源代码
         frame_info = _inspect.getframeinfo(callFrame)
+        if frame_info is None or frame_info.code_context is None:
+            return None
         source_code = "".join(frame_info.code_context).strip()
         
         # 解析为 AST 并查找函数调用的节点
@@ -668,25 +751,25 @@ class PrintLn:
         return "\n".join(lines)
 
     @classmethod
-    def _argumentToString(self, obj, compact=False, indent=0):
+    def _argumentToString(cls, obj, compact=False, indent=0) -> tuple[str, bool]:
         """如果是 ndarray，那么输出它的 __str__，否则用 pprint 得到字符串"""
         import pprint
         isobject = False
         if type(obj) == _np.ndarray:
             if compact:
-                s = _np.array2string(obj, formatter={'float_kind': lambda x: "%.2f" % x}, max_line_width=_np.inf, threshold=4)
+                s = _np.array2string(obj, formatter={'float_kind': lambda x: "%.2f" % x}, max_line_width=None, threshold=4)
             else:
                 s = obj.__str__()
         elif isinstance(obj, list):
             s = pprint.pformat(obj, compact=True)
         elif isinstance(obj, FunctionType):
-            return f"<function {obj.__name__}>"
+            return f"<function {obj.__name__}>", False
         else:
             # object
             if (obj.__class__.__str__ is not object.__str__ or obj.__class__.__repr__ is not object.__repr__):
                 s = pprint.pformat(obj)
             else:
-                s = self._get_custom_object_str(obj)
+                s = cls._get_custom_object_str(obj)
                 isobject = True
         s = s.replace("\\n", "\n")  # Preserve string newlines in output.
         s = '\n'.join(v if i == 0 else " "*indent + v for i, v in enumerate(s.split('\n')))
@@ -697,7 +780,7 @@ class PrintLn:
         return f"{color}{s}{COLOR.DEFAULT}"
 
     @classmethod
-    def _get_custom_object_str(self, obj: Any):
+    def _get_custom_object_str(cls, obj: Any):
         import inspect
         # 首先拿到 header, footer
         obj_type = type(obj)
@@ -724,14 +807,14 @@ class PrintLn:
         for key in sorted(attrs):
             val = getattr(obj, key)
             indent = len(key) + 5
-            elems += f" {PrintLn.set_color('.' + key, COLOR.GREEN)} = {self._argumentToString(val,compact=True, indent=indent)[0]}\n"
+            elems += f" {PrintLn.set_color('.' + key, COLOR.GREEN)} = {cls._argumentToString(val,compact=True, indent=indent)[0]}\n"
         
         return f"{header}\n{elems}{footer}"
     
     @staticmethod
-    def add_object_print(cls):
-        cls.__str__ = lambda self: PrintLn._get_custom_object_str(self)
-        return cls
+    def add_object_print(othercls):
+        othercls.__str__ = lambda self: PrintLn._get_custom_object_str(self)
+        return othercls
 
     def _isLiteral(self, s):
         if self._isFormatStr(s): return True
@@ -836,7 +919,7 @@ def todict(cls):
     
     得到的就是一个字典，无需创建实例！！！
     
-    示例:
+    Examples
     --------
     >>> import numpy as np
     >>> from quante.basicfun import idataclass, println, save_hdf5
@@ -859,18 +942,23 @@ def todict(cls):
 # =======
 # 画图预设
 # =======
-def set_matplotlib(config: Optional[dict] = None, reset: bool = False, svg: bool = True) -> None:
-    """
-    画图预设
-
+def plt_style_use(stylename:str = "quante", svg: bool = True) -> None:
+    """设置 pyplot 风格样式。
+    
+    Parameters
+    ----------
+    stylename: str, optional
+        风格样式,常用的有 "quante", "default" 和 "science". 默认为 "quante"
+    svg: bool, optional
+        是否使用 SVG 格式. 默认为 True.
+    
+    References
+    ----------
     https://matplotlib.org/stable/tutorials/introductory/customizing.html
-
-    参数:
-    config (dict, optional): 自定义配置字典. 默认为 None.
-    reset (bool, optional): 是否重置为默认配置. 默认为 False.
-    svg (bool, optional): 是否使用 SVG 格式. 默认为 True.
+    https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html#sphx-glr-gallery-style-sheets-style-sheets-reference-py
     """
     import matplotlib.pyplot as _plt
+    
     try:
         if svg:
             from IPython.display import set_matplotlib_formats
@@ -880,10 +968,11 @@ def set_matplotlib(config: Optional[dict] = None, reset: bool = False, svg: bool
             set_matplotlib_formats("png")
     except:
         pass
-    if config is None and reset is False:
+    
+    if stylename == "quante":
         try:
             import matplotlib as _mpl
-            _mpl.font_manager.findfont("Times New Roman", fallback_to_default=False)
+            _mpl.font_manager.findfont("Times New Roman", fallback_to_default=False) # type: ignore
             font = 'Times New Roman'
         except:
             font = 'sans-serif'
@@ -905,12 +994,55 @@ def set_matplotlib(config: Optional[dict] = None, reset: bool = False, svg: bool
             "grid.linewidth": 1.0,  # 粗细
             # "svg.image_inline": True
             "legend.frameon":       False,
-            "legend.fontsize":      13
+            "legend.fontsize":      13,
+            "savefig.bbox" : "tight",
         }
         _plt.rcParams.update(defaultconfig)
-    if reset:
-        _mpl.rcParams.update(_mpl.rcParamsDefault)
-    if config is not None:
-        _plt.rcParams.update(config)
+    elif stylename == "science":
+        # from https://github.com/garrettj403/SciencePlots/blob/master/scienceplots/styles/science.mplstyle
+        scienceconfig = {
+            # Set default figure size
+            "figure.figsize" : (3.5, 2.625),
+            
+            # Set x axis
+            "xtick.direction": "in",
+            "xtick.major.size" : 3,
+            "xtick.major.width" : 0.5,
+            "xtick.minor.size" : 1.5,
+            "xtick.minor.width" : 0.5,
+            "xtick.minor.visible" : True,
+            "xtick.top" : True,
 
+            # Set y axis
+            "ytick.direction" : "in",
+            "ytick.major.size" : 3,
+            "ytick.major.width" : 0.5,
+            "ytick.minor.size" : 1.5,
+            "ytick.minor.width" : 0.5,
+            "ytick.minor.visible" : True,
+            "ytick.right" : True,
+            
+            # Set line widths
+            "axes.linewidth" : 0.5,
+            "grid.linewidth" : 0.5,
+            "lines.linewidth" : 1.,
 
+            # Remove legend frame
+            "legend.frameon" : False,
+
+            # Always save as 'tight'
+            "savefig.bbox" : "tight",
+            "savefig.pad_inches" : 0.05,
+
+            # Use serif fonts
+            # font.serif : Times
+            "font.family" : "serif",
+            "mathtext.fontset" : "dejavuserif",
+
+            # Use LaTeX for math formatting
+            "text.usetex" : True,
+            "text.latex.preamble" : "\\usepackage{amsmath} \\usepackage{amssymb}"
+        }
+        _plt.rcParams.update(scienceconfig)
+    else:
+        _plt.style.use(stylename)

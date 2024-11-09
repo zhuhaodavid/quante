@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-12-04 14:38:49
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 15:17:33
+# @Last Modified time: 2024-11-09 16:52:53
 
 import numpy as _np
 from ..generate.matrix import pauli_matrix
@@ -21,7 +21,7 @@ def _remove_full_zero(
     coefficients: list[float], basiss: list[str]
 ) -> tuple[bool, list[float], list[str], float]:
     """
-    Example:
+    Examples
         Input: coefficients = [0.4, 0.5, 0.6, 0.7], basiss = ["00", "01", "10", "11"]
         Output: (True, [0.5, 0.6, 0.7], ["01", "10", "11"], 0.4)
     Note:
@@ -80,7 +80,7 @@ def _get_Qmat(i: int, left: int, right: int, Qmat: _np.ndarray, N: int) -> _np.n
 
 def _finalize_Qmat(Qmat: _np.ndarray) -> _np.ndarray:
     """
-    Example:
+    Examples
         Before: Qmat =  [[1,  1,  1],    After: Qmat = [[1, 2, 3],
                          [1,  2, -1],                   [1, 3, 3]]
                          [1, -1, -1]]
@@ -159,7 +159,7 @@ def _fill_Id_in_local_hamiltonian(
     N: int, hlocals: list[str], positions: list[tuple]
 ) -> list[str]:
     """
-    Example:
+    Examples
         Input:
             N = 4
             hlocals = ['xx', 'yy', 'zz']
@@ -177,9 +177,9 @@ def _fill_Id_in_local_hamiltonian(
 
 def automata_mpo(
     N: int,
-    hlocals: str,
-    positions: tuple,
-    coefficients: float,
+    hlocals: list[str],
+    positions: list[tuple],
+    coefficients: _np.ndarray,
     d: int = 2,
     pauli: int = True,
     local_matrix_function=None,
@@ -188,7 +188,7 @@ def automata_mpo(
     """
     Basis could only to be string such as "01101..."
 
-    Example:
+    Examples
     >>> L = 10
     >>> ham = op.heisenberg_operator(L)
     >>> automata_mpo(L, *ham.split_data())
@@ -317,7 +317,7 @@ def get_sparse_matrix(
     """
     利用 automata 生成稀疏矩阵
     
-    Example:
+    Examples
     >>> L = 10
     >>> ham = op.heisenberg_operator(L)
     >>> hlocals, positions, coefficients = [], [], []

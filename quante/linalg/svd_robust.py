@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2023-09-19 22:25:55
-# @Last Modified by:   dzwang
-# @Last Modified time: 2024-10-16 19:00:42
+# @Last Modified by:   hzhu
+# @Last Modified time: 2024-11-09 18:02:16
 # This is from tenpy
 
 import scipy.linalg as sla
@@ -41,7 +41,7 @@ def svd(a,
 
     带有 `gesvd` 备份计划。如果 `gesdd` 失败，尝试通过使用 lapack_driver `gesvd` 来避免引发 LinAlgError。
 
-    参数
+    Parameters
     ----------
     a : (M, N) 类数组
         要分解的矩阵。
@@ -66,7 +66,7 @@ def svd(a,
     warn : bool
         当 SVD 失败时是否创建警告。
 
-    返回值
+    Returns
     -------
     U : ndarray
         具有左奇异向量作为列的酉矩阵。形状为 ``(M, M)`` 或 ``(M, K)``，取决于 `full_matrices`。
@@ -77,17 +77,17 @@ def svd(a,
 
     如果 ``compute_uv=False``，则仅返回 ``s``。
 
-    抛出
+    Raises
     ------
     LinAlgError
         如果 SVD 计算不收敛。
 
-    参见
-    --------
+    References
+    ----------
     svdvals : 计算矩阵的奇异值。
     diagsvd : 给定向量 s 构造 Sigma 矩阵。
 
-    示例
+    Examples
     --------
     >>> import numpy as np
     >>> from scipy import linalg
@@ -148,7 +148,7 @@ class TruncationError:
     .. 警告 ::
             对于虚时间演化，这不是你感兴趣的误差！
 
-    参数
+    Parameters
     ----------
     eps : float
         所有被丢弃的施密特值平方和的总和。

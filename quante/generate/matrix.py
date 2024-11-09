@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 18:55:02
+# @Last Modified time: 2024-11-09 17:25:35
 """
 生成矩阵：(`np.ndarray`)
 - `pauli_matrix`
@@ -18,7 +18,10 @@ import numpy as _np
 import scipy.sparse as _sparse
 
 from ..linalg.operations import kron, ikron
-from .basis import _check_spin_number
+from .basis import _check_spin_number # type: ignore
+
+from typing import Optional, Callable, Union, Iterable
+number = Union[int, float, complex]
 
 __all__ = [
     "pauli_matrix",
@@ -62,13 +65,12 @@ _PAULI_MAT = {
     "d": _np.array([[0.], [1.]]),
 }
 
-from typing import Optional, Callable, Union
 
 def pauli_matrix(
     stri: str,
     S: Union[str, float, int] = '1/2',
     view: bool = False,
-) -> Union[_np.ndarray, _sparse.csr_array]:
+) -> _np.ndarray:
     """
     !! 多个算符的时候 `+`, `-`, `u`, `d` 这四个算符一定要十分小心，**最好不要用这四个算符**
     
@@ -77,7 +79,7 @@ def pauli_matrix(
     - `x2y3!5` -> `iixyi`
     - `xy!5` -> `iiixy+iixyi+ixyii+xyiii`
     
-    示例:
+    Examples
     --------
     >>> op.pauli_matrix("x")
     >>> op.pauli_matrix("xx+yy")
@@ -91,13 +93,13 @@ def pauli_matrix(
         - `dtype`: Data type of the resulting matrix (default: np.complex128).
         - `view`: If True, prints the intermediate result (default: False).
     """
-    S = _check_spin_number(S)
+    iS: Union[int, float] = _check_spin_number(S)
 
     # 定义获得单个算符的方法
-    if S == 0.5:
+    if iS == 0.5:
         _single_oper = functools.partial(_pauli_matrix_single)
     else:
-        _single_oper = functools.partial(_spin_oper_single, S=S)
+        _single_oper = functools.partial(_spin_oper_single, S=iS)
 
     # 如果长度是 1, 直接返回结果
     if len(stri) == 1:
@@ -365,7 +367,7 @@ def _random_simple_matrix(dim, seed=None):
         _np.random.seed(seed)
     real_part = _np.random.randn(dim, dim)
     imag_part = _np.random.randn(dim, dim)
-    return real_part + imag_part * 1.0j
+    return real_part + 1.0j * imag_part
 
 # @njit
 def _random_simple_real_matrix(dim, seed):
@@ -376,7 +378,7 @@ def _random_simple_real_matrix(dim, seed):
 # @njit
 def _random_symmetric_matrix_goe(dim, seed):
     real_matrix = _random_simple_real_matrix(dim, seed)
-    return (real_matrix + real_matrix.T) * 0.5
+    return 0.5 * (real_matrix + real_matrix.T)
 
 # @njit
 def _random_hermition_matrix_gue(dim, seed):
@@ -514,7 +516,7 @@ def parallel_build_matrix(hlocals, positions, coefficients, L, S, pauli=False, s
     """
     通过直积生成矩阵，效率并不是否高，可以用于验证
     
-    示例:
+    Examples
     --------
     >>> from quante.generate.matrix import parallel_build_matrix
     >>> mat = parallel_build_matrix(*ham.split_data(), L, S, pauli=False, sparse=False, parallel=True, nthreads=4)
@@ -532,39 +534,42 @@ def parallel_build_matrix(hlocals, positions, coefficients, L, S, pauli=False, s
     ikron_kws = {'sparse': True, 'stype': 'coo', 'coo_build': True}
     dims = (int(2 * S + 1),) * L
     
-    def gen_term(args):
+    def gen_term(args:tuple[str, int, float]):
         opstr, indx, j = args
-        return j * ikron([_sparse.csc_array(OPER[oi]) for oi in opstr], dims, indx, **ikron_kws)
+        tmp = [_sparse.csc_array(OPER[oi]) for oi in opstr]
+        return j * ikron(tmp, dims, indx, **ikron_kws) # type: ignore  #todo ikron 需要重写
     
     if parallel:
         from ..linalg.usenumba.numba_settings import get_thread_pool, parallel_reduce
         pool = get_thread_pool(nthreads)
-        ham = parallel_reduce(lambda a,b : a+b, pool.map(gen_term, zip(hlocals, positions, coefficients)))
+        ham:_sparse.csr_array = parallel_reduce(lambda a,b : a+b, pool.map(gen_term, zip(hlocals, positions, coefficients)))
     else:
-        ham = sum(map(gen_term, zip(hlocals, positions, coefficients)))
+        ham:_sparse.csr_array = sum(map(gen_term, zip(hlocals, positions, coefficients))) # type: ignore
     
     if sparse:
         return ham.tocsr()
     
     return ham.toarray()
 
-def _manual_array_split(arr, num_blocks):
-    avg_len = len(arr) // num_blocks
-    remainder = len(arr) % num_blocks
-    blocks = []
-    start = 0
-    for i in range(num_blocks):
-        end = start + avg_len + (1 if i < remainder else 0)
-        blocks.append(arr[start:end])
-        start = end
-    return blocks
-
 
 ################################
 # 一些常用的其他门与哈密顿量
 ################################
 
-def heisenberg_matrix(L, j: Union[float, tuple]=1.0, h: Union[float, tuple] = 0.0, pauli: bool = False, S: Union[int, float, str] = 1/2, cyclic:bool = False, Nup:Optional[int]=None, kblock:Optional[int]=None, pblock:Optional[int]=None, zblock:Optional[int]=None, pzblock:Optional[int]=None, jmblock:Optional[Union[int, tuple[int, int]]]=None) -> _np.ndarray:
+def heisenberg_matrix(
+    L, 
+    j: Union[number, tuple[number, number, number]] = 1.0, 
+    h: Union[number, tuple[number, number, number]] = 0.0, 
+    pauli: bool = False, 
+    S: Union[int, float, str] = 1/2, 
+    cyclic:bool = False,
+    Nup:Optional[int]=None, 
+    kblock:Optional[int]=None, 
+    pblock:Optional[int]=None, 
+    zblock:Optional[int]=None,
+    pzblock:Optional[int]=None,
+    jmblock:Optional[Union[int, tuple[int, int]]]=None
+    ) -> _np.ndarray:
     """
     总是生成矩阵，而不是稀疏矩阵
     
@@ -576,26 +581,25 @@ def heisenberg_matrix(L, j: Union[float, tuple]=1.0, h: Union[float, tuple] = 0.
     
     对于维数较小的矩阵比较高效
     """
-    from .basis import _check_spin_number
     S = _check_spin_number(S)
     from .basis import spin_basis
     basis = spin_basis(L, S=S, Nup=Nup, kblock=kblock, pblock=pblock, zblock=zblock, pzblock=pzblock, jmblock=jmblock)
     try:
         # 尝试使用针对heisenberg链的方法
         try:
-            jx, jy, jz = j
+            jx, jy, jz = j # type: ignore
         except TypeError:
             jx = jy = jz = j
         assert _np.isclose(jx, jy) and h == 0 and S == 0.5
         if pauli:
             jx = jx * 4
             jz = jz * 4
-        return basis._heimat(jx, jz, cyclic)
+        return basis._heimat(jx, jz, cyclic) # type: ignore
     except:
         # 如果失败使用一般方法
         from .operas import heisenberg_operator
         ham = heisenberg_operator(L, j, h, cyclic)
-        return ham.to_matrix(basis, pauli, sparse=False)
+        return ham.to_matrix(basis, pauli=pauli, sparse=False)
 
 
 def hadamard_gate(dtype=complex):
@@ -654,7 +658,7 @@ def local_hamiltonian_spin_1D(model_key:str, pauli:bool=True, **kwargs) -> _np.n
     
     - TLFI: `J` zz + `g` x + `h` z
     
-    示例:
+    Examples
     --------
     >>> qt.generate.matrix.local_hamiltonian_spin_1D("XXZ", J = 0.1, Δ = 1,h = 0.1)
     >>> qt.generate.matrix.local_hamiltonian_spin_1D("XX", J = 0.1, h = 0.1)

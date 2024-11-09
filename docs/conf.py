@@ -3,7 +3,7 @@
 # @Author: hzhu
 # @Date:   2024-10-30 21:12:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-01 00:19:32
+# @Last Modified time: 2024-11-09 15:59:42
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -38,11 +38,12 @@ extensions = [
     # "sphinx_rtd_size", # allows to fix width of rtd sphinx theme
     'sphinx_prompt',
 ]
+add_module_names = False
 
 
 autodoc_default_options = {
     'undoc-members': True,          # 包括没有文档字符串的成员
-    "members": True,  # 如果设置为 True，则会包括模块、类或函数的所有成员（方法和属性）；如果设置为 False，则不包括成员。
+    # "members": True,  # 如果设置为 True，则会包括模块、类或函数的所有成员（方法和属性）；如果设置为 False，则不包括成员。
     "inherited-members": True,  # 如果设置为 True，则会包括从基类继承的成员。
     "show-inheritance": True,
     # "no-special-members": True,
@@ -52,6 +53,8 @@ autodoc_default_options = {
     # "undoc-members": True,
     "exclude-members": "__init__",
 }
+# autodoc_default_flags = ['members', 'undoc-members', 'show-inheritance']
+
 
 autosummary_generate = True  # Make _autosummary files and include them
 
@@ -62,7 +65,7 @@ autosummary_generate = True  # Make _autosummary files and include them
 todo_include_todos = False
 
 # remove duplicates
-numpydoc_show_class_members = False
+# numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -78,6 +81,7 @@ master_doc = "index"
 
 nbsphinx_execute = 'never'  # 禁止 Sphinx 执行 Jupyter Notebook 中的代码
 nbsphinx_allow_errors = True  # 允许包含错误的 Notebook 继续生成
+# 禁用模块前缀
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -127,22 +131,22 @@ todo_include_todos = True
 
 
 html_theme = "sphinx_rtd_theme"
-# html_theme_options = {
-#     'analytics_id': googleanalytics_id,  #  Provided by Google in your dashboard
-#     'analytics_anonymize_ip': False,
-#     #'logo_only': True,
-#     #'display_version': True,
-#     #'prev_next_buttons_location': 'bottom',
-#     'style_external_links': True,
-#     'vcs_pageview_mode': '',
-#     #'style_nav_header_background': 'blue',
-#     # Toc options
-#     'collapse_navigation': True,
-#     'sticky_navigation': True,
-#     'navigation_depth': 4,
-#     'includehidden': True,
-#     'titles_only': False
-# }
+html_theme_options = {
+    # 'analytics_id': googleanalytics_id,  #  Provided by Google in your dashboard
+    'analytics_anonymize_ip': False,
+    #'logo_only': True,
+    #'display_version': True,
+    #'prev_next_buttons_location': 'bottom',
+    'style_external_links': True,
+    'vcs_pageview_mode': '',
+    #'style_nav_header_background': 'blue',
+    # Toc options
+    'collapse_navigation': True,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': True
+}
 sphinx_rtd_size_width = "100%"
 
 

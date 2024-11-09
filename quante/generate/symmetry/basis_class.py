@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-05 09:31:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 19:20:13
+# @Last Modified time: 2024-11-09 16:48:44
 
 from typing import Union
 import inspect
@@ -67,7 +67,7 @@ class SpinBasis:
         """
         返回某个实例所属，以及其方法，所在文件的路径和行号。
             
-        示例:
+        Examples
         --------
         >>> basis = qt.generate.basis.spin_basis(L=10, zblock=1)
         >>> basis.where_codes()
@@ -93,9 +93,8 @@ class SpinBasis:
     def _sparse_matrix(self, op_list, hascomplex, savememory=False):
         """ takes list of operator strings and couplings to create matrix.
         
-        # todo nobloc, Nup 之外的基矢，能否利用 _isdiag 函数判断是否是对角矩阵，然后直接生成对角矩阵?
-        
-        # todo 并行化程度仍然不高，如何更高效的利用 cpu?
+        todo nobloc, Nup 之外的基矢，能否利用 _isdiag 函数判断是否是对角矩阵，然后直接生成对角矩阵?
+        todo 并行化程度仍然不高，如何更高效的利用 cpu?
         """
         from .basis_class_nb import _is_diagonal, _update_diag, add_, _get_index_type, coodiaglists2csr, coolists2csr2
         off_diag = None
@@ -171,7 +170,7 @@ class SpinBasis:
     def to_full_space(self, index:int) -> np.ndarray:
         """生成基矢的第 i 个向量在全空间中的表示
         
-        示例:
+        Examples
         --------
         >>> L = 10
         >>> basis = qt.generate.basis.spin_basis(L=10, Nup=2)
@@ -185,7 +184,7 @@ class SpinBasis:
         将全空间/Nup空间的态投影到某个子空间 #!! 核心代码，get_state, projection_matrix 都是基于 recover 实现的
         
         
-        示例:
+        Examples
         --------
         >>> L = 10
         >>> basis = qt.generate.basis.spin_basis(L=10, Nup=2)
@@ -198,7 +197,7 @@ class SpinBasis:
         """
         投影算符，（2^L, Ns) 维的矩阵，将全空间的态投影到某个子空间的矩阵
         
-        示例:
+        Examples
         --------
         >>> L = 10
         >>> ham = qt.generate.operas.heisenberg_operator(L, cyclic=True)
@@ -226,7 +225,7 @@ class SpinBasis:
         """
         输出不同子空间的维数
         
-        示例:
+        Examples
         --------
         >>> basis = qt.generate.basis.spin_basis(L=10)
         >>> basis.print_dims(L=10)

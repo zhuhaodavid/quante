@@ -134,7 +134,7 @@ def subselect_set(A, B, p):  # pragma: no cover
     p : sequence of size dp
         The basis indices.
 
-    示例:
+    Examples
     --------
     >>> A = _np.zeros((5, 5))
     >>> B = _np.random.randn(3, 3)

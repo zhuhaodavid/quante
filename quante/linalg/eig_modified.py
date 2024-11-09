@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 03:50:53
+# @Last Modified time: 2024-11-09 18:01:37
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -689,7 +689,7 @@ def eig(
 ) -> tuple[_np.ndarray, _np.ndarray]:
     """查找非厄米矩阵的算子的所有或部分特征对。
 
-    参数
+    Parameters
     ----------
     A : operator
         要分解的算子。
@@ -742,7 +742,6 @@ def eig(
     backend_opts
         提供给后端求解器的选项。
         根据指定的求解器 backend 提供具体的参数
-
     """
     if k < 0:
         if unitary:
@@ -795,74 +794,7 @@ def eigh(A: Union[_np.ndarray, _sparse.spmatrix],
          P: Optional[_np.ndarray] = None,
          **backend_opts
          ) -> tuple[_np.ndarray, _np.ndarray]:
-    """计算本征值厄米矩阵的算子的所有或部分特征对。
-
-    参数
-    ----------
-    
-    A : operator
-        要分解的算子。
-        
-    k : int, 可选
-        如果为负数，查找所有特征对，否则执行部分特征分解并查找 k 对。
-        
-    backend : {'AUTO', 'NUMPY', 'SCIPY', 'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
-        使用哪个求解器。('MATLAB' 用于 k=-1 的情况。)
-        
-    save: bool, str, list, 可选
-        如果为 False，不保存。
-        如果为 True，按默认路径保存，k=-1 时为 EigData，k>0 时为 PartialEigData。
-        如果为 str，该字符串被解释为保存的文件名。
-        如果为列表 [path_save_to, file_name]，则路径和文件名都被指定。
-        
-    reload: bool, 可选
-        如果为 False，不返回任何内容。
-        
-    autoblock : bool, 可选
-        如果为 True，自动识别并利用当前基中出现的对称性，通过行和列的置换形成块对角线。（仅适用于 k=-1）
-        
-    which : {'SA', 'LA', 'LM', 'SM', 'TR'}
-        从谱的哪个部分获取特征值（参见 :func:`scipy.sparse.linalg.eigsh`）。
-        基态能量是 SA。
-        
-    sigma : float, 可选
-        目标谱的哪一部分，如果 which 为 None，则意味着 which='TR'。
-        
-    ncv : int, 可选
-        兰索斯向量的数量，可以用来优化速度。
-        
-    tol : None 或 float
-        查找特征值的容差。
-        
-    v0 : None 或 类 1D-array
-        用于迭代的初始向量猜测。
-        
-    sort : bool, 可选
-        是否按升序显式排序特征值。
-        
-    fallback_to_scipy : bool, 可选
-        如果发生错误且未使用 scipy，尝试使用 scipy。
-        
-    sort : bool, 可选
-        是否按升序排序特征对。
-        
-    P : array_like, sparse_matrix, LinearOperator, 可选
-        在此投影算子定义的子空间中执行特征求解。（仅适用于 k=-1）
-        
-    backend_opts
-        提供给后端求解器的选项。
-        根据指定的求解器 backend 提供具体的参数
-
-    返回值
-    -------
-    
-    el : (k,) 数组
-        特征值。
-        
-    ev : (d, k) 数组
-        对应的特征向量作为数组的列，使得 `A @ ev == ev @ A`。
-        
-    """
+    """计算本征值厄米矩阵的算子的所有或部分特征对，与 `eig` 参数相同"""
     if k < 0:
         return eigensolve(
             H=A,
@@ -897,70 +829,7 @@ def eigvals(
     P: Optional[_np.ndarray] = None,
     **backend_opts,
 ) -> _np.ndarray:
-    """查找非厄米矩阵的算子的所有或部分特征值。
-
-    参数
-    ----------
-    A : operator
-        要分解的算子。
-        
-    k : int, 可选
-        如果为负数，查找所有特征值，否则执行部分特征分解并查找 `k` 对。
-        
-    backend : {'AUTO', 'NUMPY', 'SCIPY', 'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
-        使用哪个求解器。('MATLAB' 用于 k=-1 的情况。)
-        
-    save: bool, str, list, 可选
-        如果为 False，不保存。
-        如果为 True，按默认路径保存，k=-1 时为 EigData，k>0 时为 PartialEigData。
-        如果为 str，该字符串被解释为保存的文件名。
-        如果为列表 [path_save_to, file_name]，则路径和文件名都被指定。
-        
-    reload: bool, 可选
-        如果为 False，不返回任何内容。
-        
-    autoblock : bool, 可选
-        如果为 True，自动识别并利用当前基中出现的对称性，通过行和列的置换形成块对角线。（仅适用于 k=-1）
-        
-    which : {'SA', 'LA', 'LM', 'SM', 'TR'}
-        从谱的哪个部分获取特征值（参见 :func:`scipy.sparse.linalg.eigsh`）。
-        
-    sigma : float, 可选
-        目标谱的哪一部分，如果 which 为 None，则意味着 which='TR'。
-        
-    ncv : int, 可选
-        兰索斯向量的数量，可以用来优化速度。
-        
-    tol : None 或 float
-        查找特征值的容差。
-        
-    v0 : None 或 类 1D-array
-        用于迭代的初始向量猜测。
-        
-    sort : bool, 可选
-        是否按升序显式排序特征值。
-        
-    fallback_to_scipy : bool, 可选
-        如果发生错误且未使用 scipy，尝试使用 scipy。
-        
-    sort : bool, 可选
-        是否按升序排序特征对。
-        
-    P : array_like, sparse_matrix, LinearOperator, 可选
-        在此投影算子定义的子空间中执行特征求解。（仅适用于 k=-1）
-        
-    backend_opts
-        提供给后端求解器的选项。
-        根据指定的求解器 backend 提供具体的参数
-
-    返回值
-    -------
-    el : (k,) 数组
-        特征值。
-    ev : (d, k) 数组
-        对应的特征向量作为数组的列，使得 `A @ ev == ev @ A`。
-        
-    """
+    """查找非厄米矩阵的算子的所有或部分特征值。与 `eig` 的参数基本相同。"""
     if k < 0:
         if unitary:
             # 幺正矩阵会快拆成两个厄密矩阵会快很多
@@ -1018,56 +887,7 @@ def eigvalsh(
     P: Optional[_np.ndarray] = None,
     **backend_opts,
 ) -> _np.ndarray:
-    """查找厄米矩阵的算子的所有或部分特征对。
-
-    参数
-    ----------
-    A : operator
-        要分解的算子。
-    k : int, 可选
-        如果为负数，查找所有特征对，否则执行部分特征分解并查找 `k` 对。
-    backend : {'AUTO', 'NUMPY', 'SCIPY', 'LOBPCG', 'SLEPC', 'SLEPC-NOMPI', 'MATLAB'}, 可选
-        使用哪个求解器。('MATLAB' 用于 k=-1 的情况。)
-    save: bool, str, list, 可选
-        如果为 False，不保存。
-        如果为 True，按默认路径保存，k=-1 时为 EigData，k>0 时为 PartialEigData。
-        如果为 str，该字符串被解释为保存的文件名。
-        如果为列表 [path_save_to, file_name]，则路径和文件名都被指定。
-    reload: bool, 可选
-        如果为 False，不返回任何内容。
-    autoblock : bool, 可选
-        如果为 True，自动识别并利用当前基中出现的对称性，通过行和列的置换形成块对角线。（仅适用于 k=-1）
-    which : {'SA', 'LA', 'LM', 'SM', 'TR'}
-        从谱的哪个部分获取特征值（参见 :func:`scipy.sparse.linalg.eigsh`）。
-        基态能量是 SA。
-    sigma : float, 可选
-        目标谱的哪一部分，如果 which 为 None，则意味着 which='TR'。
-    ncv : int, 可选
-        兰索斯向量的数量，可以用来优化速度。
-    tol : None 或 float
-        查找特征值的容差。
-    v0 : None 或 类 1D-array
-        用于迭代的初始向量猜测。
-    sort : bool, 可选
-        是否按升序显式排序特征值。
-    fallback_to_scipy : bool, 可选
-        如果发生错误且未使用 scipy，尝试使用 scipy。
-    sort : bool, 可选
-        是否按升序排序特征对。
-    P : array_like, sparse_matrix, LinearOperator, 可选
-        在此投影算子定义的子空间中执行特征求解。（仅适用于 k=-1）
-    backend_opts
-        提供给后端求解器的选项。
-        根据指定的求解器 backend 提供具体的参数
-
-    返回值
-    -------
-    el : (k,) 数组
-        特征值。
-    ev : (d, k) 数组
-        对应的特征向量作为数组的列，使得 `A @ ev == ev @ A`。
-        
-    """
+    """查找厄米矩阵的算子的所有或部分特征对。与 `eigvals` 参数基本相同。"""
     if k < 0:
         return eigensolve(
             H=A,
@@ -1109,14 +929,19 @@ def matlabeig(
     H, path_save_to="EigData/", file_name=None, reload=False, return_vecs=True
 ):
     """调用 matlab eig
-
-    Args:
-        H (sparse.array, numpy.ndarray): 矩阵，最好是稀疏的
-        path_save_to (str, optional): 保存路径. Defaults to "EigData/".
-        file_name (str, optional): 保存文件名. Defaults to None.
-        reload (bool, optional): 是否重新加载回 python. Defaults to False.
-        return_vecs (bool, optional): 是否计算本征向量. Defaults to True.
-
+    
+    Parameters:
+    -----------
+    H : sparse.array, numpy.ndarray
+        矩阵，最好是稀疏的
+    path_save_to : str, optional
+        保存路径. Defaults to "EigData/".
+    file_name : str, optional
+        保存文件名. Defaults to None.
+    reload : bool, optional
+        是否重新加载回 python. Defaults to False.
+    return_vecs : bool, optional
+        是否计算本征向量. Defaults to True.
     """
     spaceRequired = matlabeig_pre(H=H, path_save_to=path_save_to, file_name=file_name)
     assert spaceRequired < get_free_space(path_save_to)

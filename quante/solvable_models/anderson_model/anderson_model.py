@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-15 10:30:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 19:22:42
+# @Last Modified time: 2024-11-09 19:33:03
 
 import numpy as np
 
@@ -15,10 +15,36 @@ __all__ = [
 ]
 
 def anderson_matrix(T:np.ndarray, W:np.ndarray) -> np.ndarray:
-    """
-    生成安德森模型的矩阵
+    r"""生成安德森模型的矩阵
     
-    示例:
+    .. math:: 
+        H = \sum_{i}^{} T_{i} c_{i}^{\dagger} c_{i} + \sum_{ir}^{} W_{r} c_{i}^{\dagger} c_{i + r}
+        
+    也可以写作：
+    
+    .. math:: 
+        H = \sum_{i}^{} T_{i} \ket{i}\hspace{-1mm}\bra{i} + \sum_{ir}^{} W_{r} \ket{i}\hspace{-1mm}\bra{i + r} 
+    
+    以及：
+    
+    .. math:: 
+        \begin{bmatrix}
+            T_0 + W_0 & W_1 & W_2 &  \cdots  & W_{L - 1}  \\
+            W_{ - 1} & T_1 + W_0 & W_1 & \cdots & W_{L - 2}  \\
+            W_{ - 2} & W_{ - 1} & T_2 + W_0 & \cdots & W_{L - 3}  \\
+            \cdots  & \cdots  & \cdots  & \cdots & \cdots   \\
+            W_{ -(L - 1)}  & W_{ - (L - 2)}  & W_{ -(L - 3)}  & \cdots & T_{L - 1} + W_0  \\
+        \end{bmatrix}
+    
+    Parameters
+    ----------
+    T : np.ndarray
+        onsite 能量
+    
+    W : np.ndarray
+        hopping 能量
+
+    Examples
     --------
     >>> q, l = 2, 1000
     >>> T = np.random.randn(q)
@@ -29,14 +55,6 @@ def anderson_matrix(T:np.ndarray, W:np.ndarray) -> np.ndarray:
     >>> for i in range(1,l//2+1):
     >>>     W[-i] = W[i]
     >>> anderson_matrix(T, W)
-
-    Parameters
-    ----------
-    T : np.ndarray
-        onsite 能量
-    
-    W : np.ndarray
-        hopping 能量
 
     Returns
     -------
@@ -59,18 +77,6 @@ def anderson_matrix(T:np.ndarray, W:np.ndarray) -> np.ndarray:
 def anderson_kmat(T:np.ndarray, W:np.ndarray, k:int) -> np.ndarray:
     """
     画出 anderson 模型第 k 个矩阵
-    
-    示例:
-    --------
-    >>> q, l = 2, 1000
-    >>> T = np.random.randn(q)
-    >>> W = np.random.randn(l)
-    >>> for i in range(len(W)):
-    >>>     if i != 1:
-    >>>         W[i] *= 0
-    >>> for i in range(1,l//2+1):
-    >>>     W[-i] = W[i]
-    >>> anderson_kmat(T, W, 0)
 
     Parameters
     ----------
@@ -84,6 +90,18 @@ def anderson_kmat(T:np.ndarray, W:np.ndarray, k:int) -> np.ndarray:
     -------
     np.ndarray
         矩阵
+    
+    Examples
+    --------
+    >>> q, l = 2, 1000
+    >>> T = np.random.randn(q)
+    >>> W = np.random.randn(l)
+    >>> for i in range(len(W)):
+    >>>     if i != 1:
+    >>>         W[i] *= 0
+    >>> for i in range(1,l//2+1):
+    >>>     W[-i] = W[i]
+    >>> anderson_kmat(T, W, 0)
     """
     assert isinstance(k, int)
     l: int = len(W)
@@ -99,11 +117,11 @@ def anderson_kmat(T:np.ndarray, W:np.ndarray, k:int) -> np.ndarray:
     return mat_k(T, W, k*2*np.pi/l)
 
 
-def anderson_eigstate(T:int, W:int, vec:np.ndarray, k:int):
+def anderson_eigstate(l:int, q:int, vec:np.ndarray, k:int):
     """
     获得第 k 个矩阵，vec 对应的本征态
     
-    示例:
+    Examples
     --------
     >>> q, l = 2, 1000
     >>> T = np.random.randn(q)
@@ -121,8 +139,6 @@ def anderson_eigstate(T:int, W:int, vec:np.ndarray, k:int):
     >>> println(np.allclose(hammat @ us, eig[0] * us))
     """
     assert isinstance(k, int)
-    l: int = len(W)
-    q: int = len(T)
     reps: int = l // q
     vectilde = np.fft.fft(vec)
     phis = np.tile(A=vectilde, reps=reps)
@@ -131,21 +147,9 @@ def anderson_eigstate(T:int, W:int, vec:np.ndarray, k:int):
     return np.array(us)
 
 
-def anderson_energies(T:np.ndarray, W:np.ndarray) -> np.ndarray:
+def anderson_energies(T:np.ndarray, W:np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
     返回 anderson 模型的所有本征能量（矩阵，每一行为一个能带）
-    
-    示例:
-    --------
-    >>> q, l = 1000, 1000
-    >>> T = np.random.randn(q)
-    >>> W = np.random.randn(l)
-    >>> for i in range(len(W)):
-    >>>     if i != 1:
-    >>>         W[i] *= 0
-    >>> for i in range(1,l//2+1):
-    >>>     W[-i] = W[i]
-    >>> _, engs = anderson_energies(T, W)
     
     Parameters
     ----------
@@ -157,8 +161,20 @@ def anderson_energies(T:np.ndarray, W:np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
-        本征值
+    tuple[np.ndarray, np.ndarray]
+        能量，每一行为一个能带
+    
+    Examples
+    --------
+    >>> q, l = 1000, 1000
+    >>> T = np.random.randn(q)
+    >>> W = np.random.randn(l)
+    >>> for i in range(len(W)):
+    >>>     if i != 1:
+    >>>         W[i] *= 0
+    >>> for i in range(1,l//2+1):
+    >>>     W[-i] = W[i]
+    >>> _, engs = anderson_energies(T, W)
     """
     l: int = len(W)
     q: int = len(T)
@@ -180,8 +196,16 @@ def anderson_energies(T:np.ndarray, W:np.ndarray) -> np.ndarray:
 def plot_anderson_band(T:np.ndarray, W:np.ndarray) -> None:
     """
     画出 anderson 模型的能带
+
+    Parameters
+    ----------
+    T : np.ndarray
+        onsite 能量
+        
+    W : np.ndarray
+        hopping 能量
     
-    示例:
+    Examples
     --------
     >>> q, l = 2, 1000
     >>> T = np.random.randn(q)
@@ -192,14 +216,6 @@ def plot_anderson_band(T:np.ndarray, W:np.ndarray) -> None:
     >>> for i in range(1,l//2+1):
     >>>     W[-i] = W[i]
     >>> plot_anderson_band(T, W)
-
-    Parameters
-    ----------
-    T : np.ndarray
-        onsite 能量
-        
-    W : np.ndarray
-        hopping 能量
     """
     ks, engs_k = anderson_energies(T, W)
     

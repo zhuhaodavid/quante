@@ -2,11 +2,11 @@
  * @Author: hzhu
  * @Date:   2024-10-31 14:45:49
  * @Last Modified by:   hzhu
- * @Last Modified time: 2024-11-04 16:31:10
+ * @Last Modified time: 2024-11-09 02:56:24
  */
 @font-face {
     font-family: "Cascadia";
-    src: url("../fonts/CascadiaMono.woff2") format("woff2"); /* 使用 CascadiaMono */
+    src: url("../fonts/CascadiaMono-SemiLight.woff2") format("woff2"); /* 使用 CascadiaMono */
 }
 
 body {
@@ -14,6 +14,15 @@ body {
     zoom: 100%;
 }
 
+/* 调整参数部分标题大小 */
+dt {
+    font-size: 18px; /* 你可以根据需要调整这个值 */
+}
+
+/* 调整Example部分标题大小 */
+section h3 {
+    font-size: 18px; /* 你可以根据需要调整这个值 */
+}
 
 /* 使用更高优先级的选择器确保代码块的样式生效 */
 div.highlight pre,

@@ -15,7 +15,7 @@ def heisenberg_matrix_element(L, jxy, jz, cyclic):
     r"""
     \sum_{i=1}^L jxy * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1}) + hz * s^z_i s^z_{i+1}
     
-    Example:
+    Examples
     >>> L = 6
     >>> mat = heisenberg_chain_noblock(L, jxy=1., jz=1.)
     """

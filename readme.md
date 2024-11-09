@@ -32,6 +32,10 @@
 
 - 恢复安装历史：conda install --revision N
 
+- 查看 channel: conda config --show channels
+
+- 移除 channel: conda config --remove channels channel_name
+
 ## package dependence (python=3.11) new version
 
 （下一次更新提醒：numba 更新 0.61?，conda 更新 scipy 1.14？）

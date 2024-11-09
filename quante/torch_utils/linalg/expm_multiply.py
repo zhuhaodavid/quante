@@ -32,7 +32,7 @@ def expm_multiply(A:tc.Tensor, B:tc.Tensor, scale=1.0, start=None, stop=None, nu
     如果不给 `traceA`, `norm1A`, `hasshifted` 将会尝试使用 cupy 计算，如果没有 cupy，将会使用 scipy.sparse.linalg.norm 计算
     为避免 GPU, CPU 之间的数据传输，最好安装 cupy，或者完成 shift 后给入函数（具体做法参考 ..linalg.evolve.py 中的做法
     
-    更详细的示例，可以参考 example 文件夹下的 `evolve.ipynb` 文件。
+    更详细的Example，可以参考 example 文件夹下的 `evolve.ipynb` 文件。
     
     """
     assert isinstance(A, tc.Tensor) and isinstance(B, tc.Tensor)
@@ -48,7 +48,7 @@ def evolve_engine(A:tc.Tensor, scale=1., n0=1, herm=False):
     """
     用 evolve engine 的形式，用法如下：
     
-    示例:
+    Examples
     --------
     >>> import quante as qt
     >>> from quante.torch_utils.linalg import evolve_engine, to_csr

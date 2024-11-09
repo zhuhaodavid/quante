@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-15 14:19:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 20:44:24
+# @Last Modified time: 2024-11-09 18:05:06
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -132,7 +132,7 @@ def observe_states(vecs:_np.ndarray, O:_np.ndarray) -> _np.ndarray:
     """
     计算 vecs 的观测值：
     
-    示例:
+    Examples
     --------
     >>> mat = qla.rdmat(100, dtype=np.complex128)
     >>> eigs = qla.rdmat(100, dtype=np.complex128)
@@ -161,7 +161,7 @@ def kron(
     计算多个算符的克罗内克积(无论是密集矩阵/稀疏矩阵)。
     只要有一个是稀疏的，结果就是稀疏的。
     
-    示例:
+    Examples
     ---------
     >>> op1 = np.array([[1, 2], [3, 4]])
     >>> op2 = np.array([[5, 6], [7, 8]])
@@ -262,7 +262,7 @@ def ikron(
     """
     多个单位一起生成
     
-    示例:
+    Examples
     --------
     >>> xy = op.pauli_matrix('xy')
     >>> dims = (2, ) * 10
@@ -374,7 +374,7 @@ def partial_trace(p, dims, keep):
     """
     计算 p 的部分迹，dims 是各个格点的维数，keep 是要保留的格点位置
     
-    示例:
+    Examples
     --------
     >>> L = 4
     >>> vec = np.random.rand(2**L)  # 对稀疏向量存在问题
@@ -594,7 +594,7 @@ def fit(xs: list, ys: list, polynomial_degree: int) -> tuple:
     返回:
     tuple: 包含两个元素的元组，第一个元素是拟合后的 y 值数组，第二个元素是拟合多项式的系数
     
-    示例:
+    Examples
     --------
     >>> xs = [1, 2, 3, 4, 5]
     >>> ys = [1, 4, 9, 16, 25]
@@ -623,36 +623,56 @@ def interp(x, y, x0, kind="linear"):
 
 def find_boundary(x, y, zdata, a, clf=None, axes=None):
     """找到 (x, y, z) 图中的二分类边界，一边 z < a
+
     默认使用 Gassian 过程分类：clf = GaussianProcessClassifier(1.0 * RBF(1.0))
 
+    Parameters
+    ----------
+    x : numpy.ndarray
+        二维数组，x 方向数据
+    y : numpy.ndarray
+        二维数组，y 方向数据
+    zdata : numpy.ndarray
+        二维数组，z 方向数据
+    a : real
+        分界线
+    clf : classifier, optional
+        分类器。Defaults to None.
+    axes : list, optional
+        [x0, x1, y0, y1]. Defaults to None.
+
+    Returns
+    -------
+    (numpy.ndarray, numpy.ndarray)
+        边界的横纵坐标
+    
+    
     常用的分类器还有：
-    # 支持向量机线性分类
-    clf = sklearn.svm.SVC(kernel="linear", C=0.025)
-    # 支持向量机分类
-    clf = sklearn.svm.SVC(gamma=2, C=1)
-    # 决策树分类
-    clf = sklearn.tree.DecisionTreeClassifier(max_depth=5)
-    # MLPC 分类
-    clf = sklearn.neural_network.MLPClassifier(alpha=1, max_iter=1000)
-    # 高斯朴素贝叶斯分类
-    clf = sklearn.naive_bayes.GaussianNB()
-    # 随机森林分类
-    clf = sklearn.ensemble.RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1)
-    # AdaBoost 分类
-    clf = sklearn.ensemble.AdaBoostClassifier()
-    # 二次判别分析算法
-    clf = sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis()
+    
+    - 支持向量机线性分类
+        clf = sklearn.svm.SVC(kernel="linear", C=0.025)
+    
+    - 支持向量机分类
+        clf = sklearn.svm.SVC(gamma=2, C=1)
+    
+    - 决策树分类
+        clf = sklearn.tree.DecisionTreeClassifier(max_depth=5)
+    
+    - MLPC 分类
+        clf = sklearn.neural_network.MLPClassifier(alpha=1, max_iter=1000)
+    
+    - 高斯朴素贝叶斯分类
+        clf = sklearn.naive_bayes.GaussianNB()
+    
+    - 随机森林分类
+        clf = sklearn.ensemble.RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1)
+    
+    - AdaBoost 分类
+        clf = sklearn.ensemble.AdaBoostClassifier()
+    
+    - 二次判别分析算法
+        clf = sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis()
 
-    Args:
-        x (numpy.ndarray): 1-d 数组，x 方向数据
-        y (numpy.ndarray): 1-d 数组，y 方向数据
-        zdata (numpy.ndarray): 2-d 数组，z 方向数据
-        a (real): 分界线
-        clf (classifier, optional): 分类器。Defaults to None.
-        axes (list, optional): [x0, x1, y0, y1]. Defaults to None.
-
-    Returns:
-        (numpy.ndarray, numpy.ndarray): 边界的横纵坐标
     """
     import matplotlib.pyplot as _plt
     from sklearn.metrics import accuracy_score

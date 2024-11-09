@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2024-10-31 20:42:10
+# # @Last Modified time: 2024-11-09 17:35:19
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
@@ -67,7 +67,7 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
            19. 159-208. ISSN 0962-4929
            http://eprints.ma.man.ac.uk/1451/
            
-    示例:
+    Examples
     --------
     >>> import quante as qt
     >>> L = 10
@@ -77,7 +77,7 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
     >>> res.shape
     (100, 1024, 1)
     
-    更详细的示例，可以参考 example 文件夹下的 `evolve.ipynb` 文件。
+    更详细的Example，可以参考 example 文件夹下的 `evolve.ipynb` 文件。
     """
     assert scale == 1.0 or scale == - 1j, "only scale=1.0 or scale=-1j is supported for now"
     
@@ -123,17 +123,17 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
         dtype = psi0.dtype
         if herm is True:
             if scale == 1.0:
-                lo = _spalg.LinearOperator((dim,dim), matvec=mat, rmatvec=mat, dtype=dtype)
+                lo = _spalg.LinearOperator((dim,dim), matvec=mat, rmatvec=mat, dtype=dtype) # type: ignore
             elif scale == -1j:
-                lo = _spalg.LinearOperator((dim,dim), matvec=lambda v: (-1j) * mat(v), rmatvec=lambda v: (1j) * mat(v), dtype=dtype)
+                lo = _spalg.LinearOperator((dim,dim), matvec=lambda v: (-1j) * mat(v), rmatvec=lambda v: (1j) * mat(v), dtype=dtype) # type: ignore
         elif callable(herm):
             assert scale == 1.0
-            lo = _spalg.LinearOperator((dim,dim), matvec=mat, rmatvec=herm, dtype=dtype)
+            lo = _spalg.LinearOperator((dim,dim), matvec=mat, rmatvec=herm, dtype=dtype) # type: ignore
         else:
             raise ValueError("herm should be 1 for hermitian or -1 for antihermitian or callable")
     else:
         assert isinstance(mat, (_np.ndarray, _sparse.spmatrix, _sparse.sparray)), "cuda only support numpy.ndarray or scipy.sparse matrix"
-        dtype = _np.complex128 if scale == -1j or _np.iscomplexobj(mat) or _np.iscomplexobj(psi0) else tc.float64
+        dtype = _np.complex128 if scale == -1j or _np.iscomplexobj(mat) or _np.iscomplexobj(psi0) else _np.float64
         psi0 = psi0.astype(dtype)
         lo = mat
     
@@ -286,7 +286,7 @@ def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.nd
     Returns:
         _np.ndarray: 时间演化量子态矩阵
         
-    示例:
+    Examples
     --------
     >>> import quante as qt
     >>> L = 10

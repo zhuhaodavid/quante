@@ -69,7 +69,7 @@ $$
 
 ${ B_{\phi} }$ 同样要用 ${ \lbrace c_{i} \rbrace  }$ 展开，再用 ${ \lbrace f_{k} \rbrace  }$ 展开。
 
-## Example
+## Examples
 
 计算算符 ${ \sigma^{z}_{n} }$ 的观察值。
 

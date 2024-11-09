@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 20:45:37
+# @Last Modified time: 2024-11-05 21:38:02
 
 
 import numpy as np
@@ -57,7 +57,7 @@ def svd(tsr:tc.Tensor, *, lr_indx=None, trunc_para=(None, None, None), full_matr
     full_matrices 是否返回完整的矩阵
 
 
-    示例:
+    Examples
     --------
     >>> tsr = tc.randn(3,7,5,2,dtype=tc.float64)
     >>> u,s,v,e = svd(tsr, lr_indx=[[1,2],[0,3]])
@@ -125,7 +125,7 @@ def qr(tsr:tc.Tensor, *, lr_indx=None) -> tuple[tc.Tensor, tc.Tensor]:
 
     (`left_indx`, `right_indx`): left_indx 为左指标，right_indx 为右指标
 
-    示例:
+    Examples
     --------
     >>> tsr = tc.randn(3,7,5,2,dtype=tc.float64)
     >>> q, r = qr(tsr, lr_indx=[[1,2],[0,3]])
@@ -317,7 +317,7 @@ def tt_decompose(tsr:tc.Tensor, phys_dim:int|list, trunc_para:tuple=(None,None,N
     
     返回 tt, Ss, lognm
     
-    示例:
+    Examples
     --------
     >>> tsr = tc.randn(2**10, dtype=tc.complex128)
     >>> tt, s, lognm = tensor_train_decompose(tsr, 2)
@@ -340,7 +340,7 @@ def tt_decompose(tsr:tc.Tensor, phys_dim:int|list, trunc_para:tuple=(None,None,N
     # 然后进行TT分解：
     tt = [None]*len(phys_dim)
     Ss = [None]*(len(phys_dim)+1)
-    Ss[-1] = 1.
+    Ss[-1] = tc.tensor([1.], dtype=tc.float64)
     lognm = 0.
     if tsr.ndim == 1:
         lstdim = 1
@@ -378,5 +378,5 @@ def tt_decompose(tsr:tc.Tensor, phys_dim:int|list, trunc_para:tuple=(None,None,N
         raise ValueError("The tensor must be 1- or 2-dimensional.")
     tt[0] *= tc.sign(u[0,0])
     lognm += tc.log(tc.abs(u[0,0]))
-    Ss[0] = 1.0
+    Ss[0] = tc.tensor([1.], dtype=tc.float64)
     return tt, Ss, lognm

@@ -667,7 +667,7 @@ def lanczos_ground_state(linear_oper:Callable[[tc.Tensor],tc.Tensor], v:tc.Tenso
     
     否则只能前向传播
     
-    示例:
+    Examples
     --------
     >>> import torch
     >>> import quante.torch_utils.tclinalg as qtc
@@ -700,7 +700,7 @@ def lanczos_evolve_state(linear_oper:Callable[[tc.Tensor],tc.Tensor], v:tc.Tenso
     
     否则只能前向传播
     
-    示例:
+    Examples
     --------
     >>> import torch
     >>> import quante.torch_utils.tclinalg as qtc

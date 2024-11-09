@@ -16,7 +16,7 @@ def heisenberg_matrix_element(L:int, M:int, pz:int, jxy:float, jz:float, s_list:
     r"""
     \sum_{i=1}^L jxy * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1}) + jz * s^z_i s^z_{i+1}
 
-    Example:
+    Examples
     >>> L = 10; pz = 1
     >>> M, s_list = construct_pzblock_basis(L, pz)
     >>> mat = heisenberg_chain_in_pzblock(L, pz, jxy=1., jz=1., s_list=s_list)

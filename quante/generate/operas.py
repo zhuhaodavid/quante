@@ -2,21 +2,20 @@
 # @Author: hzhu
 # @Date:   2024-08-19 12:52:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 18:55:48
+# @Last Modified time: 2024-11-09 19:30:46
    
 #!! 包里的其他文件不要 import 这个 operas.py !!!!
 
 import numpy as _np
 import scipy as _sp
 import copy as _copy
-import numbers as _numbers
 import warnings as _warnings
-from typing import Union, Generator, Optional, Type, Callable
+from typing import Union, Generator, Optional, Type, Callable, Iterable
 
+number = Union[int, float, complex]
+OperDataType = dict[str, dict[tuple[int,...], number]]
 
-OperDataType = dict[str, dict[tuple[int], Union[float, complex]]]
-
-from ..basicfun import PrintLn
+from ..basicfun import PrintLn # type: ignore
 
 @PrintLn.add_object_print
 class Oper:
@@ -56,11 +55,11 @@ class Oper:
     def copy(self) -> 'Oper':
         return Oper(_copy.deepcopy(self.data), self.type)
 
-    def __add__(self, oper:Union['Oper', _numbers.Number], a=1.) -> 'Oper':
+    def __add__(self, oper:Union['Oper', number], a=1.) -> 'Oper':
         """ self + a * oper """
         if oper == 0:  # a + 0 = a
             return self
-        elif isinstance(oper, _numbers.Number):  # 加单位阵
+        elif isinstance(oper, (int, float, complex)):  # 加单位阵
             new_oper = self.copy()
             new_oper._add_single_oper('I', (0,), oper)
             return new_oper
@@ -72,7 +71,7 @@ class Oper:
         else:
             raise NotImplementedError("算符类型不相同")
 
-    def _add_single_oper(self, operator: str, position: tuple[int], coefficient: Union[float, complex]) -> None:
+    def _add_single_oper(self, operator: str, position: tuple[int, ...], coefficient: number) -> None:
         """添加 opnm, posn, coef"""
         operator_data = self.data.setdefault(operator, {})  # 找到算符对应的数据
         previous_coef = operator_data.setdefault(position, 0.)  # 找到相应位置的系数
@@ -84,10 +83,10 @@ class Oper:
         else:
             operator_data[position] = _np.real_if_close(updated_coef).item()
 
-    def each_term(self) -> Generator[tuple[str, tuple[int], Union[float, complex]], None, None]:
+    def each_term(self) -> Generator[tuple[str, tuple[int,...], number], None, None]:
         """
         
-        示例:
+        Examples
         --------
         >>> ham = op.heisenberg_operator(L=10)
         >>> for opnm, posn, coef in ham.each_term():
@@ -104,14 +103,14 @@ class Oper:
             for position, coefficient in operator_data.items():
                 yield operator, position, coefficient
 
-    def __radd__(self, oper:Union['Oper', _numbers.Number]) -> 'Oper':
+    def __radd__(self, oper:Union['Oper', number]) -> 'Oper':
         """ num + oper """
         return self.__add__(oper)  # a + b = b + a
     
-    def __mul__(self, scale:Union['Oper', _numbers.Number]) -> 'Oper':
+    def __mul__(self, scale:Union['Oper', number]) -> 'Oper':
         """ oper * num """
         if isinstance(scale, Oper): return self.__matmul__(scale)
-        if scale == 0: return 0
+        if scale == 0: return Oper({}, self.type)
         newdata = {}
         for key, opnmdata in self.data.items():
             newdata[key] = {k: v*scale for k, v in opnmdata.items()}
@@ -123,11 +122,11 @@ class Oper:
             return self.__matmul__(scale)
         return self * scale
     
-    def __sub__(self, oper:Union['Oper', _numbers.Number]) -> 'Oper':
+    def __sub__(self, oper:Union['Oper', number]) -> 'Oper':
         """self - oper"""
         return self.__add__(oper, a=-1.)
 
-    def __rsub__(self, oper:Union['Oper', _numbers.Number]) -> 'Oper':
+    def __rsub__(self, oper:Union['Oper', number]) -> 'Oper':
         """oper - self"""
         return ((-1.)*self).__add__(oper)
 
@@ -135,14 +134,14 @@ class Oper:
         """- self"""
         return (-1) * self
 
-    def __truediv__(self, num:Union[float, complex]) -> 'Oper':
+    def __truediv__(self, num:number) -> 'Oper':
         """self / num"""
         return (1 / num) * self
     
     def __matmul__(self, oper:'Oper') -> 'Oper':
         """ self * oper """
         if self.type == oper.type and len(oper.type) == 1:  # 相同类型
-            newoper = 0
+            newoper = Oper({}, self.type)
             for opnm1, opnmdata1 in self.data.items():
                 if opnm1 == "I":
                     coef_sum = 0
@@ -178,13 +177,63 @@ class Oper:
             newoper = self * newoper
         return newoper
 
-    def show_string_form(self) -> str:
+    def show_string_form(self) -> None:
         operator_string = ""
         for operator, operator_data in self.data.items():
             operator_string += operator + "\n"
             for position, coefficient in operator_data.items():
                 operator_string += "  " + position.__str__() + " " + coefficient.__repr__() + "\n"
         print(operator_string)
+    
+    def show(self, whichonm=None) -> None:
+        import matplotlib.pyplot as plt
+        try:
+            import igraph as ig
+        except ImportError:
+            raise ImportError("igraph is not installed, please install it first: pip install igraph")
+        
+        dic = {}
+        for onm, posn, coef in self.each_term():
+            if whichonm is not None:
+                if onm!= whichonm:
+                    continue
+            interact = "-".join([str(i) for i in posn])
+            if whichonm is not None:
+                tmp = dic.setdefault(interact, 0)
+                dic[interact] = tmp + coef
+            else:
+                tmp = dic.setdefault(interact, [])
+                tmp.append(onm)
+        
+        if whichonm is None:
+            for interact, onms in dic.items():
+                dic[interact] = "+".join(onms)
+
+        fml = ",".join(dic.keys())
+        g = ig.Graph.Formula(
+            fml
+        )
+        
+        g.es["weight"] = list(dic["-".join([ges.vertex_tuple[0]['name'], ges.vertex_tuple[1]['name']])]  for ges in g.es)
+        # print(ges.vertex_tuples[0]['name'] for ges in g.es)
+        # 如何表示单体作用？
+        # 如何表示多体作用？
+
+        fig, ax = plt.subplots(figsize=(10, 2))
+        ig.plot(
+            g,
+            target=ax,
+            layout=g.layout_kamada_kawai(),
+            vertex_size=30,
+            vertex_color="lightblue",
+            vertex_label=g.vs["name"],
+            edge_width=1.0,
+            edge_color='gray',
+            edge_label=g.es['weight']
+        )
+
+        plt.show()
+
 
     def save(self, filename:str = 'ham.h5') -> None:
         from ..basicfun import save_hdf5
@@ -205,7 +254,8 @@ class Oper:
     def sort_posn(self) -> 'Oper':
         """将位置按照从小到大顺序排列
         
-        Example:
+        Examples
+        --------
         >>> res = op.xx(2,1).sort_posn()
         
         注, 对费米子会报错
@@ -230,7 +280,7 @@ class Oper:
         
         展开之后，应当只包含 `p`, `m`, `i`, `Z` 这三种算符
         
-        示例:
+        Examples
         --------
         >>> ham = op.heisenberg_operator(L=4)
         >>> ham = ham.expandxy()
@@ -271,7 +321,7 @@ class Oper:
         else:
             raise NotImplementedError()
     
-    def _has_expanded(self) -> None:
+    def _has_expanded(self) -> bool:
         for opnm, _, _ in self.each_term():
             if 'x' in opnm or 'y' in opnm or 'z' in opnm:
                 return False
@@ -284,11 +334,11 @@ class Oper:
                 return complex
         return float
     
-    def quspin_form(self) -> list[list[list[Union[int, float, complex]]]]:
+    def quspin_form(self) -> list[list[list[number]]]:
         """
         返回 quspin 可以接受的格式
         
-        示例:
+        Examples
         --------
         >>> from quspin.operators import hamiltonian
         >>> from quspin.basis import spin_basis_1d
@@ -309,9 +359,12 @@ class Oper:
         """
         生成哈密顿量在给定基矢下的矩阵，对于自旋 1/2 默认使用 symmetrize 的方法计算矩阵元
         
-        #!! 注意：这个函数不检查哈密顿量是否有对称性。如果哈密顿量没有对称性，那么这个函数会返回错误的结果，而不会报错。
+        pauli 默认使用的是 False
         
-        示例:
+        .. 警告::
+            这个函数不检查哈密顿量是否有对称性。如果哈密顿量没有对称性，那么这个函数会返回错误的结果，而不会报错。
+        
+        Examples
         --------
         >>> L = 10
         >>> basis = qt.generate.basis.spin_basis(L=L, Nup=5)
@@ -319,8 +372,6 @@ class Oper:
         >>> mat = ham.to_matrix(basis)
         >>> print(mat)
         
-        其他生成矩阵的方法:
-        ---------------------
         时间对比参考 example/exact_diagonalization.ipynb
         
         对于**没有对称性**的基矢，automata 收缩是最快的方法：
@@ -355,6 +406,8 @@ class Oper:
                     _warnings.warn("pauli in to_matrix is not used")
                 eachterm, hascomplex = self._convert_to_quick_form()
             else:
+                if pauli is None:
+                    pauli = False
                 eachterm, hascomplex = self.expandxy(pauli)._convert_to_quick_form()
             mat = basis._sparse_matrix(eachterm, hascomplex, savememory=savememory)
             if sparse:
@@ -406,37 +459,33 @@ class Oper:
         """
         生成算符的 mpo 形式
 
-        示例:
+        Parameters
+        ----------
+        L : int
+            系统的长度，即量子比特的数量。
+        pauli : bool, optional
+            是否使用 Pauli 矩阵作为局部矩阵。默认为 False，即使用常规矩阵。
+        d : int, optional
+            局部矩阵的维度。默认为 2，即二维矩阵。
+        gen_matrix : Optional[Callable[[str], _np.ndarray]], optional
+            用于生成局部矩阵的函数。如果提供，该函数将根据字符串参数生成对应的局部矩阵。默认为 None，即使用默认的局部矩阵生成方式。
+        dtype : Type[_np.complex128], optional
+            局部矩阵的数据类型。默认为 _np.complex128，即复数类型。
+
+        Examples
         --------
         >>> L = 10
         >>> ham = op.heisenberg_operator(L)
         >>> basis = (L, pauli=False)
         >>> mpo = ham.automata(L, pauli=False)
         
-        Parameters
-        ----------
-        L : int
-            系统的长度，即量子比特的数量。
-            
-        pauli : bool, optional
-            是否使用 Pauli 矩阵作为局部矩阵。默认为 False，即使用常规矩阵。
-            
-        d : int, optional
-            局部矩阵的维度。默认为 2，即二维矩阵。
-            
-        gen_matrix : Optional[Callable[[str], _np.ndarray]], optional
-            用于生成局部矩阵的函数。如果提供，该函数将根据字符串参数生成对应的局部矩阵。默认为 None，即使用默认的局部矩阵生成方式。
-            
-        dtype : Type[_np.complex128], optional
-            局部矩阵的数据类型。默认为 _np.complex128，即复数类型。
         """
         from ..tensor.automata import automata_mpo
         hlocals, positions, coefficients = self.expandxy(pauli=pauli).split_data()
         coefficients = _np.real_if_close(coefficients)
-        dtype = coefficients.dtype
-        return automata_mpo(L, hlocals, positions, coefficients, d=d, pauli=pauli, local_matrix_function=local_matrix, dtype=dtype)
+        return automata_mpo(L, hlocals, positions, coefficients, d=d, pauli=pauli, local_matrix_function=local_matrix, dtype=coefficients.dtype)
 
-    def split_data(self) -> tuple[list[str], list[tuple[int]], list[Union[int, float, complex]]]:
+    def split_data(self) -> tuple[list[str], list[tuple[int]], list[number]]:
         """这个函数是为 automata 写的，但 parallel_matrix 等函数可能会用到"""
         operators, positions, coefficients = [], [], []
         for operator, position, coefficient in self.each_term():
@@ -471,7 +520,7 @@ class Oper:
             ╭--┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮ 
             ╰--┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯ 
         
-        示例:
+        Examples
         --------
         >>> import quante as qt
         >>> import numpy as np
@@ -528,32 +577,33 @@ class Oper:
 
         使用 Trotter-Suzuki 分解将给定的哈密顿量分解为一系列局部操作，并按照给定的时间步长 tau 进行演化。
         
-        NOTE:
-        ----------
+        .. 警告::
             该函数只支持最近邻相互作用的哈密顿量。
 
-        Args:
+        Parameters
         ----------
-        L (int): 系统的长度，即量子比特的数量。
-        
-        tau (float): 时间步长，用于控制演化的速度。
-        
-        order (str): Trotter 分解的阶数，决定了分解的精度。``1, 2, 4, '4_opt'``
-                        Order ``1`` approximation is simply :math:`e^A a^B`.
-                        Order ``2`` is the "leapfrog" `e^{A/2} e^B e^{A/2}`.
-                        Order ``4`` is the fourth-order from `[suzuki1991] <https://doi.org/10.1063/1.529425>`_
-                        
-        evolve_type (str): 演化的类型，可以是 "time" 或 "temporal"
-        
-        N_step (int): 演化的总步数，总演化时间为 N_step * tau。
-        
-        pauli (bool): 是否使用 Pauli 矩阵作为局部矩阵。默认为 True，即使用 Pauli 矩阵。
+        L : int
+            系统的长度，即量子比特的数量。
+        tau : float
+            时间步长，用于控制演化的速度。
+        order : str, optional
+            Trotter 分解的阶数，决定了分解的精度。``1, 2, 4, '4_opt'``
+            Order ``1`` approximation is simply :math:`e^A a^B`.
+            Order ``2`` is the "leapfrog" `e^{A/2} e^B e^{A/2}`.
+            Order ``4`` is the fourth-order from `[suzuki1991] <https://doi.org/10.1063/1.529425>`_
+        evolve_type : str, optional
+            演化的类型，可以是 "time" 或 "temporal"
+        N_step : int, optional
+            演化的总步数，总演化时间为 N_step * tau。
+        pauli : bool, optional
+            是否使用 Pauli 矩阵作为局部矩阵。默认为 True，即使用 Pauli 矩阵。
 
-        Returns:
-        ----------
-        tuple[list[int], list[_np.ndarray]] : 位置列表, 对应的局部操作
-        
-        示例:
+        Returns
+        -------
+        tuple[list[int], list[_np.ndarray]]
+            位置列表, 对应的局部操作
+
+        Examples
         --------
         >>> gates = ham.trotter_gates(L, tau=tau, order='2', evolve_type='time', pauli=False)
         >>> U_tau = MPO.eye(L)
@@ -636,7 +686,7 @@ class Oper:
         c_one = 2. if pauli else 1.
         c_two = 4. if pauli else 1.
         
-        local_hamiltonian = 0.  # 用来储存所有作用到 position 和 position+1 这两个格点上的局域哈密顿量的和
+        local_hamiltonian = _np.zeros((4,4), dtype=_np.float64)  # 用来储存所有作用到 position 和 position+1 这两个格点上的局域哈密顿量的和
 
         # todo 如果有需要，这里是可以并行加速的（利用 linalg 中的 parallel_reduce 工具），提高 5 ~ 8 倍的速度
         # 遍历哈密顿量中的每一项，找到所有作用在 position 和 position+1 这两个格点上的局域哈密顿量
@@ -800,9 +850,11 @@ def xy(i:int, j:int) -> Oper:
 def yx(i:int, j:int) -> Oper:
     return Oper({'yx': {(i,j): 1.}}, 's')
 
-def sum(*oper) -> Oper:
-    import builtins
-    return builtins.sum(*oper)
+def sum(oper: Iterable[Oper]) -> Oper:
+    res = Oper({}, 's')
+    for o in oper:
+        res += o
+    return res
 
 def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> Oper:
     r"""
@@ -813,18 +865,18 @@ def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> Oper:
     .. math::
         \sum_{i=1}^{N-1} j * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1} + s^z_i s^z_{i+1}) + \sum_i^N h * s^z_i
     
-    示例:
+    Examples
     --------
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=1.0, h=0.0) # heisenberg model
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(1.0, 1.0, 0.0), h=0.0)  # xy model
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(0.0, 0.0, 1.0), h=(1.0, 0.0, 0.0))  # ising model
     """
     try:
-        jx, jy, jz = j
+        jx, jy, jz = j # type: ignore
     except TypeError:
         jx = jy = jz = j
     try:
-        hx, hy, hz = h
+        hx, hy, hz = h # type: ignore
     except TypeError:
         hz = h
         hx = hy = 0.0

@@ -9,51 +9,37 @@ basicfun (:mod:`quante.basicfun`)
 - 系统层面的函数：`create_folder`, `save_hdf5`, `load_hdf5`
 - 日志工具：`set_logging`, `println`
 - 字典格式：`todict`, `idataclass`
-- 画图预设：`set_matplotlib`
+- 画图预设：`plt_style_use`
+
+.. currentmodule:: quante.basicfun
 
 测试工具
 -------- 
+.. autofunction:: test_time
+.. autofunction:: test_memory
 
-.. autosummary::
-   :toctree: _autosummary
-
-   quante.basicfun.test_time
-   quante.basicfun.test_memory
 
 系统层面的函数
 --------------- 
 
-.. autosummary::
-   :toctree: _autosummary
-
-   quante.basicfun.create_folder
-   quante.basicfun.save_hdf5
-   quante.basicfun.load_hdf5
-   quante.basicfun._save_hdf5
-   quante.basicfun._load_hdf5
+.. autofunction:: create_folder
+.. autofunction:: save_hdf5
+.. autofunction:: load_hdf5
+.. autofunction:: _save_hdf5
+.. autofunction:: _load_hdf5
 
 日志工具
 -------- 
 
-.. autosummary::
-   :toctree: _autosummary
-
-   quante.basicfun.set_logging
-   quante.basicfun.println
+.. autofunction:: set_logging
+.. autofunction:: println
 
 字典格式
 -------- 
 
-.. autosummary::
-   :toctree: _autosummary
-
-   quante.basicfun.todict
-   quante.basicfun.idataclass
+.. autofunction:: todict
+.. autofunction:: idataclass
 
 画图预设
 -------- 
-
-.. autosummary::
-   :toctree: _autosummary
-
-   quante.basicfun.set_matplotlib
+.. autofunction:: plt_style_use

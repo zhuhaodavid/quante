@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 20:47:07
+# @Last Modified time: 2024-11-09 16:37:58
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -11,9 +11,10 @@ import warnings as _warnings
 
 
 __all__ = [
+    "entanglement_spectrum",
+    "entanglement_entropy",
     "entropy",
     "entropy_page",
-    "entanglement_spectrum",
     "cg_coef",
     "mean_level_spacing",
 ]
@@ -24,20 +25,40 @@ __all__ += [
     "plot_level_spacing_distribution", 
     ]
 
-def entanglement_spectrum(state:_np.ndarray, L:int, left_number:int, basis=None) -> _np.float64:
-    """计算纯态纠缠熵
-    basis 表示 state 所处的对称性空间
+def entanglement_spectrum(state:_np.ndarray, L:int, left_number:int, basis=None) -> _np.ndarray:
+    """纯态纠缠谱.
     
-    示例:
+    `state` 处于 `basis` 空间，`1/2` 自旋个数为 `L`，计算左边有 `left_number` 个自旋这种二分的纠缠谱。
+    
+    Parameters
+    ----------
+    state : _np.ndarray
+        纯态
+    L : int
+        自旋个数
+    left_number : int
+        二分左侧自旋个数
+    basis : _type_, optional
+        基矢, by default None
+
+    Returns
+    -------
+    float
+        纠缠谱
+        
+    Examples
     --------
+    计算海森堡链的二分纠缠谱
+    
     >>> L = 10
     >>> ham = qt.generate.operas.heisenberg_operator(L=10)
     >>> basis = qt.generate.basis.spin_basis(L=L, Nup=5, kblock=1)
     >>> hammat = ham.to_matrix(basis)
-    >>> val, vec = qt.linalg.eigh(hammat, k=1, which="SA")
+    >>> val, vec = qt.linalg.eigh(hammat, k=1)
     >>> print(qt.quantity.entanglement_spectrum(vec, L=L, left_number=L//2, basis=basis))
     [0.70710678 0.70710678 0.         0.         0.         0.         0.         0.        ]
     """
+    assert state.ndim == 1 or state.shape[1] == 1, "state must be a vector"
     if basis is not None:
         fullstate = basis.recover(state.reshape(-1,1))
     else:
@@ -45,14 +66,62 @@ def entanglement_spectrum(state:_np.ndarray, L:int, left_number:int, basis=None)
     assert fullstate.shape[0] == 1<<L
     matrix = fullstate.reshape(1<<left_number, -1)
     from quante.linalg.svd_robust import svd
-    return svd(matrix, compute_uv=False)
+    return svd(matrix, compute_uv=False) # type: ignore
 
+def entanglement_entropy(state:_np.ndarray, L:int, left_number:int, basis=None) -> float:
+    """纯态纠缠熵.
+    
+    `state` 处于 `basis` 空间，`1/2` 自旋个数为 `L`，计算左边有 `left_number` 个自旋这种二分的纠缠熵。
+    
+    Parameters
+    ----------
+    state : _np.ndarray
+        纯态
+    L : int
+        自旋个数
+    left_number : int
+        二分左侧自旋个数
+    basis : SpinBasis, optional
+        基矢, by default None
+
+    Returns
+    -------
+    float
+        纠缠熵
+        
+    Examples
+    --------
+    计算海森堡链的二分纠缠熵
+    
+    >>> L = 10
+    >>> ham = qt.generate.operas.heisenberg_operator(L=10)
+    >>> basis = qt.generate.basis.spin_basis(L=L, Nup=5, kblock=1)
+    >>> hammat = ham.to_matrix(basis)
+    >>> val, vec = qt.linalg.eigh(hammat, k=1)
+    >>> print(qt.quantity.entanglement_entropy(vec, L=L, left_number=L//2, basis=basis))
+    0.6931471805599453
+    """
+    ee = entanglement_spectrum(state, L, left_number, basis)
+    return (-2) * sum(ee**2 * _np.log(ee))
 
 def entropy(a, rank=None, base=_np.e) -> _np.float64:
-    """
-    计算 von Neumann 熵 (- tr a log a) ，rank 表示使用 eigs
+    """计算 von Neumann 熵.
+    
+    如果 `a` 是密度矩阵，那么计算：
+    
+    .. math::
+        -\\operatorname{tr} a \\log a
+        
+    通过 `rank` 可以指定计算的本征值个数。
+    
+    如果 `a` 是本征值，那么计算：
+    
+    .. math::
+        -\\sum_{i=1}^n a_i \\log a_i
+    
+    其中 :math:`n` 是 `a` 的维度。
 
-    示例:
+    Examples
     --------
     >>> L = 6
     >>> mat = ed.rdmat_rho(2**L, sparse=True, density=0.5)
@@ -75,24 +144,49 @@ def entropy(a, rank=None, base=_np.e) -> _np.float64:
             evals = eigvals(a, k=rank, which="LM")
 
     evals = evals[evals > 0.0]
-    return _np.real_if_close(_np.sum(-evals * _np.log2(evals)) / _np.log2(base))
+    return _np.real_if_close([_np.sum(-evals * _np.log2(evals)) / _np.log2(base)])[0]
 
 
-def entropy_page(Dim_sub:int, Dim_tot:int) -> _np.float64:
-    """
-    Calculate the page entropy, i.e. 
-       expected entropy for a subsytem of a random state in Hilbert space.
+def entropy_page(Dim_sub:int, Dim_tot:int) -> float:
+    """计算 Page 熵。
     
-    示例:
+    Page 熵指 Hilbert 空间中一个随机态的熵。
+    
+    Parameters
+    ----------
+    Dim_sub : int
+        子空间维数
+    Dim_tot : int
+        空间维数
+
+    Returns
+    -------
+    float
+        Page 熵
+    
+    Examples
     --------
-    >>> L = 12
-    >>> vals = qla.entropy_page(2**(L//2), 2**L)
-    >>> print(vals)
-    >>> vec = qla.rdket(2**L)
-    >>> rho = qla.partial_trace(vec, [2]*L, range(L//2))
-    >>> print(qla.entropy(rho))
+    计算 12 个自旋，二分为 6 个自旋的 Page 熵：
     
-    来自文献：10.1103/PhysRevLett.71.1291
+    >>> import quante.quantity as qq
+    >>> L = 12
+    >>> vals = qq.entropy_page(2**(L//2), 2**L)
+    >>> vals
+    3.6590254932605575
+    
+    随机这样一个态，计算它的二分纠缠熵：
+    
+    >>> import quante as qt
+    >>> vec = qt.generate.state.random(dim=2**12)
+    >>> rho = qt.linalg.partial_trace(vec, [2]*L, range(L//2))
+    >>> qt.quantity.entropy(rho)
+    3.6520327465312925
+    
+    可以看到是非常接近的。
+    
+    References
+    ----------
+    https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.71.1291
     """
     # * Ensure m is the smaller subsystem
     if Dim_sub <= Dim_tot//Dim_sub:
@@ -107,98 +201,114 @@ def entropy_page(Dim_sub:int, Dim_tot:int) -> _np.float64:
 
 
 
-def cg_coef(j1:int, j2:int, j3:int, m1:int, m2:int, m3:int) -> float:
-    """Calculates the Clebsch-Gordon coefficient
-    for coupling (j1,m1) and (j2,m2) to give (j3,m3).
+def cg_coef(j1:float, j2:float, j3:float, m1:float, m2:float, m3:float) -> float:
+    """Clebsch-Gordon coefficient 系数.
     
-    参考：https://github.com/BrandonHenke/phy803/blob/main/clebrpp.pdf
-
+    (j1,m1) 与 (j2,m2) 耦合成为 (j3,m3) 的系数
+    
     Parameters
     ----------
     j1 : float
-        Total angular momentum 1.
-
+        1 的总角动量
     j2 : float
-        Total angular momentum 2.
-
+        2 的总角动量
     j3 : float
-        Total angular momentum 3.
-
+        3 的总角动量
     m1 : float
-        z-component of angular momentum 1.
-
+        1 角动量的 z 分量
     m2 : float
-        z-component of angular momentum 2.
-
+        2 角动量的 z 分量
     m3 : float
-        z-component of angular momentum 3.
+        3 角动量的 z 分量
 
     Returns
     -------
     cg_coeff : float
-        Requested Clebsch-Gordan coefficient.
-
+        相应的 cg 系数
+    
+    Examples
+    --------
+    计算 [1] 中第一个数: (1/2,1/2) + (1/2,1/2) => (1,1)
+    
+    >>> import quante.quantity as qq
+    >>> qq.cg_coef(1/2, 1/2, 1, 1/2, 1/2, 1)
+    1.0
+    
+    References
+    ----------
+    [1]. https://github.com/BrandonHenke/phy803/blob/main/clebrpp.pdf
     """
-    from .linalg.usenumba.numba_settings import clebsch
+    from .linalg.usenumba.operations_numba import clebsch
     return clebsch(j1, j2, j3, m1, m2, m3)
 
 
 def mean_level_spacing(E,verbose=True):
-	r"""Calculates the mean-level spacing of an energy spectrum.
+    """Clebsch-Gordon coefficient 系数.
+    
+    三种系综的值如下：
+    
+    +----------+-------------+-------------+-------------+
+    |  Possion |     GOE     |     GUE     |     GSE     |
+    +----------+-------------+-------------+-------------+
+    |  0.38629 |  0.5307(1)  |  0.5996(1)  |  0.6744(1)  |
+    +----------+-------------+-------------+-------------+
+    
+    Parameters
+    ----------
+    E : list or _np.ndarray
+        能级列表，必须是升序且没有重复的能级
+    verbose : bool, optional
+        是否打印警告信息, by default True
 
-	See mean level spacing, :math:`\\langle\\tilde r_\mathrm{W}\\rangle`, in 
-	`arXiv:1212.5611 <https://arxiv.org/pdf/1212.5611.pdf>`_ for more details.
-
-	For Wigner-Dyson statistics, we have :math:`\\langle\\tilde r_\mathrm{W}\\rangle\\approx 0.53`, while
-	for Poisson statistics: :math:`\\langle\\tilde r_\mathrm{W}\\rangle\\approx 0.38`.
-
-	Examples
-	--------
-
-	The following example shows how to calculate the mean level spacing :math:`\\langle\\tilde r_\mathrm{W}\\rangle` for the
-	spectrum of the ergodic Hamiltonian :math:`H_1=\\sum_jJ S^z_{j+1}S^z + hS^x_j + g S^z_j`.
-
-	Parameters
-	-----------
-	E : numpy.ndarray
-			Ordered list of ascending, NONdegenerate energies. If `E` contains a repeating value, the function returns `nan`.
-	verbose : bool, optional
-		Toggles warning message about degeneracies of the spectrum `E`.
-
-	Returns
-	-------- 
-	float
-		mean-level spacing.
-	nan
-		if spectrum `E` has degeneracies.
-
+    Returns
+    -------
+    float
+        平均能级间距
+    
+    Examples
+    --------
+    计算 xxz 模型的平均能级间距：
+    
+    >>> import quante as qt
+    >>> import numpy as np
+    >>> ham = qt.generate.operas.heisenberg_operator(L=12, j=(1,1,0.5))
+    >>> basis = qt.generate.basis.spin_basis(L=12, Nup=6, zblock=1)
+    >>> mat = ham.to_matrix(basis)
+    >>> engs = np.linalg.eigvalsh(mat)
+    >>> qt.quantity.mean_level_spacing(engs)
+    0.3693119203415571
+    
+    References
+    ----------
+    https://arxiv.org/pdf/1212.5611.pdf
 	"""
-	if not isinstance(E,_np.ndarray):
-		E = _np.asarray(E)
+    if not isinstance(E,_np.ndarray):
+        E = _np.asarray(E)
 
-	if _np.any(_np.sort(E)!=E):
-		raise TypeError("Expecting a sorted list of ascending, nondegenerate eigenenergies 'E'.")
+    if _np.any(_np.sort(E)!=E):
+        raise TypeError("Expecting a sorted list of ascending, nondegenerate eigenenergies 'E'.")
 
-	# check for degeneracies
-	if len(_np.unique(E)) != len(E):
-		if verbose:
-			_warnings.warn("Degeneracies found in spectrum 'E'!")
-		return _np.nan
-	else:
-		# compute consecutive E-differences
-		sn = _np.diff(E)
+	# check for degeneracies    
+    if len(_np.unique(E)) != len(E):
+        if verbose:
+            _warnings.warn("Degeneracies found in spectrum 'E'!")
+        return _np.nan
+    else:
+	    # compute consecutive E-differences
+        sn = _np.diff(E)
 		
 		# calculate the ratios of consecutive spacings
-		aux = _np.zeros((len(E)-1,2),dtype=_np.float64)
+        aux = _np.zeros((len(E)-1,2),dtype=_np.float64)
 
-		aux[:,0] = sn
-		aux[:,1] = _np.roll(sn,-1)
+        aux[:,0] = sn
+        aux[:,1] = _np.roll(sn,-1)
 
-		return _np.mean(_np.divide( aux.min(1), aux.max(1) )[0:-1] )
+        return _np.mean(_np.divide( aux.min(1), aux.max(1) )[0:-1] )
 
 
 #############################
 # 下面是换能级分布的函数
+# todo: 格式整理
 #############################
 
 def discard_len(val, discard):
@@ -278,7 +388,7 @@ def plot_energy_density(vals, ax=None, bandwidth=1.):
         ax = _plt.subplot(111)
         tag = True
     x_d = _np.linspace(vals.min(), vals.max(), 500)
-    density = sum(norm(xi, bandwidth).pdf(x_d) for xi in vals) / len(vals)
+    density = sum(norm(xi, bandwidth).pdf(x_d) for xi in vals) / len(vals) # type: ignore
     ax.fill_between(x_d, density, color=color1, alpha=0.8)
     ax.plot(vals, _np.full_like(vals, -0.003), color2, markeredgewidth=0.1, markersize=10)
     
@@ -308,7 +418,7 @@ def plot_energy_hist(vals, ax=None, bins=None):
     
     from scipy.stats import norm
     x_d = _np.linspace(vals.min(), vals.max(), 100)
-    y_norm = [norm(_np.mean(vals), _np.std(vals)).pdf(xi) for xi in x_d]
+    y_norm = [norm(_np.mean(vals), _np.std(vals)).pdf(xi) for xi in x_d] # type: ignore
     ax.plot(x_d, y_norm, "k--")
     if tag:
         _plt.show()
@@ -355,7 +465,7 @@ def _plot_level_spacing_distribution(spacing, ax=None, bins=None, beta=1):
         bins = _np.arange(eps_spc.min(), eps_spc.max()+h, h)
     else:
         bins = _np.linspace(0, 4+0.1, bins)
-    ax.hist(eps_spc, bins=bins, density=True, color='lightgray', ec="gray")
+    ax.hist(eps_spc, bins=bins, density=True, color='lightgray', ec="gray") # type: ignore
     ax.set_xlim(0, 4)
     ax.set_ylim(0, 1)
     # comparing
@@ -432,7 +542,7 @@ def plot_level_number_variance(eps, l_list, ax=None):
     y_d = [2*(_np.log(2*_np.pi*l)+_np.euler_gamma+1-_np.pi**2/8) /
            _np.pi**2 if l != 0 else 0 for l in l_list]
     ax.plot(l_list, y_d, 'r--')
-    ax.set_ylim([0, 2])
+    ax.set_ylim((0, 2))
     if tag:
         _plt.show()
     return l_list, ax
@@ -450,7 +560,7 @@ def level_spacing_indicator_beta(eps, bandwidth=0.05):
     def PB(s, beta): return b(beta) * (beta+1) * \
         s**beta * _np.exp(- b(beta) * s**(beta+1))
     s_order = _np.linspace(0, _np.max(eps_spc), 1000)[1:]
-    Ps = sum(norm(xi, bandwidth).pdf(s_order)
+    Ps = sum(norm(xi, bandwidth).pdf(s_order) # type: ignore
              for xi in eps_spc)/len(eps_spc)  # 有参数可调
     beta = optimize.curve_fit(PB, s_order, Ps)[0][0]
     return beta
@@ -477,7 +587,7 @@ def plot_level_spacings_ratio(val, ax=None, bins=None):
         bins = _np.arange(_np.min(r_list), _np.max(r_list)+h, h)
     else:
         bins = _np.linspace(0, 1+0.1, bins)
-    ax.hist(r_list, bins=bins, density=True, color='lightgray', ec="gray")
+    ax.hist(r_list, bins=bins, density=True, color='lightgray', ec="gray") # type: ignore
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 2)
     """RMT result comparing"""

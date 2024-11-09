@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:25
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-03 13:27:27
+# @Last Modified time: 2024-11-09 17:32:26
 
 """
 生成一些常用的态（`np.ndarray`）
@@ -23,32 +23,7 @@ import math as _math
 from ..linalg.operations import eye, kron
 from ..linalg.eig_modified import eigh
 
-from typing import Union
-
-__all__ = [
-    "spin_up",
-    "spin_down",
-    "basis_state",
-    "xplus",
-    "xminus",
-    "plus",
-    "minus",
-    "yplus",
-    "yminus",
-    "bloch",
-    "bell",
-    "singlet",
-    "thermal",
-    "product_state",
-    "neel",
-    "singlet_pairs",
-    "werner",
-    "ghz",
-    "w",
-    "antisymmetric",
-    "random"
-    "random_sparse"
-]
+from typing import Union, Optional
 
 def spin_up(dtype=float) -> _np.ndarray:
     return _np.array([1., 0.], dtype=dtype)
@@ -66,7 +41,7 @@ def basis_state(i, dim, dtype=complex):
     dim : int
         Total size of hilbert space.
 
-    示例:
+    Examples
     --------
     >>> qt.generate.state.basis_state(1,4)
     [[0.+0.j]
@@ -88,7 +63,7 @@ def product_state(updns:list[str], dtype=float):
     binary : sequence of 0s and 1s
         The binary of the computation state.
 
-    示例:
+    Examples
     --------
     >>> qt.generate.state.product_state(["up", "dn"])
     [[0.]
@@ -115,7 +90,7 @@ def neel(L:int, down_first=False, dtype=float):
     
     L 是链长，down_first 为 True 时，第一个是 down，否则是 up
     
-    示例:
+    Examples
     --------
     >>> qt.generate.state.neel(2, down_first=False)
     [[0.]
@@ -134,7 +109,7 @@ def ghz(L):
     """
     生成 ghz 态，即所有自旋都是 up 或 down 的叠加态
     
-    示例:
+    Examples
     --------
     >>> qt.generate.state.ghz(2)
     [[0.70710678]
@@ -149,7 +124,7 @@ def ghz(L):
 def w(L, dtype=complex):
     """生成 w 态，即只有一个 down 的态的叠加
     
-    示例:
+    Examples
     --------
     >>> qt.generate.state.w(2)
     [[0.        +0.j]
@@ -166,7 +141,7 @@ def w(L, dtype=complex):
     return x
     # return sum(basis_state(2**i, 2**n, **kwargs) for i in range(n)) / n**0.5
 
-def random(dim: int, n: int = 1, dtype: type = complex, seed: int = None) -> _np.ndarray:
+def random(dim: int, n: int = 1, dtype: type = complex, seed: Optional[int] = None) -> _np.ndarray:
     """
     生成一个随机向量或矩阵，并归一化。
 
@@ -176,7 +151,7 @@ def random(dim: int, n: int = 1, dtype: type = complex, seed: int = None) -> _np
     - dtype (type, 可选): 数据类型，默认为complex。
     - seed (int, 可选): 随机数生成器的种子，用于复现结果。
     
-    示例:
+    Examples
     --------
     >>> qt.generate.state.random(4)
     [[ 0.08615608]
@@ -195,7 +170,7 @@ def random(dim: int, n: int = 1, dtype: type = complex, seed: int = None) -> _np
         return ket
     
 
-def random_sparse(dim: int, n: int = 1, density: float = 1., dtype: type = complex, seed: int = None) -> _sparse.sparray:
+def random_sparse(dim: int, n: int = 1, density: float = 1., dtype: type = complex, seed: Optional[int] = None) -> _sparse.sparray:
     """
     生成一个稀疏的随机向量或矩阵，并归一化。
 
@@ -212,7 +187,7 @@ def random_sparse(dim: int, n: int = 1, density: float = 1., dtype: type = compl
     - seed (int, 可选): 随机数生成器的种子，用于复现结果。
     
     
-    示例:
+    Examples
     --------
     >>> qt.generate.state.random_sparse(4)
       (0, 0)        0.350909962928404
@@ -227,7 +202,7 @@ def random_sparse(dim: int, n: int = 1, density: float = 1., dtype: type = compl
     else:
         ket.data = rng.standard_normal((ket.nnz,))
     ket = ket.asformat("csr")
-    ket[:] /= _np.sum(ket.conj() * ket, axis=0)**0.5
+    ket[:] /= _np.sum(ket.conj() * ket, axis=0)**0.5 # type: ignore
     return ket
 
 def bloch(theta: float, phi: float, j: Union[int, float]) -> _np.ndarray:
@@ -244,7 +219,7 @@ def bloch(theta: float, phi: float, j: Union[int, float]) -> _np.ndarray:
     .. math:: 
         \braket{ jm \vert \theta \phi } = (1 + \gamma \gamma ^* )^{ - j} \gamma^{j - m} \sqrt{\begin{pmatrix} 2j \\ j - m \end{pmatrix}}
     
-    示例:
+    Examples
     --------
     >>> j = 100
     >>> theta = np.arccos(np.random.uniform(-1, 1))
@@ -255,7 +230,7 @@ def bloch(theta: float, phi: float, j: Union[int, float]) -> _np.ndarray:
     角动量相干态的其他性质参见 Qauntum Signatures of Chaos P268-P269
     """
     from scipy.special import gammaln
-    from .matrix import _check_spin_number
+    from .matrix import _check_spin_number # type: ignore
     j = _check_spin_number(j)
     co_state = _np.zeros(int(2*j+1), dtype=complex)
     if theta == 0:
@@ -335,7 +310,7 @@ def plot_bloch_state(co_state, j):
     X = _np.outer(_np.cos(u), _np.sin(v))
     Y = _np.outer(_np.sin(u), _np.sin(v))
     Z = _np.outer(_np.ones(_np.size(u)), _np.cos(v))
-    ax.plot_wireframe(X, Y, Z, color='r', alpha=0.1)
+    ax.plot_wireframe(X, Y, Z, color='r', alpha=0.1) # type: ignore
     # ax.plot_surface(x, y, z, color='b', alpha=0.1)
 
     # 绘制测量结果
@@ -353,11 +328,11 @@ def plot_bloch_state(co_state, j):
     X = _np.sqrt(var)*_np.outer(_np.cos(u), _np.sin(v)) + _np.cos(phi)*_np.sin(theta)
     Y = _np.sqrt(var)*_np.outer(_np.sin(u), _np.sin(v)) + _np.sin(phi)*_np.sin(theta)
     Z = _np.sqrt(var)*_np.outer(_np.ones(_np.size(u)), _np.cos(v)) + _np.cos(theta)
-    ax.plot_wireframe(X, Y, Z, color='g', alpha=0.1)
+    ax.plot_wireframe(X, Y, Z, color='g', alpha=0.1) # type: ignore
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+    ax.set_zlabel('Z') # type: ignore
     # 坐标轴比例相等
     ax.set_aspect('equal')
 
@@ -471,11 +446,6 @@ def singlet_pairs(n, **kwargs):
     return kron([bell('psi-', **kwargs)] * (n // 2))
 
 
-def werner(p, **kwargs):
-    """fractional mix of identity with singlet"""
-    return (p * bell('psi-', qtype="dop", **kwargs) +
-            (1 - p) * eye(4, **kwargs) / 4)
-
 def _levi_civita(perm):
     """Compute the generalised levi-civita coefficient for a permutation.
 
@@ -512,7 +482,7 @@ def antisymmetric(*args):
     vector or operator
         The permutation state, dimension same as ``kron(*ps)``.
 
-    示例:
+    Examples
     --------
     A singlet is the ``perm_state`` of up and down.
 
@@ -537,7 +507,7 @@ def antisymmetric(*args):
 
     def terms():
         for vec, ind in zip(vec_perm, ind_perm):
-            yield _levi_civita(ind) * kron(*vec)
+            yield _levi_civita(ind) * kron(*vec) # type: ignore
 
     return sum(terms()) / _math.factorial(n)**0.5
 
