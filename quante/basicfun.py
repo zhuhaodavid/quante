@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 17:55:18
+# @Last Modified time: 2024-11-09 23:15:15
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -313,7 +313,7 @@ def _save_main(h5group:_h5py.Group, data_dic: Dict[str, Any]) -> None:
             save_func(h5group, keystr, value)
 
 def _default_save(h5group:_h5py.Group, key:str, value) -> None:
-    if is_dataclass(value) and isinstance(value, tuple):
+    if is_dataclass(value):
         # 如果是 dataclass 转为字符串储存
         data = _json.dumps(asdict(value), indent=4)
         dataset = h5group.create_dataset(key, data=data)
@@ -996,7 +996,9 @@ def plt_style_use(stylename:str = "quante", svg: bool = True) -> None:
             "legend.frameon":       False,
             "legend.fontsize":      13,
             "savefig.bbox" : "tight",
+            "text.usetex" : False,
         }
+        _plt.style.use("default")
         _plt.rcParams.update(defaultconfig)
     elif stylename == "science":
         # from https://github.com/garrettj403/SciencePlots/blob/master/scienceplots/styles/science.mplstyle
@@ -1043,6 +1045,7 @@ def plt_style_use(stylename:str = "quante", svg: bool = True) -> None:
             "text.usetex" : True,
             "text.latex.preamble" : "\\usepackage{amsmath} \\usepackage{amssymb}"
         }
+        _plt.style.use("default")
         _plt.rcParams.update(scienceconfig)
     else:
         _plt.style.use(stylename)
