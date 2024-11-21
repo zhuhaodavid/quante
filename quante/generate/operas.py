@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-19 12:52:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 19:30:46
+# @Last Modified time: 2024-11-13 17:28:41
    
 #!! 包里的其他文件不要 import 这个 operas.py !!!!
 
@@ -57,19 +57,20 @@ class Oper:
 
     def __add__(self, oper:Union['Oper', number], a=1.) -> 'Oper':
         """ self + a * oper """
-        if oper == 0:  # a + 0 = a
+        if isinstance(oper, (int, float, complex)) and oper == 0:  # a + 0 = a
             return self
         elif isinstance(oper, (int, float, complex)):  # 加单位阵
             new_oper = self.copy()
             new_oper._add_single_oper('I', (0,), oper)
             return new_oper
-        elif self.type == oper.type:  # 相同类型相加 如 "s" + "s"
+        elif isinstance(oper, Oper):  # 两个算符相加
+            assert self.type == oper.type, NotImplementedError("算符类型不相同")
             new_oper = self.copy()
             for operator, position, coefficient in oper.each_term():
                 new_oper._add_single_oper(operator, position, coefficient*a)  # 逐项添加
             return new_oper
         else:
-            raise NotImplementedError("算符类型不相同")
+            raise NotImplementedError(f"oper type {type(oper)} not supported")
 
     def _add_single_oper(self, operator: str, position: tuple[int, ...], coefficient: number) -> None:
         """添加 opnm, posn, coef"""

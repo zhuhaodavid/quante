@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 23:15:15
+# @Last Modified time: 2024-11-15 16:08:43
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -301,7 +301,7 @@ def _save_main(h5group:_h5py.Group, data_dic: Dict[str, Any]) -> None:
     """
     for key, value in data_dic.items():
         keystr = str(key)
-        if isinstance(value, dict):  # dic[key] is a dict, save recursively
+        if isinstance(value, dict) and not isinstance(value, DictObj):  # dic[key] is a dict, save recursively
             subgroup = h5group.require_group(keystr)
             _save_main(subgroup, value)
         else:  # dic[key] is just a dataset
@@ -313,9 +313,20 @@ def _save_main(h5group:_h5py.Group, data_dic: Dict[str, Any]) -> None:
             save_func(h5group, keystr, value)
 
 def _default_save(h5group:_h5py.Group, key:str, value) -> None:
-    if is_dataclass(value):
-        # 如果是 dataclass 转为字符串储存
-        data = _json.dumps(asdict(value), indent=4)
+    # 前置判断，是否是 dataclass, 或者是可以直接保存的类型
+    value_dict = None
+    if isinstance(value, tuple) and hasattr(value, '_fields'):
+        # namedtuple
+        value_dict = value._asdict()
+    elif is_dataclass(value):
+        # dataclass
+        value_dict = asdict(value)
+    elif isinstance(value, DictObj):
+        value_dict = value
+    
+    # 如果是可以直接报错的类型，如 dataclass，用 json 序列化
+    if value_dict is not None:
+        data = _json.dumps(value_dict, indent=4)
         dataset = h5group.create_dataset(key, data=data)
         # 记录dataset 的名字
         dataset.attrs["object_type"] = "dataclass"
@@ -436,7 +447,8 @@ def _load_csr(data_location: _h5py.Group) -> _sp.sparse.csr_array:
 def _load_dataclass(data_location: _h5py.Group) -> Any:
     data_str = data_location[()]
     data_name = data_location.attrs["dataset_name"]
-    assert isinstance(data_str, str) and isinstance(data_name, str)
+    # print(data_str, data_name)
+    # assert isinstance(data_str, str) and isinstance(data_name, str)
     data_dict = _json.loads(data_str)
     from collections import namedtuple
     Parameters = namedtuple(data_name, data_dict.keys())
@@ -708,7 +720,7 @@ class PrintLn:
         # 获取调用函数的源代码
         frame_info = _inspect.getframeinfo(callFrame)
         if frame_info is None or frame_info.code_context is None:
-            return None
+            return []
         source_code = "".join(frame_info.code_context).strip()
         
         # 解析为 AST 并查找函数调用的节点
@@ -723,6 +735,7 @@ class PrintLn:
                     # 使用 ast.unparse 来获取参数的源代码表示
                     arg_values.append(_ast.unparse(arg))
                 return arg_values
+        return []
 
     def _constructArgumentOutput(self, paraname, inputargs):
         if len(paraname) == 0:
@@ -892,7 +905,7 @@ class DictObj(dict):
     def __repr__(self) -> str:
         
         # 首先拿到 header, footer
-        header = PrintLn.set_color(f"<{self.__objname__} {hex(id(self))}", COLOR.CYAN)
+        header = PrintLn.set_color(f"<params {hex(id(self))}", COLOR.CYAN)
         footer = PrintLn.set_color(">", COLOR.CYAN)
         
         # 将属性组装起来
@@ -933,10 +946,9 @@ def todict(cls):
     for key, value in vars(cls).items():
         if key.startswith('_'+cls.__name__+'__'):
             raise ValueError(f"Can't use '__' to start the key: {key[len('_'+cls.__name__):]}")
-        if key not in ('__module__', '__qualname__', '__doc__', '__dict__', '__weakref__', '__new__'):
+        if key not in ('__module__', '__qualname__', '__doc__', '__dict__', '__weakref__', '__new__', '__annotations__'):
             newdict[key] = value
     dct = _todictobj(newdict)
-    dct.__dict__["__objname__"] = cls.__name__
     return dct
 
 # =======
