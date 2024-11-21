@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-15 16:08:43
+# @Last Modified time: 2024-11-21 19:59:41
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -97,7 +97,7 @@ def test_time(func: Callable, *args, inner_func_list:list[Callable] = [], timer_
     for i in inner_func_list:
         lp.add_function(i)  # 添加要分析的函数
     lp_wrapper = lp(func) # 包装函数
-    lp_wrapper(*args, **kwargs)  # 传递参数
+    res = lp_wrapper(*args, **kwargs)  # 传递参数
     if save:
         filename = "profile_" + _os.path.basename(_sys.argv[0])[:-3] + '.txt'  # 根据运行的脚本文件名生成日志文件名 
         with open(filename, 'a') as f:
@@ -107,6 +107,7 @@ def test_time(func: Callable, *args, inner_func_list:list[Callable] = [], timer_
             _sys.stdout = original_stdout
     else:
         lp.print_stats(output_unit=timer_unit)
+    return res
     
 
 def test_memory(obj: Any) -> None:

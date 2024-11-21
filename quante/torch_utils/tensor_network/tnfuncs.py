@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-15 22:08:25
+# @Last Modified time: 2024-11-22 02:09:40
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -13,7 +13,7 @@
 
 import torch as tc
 
-from ..utils import clone_list
+from ..utils import clone
 from ..linalg.decomp import qr, svd, truncate, rq
 from ...linalg.svd_robust import TruncationError
 
@@ -583,7 +583,7 @@ def orthogonalize(Ws:list[tc.Tensor], j: int)->list[tc.Tensor]:
                                  j=3
     """
     L = len(Ws)
-    newWs = clone_list(Ws)
+    newWs = clone(Ws)
     for i in range(j-1):
         newWs[i], newWs[i+1] = _left2right_QR_step(newWs[i], newWs[i+1])
     for i in range(L-1,j,-1):

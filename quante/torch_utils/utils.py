@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-25 22:20:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-21 18:18:18
+# @Last Modified time: 2024-11-21 18:38:41
 
 # 梯度下降的工具
 
@@ -141,9 +141,9 @@ def totc(data: list | np.ndarray | tc.Tensor, dtype=None, device=None) -> list |
     ----------
     data : list | np.ndarray | tc.Tensor
         要转换的数据。
-    dtype : _type_, optional
+    dtype : torch.dtype, optional
         数据类型, by default None
-    device : _type_, optional
+    device : torch.device, optional
         设备, by default None
 
     Returns

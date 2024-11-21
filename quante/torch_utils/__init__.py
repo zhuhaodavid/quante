@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-09 19:28:03
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 02:53:09
+# @Last Modified time: 2024-11-22 02:05:52
 
 """
 ============================================
@@ -44,9 +44,9 @@ torch_utils (:mod:`quante.torch_utils`)
 
 .. autofunction:: quante.torch_utils.utils.open_grad
 .. autofunction:: quante.torch_utils.utils.close_grad
-.. autofunction:: quante.torch_utils.utils.to_numpy_array
-.. autofunction:: quante.torch_utils.utils.convert_to_torch
-.. autofunction:: quante.torch_utils.utils.clone_list
+.. autofunction:: quante.torch_utils.utils.tonp
+.. autofunction:: quante.torch_utils.utils.totc
+.. autofunction:: quante.torch_utils.utils.clone
 
 
 张量网络工具

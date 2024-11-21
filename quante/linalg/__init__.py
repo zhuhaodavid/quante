@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 18:27:12
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 02:48:53
+# @Last Modified time: 2024-11-22 02:03:17
 """
 ==================================
 linalg (:mod:`quante.linalg`)
@@ -19,7 +19,7 @@ linalg (:mod:`quante.linalg`)
 本征值分解
 ------------
 .. automodule:: quante.linalg.eig_modified
-
+.. autofunction:: quante.linalg.perturbation.eigh_perturbation
 
 奇异值分解
 --------------
@@ -62,6 +62,7 @@ krylov
 -------
 .. automodule:: quante.linalg.krylov
    :members: lanczos_ground_state, lanczos_evolve_state, lanczos_arpack
+   
 """
 
 from .eig_modified import *
@@ -69,4 +70,5 @@ from .svd_robust import *
 from .operations import *
 from .evolve import *
 from .krylov import *
+from .perturbation import *
 

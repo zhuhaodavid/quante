@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 19:34:34
+# @Last Modified time: 2024-11-22 02:09:11
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -18,7 +18,7 @@ from ..linalg.decomp import eigh, qr, rq, svd, truncate
 
 from . import tnfuncs as tf
 from ..linalg.krylov import lanczos_ground_state, lanczos_evolve_state
-from ..utils import clone_list
+from ..utils import clone
 from ...generate.matrix import pauli_matrix
 from ...linalg.svd_robust import TruncationError
 from ...linalg.krylov import lanczos_arpack
@@ -90,7 +90,7 @@ class TensorTrain:
         self.lognm = newlognm
     
     def copy(self):
-        return type(self)(clone_list(self.data), clone_list(self.Ss), copy.deepcopy(self.llim), copy.deepcopy(self.rlim), copy.deepcopy(self.lognm))
+        return type(self)(clone(self.data), clone(self.Ss), copy.deepcopy(self.llim), copy.deepcopy(self.rlim), copy.deepcopy(self.lognm))
     
     def __add__(self, anotherTT):
         """Tensor Train 的自加，会改变 self 的数据！"""
