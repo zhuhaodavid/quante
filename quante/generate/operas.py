@@ -2,10 +2,8 @@
 # @Author: hzhu
 # @Date:   2024-08-19 12:52:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-21 18:31:05
+# @Last Modified time: 2024-11-26 19:32:36
    
-#!! 包里的其他文件不要 import 这个 operas.py !!!!
-
 import numpy as _np
 import scipy as _sp
 import copy as _copy
@@ -86,6 +84,7 @@ class Oper:
 
     def each_term(self) -> Generator[tuple[str, tuple[int,...], number], None, None]:
         """
+        遍历每个算符的每个项
         
         Examples
         --------
@@ -179,6 +178,7 @@ class Oper:
         return newoper
 
     def show_string_form(self) -> None:
+        """答应算符的字符串形式"""
         operator_string = ""
         for operator, operator_data in self.data.items():
             operator_string += operator + "\n"
@@ -187,11 +187,24 @@ class Oper:
         print(operator_string)
     
     def show(self, whichonm=None) -> None:
+        """
+        使用 igraph 画出算符的图形表示
+
+        Parameters
+        ----------
+        whichonm : str, optional
+            指定要画哪个算符，如 'xx' 的图形, 如果为 None, 则画出所有算符，每个算符用线表示, by default None
+
+        Raises
+        ------
+        ImportError
+            没有安装 igraph 模块
+        """
         import matplotlib.pyplot as plt
         try:
             import igraph as ig
         except ImportError:
-            raise ImportError("igraph is not installed, please install it first: pip install igraph")
+            raise ImportError("需要安装: pip install igraph")
         
         dic = {}
         for onm, posn, coef in self.each_term():
@@ -280,6 +293,11 @@ class Oper:
         其中 `Z` = `pm`-`mp`，这是为了 `to_matrix` 方便
         
         展开之后，应当只包含 `p`, `m`, `i`, `Z` 这三种算符
+
+        Parameters
+        ----------
+        pauli : bool, optional
+            是否使用 Pauli 矩阵作为局部矩阵。默认为 False，即使用常规矩阵。
         
         Examples
         --------
@@ -360,10 +378,22 @@ class Oper:
         """
         生成哈密顿量在给定基矢下的矩阵，对于自旋 1/2 默认使用 symmetrize 的方法计算矩阵元
         
-        pauli 默认使用的是 False
-        
         .. 警告::
             这个函数不检查哈密顿量是否有对称性。如果哈密顿量没有对称性，那么这个函数会返回错误的结果，而不会报错。
+        
+        Parameters
+        ----------
+        basis : Basis
+            基矢。
+        pauli : bool, optional
+            是否使用 Pauli 矩阵作为局部矩阵。默认为 False，即使用常规矩阵。如果哈密顿量已经用 expandxy 展开过，那么这个参数无效，同时给出警告。
+        sparse : bool, optional
+            是否返回稀疏矩阵。默认为 False，即返回 numpy 数组。
+
+        Returns
+        -------
+        Union[_np.ndarray, _sp.sparse.csr_array]
+            哈密顿量在给定基矢下的矩阵。
         
         Examples
         --------
@@ -520,6 +550,22 @@ class Oper:
                |  ╰-┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯  |   
             ╭--┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮╭-┴----┴-╮ 
             ╰--┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯╰-┬----┬-╯ 
+
+        Parameters
+        ----------
+        L : int
+            系统的长度，即量子比特的数量。
+        tau : float
+            时间步长，用于控制演化的速度。
+        form : str, optional
+            门的形式，可以是 "ladder" 或 "brick"。
+        pauli : bool, optional
+            是否使用 Pauli 矩阵作为局部矩阵。默认为 True，即使用 Pauli 矩阵。
+
+        Returns
+        -------
+        tuple[list[int],list[_np.ndarray]]
+            门的位置和对应的矩阵。
         
         Examples
         --------
@@ -865,6 +911,17 @@ def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> Oper:
 
     .. math::
         \sum_{i=1}^{N-1} j * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1} + s^z_i s^z_{i+1}) + \sum_i^N h * s^z_i
+    
+    Parameters
+    ----------
+    L : int
+        系统的长度
+    j : float or tuple of float
+        相互作用强度，可以是单个值，也可以是三个值表示 x, y, z 方向的相互作用强度
+    h : float or tuple of float
+        自旋场强度，可以是单个值，也可以是三个值表示 x, y, z 方向的自旋场强度
+    cyclic : bool
+        是否是周期性模型，默认是 False
     
     Examples
     --------

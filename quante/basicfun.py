@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-21 19:59:41
+# @Last Modified time: 2024-11-27 12:35:07
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -325,13 +325,18 @@ def _default_save(h5group:_h5py.Group, key:str, value) -> None:
     elif isinstance(value, DictObj):
         value_dict = value
     
-    # 如果是可以直接报错的类型，如 dataclass，用 json 序列化
+    # 如果是可以直接保存的类型，如 dataclass，用 json 序列化
     if value_dict is not None:
-        data = _json.dumps(value_dict, indent=4)
-        dataset = h5group.create_dataset(key, data=data)
-        # 记录dataset 的名字
-        dataset.attrs["object_type"] = "dataclass"
-        dataset.attrs["dataset_name"] = type(value).__name__
+        try:
+            data = _json.dumps(value_dict, indent=4, ensure_ascii=False)
+            dataset = h5group.create_dataset(key, data=data)
+            dataset.attrs["object_type"] = "dataclass"
+            dataset.attrs["dataset_name"] = type(value).__name__
+        except TypeError as e:
+            _logging.warning(f"序列化 {key} 时发生错误: {e}\n将保存为字符串类型。")
+            import pprint
+            res = pprint.pformat(value_dict, indent=2, width=1)
+            dataset = h5group.create_dataset(key, data=res)
     else:
         try:
             # 尝试直接保存

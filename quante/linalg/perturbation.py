@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-11-20 02:20:47
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-22 02:13:54
+# @Last Modified time: 2024-11-23 01:56:23
 
 import numpy as np
 from .usenumba.numba_settings import njit, numba, numba_cache_dir
@@ -32,6 +32,8 @@ def eigh_perturbation(H0, H1, H2=None, eps=1e-10):
         &= U^{(0)} E^{(2)} + U^{(1)} E^{(1)} + U^{(2)} E^{(0)}
 
     这个函数只是验证算法，对于具体问题需要具体优化。
+    
+    二级矩阵并不唯一（如果简并很多，那么一级矩阵也不唯一），但这个三个等式总是成立，误差总为 ``math:: O(\lambda^3)``
     
     Parameters
     ----------
@@ -73,7 +75,7 @@ def eigh_perturbation(H0, H1, H2=None, eps=1e-10):
     >>> H2 = ham2.to_matrix(basis)
     >>> E0, E1, E2, U0, U1, U2 = eigh_perturbation(H0, H1, H2)
     >>> check_perturbation(H0, H1, H2, E0, E1, E2, U0, U1, U2)
-    eq1 = 4.372365016310774e-15, eq2 = 6.985521359465092e-15, eq3 = 9.224914891579297e-15
+    eq1 = 4.366911925232853e-15, eq2 = 6.746548682934744e-15, eq3 = 8.644665959144473e-15
     """
     # 首先需要求解零级部分
     E0, U0 = np.linalg.eigh(H0)
@@ -215,11 +217,11 @@ def _first_order_eigvecs(U0, E0, h1, E1, h2=None, eps=1e-10):
     #            ∑           --------------------------------------  | E^{(0)}_m ⟩
     #  E^{(0)}_m ≠ E^{(0)}_n         E^{(0)}_n - E^{(0)}_m
     # 
-    tmp1 = h1.copy()
+    tmp1 = np.zeros_like(h1)
     for n in range(len(E0)):
         E0diff = E0[n] - E0
         E0_noteq_indx = np.abs(E0diff) > 1e-10
-        tmp1[E0_noteq_indx, n] /= (E0diff[E0_noteq_indx])
+        tmp1[E0_noteq_indx, n] = h1[E0_noteq_indx, n] / (E0diff[E0_noteq_indx])
     U1 = U0 @ tmp1
 
     # 计算一级修正中的第二项
