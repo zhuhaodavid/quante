@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 17:55:56
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 02:07:21
+# @Last Modified time: 2024-12-08 16:00:07
 """
 .. currentmodule:: quante.generate
 
@@ -32,3 +32,6 @@ from . import operas
 from . import basis
 from . import matrix
 from . import state
+
+from .basis import spin_basis
+from .matrix import pauli_matrix, PAULI_MAT

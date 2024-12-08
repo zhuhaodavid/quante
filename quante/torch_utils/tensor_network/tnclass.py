@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-22 02:09:11
+# @Last Modified time: 2024-12-03 18:35:09
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -209,7 +209,7 @@ class TensorTrain:
             self.orthogonalize_(0)
             self.lognm *= 0.0
         
-    def entanglement_entropy(self, bonds: int):
+    def entanglement_entropy(self, bonds: list[int]):
         if self.is_canonical_form():
             res = []
             for bond in range(bonds):
@@ -377,11 +377,11 @@ class TensorTrain:
         .. code-block:: text
         
             .      |         |               
-                  (c)       (f)                  
+                  (1)       (2)                  
                    |         |                
                    ├-gate2_b-┤              
                    |         |                      |         |        
-                  (b)       (e)                    (c)       (f)       
+                  (3)       (4)                    (c)       (f)       
                    |         |                      |         |            
             --(a)--⨞---(d)---⨞--(g)--  -->   --(a)--⨞---(d)---⨞--(g)-- 
         
@@ -418,7 +418,10 @@ class TensorTrain:
 
     def _convert_gate(self, gate, site_num):
         if gate.ndim == site_num == 2:
-            gate = gate.reshape(2,2,2,2)
+            try:
+                gate = gate.reshape(2,2,2,2)
+            except:
+                raise ValueError("failed to reshape gate")
         if isinstance(gate, np.ndarray):
             if np.iscomplexobj(gate):
                 gate = tc.tensor(gate, dtype=tc.complex128, device=self.device)
@@ -444,8 +447,8 @@ class TensorTrain:
         
         assert self.data[pos].ndim == phi.ndim, "维度不匹配"
         if normalize:
-            nm = tc.norm(W)
-            W = W / nm
+            nm = tc.norm(phi)
+            phi = phi / nm
             self.lognm += tc.log(nm)
         self.data[pos] = phi
         return TruncationError(0.0, 1.0)

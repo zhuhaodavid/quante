@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-09 19:48:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-30 12:01:16
+# @Last Modified time: 2024-12-08 16:03:58
 
 import unittest
 
@@ -41,16 +41,16 @@ class TestOperas(unittest.TestCase):
         
         for form in forms:
             gates = ham.gate2_decomposition(L, tau=tau, form=form, pauli=False)
-            
             U_tau = qtc.tensor_network.MPO(qtc.tensor_network.mpo_eye(L, [2]*L))  # 生成单位矩阵
-            for pos_cur, gate in zip(*gates):
-                local_evolve = tc.tensor(gate).reshape(2,2,2,2)
-                U_tau.apply_gate_(pos_cur, local_evolve, svd_alg='svd')
-                
+            for i in range(len(gates[0])):
+                local_evolve = tc.tensor(gates[1][i]).reshape(2,2,2,2)
+                U_tau.apply_gate_(gates[0][i], local_evolve, svd_alg='svd')
+            
             basis = qt.generate.basis.spin_basis(L=L)
             mat = ham.to_matrix(basis, sparse=False)
             evolve_operator = qt.linalg.expm( -1j*tau*mat)
             diff = np.linalg.norm(evolve_operator - U_tau.to_matrix().numpy())
+            # print(diff, diff2)
             self.assertAlmostEqual(diff, res[forms.index(form)])
     
     

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-05 21:38:02
+# @Last Modified time: 2024-12-06 23:31:30
 
 
 import numpy as np
@@ -380,3 +380,9 @@ def tt_decompose(tsr:tc.Tensor, phys_dim:int|list, trunc_para:tuple=(None,None,N
     lognm += tc.log(tc.abs(u[0,0]))
     Ss[0] = tc.tensor([1.], dtype=tc.float64)
     return tt, Ss, lognm
+
+def kron(*mats):
+    res = mats[0]
+    for i in range(1,len(mats)):
+        res = tc.kron(res, mats[i])
+    return res

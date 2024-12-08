@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-22 02:09:40
+# @Last Modified time: 2024-12-08 16:14:01
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -78,16 +78,16 @@ def _add_each(tsrs: list[tc.Tensor]) -> tc.Tensor:
     W1, W2 只要有一个的追踪了梯度，那返回的结果就追踪梯度
     """
     # 获得两个张量的维数
-    rightbond = [tsr.shape[-1] for tsr in tsrs]
-    sum_a = sum(rightbond)
+    leftbond = [tsr.shape[0] for tsr in tsrs]
+    sum_a = sum(leftbond)
     data = []
     a, *b, c = tsrs[0].shape
     rightpart = tc.zeros(sum_a - a, *b, c, device=tsrs[0].device, requires_grad=False)
     data.append(tc.cat((tsrs[0], rightpart), dim=0))
     for i in range(1, len(tsrs)-1):
         a, *b, c = tsrs[i].shape
-        leftpart = tc.zeros(sum(rightbond[:i]), *b, c, device=tsrs[i].device, requires_grad=False)
-        rightpart = tc.zeros(sum(rightbond[i+1:]), *b, c, device=tsrs[i].device, requires_grad=False)
+        leftpart = tc.zeros(sum(leftbond[:i]), *b, c, device=tsrs[i].device, requires_grad=False)
+        rightpart = tc.zeros(sum(leftbond[i+1:]), *b, c, device=tsrs[i].device, requires_grad=False)
         data.append(tc.cat((leftpart, tsrs[i], rightpart), dim=0))    
     a, *b, c = tsrs[-1].shape
     leftpart = tc.zeros(sum_a - a, *b, c, device=tsrs[-1].device, requires_grad=False)
@@ -115,7 +115,9 @@ def _local_apply(res: tc.Tensor, Wsi: tc.Tensor):
     """
     .. code-block:: text
     
-        .       |
+        plot:
+               (d)
+                |
                 ◻
                 |
                (b)
@@ -123,7 +125,8 @@ def _local_apply(res: tc.Tensor, Wsi: tc.Tensor):
         --(a)--res--(c)--
     """
     a, b, *c = res.shape
-    return (Wsi @ res.swapaxes(0,1).reshape(b,-1)).reshape(b, a, *c).swapaxes(0,1)
+    d, b = Wsi.shape
+    return (Wsi @ res.swapaxes(0,1).reshape(b,-1)).reshape(d, a, *c).swapaxes(0,1)
 
 def _local_apply2(res: tc.Tensor, Ws1: tc.Tensor, Ws2: tc.Tensor):
     """
@@ -1602,7 +1605,7 @@ def _cholesky_decomp(VL):
     return Y, Yinv
 
 def canonicalize_infinite(tsr:tc.Tensor):
-    """
+    r"""
     tsr 是一个三阶张量，将它变换成正则形式
     
     .. code-block:: text

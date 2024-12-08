@@ -3,7 +3,26 @@ import scipy.sparse as _sparse
 from _typeshed import Incomplete
 from typing import Optional
 
-__all__ = ['pauli_matrix', 'random_matrix', 'random_orthorgonal_matrix_close_I', 'random_unitary_matrix_close_I', 'random_sparse_matrix', 'hadamard_gate', 'phase_gate', 'rotation_gate', 'heisenberg_matrix', 'random_phase_model', 'local_hamiltonian_spin_1D']
+__all__ = ['PAULI_MAT', 'pauli_matrix', 'random_matrix', 'random_orthorgonal_matrix_close_I', 'random_unitary_matrix_close_I', 'random_sparse_matrix', 'hadamard_gate', 'phase_gate', 'rotation_gate', 'heisenberg_matrix', 'random_phase_model', 'local_hamiltonian_spin_1D']
+
+PAULI_MAT = {
+    "X": _np.array([[0.,1.],[1.,0.]]),
+    "Y": _np.array([[0.,-1.j],[1.j,0.]]),
+    "Z": _np.array([[1.,0.],[0.,-1.]]),
+    "P": _np.array([[0.,1.],[0.,0.]]),
+    "M": _np.array([[0.,0.],[1.,0.]]),
+    "I": _np.array([[1.,0.],[0.,1.]]),
+    "x": _np.array([[0.,0.5],[0.5,0.]]),
+    "y": _np.array([[0.,-0.5j],[0.5j,0.]]),
+    "z": _np.array([[0.5,0.],[0.,-0.5]]),
+    "p": _np.array([[0.,1.],[0.,0.]]),
+    "m": _np.array([[0.,0.],[1.,0.]]),
+    "+": _np.array([[0.,1.],[0.,0.]]),
+    "-": _np.array([[0.,0.],[1.,0.]]),
+    "i": _np.array([[1.,0.],[0.,1.]]),
+    "u": _np.array([[1.], [0.]]),
+    "d": _np.array([[0.], [1.]]),
+}
 
 def pauli_matrix(stri: str, S: str | float | int = '1/2', dtype: _np.dtype = ..., sparse: bool | None = None, stype: str = 'csr', view: bool = False, parallel: bool = False) -> _np.ndarray: ...
 def random_matrix(dim, type: str = 'simple', seed: Incomplete | None = None): ...

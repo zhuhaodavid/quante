@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 17:25:35
+# @Last Modified time: 2024-12-08 15:37:28
 """
 生成矩阵：(`np.ndarray`)
 - `pauli_matrix`
@@ -46,7 +46,7 @@ __all__ += [
 
 
 
-_PAULI_MAT = {
+PAULI_MAT = {
     "X": _np.array([[0.,1.],[1.,0.]]),
     "Y": _np.array([[0.,-1.j],[1.j,0.]]),
     "Z": _np.array([[1.,0.],[0.,-1.]]),
@@ -65,6 +65,8 @@ _PAULI_MAT = {
     "d": _np.array([[0.], [1.]]),
 }
 
+for k, v in PAULI_MAT.items():
+    v.setflags(write=False)
 
 def pauli_matrix(
     stri: str,
@@ -114,7 +116,7 @@ def pauli_matrix(
     return _np.real_if_close(res)
         
 def _pauli_matrix_single(stri):
-    return _PAULI_MAT[stri]
+    return PAULI_MAT[stri]
 
 def _spin_oper_single(
     label:str,
