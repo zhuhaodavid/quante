@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-08 14:01:00
+# @Last Modified time: 2024-12-09 19:12:13
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -26,92 +26,133 @@ from collections import deque
 from types import FunctionType
 from typing import Callable, Any, Dict, Union
 
-
-__all__ = ["test_time", "test_memory"]  # 测试工具
-
-__all__ += ["clear", "get_free_space", "create_folder"]  # 系统层面的函数
-
-__all__ += ["save_hdf5", "load_hdf5", "_save_hdf5", "_load_hdf5", "view_hdf5"]  # hdf5 工具
-
-__all__ += ["set_logging", "println"]  # 日志工具
-
-__all__ += ["idataclass", "todict"]  # 字典格式
-
-__all__ += ["plt_style_use"]  # 画图预设
-
-
-import os
-os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'  # 为了让 ctrl+c 中断程序可用
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'  # 为了避免 scipy svd 与 gpu torch 冲突
+_os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'  # 为了让 ctrl+c 中断程序可用
+_os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'  # 为了避免 scipy svd 与 gpu torch 冲突
 
 _np.set_printoptions(linewidth=1000000, suppress=True) # 为了让 print 出的矩阵的宽度没有限制
 
 # =================
 #     测试工具
 # =================
-def test_time(func: Callable, *args, inner_func_list:list[Callable] = [], timer_unit: float =1e-7, save: bool=False, **kwargs) -> None:
-    """记录每行代码的执行时间.
+__profiles = []
+
+def profile(on: bool=True, save:bool=False, output_unit:float|None=None) -> Callable:
+    """测试函数的运行时间
     
-    记录 `funcs` 以及 `inner_func_list` 中每行代码的执行时间，并打印统计信息。
-    
+    在 notebook 中，建议使用 timing 的上下文管理器。
+
     Parameters
     ----------
-    func : Callable
-        需要测试的函数。
-    args : Any
-        传递给目标函数的参数。
-    inner_func_list : list[Callable], optional
-        要测试的内部函数列表，默认为空。
-    timer_unit : float, optional
-        时间单位，默认为 1e-7 秒（100 纳秒）。
+    on : bool, optional
+        是否启用当前测试, by default True
     save : bool, optional
-        是否保存日志文件，默认为 True。
-    **kwargs : Any
-        传递给目标函数的关键字参数。
+        是否保存测试结果, by default False
+    output_unit : float, optional
+        测试结果的输出单位, by default None
 
+    Returns
+    -------
+    Callable
+        返回装饰器
+    
     Examples
     --------
-    >>> import numpy as np
-    >>> from quante.basicfun import test_time
-    >>> def func2(dim):
-    >>>     return np.random.randn(dim,dim)
-    >>> def my_function(dim):
-    >>>     for _ in range(10):
-    >>>         mat = func2(dim)
-    >>>         val, vec = np.linalg.eig(mat)
-    >>>     return val
-    >>> test_time(my_function, 100, inner_func_list=[func2], timer_unit=0.01)
-
-    Notes
-    -----
-    另一个方法是：在文件最开始添加 os.environ["LINE_PROFILE"] = "1"，然后在要测试的函数加上装饰器，如
-    
-    >>> from line_profiler import profile
-    >>> @profile
-    >>> def ...:
-    
-    即可得到每一行代码的执行时间
+    >>> @qt.basicfun.profile()
+    >>> def test_func():
+    >>>     a = 1
+    >>>     b = 2
+    >>>     c = a + b
+    >>>     return c
+    >>> 
+    >>> @qt.basicfun.profile(False)
+    >>> def outf():
+    >>>     for i in range(1000):
+    >>>         test_func()
+    >>> 
+    >>> outf()
     """
-    from line_profiler import LineProfiler
-    lp = LineProfiler()  # 初始化行分析器
-    for i in inner_func_list:
-        lp.add_function(i)  # 添加要分析的函数
-    lp_wrapper = lp(func) # 包装函数
-    res = lp_wrapper(*args, **kwargs)  # 传递参数
-    if save:
-        filename = "profile_" + _os.path.basename(_sys.argv[0])[:-3] + '.txt'  # 根据运行的脚本文件名生成日志文件名 
-        with open(filename, 'a') as f:
-            original_stdout = _sys.stdout
-            _sys.stdout = f
-            lp.print_stats(output_unit=timer_unit)  # 打印执行时间统计信息
-            _sys.stdout = original_stdout
-    else:
-        lp.print_stats(output_unit=timer_unit)
-    return res
-    
+    if not on:
+        return lambda func: func
+    if not __profiles:
+        from line_profiler import profile as lp
+        # 设置环境变量和配置
+        _os.environ["LINE_PROFILE"] = "1"
+        lp.write_config.update({
+            'lprof': False,
+            'text': False,
+            'timestamped_text': save,
+            'stdout': not save,
+        })
+        lp.show_config.update({
+            'output_unit': output_unit,
+            'details': 1 if not save else None
+        })
+        __profiles.append(lp)
+        return lp
+    return __profiles[0]
 
-def test_memory(obj: Any) -> None:
+
+class timing:
+    def __init__(self, functions, output_unit: float|None = None, save=False):
+        """通过上下文管理器记录函数的执行时间.
+
+        Parameters
+        ----------
+        functions : list[Callable] | tuple[Callable] | Callable
+            要记录时间的函数
+        timer_unit : float | None, optional
+            时间单位，默认根据实际运行时间自动调整, by default None
+        save : bool, optional
+            是否保存到文件中, by default False
+        
+        Examples
+        --------
+        >>> with qt.basicfun.timing(test_func):
+        >>>     test_func()
+        """
+        from line_profiler import LineProfiler
+        if not isinstance(functions, (list, tuple)):
+            self.functions = [functions]
+        else:
+            self.functions = functions
+        self.profile = LineProfiler(*self.functions)
+        self.outplut_unit = output_unit
+        self.save = save
+
+    def __enter__(self):
+        if self.outplut_unit is None:
+            self.start_time = _time.time()  # 记录开始时间
+        self.profile.enable()  # 开始分析
+        return self.profile
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.profile.disable()  # 停止分析
+        if self.outplut_unit is None:
+            elapsed_time = _time.time() - self.start_time  # 计算经过的时间
+            if elapsed_time < 0.0001:  # 如果小于 0.0001 秒，则认为是微秒级
+                self.outplut_unit = None  # 微秒
+            elif elapsed_time < 0.1:  # 如果小于 0.1 秒，则认为是毫秒级
+                self.outplut_unit = 1e-3  # 毫秒
+            else:  # 其他情况，使用秒
+                self.outplut_unit = 1  # 秒
+        if self.save:
+            filename = "profile_" + _os.path.basename(_sys.argv[0])[:-3] + '.txt'  # 根据运行的脚本文件名生成日志文件名 
+            header = "#"*60+'\n' + f"[{_time.strftime('%Y-%m-%d %H:%M:%S', _time.localtime(_time.time()))}]\n" + f"Profiling result for {len(self.functions)} functions: {[i.__name__ for i in self.functions]}\n" + "#"*60+'\n\n'
+            with open(filename, 'a') as f:
+                # 写入当前时间
+                f.write(header)
+                # 写入性能分析结果
+                original_stdout = _sys.stdout
+                _sys.stdout = f
+                self.profile.print_stats(output_unit=self.outplut_unit)  # 打印执行时间统计信息
+                _sys.stdout = original_stdout
+        else:
+            self.profile.print_stats(_sys.stdout, output_unit=self.outplut_unit)  # 打印出性能分析结果
+
+
+def print_memory_usage(obj: Any) -> None:
     """ 打印对象的占用空间的大小.
+    todo: 增加对一般类的支持
     
     Parameters
     ----------
@@ -123,7 +164,7 @@ def test_memory(obj: Any) -> None:
     >>> import numpy as np
     >>> from quante.basicfun import test_memory
     >>> a = [np.random.randn(10,10) for i in range(100)]
-    >>> test_memory(a)
+    >>> print_memory_usage(a)
     79.02 KB
     """
     dict_handler = lambda d: chain.from_iterable(d.items())
@@ -408,7 +449,7 @@ def load_hdf5(filename:str, group:str, dataname:str) -> Any:
     >>> save_hdf5("data.h5", "/", {"mat": mat})
     >>> mat = load_hdf5("data.h5", "/", "mat")
     """
-    if not os.path.exists(filename):
+    if not _os.path.exists(filename):
         raise FileNotFoundError(f"File {filename} not found.")
     with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
         group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."

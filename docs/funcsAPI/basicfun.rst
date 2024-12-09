@@ -5,7 +5,7 @@ basicfun (:mod:`quante.basicfun`)
 
 功能：
 
-- 测试工具：`test_time`, `test_memory`
+- 测试工具：`profile`, `timing`, `print_memory_usage`
 - 系统层面的函数：`create_folder`, `save_hdf5`, `load_hdf5`
 - 日志工具：`set_logging`, `println`
 - 字典格式：`todict`, `idataclass`
@@ -15,8 +15,9 @@ basicfun (:mod:`quante.basicfun`)
 
 测试工具
 -------- 
-.. autofunction:: test_time
-.. autofunction:: test_memory
+.. autofunction:: profile
+.. autofunction:: timing
+.. autofunction:: print_memory_usage
 
 
 系统层面的函数
@@ -33,12 +34,6 @@ basicfun (:mod:`quante.basicfun`)
 
 .. autofunction:: set_logging
 .. autofunction:: println
-
-字典格式
--------- 
-
-.. autofunction:: todict
-.. autofunction:: idataclass
 
 画图预设
 -------- 
