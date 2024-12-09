@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-09 19:12:13
+# @Last Modified time: 2024-12-09 20:06:54
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -92,8 +92,8 @@ def profile(on: bool=True, save:bool=False, output_unit:float|None=None) -> Call
     return __profiles[0]
 
 
-class timing:
-    def __init__(self, functions, output_unit: float|None = None, save=False):
+class Timer:
+    def __init__(self, functions=None, output_unit: float|None = None, save=False):
         """通过上下文管理器记录函数的执行时间.
 
         Parameters
@@ -110,6 +110,11 @@ class timing:
         >>> with qt.basicfun.timing(test_func):
         >>>     test_func()
         """
+        if functions is None:
+            self.only_time = True
+            return
+        else:
+            self.only_time = False
         from line_profiler import LineProfiler
         if not isinstance(functions, (list, tuple)):
             self.functions = [functions]
@@ -120,15 +125,24 @@ class timing:
         self.save = save
 
     def __enter__(self):
-        if self.outplut_unit is None:
-            self.start_time = _time.time()  # 记录开始时间
+        if self.only_time:
+            self.start_time = _time.perf_counter()  # 记录开始时间
+            return self
+        if self.outplut_unit is not None:
+            self.start_time = _time.perf_counter()  # 记录开始时间
+        if self.only_time:
+            return
         self.profile.enable()  # 开始分析
         return self.profile
 
     def __exit__(self, exc_type, exc_value, traceback):
+        if self.only_time:
+            timer_interval = _time.perf_counter() - self.start_time  # 计算运行时间
+            print(f"Time elapsed: {timer_interval} seconds")
+            return timer_interval
         self.profile.disable()  # 停止分析
         if self.outplut_unit is None:
-            elapsed_time = _time.time() - self.start_time  # 计算经过的时间
+            elapsed_time = _time.perf_counter() - self.start_time  # 计算经过的时间
             if elapsed_time < 0.0001:  # 如果小于 0.0001 秒，则认为是微秒级
                 self.outplut_unit = None  # 微秒
             elif elapsed_time < 0.1:  # 如果小于 0.1 秒，则认为是毫秒级
