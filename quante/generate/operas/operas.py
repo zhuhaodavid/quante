@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-15 22:37:22
+# @Last Modified time: 2024-12-15 22:51:06
 
 import warnings
 import numpy as np
@@ -21,12 +21,6 @@ class Oper:
 
     - 算符生成矩阵 (`to_matrix`) 、MPO (`automata`)
 
-    - 最近邻相互作用的二体门分解 (`gate2_decomposition`,  `suzuki_trotter_decomposition`)
-
-    - 其他方便的函数 (`copy`, `each_term`)
-
-    算符的数据结构：
-    
     .. code-block:: python
     
         data = {
@@ -35,7 +29,7 @@ class Oper:
             ...
         }
     """
-    def __init__(self, data:dict, stype:str = "s") -> None:  # todo 处理费米子系统
+    def __init__(self, data:dict, stype:str) -> None:  # todo 处理费米子系统
         self.data = data
         self.type = stype
     
@@ -55,7 +49,7 @@ class Oper:
             for name, (pos, coef) in oper.data.items():
                 old_pos, old_coef = self.data.get(name, (None, None))
                 if old_coef is None and old_pos is None:
-                    self.data[name] = (pos, coef)
+                    self.data[name] = (pos, add_or_minus*coef)
                 else:
                     newpos,newcoef = merge_poscoef((old_pos, pos), (old_coef, add_or_minus*coef))
                     if len(newpos) > 0:
@@ -73,7 +67,8 @@ class Oper:
         return self_copy
 
     def copy(self) -> 'Oper':
-        return Oper(copy.deepcopy(self.data), self.type)
+        cls = self.__class__
+        return cls(copy.deepcopy(self.data), self.type)
     
     def __radd__(self, oper) -> 'Oper':
         """ num + oper """
@@ -134,18 +129,19 @@ class Oper:
     def __matmul__(self, oper:'Oper') -> 'Oper':
         """ self * oper """
         if self.type == oper.type and len(oper.type) == 1:  # 相同类型
-            newoper = Oper({}, self.type)
+            cls = self.__class__
+            newoper = cls({}, self.type)
             for opnm1, (posn1, coef1) in self.data.items():
                 if opnm1 == "I":
                     newoper += np.sum(coef1) * oper
                     continue
                 for opnm2, (posn2, coef2) in oper.data.items():
                     if opnm2 == "I":
-                        newoper += np.sum(coef2) * Oper({opnm1: (posn1, coef1)}, self.type)
+                        newoper += np.sum(coef2) * cls({opnm1: (posn1, coef1)}, self.type)
                         continue
                     newopnm = opnm1 + opnm2
                     newposn, newcoef = catposcoef(posn1, coef1, posn2, coef2)
-                    newoper += Oper({newopnm : (newposn, newcoef)}, self.type)
+                    newoper += cls({newopnm : (newposn, newcoef)}, self.type)
             return newoper
         else:
             raise NotImplementedError("不同基矢相加")
@@ -161,13 +157,19 @@ class Oper:
             newoper = self * newoper
         return newoper
     
+    def _check_length(self, L:int) -> None:
+        for _, position, _ in self.each_term():
+            for pos in position:
+                if pos >= L:
+                    raise ValueError(f"position {pos} is larger than L {L}")
+
     def show_string_form(self) -> None:
-        """答应算符的字符串形式"""
+        """打印算符的字符串形式"""
         operator_string = ""
         for operator, (posn, coef) in self.data.items():
-            operator_string += operator + ": "
+            operator_string += operator + ": \n"
             for i in range(len(coef)):
-                operator_string += tuple(posn[i]).__str__() + " => " + coef[i].__repr__() + "  "
+                operator_string += "    " + posn[i].__str__() + " => " + coef[i].__str__() + "  \n"
             operator_string += "\n"
         print(operator_string)
     
@@ -183,7 +185,7 @@ class Oper:
             for j, (operator, (posn, coef)) in enumerate(sorted(self.data.items(), key=lambda item: (len(item[0]), item[0]))):
                 operator_string += operator + ": "
                 for i in range(len(coef)):
-                    operator_string += tuple(posn[i]).__str__() + " => " + coef[i].__repr__() + "  "
+                    operator_string += posn[i].__str__() + " => " + coef[i].__str__() + "  "
                 if j != len(self.data)-1:
                     operator_string += "\n" + " " * 9
         
@@ -229,7 +231,7 @@ class Oper:
         """
         import matplotlib.pyplot as plt
         try:
-            import igraph as ig
+            import igraph as ig # type: ignore
         except ImportError:
             raise ImportError("需要安装: pip install igraph")
         
@@ -276,23 +278,29 @@ class Oper:
         plt.show()
 
     def save(self, filename:str = 'ham.h5') -> None:
-        from ..basicfun import save_hdf5
+        from ...basicfun import save_hdf5
         data_dict = {name: {"posn": posn, "coef": coef} for name, (posn, coef) in self.data.items()}
         data_dict.update({"type": self.type})
         save_hdf5(filename, "/", data_dict)
         
     @classmethod
     def load(cls, filename:str) -> 'Oper':
-        from ..basicfun import load_hdf5
+        from ...basicfun import load_hdf5
         data = load_hdf5(filename, '/', '/')
         dic = {}
         for key, val in data.items():
             if key == "type":
                 continue
             dic[key] = (val["posn"], val["coef"])
-        return Oper(dic, data['type'].decode('utf-8'))
-    
-    def expandxy(self, pauli:bool = False) -> 'Oper':
+        return cls(dic, data['type'].decode('utf-8'))
+
+
+class SpinOper(Oper):
+    def __init__(self, data:dict, type='s') -> None:
+        assert type == 's'
+        super().__init__(data, stype='s')
+ 
+    def expandxy(self, pauli:bool = False) -> 'SpinOper':
         """
         
         展开算符中的 `x`,`y`，同时将 `z` 替换为 `Z` 
@@ -315,17 +323,14 @@ class Oper:
         """
         if self._has_expanded():
             return self.copy()
-        if self.type == "s":
-            c = 1.0 if pauli else 0.5
-            res = Oper({}, "s")
-            for name, (posn, coef) in self.data.items():
-                expanded_names, expanded_coefs = _expand_term(name, c)
-                for expanded_name, expanded_coef in zip(expanded_names, expanded_coefs):
-                    res += Oper({expanded_name: (posn, coef * expanded_coef)}, "s")
-            return res
-        else:
-            raise NotImplementedError()
-        
+        c = 1.0 if pauli else 0.5
+        res = SpinOper({})
+        for name, (posn, coef) in self.data.items():
+            expanded_names, expanded_coefs = _expand_term(name, c)
+            for expanded_name, expanded_coef in zip(expanded_names, expanded_coefs):
+                res += SpinOper({expanded_name: (posn, coef * expanded_coef)})
+        return res
+    
     def _has_expanded(self) -> bool:
         for opnm in self.data.keys():
             if opnm not in ['I', "p", "m", "Z"]:
@@ -416,7 +421,7 @@ class Oper:
                 return np.zeros((basis.Ns, basis.Ns), dtype=float)
             return sp.csr_matrix((basis.Ns, basis.Ns), dtype=float)
         self._check_length(basis.L)
-        from .symmetry.basis_class import SpinHalfBasis, SpinHighBasis
+        from ..basis.symmetry.basis_class import SpinHalfBasis, SpinHighBasis
         if isinstance(basis, (SpinHalfBasis, SpinHighBasis)):
             if basis.S != 0.5 and pauli is True:
                 raise KeyError("自旋不是 1/2，不能使用 Pauli 矩阵")
@@ -434,13 +439,7 @@ class Oper:
             else:
                 return mat.toarray()
         else:
-            raise NotImplementedError("不支持的基矢类型")
-        
-    def _check_length(self, L:int) -> None:
-        for _, position, _ in self.each_term():
-            for pos in position:
-                if pos >= L:
-                    raise ValueError(f"position {pos} is larger than L {L}")
+            raise NotImplementedError(f"Spin Oper 不支持的 {type(basis).__name__} 作为基矢")
     
     def _convert_to_quick_form(self):
         """这个函数专门为 to_matrix 写的，其他函数不需要"""
@@ -496,7 +495,7 @@ class Oper:
         >>> mpo = ham.automata(L, pauli=False)
         
         """
-        from ..tensor.automata import automata_mpo
+        from ...tensor.automata import automata_mpo
         hlocals, positions, coefficients = self.expandxy(pauli=pauli).split_data()
         coefficients = np.real_if_close(coefficients)
         return automata_mpo(L, hlocals, positions, coefficients, d=d, pauli=pauli, local_matrix_function=local_matrix, dtype=coefficients.dtype)
@@ -644,7 +643,7 @@ class Oper:
         >>> for pos_cur, gate in zip(*gates):
         >>>     U_tau.apply_gate_(pos_cur, gate)
         """
-        from ..linalg import expm
+        from ...linalg import expm
         expandself = self.expandxy(pauli=pauli)
         # 获取偶数位置和局域哈密顿量
         even_positions, even_hamiltonians = expandself._get_local_hamiltonians(L, increment=2, layer="even")
@@ -662,7 +661,7 @@ class Oper:
         even_gates_dts = []
         odd_gates_dts = []
         
-        for dt in Oper._trotter_suzuki_time_steps(order):
+        for dt in SpinOper._trotter_suzuki_time_steps(order):
             # 计算偶数位置的演化门的单步演化门
             even_gates_dt = [expm(hamiltonian, c*tau*dt) for hamiltonian in even_hamiltonians]
             even_gates_dts.append(even_gates_dt)
@@ -676,7 +675,7 @@ class Oper:
         positions = []
         
         # 根据 trotter-suzuki 先后分别演化奇偶门
-        for dt_index, evolve_even_gate in Oper._pseudo_trotter_suzuki_decomposition(order, N_step):
+        for dt_index, evolve_even_gate in SpinOper._pseudo_trotter_suzuki_decomposition(order, N_step):
             
             direction = 1 if evolve_even_gate else -1  # 如果是偶数，方向是 1，表示从左向右演化，如果是奇数，方向是 -1，表示从右向左演化
             
@@ -720,7 +719,7 @@ class Oper:
         根据 self 的算符名称决定是否使用 pauli 矩阵。
         """
         assert site_position < L-1, "site_position should be less than L-1"
-        from .matrix import PAULI_MAT
+        from ..matrix import PAULI_MAT
         
         local_hamiltonian = np.zeros((4,4), dtype=self.dtype())  # 用来储存所有作用到 position 和 position+1 这两个格点上的局域哈密顿量的和
 
@@ -824,9 +823,9 @@ class Oper:
     
     def to_mpo(self, L, pauli=False, backend='torch', device=None):
         if backend == 'torch':
-            from ..torch_utils.tensor_network.tnclass import MPO
-            from ..torch_utils.utils import convert_to_torch 
-            import torch as tc
+            from ...torch_utils.tensor_network.tnclass import MPO
+            from ...torch_utils.utils import convert_to_torch 
+            import torch as tc # type: ignore
             tt = self.automata(L, pauli=pauli)
             dtype = tc.float64
             for i in tt:
@@ -838,7 +837,8 @@ class Oper:
             raise NotImplementedError("还没有实现")
         else:
             raise ValueError("backend should be 'torch' or 'tensor'")
-# from numba import njit
+
+#  from numba import njit
 # @njit
 def argsort_positions(pos_array):
     """Sort indices based on positions using a custom lexicographical sort."""
@@ -929,50 +929,50 @@ def _expand_term(name, c):
 def _single_term(i, coef):
     return (np.array([list(i)], dtype=int), np.array([coef]))
 
-def I(i:int=0) -> Oper:
-    return Oper({'I': _single_term((0,), 1.)}, 's')
+def I(i:int=0) -> SpinOper:
+    return SpinOper({'I': _single_term((0,), 1.)})
 
-def p(i:int=0) -> Oper:
-    return Oper({'p': _single_term((i,), 1.)}, 's')
+def p(i:int=0) -> SpinOper:
+    return SpinOper({'p': _single_term((i,), 1.)})
 
-def m(i:int=0) -> Oper:
-    return Oper({'m': _single_term((i,), 1.)}, 's')
+def m(i:int=0) -> SpinOper:
+    return SpinOper({'m': _single_term((i,), 1.)})
 
-def x(i:int=0) -> Oper:
-    return Oper({'x': _single_term((i,), 1.)}, 's')
+def x(i:int=0) -> SpinOper:
+    return SpinOper({'x': _single_term((i,), 1.)})
 
-def y(i:int=0) -> Oper:
-    return Oper({'y': _single_term((i,), 1.)}, 's')
+def y(i:int=0) -> SpinOper:
+    return SpinOper({'y': _single_term((i,), 1.)})
 
-def z(i:int=0) -> Oper:
-    return Oper({'z': _single_term((i,), 1.)}, 's')
+def z(i:int=0) -> SpinOper:
+    return SpinOper({'z': _single_term((i,), 1.)})
 
-def n(i:int=0) -> Oper:
-    return Oper({'pm': _single_term((i, i), 1.)}, 's')
+def n(i:int=0) -> SpinOper:
+    return SpinOper({'pm': _single_term((i, i), 1.)})
 
-def nn(i:int, j:int) -> Oper:
-    return Oper({'pmpm': _single_term((i, i, j, j), 1.)}, 's')
+def nn(i:int, j:int) -> SpinOper:
+    return SpinOper({'pmpm': _single_term((i, i, j, j), 1.)})
 
-def zz(i:int, j:int) -> Oper:
-    return Oper({'zz': _single_term((i, j), 1.)}, 's')
+def zz(i:int, j:int) -> SpinOper:
+    return SpinOper({'zz': _single_term((i, j), 1.)})
 
-def mp(i:int, j:int) -> Oper:
-    return Oper({'mp': _single_term((i, j), 1.)}, 's')
+def mp(i:int, j:int) -> SpinOper:
+    return SpinOper({'mp': _single_term((i, j), 1.)})
 
-def pm(i:int, j:int) -> Oper:
-    return Oper({'pm': _single_term((i, j), 1.)}, 's')
+def pm(i:int, j:int) -> SpinOper:
+    return SpinOper({'pm': _single_term((i, j), 1.)})
 
-def xx(i:int, j:int) -> Oper:
-    return Oper({'xx': _single_term((i, j), 1.)}, 's')
+def xx(i:int, j:int) -> SpinOper:
+    return SpinOper({'xx': _single_term((i, j), 1.)})
 
-def yy(i:int, j:int) -> Oper:
-    return Oper({'yy': _single_term((i, j), 1.)}, 's')
+def yy(i:int, j:int) -> SpinOper:
+    return SpinOper({'yy': _single_term((i, j), 1.)})
 
-def xy(i:int, j:int) -> Oper:
-    return Oper({'xy': _single_term((i, j), 1.)}, 's')
+def xy(i:int, j:int) -> SpinOper:
+    return SpinOper({'xy': _single_term((i, j), 1.)})
 
-def yx(i:int, j:int) -> Oper:
-    return Oper({'yx': _single_term((i, j), 1.)}, 's')
+def yx(i:int, j:int) -> SpinOper:
+    return SpinOper({'yx': _single_term((i, j), 1.)})
 
 def sum(oper) -> Oper:
     # lazy sum
@@ -1002,7 +1002,7 @@ def sum(oper) -> Oper:
             newdata[name] = (newposn, newcoef)
     if stype is None:
         stype = 's'
-    return Oper(newdata, stype)
+    return SpinOper(newdata)
 
 def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> Oper:
     r"""
@@ -1060,5 +1060,5 @@ def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> Oper:
         data["y"] = (posn1, hy*coef1)
     if hz != 0:
         data["z"] = (posn1, hz*coef1)
-    return Oper(data, "s")
+    return SpinOper(data)
 
