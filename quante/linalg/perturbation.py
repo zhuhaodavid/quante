@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-11-20 02:20:47
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-23 01:56:23
+# @Last Modified time: 2024-12-13 01:14:10
 
 import numpy as np
 from .usenumba.numba_settings import njit, numba, numba_cache_dir
@@ -10,7 +10,7 @@ from .usenumba.numba_settings import njit, numba, numba_cache_dir
 __all__ = ['eigh_perturbation']
 
 def eigh_perturbation(H0, H1, H2=None, eps=1e-10):
-    """微扰计算
+    r"""微扰计算
     
     用微扰方法计算：
     

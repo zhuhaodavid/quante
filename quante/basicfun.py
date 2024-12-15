@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-09 20:06:54
+# @Last Modified time: 2024-12-11 12:40:57
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -93,7 +93,7 @@ def profile(on: bool=True, save:bool=False, output_unit:float|None=None) -> Call
 
 
 class Timer:
-    def __init__(self, functions=None, output_unit: float|None = None, save=False):
+    def __init__(self, *functions, output_unit: float|None = None, save=False):
         """通过上下文管理器记录函数的执行时间.
 
         Parameters
@@ -107,33 +107,34 @@ class Timer:
         
         Examples
         --------
-        >>> with qt.basicfun.timing(test_func):
-        >>>     test_func()
+        >>> def test():
+        >>>     time.sleep(1)
+        >>>     return 1
+        >>> 
+        >>> def test2():
+        >>>     time.sleep(1)
+        >>>     return 1
+        >>> 
+        >>> with qt.basicfun.Timer(test,test2):
+        >>>     a = test()
+        >>>     b = test2()
         """
-        if functions is None:
+        if len(functions) == 0:
             self.only_time = True
             return
         else:
             self.only_time = False
         from line_profiler import LineProfiler
-        if not isinstance(functions, (list, tuple)):
-            self.functions = [functions]
-        else:
-            self.functions = functions
-        self.profile = LineProfiler(*self.functions)
+        self.profile = LineProfiler(*functions)
+        self.functions = functions
         self.outplut_unit = output_unit
         self.save = save
 
     def __enter__(self):
-        if self.only_time:
-            self.start_time = _time.perf_counter()  # 记录开始时间
-            return self
-        if self.outplut_unit is not None:
-            self.start_time = _time.perf_counter()  # 记录开始时间
-        if self.only_time:
-            return
-        self.profile.enable()  # 开始分析
-        return self.profile
+        self.start_time = _time.perf_counter()  # 记录开始时间
+        if not self.only_time:
+            self.profile.enable()  # 开始分析
+            return self.profile
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self.only_time:
@@ -715,7 +716,7 @@ def set_logging(level: int = _logging.WARNING, savelog: bool = False, filenameTi
         if filenameTime:  # 如果 `filenameTime` 为 `True`，在文件名中添加时间戳
             now = "_" + _time.strftime("%Y-%m-%d-%H_%M_%S", _time.localtime(_time.time()))
             filename += now
-        filename += '.log'
+        filename += '.ansi'
     else:
         filename = ""
     if logtime:  # 根据 `logtime` 参数设置日志格式
@@ -808,7 +809,7 @@ class PrintLn:
         
         pairs = [(arg, *self._argumentToString(val)) for arg, val in zip(paraname, inputargs)]
         
-        pairStrs = [val if self._isLiteral(arg) else "\033[31m%s:\033[0m " % arg + val for arg, val, _ in pairs]
+        pairStrs = [val if self._isLiteral(arg) else PrintLn.set_color(f"{arg}: ", COLOR.RED) + val for arg, val, _ in pairs]
         allArgsOnOneLine = ", ".join(pairStrs)
         
         multilineArgs = len(allArgsOnOneLine.splitlines()) > 1

@@ -2,9 +2,8 @@
 # @Author: hzhu
 # @Date:   2023-10-22 18:27:12
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-22 02:03:17
+# @Last Modified time: 2024-12-11 12:30:55
 """
-==================================
 linalg (:mod:`quante.linalg`)
 ==================================
 
