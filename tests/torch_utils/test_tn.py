@@ -61,7 +61,7 @@ class TestTN(unittest.TestCase):
         
         # 考虑这个算符
         M = op.xx(1,2) + op.yy(1,2)
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         basis = spin_basis(L=N)
         M = M.to_matrix(basis)
 
@@ -150,7 +150,7 @@ class TestTN(unittest.TestCase):
         
     def test_oddeven_decomp(self):
         import quante.generate.operas as op
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         import quante.linalg as qla
         # 验证奇偶拆分 --- 精确对角化
 
@@ -205,7 +205,7 @@ class TestTN(unittest.TestCase):
 
     def test_trotter(self):
         import quante.generate.operas as op
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         import quante.linalg as qla
         L = 10
         tau = 0.1

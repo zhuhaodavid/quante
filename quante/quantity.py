@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-03 01:11:45
+# @Last Modified time: 2024-12-15 18:28:36
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -65,7 +65,7 @@ def entanglement_spectrum(state:_np.ndarray, L:int, left_number:int, basis=None)
         fullstate = state.reshape(-1,1)
     assert fullstate.shape[0] == 1<<L
     matrix = fullstate.reshape(1<<left_number, -1)
-    from quante.linalg.svd_robust import svd
+    from .linalg.svd_robust import svd
     return svd(matrix, compute_uv=False) # type: ignore
 
 def entanglement_entropy(state:_np.ndarray, L:int, left_number:int, basis=None) -> float:
