@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-09 18:37:38
+# @Last Modified time: 2024-12-15 18:28:56
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -20,7 +20,7 @@ from scipy.sparse.linalg import aslinearoperator  # type: ignore
 from scipy.sparse.linalg._interface import IdentityOperator
 from scipy.sparse.linalg._onenormest import onenormest
 
-from quante.linalg.usenumba.operations_numba import dot_parallel  # type: ignore
+from .operations_numba import dot_parallel  # type: ignore
 from .operations_numba import addself, prodscale, addtwo
 
 

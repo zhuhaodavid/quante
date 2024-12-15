@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-06 23:31:30
+# @Last Modified time: 2024-12-15 18:29:15
 
 
 import numpy as np
-from quante.linalg.svd_robust import TruncationError
+from ...linalg.svd_robust import TruncationError
 import torch as tc
 
 

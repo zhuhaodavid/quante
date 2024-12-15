@@ -128,7 +128,7 @@ class TestSpinHalf(unittest.TestCase):
             mat1 = heisenberg_matrix_element(L, jxy, jz, cyclic=cyclic)
             
             from quante.generate.operas import heisenberg_operator
-            from quante.generate.basis import spin_basis
+            from quante.generate import spin_basis
             ham = heisenberg_operator(L, (jxy, jxy, jz), 0., cyclic=cyclic)
             basis = spin_basis(L=L)
             mat2 = ham.to_matrix(basis, sparse=True).toarray()
@@ -151,7 +151,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.Nup.matrixele import heisenberg_matrix_element
         from quante.generate.symmetry.spin_half.Nup.defbasis import construct_Nup_basis
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         jxy = np.random.randn()
@@ -185,7 +185,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.kblock.defbasis import construct_kblock_basis
         from quante.generate.symmetry.spin_half.kblock.matrixele import heisenberg_matrix_element
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -218,7 +218,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.pblock.defbasis import construct_pblock_basis
         from quante.generate.symmetry.spin_half.pblock.matrixele import heisenberg_matrix_element
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -252,7 +252,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.zblock.defbasis import construct_zblock_basis
         from quante.generate.symmetry.spin_half.zblock.matrixele import heisenberg_matrix_element
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -286,7 +286,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.pzblock.defbasis import construct_pzblock_basis
         from quante.generate.symmetry.spin_half.pzblock.matrixele import heisenberg_matrix_element
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -320,7 +320,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.Nup_kblock.defbasis import construct_Nup_kblock_basis
         from quante.generate.symmetry.spin_half.kblock.matrixele import heisenberg_matrix_element
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -356,7 +356,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.Nup_pblock.defbasis import construct_Nup_pblock_basis
         from quante.generate.symmetry.spin_half.pblock.matrixele import heisenberg_matrix_element
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -392,7 +392,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.Nup_zblock.defbasis import construct_Nup_zblock_basis
         from quante.generate.symmetry.spin_half.zblock.matrixele import heisenberg_matrix_element
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -428,7 +428,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.Nup_pzblock.defbasis import construct_Nup_pzblock_basis
         from quante.generate.symmetry.spin_half.pzblock.matrixele import heisenberg_matrix_element
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -464,7 +464,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.Nup_kblock_pblock.defbasis import construct_Nup_kblock_pblock_basis
         from quante.generate.symmetry.spin_half.Nup_kblock_pblock.matrixele import heisenberg_matrix_element
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -503,7 +503,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.symmetry.spin_half.Nup_kblock_pblock_zblock.defbasis import construct_Nup_kblock_pblock_zblock_basis
         from quante.generate.symmetry.spin_half.Nup_kblock_pblock_zblock.matrixele import heisenberg_matrix_element
         from quante.generate.operas import heisenberg_operator
-        from quante.generate.basis import spin_basis
+        from quante.generate import spin_basis
         
         L = 10
         j = np.random.randn()

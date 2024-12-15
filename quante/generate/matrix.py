@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-08 15:37:28
+# @Last Modified time: 2024-12-15 18:54:36
 """
 生成矩阵：(`np.ndarray`)
 - `pauli_matrix`
@@ -18,7 +18,7 @@ import numpy as _np
 import scipy.sparse as _sparse
 
 from ..linalg.operations import kron, ikron
-from .basis import _check_spin_number # type: ignore
+from .basis.symmetry.basis_wrapped import _check_spin_number # type: ignore
 
 from typing import Optional, Callable, Union, Iterable
 number = Union[int, float, complex]
@@ -584,7 +584,7 @@ def heisenberg_matrix(
     对于维数较小的矩阵比较高效
     """
     S = _check_spin_number(S)
-    from .basis import spin_basis
+    from . import spin_basis
     basis = spin_basis(L, S=S, Nup=Nup, kblock=kblock, pblock=pblock, zblock=zblock, pzblock=pzblock, jmblock=jmblock)
     try:
         # 尝试使用针对heisenberg链的方法
