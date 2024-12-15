@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-03 18:35:09
+# @Last Modified time: 2024-12-14 02:46:18
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -326,8 +326,8 @@ class TensorTrain:
         self.llim = self.rlim = None
         self.lognm = self.lognm + lognm
         return trunc_err
-        
-    
+
+
     def apply_gate_(
         self,
         pos:int,
@@ -416,6 +416,7 @@ class TensorTrain:
             return self.update_two_site_(pos, W, direction=direction, svd_alg=svd_alg, trunc_para=trunc_para, normalize=normalize, updateS=updateS)
             # -------------------------
 
+    
     def _convert_gate(self, gate, site_num):
         if gate.ndim == site_num == 2:
             try:
@@ -852,7 +853,7 @@ class MPS(TensorTrain):
             linkdims_ = linkdims
         ψ1 = [tc.randn(linkdims_[i],2,linkdims_[i+1], dtype=dtype, device=device) for i in range(N)]
         return cls(ψ1)
-
+    
     @classmethod
     def product_state(cls, state: list[str], dtype=tc.float64, device=None):
         Ws = [tc.zeros(1, 2, 1, dtype=dtype, device=device) for i in range(len(state))]
@@ -1985,7 +1986,7 @@ class ProjMPO:
                         nexttsrshape = nexttsr.shape
                         state.data[b - 1] = (nexttsr.reshape(-1, nexttsrshape[-1]) @ bond_reduced_state).reshape(*nexttsrshape[:-1],-1)
                         state.llim -= 1
-                        
+                    
                     self.nsite = nsite
                 else:
                     # only move ortho center

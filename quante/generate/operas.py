@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-08 16:13:41
+# @Last Modified time: 2024-12-13 02:19:12
 
 import warnings
 import numpy as np
@@ -55,7 +55,7 @@ class Oper:
             for name, (pos, coef) in oper.data.items():
                 old_pos, old_coef = self.data.get(name, (None, None))
                 if old_coef is None and old_pos is None:
-                    self.data[name] = (pos, coef)
+                    self.data[name] = (pos, add_or_minus*coef)
                 else:
                     newpos,newcoef = merge_poscoef((old_pos, pos), (old_coef, add_or_minus*coef))
                     if len(newpos) > 0:

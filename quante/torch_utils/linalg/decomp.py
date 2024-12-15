@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
-# @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-06 23:31:30
-
-
+# @Last Modified by:   dzwang
+# @Last Modified time: 2024-12-14 00:18:23
 import numpy as np
 from quante.linalg.svd_robust import TruncationError
 import torch as tc

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2023-09-19 22:25:55
-# @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 18:02:16
+# @Last Modified by:   dzwang
+# @Last Modified time: 2024-12-13 23:50:12
 # This is from tenpy
 
 import scipy.linalg as sla
@@ -190,4 +190,3 @@ def truncate(S:np.ndarray, chi_max:int, svd_min:float, trunc_cut:float) -> tuple
     eps = S[~good].sum()
     ov = 1. - 2. * eps
     return good, TruncationError(eps, ov)
-
