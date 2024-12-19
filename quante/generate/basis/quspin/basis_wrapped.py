@@ -2,15 +2,13 @@
 # @Author: hzhu
 # @Date:   2024-12-15 18:08:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-15 22:02:45
+# @Last Modified time: 2024-12-16 15:42:11
 
 # quspin_basis 是 quspin 库中的源码，这里提供一个简单的封装，使得用户可以更方便地使用 quspin_basis 中的 basis 类。
 
 # todo 文档中文化
 # todo boson-spin 类
 
-from .quspin_basis.basis_1d.fermion import spinless_fermion_basis_1d, spinful_fermion_basis_1d
-from .quspin_basis.basis_1d.boson import boson_basis_1d
 
 def spinless_fermion_basis(L:int, Nf:int|list|None = None, nf:float|None = None, a:int|None = None, kblock:int|None=None, pblock:int|None=None):
     """quspin spinless fermion basis
@@ -30,6 +28,7 @@ def spinless_fermion_basis(L:int, Nf:int|list|None = None, nf:float|None = None,
     pblock : int | None, optional
         specifies parity block. The physical manifestation of this symmetry transformation is reflection about the middle of the chain, by default None
     """
+    from .quspin_basis.basis_1d.fermion import spinless_fermion_basis_1d
     blocks = {'a': a, "kblock": kblock, "pblock": pblock}
     blocks = {k: v for k, v in blocks.items() if v is not None}
     return spinless_fermion_basis_1d(L=L, Nf=Nf, nf=nf, **blocks)
@@ -60,6 +59,7 @@ def spinful_fermion_basis(L:int, Nf:tuple[int, list]|None = None, nf: tuple[floa
     psblock : int | None, optional
         specifies parity followed by fermion spin inversion symmetry block. The physical manifestation of this symmetry transformation is reflection about the middle of the chain, and a simultaneous exchange of a spin-up and a spin-down fermion on a fixed lattice site, by default None
     """
+    from .quspin_basis.basis_1d.fermion import spinful_fermion_basis_1d
     blocks = {'a': a, "kblock": kblock, "pblock": pblock, "sblock": sblock, "psblock": psblock}
     blocks = {k: v for k, v in blocks.items() if v is not None}
     return spinful_fermion_basis_1d(L=L, Nf=Nf, nf=nf, double_occupancy=double_occupancy, **blocks)
@@ -92,6 +92,7 @@ def boson_basis(L:int, Nb:int|list|None = None, nb:float|None = None, sps:int|No
     cBblock : int | None, optional
         specifies particle-hole symmetry block for sublattice B (defined as all odd lattice sites). The physical manifestation of this symmetry transformation is the exchange of a hard-core boson for a hole (i.e. no particle) on all odd sites, by default None
     """
+    from .quspin_basis.basis_1d.boson import boson_basis_1d
     blocks = {'a': a, "kblock": kblock, "pblock": pblock, "cblock":cblock, "pcblock":pcblock, "cAblock": cAblock, "cBblock": cBblock}
     blocks = {k: v for k, v in blocks.items() if v is not None}
     return boson_basis_1d(L=L, Nb=Nb, nb=nb, sps=sps, **blocks)
