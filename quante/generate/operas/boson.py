@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-16 16:50:49
+# @Last Modified time: 2024-12-15 22:30:48
 import numpy as np
 from .operas import Oper, merge_poscoef, _single_term
 
@@ -97,11 +97,10 @@ class BosonOper(Oper):
 
     def to_matrix(self, basis, dtype=np.complex128, sparse=False):
         self._check_length(basis.L)
-        operator = self if self._has_expanded() else self.expandxy()
         from ..basis.quspin.quspin_basis.basis_1d.boson import boson_basis_1d
         if isinstance(basis, boson_basis_1d):
             op_list = []
-            for opstr, posn, coef in operator.each_term():
+            for opstr, posn, coef in self.each_term():
                 op_list.append([opstr, posn, coef])
             mat = basis._make_matrix(op_list, dtype=dtype)
             if sparse:
@@ -197,66 +196,6 @@ class BosonOper(Oper):
                 newdata[name] = (newposn, newcoef)
         return cls(newdata)
 
-    @classmethod
-    def heisenberg_operator(cls, L, j=1.0, h=0.0, cyclic=False) -> "BosonOper":
-        r"""
-        生成 heisenberg 模型的哈密顿量，返回一个 'Oper' 的实例
-        
-        这个实例可以 automata, local_matrix, to_matrix 等方法
-
-        .. math::
-            \sum_{i=1}^{N-1} j * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1} + s^z_i s^z_{i+1}) + \sum_i^N h * s^z_i
-        
-        Parameters
-        ----------
-        L : int
-            系统的长度
-        j : float or tuple of float
-            相互作用强度，可以是单个值，也可以是三个值表示 x, y, z 方向的相互作用强度
-        h : float or tuple of float
-            自旋场强度，可以是单个值，也可以是三个值表示 x, y, z 方向的自旋场强度
-        cyclic : bool
-            是否是周期性模型，默认是 False
-        
-        Examples
-        --------
-        >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=1.0, h=0.0) # heisenberg model
-        >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(1.0, 1.0, 0.0), h=0.0)  # xy model
-        >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(0.0, 0.0, 1.0), h=(1.0, 0.0, 0.0))  # ising model
-        """
-        try:
-            jx, jy, jz = j # type: ignore
-        except TypeError:
-            jx = jy = jz = j
-        try:
-            hx, hy, hz = h # type: ignore
-        except TypeError:
-            hz = h
-            hx = hy = 0.0
-        data = {}
-        posn1 = np.arange(0,L, dtype=np.int32).reshape(L,1)
-        coef1 = np.ones(L, dtype=np.float64)
-        if cyclic:
-            posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=np.int32)
-            coef2 = np.ones(L, dtype=np.float64)
-        else:
-            posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
-            coef2 = np.ones(L-1, dtype=np.float64)
-        if jx != 0:
-            data["xx"] = (posn2, jx*coef2)
-        if jy != 0:
-            data["yy"] = (posn2, jy*coef2)
-        if jz != 0:
-            data["zz"] = (posn2, jz*coef2)
-        if hx != 0:
-            data["x"] = (posn1, hx*coef1)
-        if hy != 0:
-            data["y"] = (posn1, hy*coef1)
-        if hz != 0:
-            data["z"] = (posn1, hz*coef1)
-        return cls(data)
-
-
 def _expand_term(name):
     """Expand the term based on the given name and coefficient."""
     # Initialize with base case
@@ -266,10 +205,10 @@ def _expand_term(name):
     for char in reversed(name):  # Process characters from the end to the start
         if char == 'x':
             prefixes = ['+', '-']
-            factors = [0.5, 0.5]
+            factors = [1., 1.]
         elif char == 'y':
             prefixes = ['+', '-']
-            factors = [-0.5j, 0.5j]
+            factors = [-1j, 1j]
         else:
             prefixes = [char]
             factors = [1.]
