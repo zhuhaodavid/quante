@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-11 12:40:57
+# @Last Modified time: 2024-12-19 18:04:55
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -39,7 +39,7 @@ __profiles = []
 def profile(on: bool=True, save:bool=False, output_unit:float|None=None) -> Callable:
     """测试函数的运行时间
     
-    在 notebook 中，建议使用 timing 的上下文管理器。
+    在 notebook 中，建议使用 Timer 的上下文管理器。
 
     Parameters
     ----------
@@ -98,8 +98,8 @@ class Timer:
 
         Parameters
         ----------
-        functions : list[Callable] | tuple[Callable] | Callable
-            要记录时间的函数
+        functions : None | str | Callable
+            要记录时间的函数, None 记录进出之间时间，str 记录时间并答应 str，Callable 记录时间并执行该函数。
         timer_unit : float | None, optional
             时间单位，默认根据实际运行时间自动调整, by default None
         save : bool, optional
@@ -121,6 +121,11 @@ class Timer:
         """
         if len(functions) == 0:
             self.only_time = True
+            self.string = "Time elapsed"
+            return
+        elif len(functions)==1 and isinstance(functions[0], str):
+            self.string = functions[0]
+            self.only_time = True
             return
         else:
             self.only_time = False
@@ -137,13 +142,14 @@ class Timer:
             return self.profile
 
     def __exit__(self, exc_type, exc_value, traceback):
+        elapsed_time = _time.perf_counter() - self.start_time  # 计算经过的时间
         if self.only_time:
-            timer_interval = _time.perf_counter() - self.start_time  # 计算运行时间
-            print(f"Time elapsed: {timer_interval} seconds")
-            return timer_interval
+            print(f"{self.string}: {elapsed_time} seconds")
+            if exc_type is not None:  # 检查是否发生错误
+                traceback.print_exc()  # 打印堆栈跟踪
+            return elapsed_time
         self.profile.disable()  # 停止分析
         if self.outplut_unit is None:
-            elapsed_time = _time.perf_counter() - self.start_time  # 计算经过的时间
             if elapsed_time < 0.0001:  # 如果小于 0.0001 秒，则认为是微秒级
                 self.outplut_unit = None  # 微秒
             elif elapsed_time < 0.1:  # 如果小于 0.1 秒，则认为是毫秒级
@@ -163,6 +169,9 @@ class Timer:
                 _sys.stdout = original_stdout
         else:
             self.profile.print_stats(_sys.stdout, output_unit=self.outplut_unit)  # 打印出性能分析结果
+        
+        if exc_type is not None:  # 检查是否发生错误
+            traceback.print_exc()  # 打印堆栈跟踪
 
 
 def print_memory_usage(obj: Any) -> None:
@@ -1123,3 +1132,75 @@ def plt_style_use(stylename:str = "quante", svg: bool = True) -> None:
         _plt.rcParams.update(scienceconfig)
     else:
         _plt.style.use(stylename)
+
+
+def send_email(subject: str, body: str, to_email: str, from_email: str, smtp_server: str, smtp_port: int, login: str, password: str):
+    r"""发送程序执行完成的邮件
+    
+    Parameters
+    ----------
+    subject : str
+        邮件主题
+    body : str
+        邮件正文
+    to_email : str
+        收件人邮箱地址
+    from_email : str
+        发件人邮箱地址
+    smtp_server : str
+        SMTP 服务器地址（如'smtp.gmail.com'）
+    smtp_port : int
+        SMTP 端口号（通常 587 或 465）
+    login : str
+        SMTP 登录用户名（通常是发件人邮箱）
+    password : str
+        SMTP 登录密码或授权码
+        
+    Returns
+    -------
+    None
+
+    Example
+    -------
+    >>> # 配置 SMTP 信息和邮件内容
+    >>> smtp_server = "smtp.xxx.edu.cn"  # 例如 Gmail 的 SMTP 服务器
+    >>> smtp_port = 25  # Gmail 使用的 TLS 端口
+    >>> from_email = "xxxxxxxxxx@xxxx.edu.cn"
+    >>> to_email = "xxxxxxxxxxx@outlook.com"
+    >>> login = "xxxxxxxxxxx@xxx.edu.cn"
+    >>> password = "xxxxxxxxxxxx"  # 应用专用密码或邮箱密码
+    >>> 
+    >>> # 自定义邮件内容
+    >>> subject = "程序执行完成通知"
+    >>> body = "您的程序已经成功运行完成！"
+    >>> 
+    >>> try:
+    >>>     pass  # 程序运行代码
+    >>>     body += "\n\n程序运行成功！"
+    >>> except Exception as e:
+    >>>     body += f"\n\n出现错误：\n{e}"
+    >>> finally:
+    >>>     send_email(subject, body, to_email, from_email, smtp_server, smtp_port, login, password)
+    """
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    import traceback
+
+    try:
+        # 创建邮件
+        message = MIMEMultipart()
+        message["From"] = from_email
+        message["To"] = to_email
+        message["Subject"] = subject
+        message.attach(MIMEText(body, "plain"))  # 可以将 "plain" 替换为 "html" 发送 HTML 格式邮件
+
+        # 连接 SMTP 服务器并发送邮件
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()  # 启用 TLS 加密
+            server.login(login, password)
+            server.sendmail(from_email, to_email, message.as_string())
+            print(f"邮件已发送至 {to_email}")
+    except Exception as e:
+        print("发送邮件时发生错误：")
+        traceback.print_exc()
