@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-19 18:04:55
+# @Last Modified time: 2024-12-20 12:37:21
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -138,7 +138,7 @@ class Timer:
     def __enter__(self):
         self.start_time = _time.perf_counter()  # 记录开始时间
         if not self.only_time:
-            self.profile.enable()  # 开始分析
+            self.profile.enable()  # 开始分析时间
             return self.profile
 
     def __exit__(self, exc_type, exc_value, traceback):
