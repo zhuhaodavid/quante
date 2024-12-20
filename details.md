@@ -82,11 +82,23 @@ quspin 1.0.0 要求 numpy>=2.0.0
 
 ## Git
 
+- 创建新分支 `git checkout -b branchname`
+
 - 查看某一分支 `git checkout branchname`
 
 - 创建分支 `git branch branchname`
 
 - 合并分支 `git merge branchname`
+
+- 上传到 github `git push origin branchname`
+
+- 从 github 上下载 `git pull origin branchname`
+
+- 查看历史记录：`git log`
+
+- 回到某个历史版本：`git reset --hard <commit_hash>`
+
+- 查看历史版本：`git checkout <commit_hash>`
 
 ## install slepc4py
 
