@@ -1,6 +1,5 @@
 # Byte-compiled / optimized / DLL files
 reindex.py
-.vscode/
 __pycache__/
 *.py[cod]
 *$py.class
