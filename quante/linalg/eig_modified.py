@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 18:01:37
+# @Last Modified time: 2024-12-29 18:00:35
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -23,6 +23,7 @@ from ..basicfun import (
     get_free_space,
     load_hdf5,
     save_hdf5,
+    logger,
 )
 
 __all__ = [
@@ -132,7 +133,7 @@ def eigensolve_core(
         )
 
     if H.shape[0] > 32766:
-        _logging.warning("may bad performance")
+        logger.warning("may bad performance")
 
     Hmat = toarray(H)
     isherm = _np.allclose(Hmat, Hmat.conj().T) if isherm is None else isherm
@@ -142,20 +143,20 @@ def eigensolve_core(
 
     if backend == "dsyevd":
         assert isherm
-        _logging.info(
+        logger.debug(
             f"EIG{returnvec_str}{isherm_str}ing ({backend}) ... (dim={Hmat.shape})"
         )
         if return_vecs:
             return _sla.lapack.dsyevd(Hmat)
         else:
             return _sla.lapack.dsyevd(Hmat, compute_v=0)[0]
-        _logging.info("done")
+        logger.debug("done")
 
-    _logging.info(
+    logger.debug(
         f"EIG{returnvec_str}{isherm_str}ing ({backend}) ... (dim={Hmat.shape})"
     )
     res = _EIG_BACKEND[backend, isherm, return_vecs](Hmat)
-    _logging.info("done")
+    logger.debug("done")
 
     return res
 
@@ -239,7 +240,7 @@ def eigensolve(
     # if use matlab, data has to be saved
     if backend == "matlab" and save is False:
         save = True
-        _logging.warning("matlab backend has to save result")
+        logger.warning("matlab backend has to save result")
 
     path_save_to, file_name, E_file, psi_file = _unwrap_save(
         save, defaultname=path_save
@@ -248,12 +249,12 @@ def eigensolve(
     # if data exists, just return the data
     if save is not False and save is not True:
         if return_vecs and (_os.path.exists(E_file) or _os.path.exists(psi_file)):
-            _logging.warning(
+            logger.warning(
                 f"data seems available at\n\t{E_file} \nor\n\t{psi_file}\ntrying to load from there. (if recalculate is needed, please remove data or change the file name)"
             )
             return _load_eigres(E_file), _load_eigres(psi_file)
         elif not return_vecs and (_os.path.exists(E_file) or _os.path.exists(psi_file)):
-            _logging.warning(
+            logger.warning(
                 f"data seems available at\n\t{E_file} \nor\n\t{psi_file}\ntrying to load from there. (if recalculate is needed, please remove data or change the file name)"
             )
             return _load_eigres(E_file)
@@ -392,9 +393,9 @@ def eigs_numpy(
 
     if return_vecs:
         # get all eigenpairs
-        _logging.info(f"EIG{isherm_str}ing ... (dim={A.shape})")
+        logger.debug(f"EIG{isherm_str}ing ... (dim={A.shape})")
         lk, vk = eig_fn(A.toarray() if _sparse.issparse(A) else A)
-        _logging.info("done")
+        logger.debug("done")
 
         # sort and trim according to which k we want
         sk = sort_inds(lk, method=which, sigma=sigma)[:k]
@@ -413,9 +414,9 @@ def eigs_numpy(
 
     else:
         # get all eigenvalues
-        _logging.info(f"EIG{isherm_str}ing (numpy) ... (dim={A.shape})")
+        logger.debug(f"EIG{isherm_str}ing (numpy) ... (dim={A.shape})")
         lk = eig_fn(A.toarray() if _sparse.issparse(A) else A)
-        _logging.info("done")
+        logger.debug("done")
 
         # sort and trim according to which k we want
         sk = sort_inds(lk, method=which, sigma=sigma)[:k]
@@ -502,14 +503,14 @@ def eigs_scipy(
     isherm_str = "H" if isherm else ""
 
     if return_vecs:
-        _logging.info(f"EIGS{isherm_str}ing (scipy) ... (dim={A.shape})")
+        logger.debug(f"EIGS{isherm_str}ing (scipy) ... (dim={A.shape})")
         lk, vk = eigs(A, **settings, **eigs_opts)
-        _logging.info("done")
+        logger.debug("done")
         return maybe_sort_and_project(lk, vk, P, sort)
     else:
-        _logging.info(f"EIGVALS{isherm_str}ing (scipy)... (dim={A.shape})")
+        logger.debug(f"EIGVALS{isherm_str}ing (scipy)... (dim={A.shape})")
         lk = eigs(A, **settings, **eigs_opts)
-        _logging.info("done")
+        logger.debug("done")
         return _np.sort(lk) if sort else lk
 
 
@@ -580,12 +581,12 @@ def eigensolve_partial(
     # if data exists, just return the data
     if save is not False and save is not True:
         if return_vecs and (_os.path.exists(E_file) or _os.path.exists(psi_file)):
-            _logging.warning(
+            logger.warning(
                 f"data seems available at\n\t{E_file} \nor\n\t{psi_file}\ntrying to load from there. (if recalculate is needed, please remove data or change the file name)"
             )
             return _load_eigres(E_file), _load_eigres(psi_file)
         elif not return_vecs and (_os.path.exists(E_file) or _os.path.exists(psi_file)):
-            _logging.warning(
+            logger.warning(
                 f"data seems available at\n\t{E_file} \nor\n\t{psi_file}\ntrying to load from there. (if recalculate is needed, please remove data or change the file name)"
             )
             return _load_eigres(E_file)
@@ -639,7 +640,7 @@ def eigensolve_partial(
                         mat.indices
                     )
 
-                _logging.info(f"QUIMB {bkd} ... (dim={A.shape})")
+                logger.debug(f"QUIMB {bkd} ... (dim={A.shape})")
                 res = qu.eigensystem_partial(
                     mat,
                     backend=backend,
@@ -647,7 +648,7 @@ def eigensolve_partial(
                     **settings,
                     **backend_opts,
                 )
-                _logging.info("done")
+                logger.debug("done")
             except Exception as e:
                 raise e
 
@@ -1045,7 +1046,7 @@ def matlabeig_list(path_save_to="EigData/", file_names=None, return_vecs=True):
     command += f"'{tempPath}','{path_save_to}',{para}); catch ME; fprintf('%s\\n', string(getReport(ME, 'extended','hyperlinks', 'off'))); end; quit\""
     if _platform.system() != "Windows":
         command += f" >> {tempPath}outfile.log 2>&1"
-    _logging.warning(f"change to matlab by command:\n {command}")
+    logger.warning(f"change to matlab by command:\n {command}")
     _os.system(command)
     lastline = __get_last_line(rf"{tempPath}outfile.log")
     if lastline != b"finished":

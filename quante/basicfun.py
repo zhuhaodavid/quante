@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-20 12:37:21
+# @Last Modified time: 2024-12-29 19:39:21
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -19,8 +19,11 @@ import ctypes as _ctypes
 import inspect as _inspect
 import logging as _logging
 import platform as _platform
-from dataclasses import is_dataclass, asdict
+import traceback as _traceback
+import itertools as _itertools
+import builtins
 
+from dataclasses import is_dataclass, asdict
 from itertools import chain
 from collections import deque
 from types import FunctionType
@@ -93,7 +96,7 @@ def profile(on: bool=True, save:bool=False, output_unit:float|None=None) -> Call
 
 
 class Timer:
-    def __init__(self, *functions, output_unit: float|None = None, save=False):
+    def __init__(self, *str_or_funcs, output_unit: float|None = None, save=False):
         """通过上下文管理器记录函数的执行时间.
 
         Parameters
@@ -119,19 +122,19 @@ class Timer:
         >>>     a = test()
         >>>     b = test2()
         """
-        if len(functions) == 0:
+        if len(str_or_funcs) == 0:
             self.only_time = True
             self.string = "Time elapsed"
             return
-        elif len(functions)==1 and isinstance(functions[0], str):
-            self.string = functions[0]
+        elif len(str_or_funcs)==1 and isinstance(str_or_funcs[0], str):
+            self.string = str_or_funcs[0]
             self.only_time = True
             return
         else:
             self.only_time = False
         from line_profiler import LineProfiler
-        self.profile = LineProfiler(*functions)
-        self.functions = functions
+        self.profile = LineProfiler(*str_or_funcs)
+        self.functions = str_or_funcs
         self.outplut_unit = output_unit
         self.save = save
 
@@ -141,12 +144,12 @@ class Timer:
             self.profile.enable()  # 开始分析时间
             return self.profile
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback_obj):
         elapsed_time = _time.perf_counter() - self.start_time  # 计算经过的时间
         if self.only_time:
             print(f"{self.string}: {elapsed_time} seconds")
             if exc_type is not None:  # 检查是否发生错误
-                traceback.print_exc()  # 打印堆栈跟踪
+                _traceback.print_exc()  # 打印堆栈跟踪
             return elapsed_time
         self.profile.disable()  # 停止分析
         if self.outplut_unit is None:
@@ -171,8 +174,9 @@ class Timer:
             self.profile.print_stats(_sys.stdout, output_unit=self.outplut_unit)  # 打印出性能分析结果
         
         if exc_type is not None:  # 检查是否发生错误
-            traceback.print_exc()  # 打印堆栈跟踪
+            _traceback.print_exc()  # 打印堆栈跟踪
 
+builtins.Timer = Timer
 
 def print_memory_usage(obj: Any) -> None:
     """ 打印对象的占用空间的大小.
@@ -274,8 +278,6 @@ def get_free_space(folder: str) -> float:
         import shutil as _shutil
         usage = _shutil.disk_usage(folder)
         return usage.free / (1024 ** 3)
-        # st = _os.statvfs(folder)
-        # return st.f_bavail * st.f_frsize / (1024 ** 3)
     
 
 def create_folder(path1:str, path2: Union[None, str]=None) -> str:
@@ -305,7 +307,420 @@ def create_folder(path1:str, path2: Union[None, str]=None) -> str:
     whole_path = _os.path.join(whole_path, path2).replace("\\", "/") if path2 else whole_path  # 如果提供了子路径，则加入到主路径中
     _os.makedirs(whole_path, exist_ok=True)  # 创建文件夹（包括所有父文件夹）
     return whole_path if whole_path.endswith("/") else whole_path+"/"   # 确保返回路径以斜杠结尾
+ 
+#############################################################
+#  日志工具
+#############################################################
+
+# 创建自定义的日志记录器
+logger = _logging.getLogger('quante_logger')
+
+def set_logging(level: int = _logging.INFO, savelog: bool = False, filenameTime: bool = False, logtime: bool = False):
+    """配置日志记录功能.
     
+    Parameters
+    ----------
+    level : int, optional
+        日志记录的级别，默认为 `_logging.WARNING`。
+    savelog : bool, optional
+        是否将日志保存到文件中，默认为 `False`。
+    filenameTime : bool, optional
+        是否在日志文件名中包含时间戳，默认为 `False`。
+    logtime : bool, optional
+        是否在日志消息中包含时间戳，默认为 `False`。
+    
+    Returns
+    -------
+    None: 该函数无返回值。
+    
+    Examples
+    --------
+    >>> set_logging(savelog=True, logtime=True)
+    """
+    # 清除已有的处理器，防止重复添加
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+        handler.close()
+
+    if logtime:  # 根据 `logtime` 参数设置日志格式
+        _format = "%(asctime)s - %(levelname)s: %(message)s"
+    else:
+        _format = "%(message)s"
+
+    if savelog:
+        filename = "log/"
+        create_folder("log/")  # 创建日志目录
+        filename += _os.path.basename(_sys.argv[0])[:-3]  # 根据运行的脚本文件名生成日志文件名
+        if filenameTime:  # 如果 `filenameTime` 为 `True`，在文件名中添加时间戳
+            now = "_" + _time.strftime("%Y-%m-%d-%H_%M_%S", _time.localtime(_time.time()))
+            filename += now
+        filename += '.log'
+        file_handler = _logging.FileHandler(filename, mode="w", encoding='utf-8')
+        file_handler.setFormatter(_logging.Formatter(_format))
+        logger.addHandler(file_handler)
+        try:
+            println.use_color = False
+        except:
+            pass
+    else:
+        console_handler = _logging.StreamHandler()
+        console_handler.setFormatter(_logging.Formatter(_format))
+        logger.addHandler(console_handler)
+        try:
+            println.use_color = True
+        except:
+            pass
+    
+    # 设置日志记录级别
+    logger.setLevel(level)
+    logger.propagate = False  # 防止日志消息传播到root日志记录器
+
+set_logging()  # 使用默认日志记录器
+
+import traceback
+def custom_exception_handler(exc_type, exc_value, exc_traceback):
+    # logger.debug("发生错误！这是固定的提示信息。")
+    tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    logger.error(tb_str)  # 输出格式化的traceback字符串
+
+# 下面这句话可以让 logging 记录所有的报错信息
+_sys.excepthook = custom_exception_handler
+
+class COLOR:
+    BLACK = '\033[30m'
+    RED = '\033[31m'
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    MAGENTA = '\033[35m'
+    CYAN = '\033[36m'
+    WHITE = '\033[37m'
+    DEFAULT = '\033[39m'
+    
+class PrintLn:
+    """
+    打印输入变量的名称和值到日志中。
+    
+    任何以 f" 或 rf" 开头的字符串会被识别为 f-string，而不会被解析为变量名称。
+    
+    可以通过在 builtins.pyi 中添加：
+
+    >>> def Timer(self, *str_or_funcs, output_unit: float|None = None, save=False) -> None: ...
+    >>> def show(*values) -> None: ...
+
+    使得 ide 可以识别 show 和 Timer 函数。
+
+    Examples
+    --------
+    >>> from quante.basicfun import println as show
+    >>> a = "this is a test"
+    >>> show(a)
+    a: this is a test
+    >>> a; show>>1
+    a: this is a test
+    >>> L, a = 1, 2; show>>1
+    L: 1; a: 2
+    
+    Warning
+    -------
+    可能存在的问题：
+    - 只能在单行中使用，否则报 SyntaxError。
+    - 使用 >> 显示表达式，而不是赋值语句时，表达式会被 evaluate 两次，可能导致潜在问题，如：
+    >>> def f(L, a):
+    >>>     L.append(a)
+    >>>     return L
+    >>> L, a = [], 2
+    >>> f(L,a); show>>1
+    f(L, a): [2, 2]
+    >>> L = f(L,a); show>>1
+    L: [2]
+    """
+    def __init__(self, use_color=True):
+        self.use_color = use_color
+
+    def __rshift__(self, mode=1):
+        if not mode:
+            return None
+        try:
+            cf = _inspect.currentframe()  # 获取调用函数的栈帧
+            if cf is None:
+                raise ValueError("Can't get the caller's frame")
+            paraname, values = PrintLn._get_paraname_value(cf.f_back)
+            if paraname == []:
+                return None
+            out: str = self._constructArgumentOutput(paraname,values)
+            if mode == 1:
+                logger.info(out)
+            elif mode == -1:
+                logger.debug(out)
+            elif mode == 2:
+                logger.warning(out)
+            elif mode == 3:
+                logger.error(out)
+            else:
+                logger.critical(out)
+        except SyntaxError as e:
+            logger.warning("SyntaxError")
+        
+        logger.handlers[0].flush()  # 立即刷新日志
+
+    @staticmethod
+    def _get_paraname_value(callFrame):
+        """利用 inspect 和 ast 模块获取变量名称"""
+        # 获取调用函数的源代码
+        frame_info = _inspect.getframeinfo(callFrame)
+        if frame_info is None or frame_info.code_context is None:
+            return [], []
+        source_code = "".join(frame_info.code_context).strip()
+        
+        # 解析为 AST 并查找函数调用的节点
+        tree = _ast.parse(source_code)
+        
+        node = next(_itertools.islice(_ast.walk(tree), 3, 4))
+        if isinstance(node, _ast.Tuple):
+            paraname = PrintLn.split_expression(_ast.unparse(node)[1:-1])
+        else:
+            paraname = PrintLn.split_expression(_ast.unparse(node))
+        
+        values = []
+        local_vars = callFrame.f_locals
+        global_vars = callFrame.f_globals
+        for arg in paraname:
+            values.append(eval(arg, global_vars, local_vars))
+        
+        return paraname, values
+    
+    @staticmethod
+    def split_expression(expression):
+        # 初始化计数器和结果列表
+        brackets_counter = 0
+        quote_counter_1 = 0
+        quote_counter_2 = 0
+        
+        result = []
+        current_part = []
+        
+        # 从左向右循环处理字符串
+        for char in expression:
+            # 遇到逗号且所有计数器为零，将当前部分添加到结果列表
+            if char == ',' and brackets_counter == 0 and quote_counter_1 == 0 and quote_counter_2 == 0:
+                part = ''.join(current_part).strip()
+                if part:
+                    result.append(part)
+                current_part = []
+                continue
+            
+            current_part.append(char)
+            
+            # 更新计数器
+            if char in '([{':
+                brackets_counter += 1
+            elif char in ')]}':
+                brackets_counter -= 1
+            if char == '"':
+                quote_counter_1 = 1 - quote_counter_1
+            if char == "'":
+                quote_counter_2 = 1 - quote_counter_2
+        
+        # 添加最后一部分
+        part = ''.join(current_part).strip()
+        if part:
+            result.append(part)
+        
+        return result
+
+    
+    def __call__(self, *inputargs):
+        try:
+            cf = _inspect.currentframe()  # 获取调用函数的栈帧
+            if cf is None:
+                raise ValueError("Can't get the caller's frame")
+            paraname = PrintLn._get_paraname(cf.f_back)
+            out: str = self._constructArgumentOutput(paraname, inputargs)
+            logger.info(out)
+        except SyntaxError as e:
+            logger.warning("SyntaxError")
+            logger.warning(inputargs)
+        
+        logger.handlers[0].flush()  # 立即刷新日志
+
+    @staticmethod
+    def _get_paraname(callFrame):
+        """利用 inspect 和 ast 模块获取变量名称"""
+        # 获取调用函数的源代码
+        frame_info = _inspect.getframeinfo(callFrame)
+        if frame_info is None or frame_info.code_context is None:
+            return []
+        source_code = "".join(frame_info.code_context).strip()
+        
+        # 解析为 AST 并查找函数调用的节点
+        tree = _ast.parse(source_code)
+        
+        for node in _ast.walk(tree):
+            
+            if isinstance(node, _ast.Call):  # 查找函数调用节点 
+                arg_values = []
+                # 提取参数
+                for arg in node.args:
+                    # 使用 ast.unparse 来获取参数的源代码表示
+                    arg_values.append(_ast.unparse(arg))
+                return arg_values
+        return []
+
+    def _constructArgumentOutput(self, paraname, inputargs):
+        if len(paraname) == 0:
+            return ""
+        if len(paraname) == 1 and self._isLiteral(paraname[0]):
+            if isinstance(inputargs[0], str):
+                return inputargs[0]
+            return self._argumentToString(inputargs[0], use_color=self.use_color)[0]
+        
+        pairs = [(arg, *self._argumentToString(val, use_color=self.use_color)) for arg, val in zip(paraname, inputargs)]
+        
+        pairStrs = [val if self._isLiteral(arg) else PrintLn.set_color(f"{arg}: ", COLOR.RED, self.use_color) + val for arg, val, _ in pairs]
+        allArgsOnOneLine = PrintLn.set_color(f"; ", COLOR.RED, self.use_color).join(pairStrs)
+        
+        multilineArgs = len(allArgsOnOneLine.splitlines()) > 1
+        firstLineTooLong = len(allArgsOnOneLine.splitlines()[0]) > 70
+        
+        if multilineArgs or firstLineTooLong:
+            lines = []
+            for i, (arg, value, isobject) in enumerate(pairs):
+                prefixTooLong =  (len(pairs[i][0]) > 8) or isobject
+                lines.append(self._format_pair(arg, value, prefixTooLong))
+        else:
+            lines = [allArgsOnOneLine]
+        
+        return "\n".join(lines)
+
+    @classmethod
+    def _argumentToString(cls, obj, compact=False, indent=0, use_color=True) -> tuple[str, bool]:
+        """如果是 ndarray，那么输出它的 __str__，否则用 pprint 得到字符串"""
+        import pprint
+        isobject = False
+        if type(obj) == _np.ndarray:
+            if compact:
+                s = _np.array2string(obj, formatter={'float_kind': lambda x: "%.2f" % x}, max_line_width=None, threshold=4)
+            else:
+                s = obj.__str__()
+        elif isinstance(obj, list):
+            s = pprint.pformat(obj, compact=True)
+        elif isinstance(obj, FunctionType):
+            return f"<function {obj.__name__}>", False
+        else:
+            # object
+            if (obj.__class__.__str__ is not object.__str__ or obj.__class__.__repr__ is not object.__repr__):
+                s = pprint.pformat(obj)
+            else:
+                s = cls._get_custom_object_str(obj, use_color)
+                isobject = True
+        s = s.replace("\\n", "\n")  # Preserve string newlines in output.
+        s = '\n'.join(v if i == 0 else " "*indent + v for i, v in enumerate(s.split('\n')))
+        return s, isobject
+
+    @staticmethod
+    def set_color(s: str, color: str, use_color: bool = True) -> str:
+        if use_color:
+            return f"{color}{s}{COLOR.DEFAULT}"
+        else:
+            return s
+
+    @classmethod
+    def _get_custom_object_str(cls, obj: Any, use_color=True):
+        import inspect
+        # 首先拿到 header, footer
+        obj_type = type(obj)
+        header = PrintLn.set_color(f"<{obj_type.__name__} {hex(id(obj))}", COLOR.CYAN, use_color=use_color)
+        footer = PrintLn.set_color(">", COLOR.CYAN, use_color=use_color)
+        
+        # 拿到所有的属性
+        attrs = []
+        attr_pattern: str = r"(?!_).*"
+        import re
+        for attr in dir(obj):
+            if re.fullmatch(attr_pattern, attr):
+                try:
+                    attr_val = getattr(obj, attr)
+                except AttributeError:
+                    continue
+                if inspect.ismethod(attr_val) or inspect.isbuiltin(attr_val):
+                    continue
+                else:
+                    attrs.append(attr)
+        
+        # 将属性组装起来
+        elems = ""
+        for key in sorted(attrs):
+            val = getattr(obj, key)
+            indent = len(key) + 5
+            elems += f" {PrintLn.set_color('.' + key, COLOR.GREEN, use_color=use_color)} = {cls._argumentToString(val,compact=True, indent=indent, use_color=use_color)[0]}\n"
+        
+        return f"{header}\n{elems}{footer}"
+    
+    @staticmethod
+    def add_object_print(othercls):
+        othercls.__str__ = lambda self: PrintLn._get_custom_object_str(self)
+        return othercls
+
+    def _isLiteral(self, s):
+        if self._isFormatStr(s): return True
+        try:
+            import ast as _ast
+            _ast.literal_eval(s)
+        except Exception:
+            return False
+        return True
+
+    def _isFormatStr(self, s):
+        import re
+        # 检查是否是 f-string
+        pattern = r'^(f|rf|fr|Fr|fR|FR)([\'"])(.*?)\2'
+        match = re.fullmatch(pattern, s)
+        if bool(re.search(pattern, s)): return True
+        
+        # 检查是否是 % 格式化
+        pattern = r'^([\'"])(.*?)%[sdxf](.*?)\1\s*%'
+        if bool(re.search(pattern, s)): return True
+        
+        # 检查是否是 .format() 格式化
+        pattern = r'^([\'"])(.+?)\1.format\((.*?)\)\s*$'
+        match = re.fullmatch(pattern, s)
+        if bool(match): return True
+        
+        return False
+
+    def _format_pair(self, arg, value, prefixTooLong=False):
+        arg_lines = self._indented_lines("", arg)
+        value_prefix = arg_lines[-1] + ": "
+        
+        # str如果分行，那么整体退一格
+        looksLikeAString = value[0] + value[-1] in ["''", '""']
+        if looksLikeAString:  # Align the start of multiline strings.
+            lines = value.splitlines(True)
+            for i in range(1, len(lines)):
+                lines[i] = " " + lines[i]
+            value = "".join(lines)
+
+        value_lines = self._indented_lines(value_prefix, value, prefixTooLong=prefixTooLong)
+        lines = arg_lines[:-1] + value_lines
+        return "\n".join(lines)
+
+    def _indented_lines(self, prefix, string, prefixTooLong=False):
+        lines = string.splitlines()
+        prefixlen = len(prefix)
+        
+        if bool(prefix.strip()):
+            prefix = PrintLn.set_color(prefix, COLOR.RED, self.use_color)
+            
+        if prefixTooLong:
+            lth = 3
+            return [prefix + '\n' + ' '*lth + lines[0]] + [" " * lth + line for line in lines[1:]]
+        else:
+            return [prefix + lines[0]] + [" " * prefixlen + line for line in lines[1:]]
+
+println = PrintLn()  # 实例化 PrintLn 类
+builtins.show = println  # 给内置函数 println 赋值
+
 # =================
 #    hdf5 工具
 # =================
@@ -344,12 +759,12 @@ def save_hdf5(filename:str, group:str, data: dict[str, Any], mode: str = "a") ->
     """
     assert filename.endswith(".h5"), "Filename must to be `.h5` file."
     group = "/" + group.strip("/")  # make group to be "/xxx/xxx/..."
-    _logging.info(f"Saving {list(data.keys())} to " + _os.path.abspath(filename) + " ... ")
+    logger.debug(f"Saving {list(data.keys())} to " + _os.path.abspath(filename) + " ... ")
     with _h5py.File(filename.encode("utf-8"), mode) as f:  # `f` is a type `h5py.File`
         # * Save data into group (group can be root "/" or not "/xxxx/xxx/...")
         g = f.require_group(group)
         _save_main(g, data) # g: _h5py.Group,  data: Dict[str,Any]
-    _logging.info("Save done")
+    logger.debug("Save done")
     return filename, group
 
 
@@ -367,7 +782,7 @@ def _save_main(h5group:_h5py.Group, data_dic: Dict[str, Any]) -> None:
     """
     for key, value in data_dic.items():
         keystr = str(key)
-        if isinstance(value, dict) and not isinstance(value, DictObj):  # dic[key] is a dict, save recursively
+        if isinstance(value, dict):  # dic[key] is a dict, save recursively
             subgroup = h5group.require_group(keystr)
             _save_main(subgroup, value)
         else:  # dic[key] is just a dataset
@@ -387,8 +802,6 @@ def _default_save(h5group:_h5py.Group, key:str, value) -> None:
     elif is_dataclass(value):
         # dataclass
         value_dict = asdict(value)
-    elif isinstance(value, DictObj):
-        value_dict = value
     
     # 如果是可以直接保存的类型，如 dataclass，用 json 序列化
     if value_dict is not None:
@@ -398,7 +811,7 @@ def _default_save(h5group:_h5py.Group, key:str, value) -> None:
             dataset.attrs["object_type"] = "dataclass"
             dataset.attrs["dataset_name"] = type(value).__name__
         except TypeError as e:
-            _logging.warning(f"序列化 {key} 时发生错误: {e}\n将保存为字符串类型。")
+            logger.debug(f"序列化 {key} 时发生错误: {e}\n将保存为字符串类型。")
             import pprint
             res = pprint.pformat(value_dict, indent=2, width=1)
             dataset = h5group.create_dataset(key, data=res)
@@ -663,7 +1076,7 @@ def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], li
     >>> bf.save_h5("data.h5", mat)
     >>> mat, = bf.saveh5("data.h5", "mat")
     """
-    _logging.info("Loading from " + _os.path.abspath(filename) + " ... ")
+    logger.debug("Loading from " + _os.path.abspath(filename) + " ... ")
     if group is None:
         group = []
     elif isinstance(group, str):
@@ -689,342 +1102,13 @@ def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], li
                 data.append(load_func(data_location))
             if len(datanames) == 1:
                 data = data[0]
-    _logging.info("Load done")
+    logger.debug("Load done")
     return data
-
-#############################################################
-#  日志工具
-#############################################################
-
-def set_logging(level: int = _logging.WARNING, savelog: bool = False, filenameTime: bool = False, logtime: bool = False):
-    """配置日志记录功能.
-    
-    Parameters
-    ----------
-    level : int, optional
-        日志记录的级别，默认为 `_logging.WARNING`。
-    savelog : bool, optional
-        是否将日志保存到文件中，默认为 `False`。
-    filenameTime : bool, optional
-        是否在日志文件名中包含时间戳，默认为 `False`。
-    logtime : bool, optional
-        是否在日志消息中包含时间戳，默认为 `False`。
-    
-    Returns
-    -------
-    None: 该函数无返回值。
-    
-    Examples
-    --------
-    >>> set_logging(savelog=True, logtime=True)
-    """
-    if savelog:
-        filename = "log/"
-        create_folder("log/")  # 创建日志目录
-        filename += _os.path.basename(_sys.argv[0])[:-3]  # 根据运行的脚本文件名生成日志文件名
-        if filenameTime:  # 如果 `filenameTime` 为 `True`，在文件名中添加时间戳
-            now = "_" + _time.strftime("%Y-%m-%d-%H_%M_%S", _time.localtime(_time.time()))
-            filename += now
-        filename += '.ansi'
-    else:
-        filename = ""
-    if logtime:  # 根据 `logtime` 参数设置日志格式
-        _format = "%(asctime)s: %(message)s"
-    else:
-        _format = "%(message)s"
-    _logging.basicConfig(level=level, format=_format, filename=filename, filemode="w", force=True, encoding='utf-8') # 配置日志记录器
-
-set_logging()  # 使用默认日志记录器
-
-
-import traceback
-def custom_exception_handler(exc_type, exc_value, exc_traceback):
-    # _logging.warning("发生错误！这是固定的提示信息。")
-    tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
-    _logging.error(tb_str)  # 输出格式化的traceback字符串
-
-# 下面这句话可以让 logging 记录所有的报错信息
-_sys.excepthook = custom_exception_handler
-
-class COLOR:
-    BLACK = '\033[30m'
-    RED = '\033[31m'
-    GREEN = '\033[32m'
-    YELLOW = '\033[33m'
-    BLUE = '\033[34m'
-    MAGENTA = '\033[35m'
-    CYAN = '\033[36m'
-    WHITE = '\033[37m'
-    DEFAULT = '\033[39m'
-
-class PrintLn:
-    """
-    打印输入变量的名称和值到日志中。
-    
-    任何以 f" 或 rf" 开头的字符串会被识别为 f-string，而不会被解析为变量名称。
-    
-    todo: 整理这部分代码，实现多行输出，目前只能单行
-
-    Examples
-    --------
-    >>> a = "this is a test"
-    >>> println(a)
-    """
-    
-    def __call__(self, *inputargs):
-        try:
-            cf = _inspect.currentframe()  # 获取调用函数的栈帧
-            if cf is None:
-                raise ValueError("Can't get the caller's frame")
-            paraname = PrintLn._get_paraname(cf.f_back)
-            out: str = self._constructArgumentOutput(paraname, inputargs)
-            _logging.warning(out)
-        except SyntaxError as e:
-            _logging.warning("SyntaxError")
-            _logging.warning(inputargs)
-        
-        _logging.getLogger().handlers[0].flush()  # 立即刷新日志
-
-    @staticmethod
-    def _get_paraname(callFrame):
-        """利用 inspect 和 ast 模块获取变量名称"""
-        # 获取调用函数的源代码
-        frame_info = _inspect.getframeinfo(callFrame)
-        if frame_info is None or frame_info.code_context is None:
-            return []
-        source_code = "".join(frame_info.code_context).strip()
-        
-        # 解析为 AST 并查找函数调用的节点
-        tree = _ast.parse(source_code)
-        
-        for node in _ast.walk(tree):
-            
-            if isinstance(node, _ast.Call):  # 查找函数调用节点 
-                arg_values = []
-                # 提取参数
-                for arg in node.args:
-                    # 使用 ast.unparse 来获取参数的源代码表示
-                    arg_values.append(_ast.unparse(arg))
-                return arg_values
-        return []
-
-    def _constructArgumentOutput(self, paraname, inputargs):
-        if len(paraname) == 0:
-            return ""
-        if len(paraname) == 1 and self._isLiteral(paraname[0]):
-            if isinstance(inputargs[0], str):
-                return inputargs[0]
-            return self._argumentToString(inputargs[0])[0]
-        
-        pairs = [(arg, *self._argumentToString(val)) for arg, val in zip(paraname, inputargs)]
-        
-        pairStrs = [val if self._isLiteral(arg) else PrintLn.set_color(f"{arg}: ", COLOR.RED) + val for arg, val, _ in pairs]
-        allArgsOnOneLine = ", ".join(pairStrs)
-        
-        multilineArgs = len(allArgsOnOneLine.splitlines()) > 1
-        firstLineTooLong = len(allArgsOnOneLine.splitlines()[0]) > 70
-        
-        if multilineArgs or firstLineTooLong:
-            lines = []
-            for i, (arg, value, isobject) in enumerate(pairs):
-                prefixTooLong =  (len(pairs[i][0]) > 8) or isinstance(inputargs[i], DictObj) or isobject
-                lines.append(self._format_pair(arg, value, prefixTooLong))
-        else:
-            lines = [allArgsOnOneLine]
-        
-        return "\n".join(lines)
-
-    @classmethod
-    def _argumentToString(cls, obj, compact=False, indent=0) -> tuple[str, bool]:
-        """如果是 ndarray，那么输出它的 __str__，否则用 pprint 得到字符串"""
-        import pprint
-        isobject = False
-        if type(obj) == _np.ndarray:
-            if compact:
-                s = _np.array2string(obj, formatter={'float_kind': lambda x: "%.2f" % x}, max_line_width=None, threshold=4)
-            else:
-                s = obj.__str__()
-        elif isinstance(obj, list):
-            s = pprint.pformat(obj, compact=True)
-        elif isinstance(obj, FunctionType):
-            return f"<function {obj.__name__}>", False
-        else:
-            # object
-            if (obj.__class__.__str__ is not object.__str__ or obj.__class__.__repr__ is not object.__repr__):
-                s = pprint.pformat(obj)
-            else:
-                s = cls._get_custom_object_str(obj)
-                isobject = True
-        s = s.replace("\\n", "\n")  # Preserve string newlines in output.
-        s = '\n'.join(v if i == 0 else " "*indent + v for i, v in enumerate(s.split('\n')))
-        return s, isobject
-
-    @staticmethod
-    def set_color(s: str, color: str) -> str:
-        return f"{color}{s}{COLOR.DEFAULT}"
-
-    @classmethod
-    def _get_custom_object_str(cls, obj: Any):
-        import inspect
-        # 首先拿到 header, footer
-        obj_type = type(obj)
-        header = PrintLn.set_color(f"<{obj_type.__name__} {hex(id(obj))}", COLOR.CYAN)
-        footer = PrintLn.set_color(">", COLOR.CYAN)
-        
-        # 拿到所有的属性
-        attrs = []
-        attr_pattern: str = r"(?!_).*"
-        import re
-        for attr in dir(obj):
-            if re.fullmatch(attr_pattern, attr):
-                try:
-                    attr_val = getattr(obj, attr)
-                except AttributeError:
-                    continue
-                if inspect.ismethod(attr_val) or inspect.isbuiltin(attr_val):
-                    continue
-                else:
-                    attrs.append(attr)
-        
-        # 将属性组装起来
-        elems = ""
-        for key in sorted(attrs):
-            val = getattr(obj, key)
-            indent = len(key) + 5
-            elems += f" {PrintLn.set_color('.' + key, COLOR.GREEN)} = {cls._argumentToString(val,compact=True, indent=indent)[0]}\n"
-        
-        return f"{header}\n{elems}{footer}"
-    
-    @staticmethod
-    def add_object_print(othercls):
-        othercls.__str__ = lambda self: PrintLn._get_custom_object_str(self)
-        return othercls
-
-    def _isLiteral(self, s):
-        if self._isFormatStr(s): return True
-        try:
-            import ast as _ast
-            _ast.literal_eval(s)
-        except Exception:
-            return False
-        return True
-
-    def _isFormatStr(self, s):
-        import re
-        # 检查是否是 f-string
-        pattern = r'^(f|rf|fr|Fr|fR|FR)([\'"])(.*?)\2'
-        match = re.fullmatch(pattern, s)
-        if bool(re.search(pattern, s)): return True
-        
-        # 检查是否是 % 格式化
-        pattern = r'^([\'"])(.*?)%[sdxf](.*?)\1\s*%'
-        if bool(re.search(pattern, s)): return True
-        
-        # 检查是否是 .format() 格式化
-        pattern = r'^([\'"])(.+?)\1.format\((.*?)\)\s*$'
-        match = re.fullmatch(pattern, s)
-        if bool(match): return True
-        
-        return False
-
-    def _format_pair(self, arg, value, prefixTooLong=False):
-        arg_lines = self._indented_lines("", arg)
-        value_prefix = arg_lines[-1] + ": "
-        
-        # str如果分行，那么整体退一格
-        looksLikeAString = value[0] + value[-1] in ["''", '""']
-        if looksLikeAString:  # Align the start of multiline strings.
-            lines = value.splitlines(True)
-            for i in range(1, len(lines)):
-                lines[i] = " " + lines[i]
-            value = "".join(lines)
-
-        value_lines = self._indented_lines(value_prefix, value, prefixTooLong=prefixTooLong)
-        lines = arg_lines[:-1] + value_lines
-        return "\n".join(lines)
-
-    def _indented_lines(self, prefix, string, prefixTooLong=False):
-        lines = string.splitlines()
-        prefixlen = len(prefix)
-        
-        if bool(prefix.strip()):
-            prefix = f"\033[31m{prefix}\033[0m"
-            
-        if prefixTooLong:
-            lth = 3
-            return [prefix + '\n' + ' '*lth + lines[0]] + [" " * lth + line for line in lines[1:]]
-        else:
-            return [prefix + lines[0]] + [" " * prefixlen + line for line in lines[1:]]
-
-println = PrintLn()  # 实例化 PrintLn 类
-
-# =======
-# 字典格式
-# =======
-
-class DictObj(dict):
-    """`dict` 类的子类。
-    
-    `DictObj` 类的实例拥有字典的所有属性。此外，该类的实例还可以使用点符号来访问和设置值。
-    """
-    def __getattr__(self, key:str) -> Any:
-        return self[key]
-
-    def __setattr__(self, key:str, value: Any) -> None:
-        self[key] = value
-
-    def __repr__(self) -> str:
-        
-        # 首先拿到 header, footer
-        header = PrintLn.set_color(f"<params {hex(id(self))}", COLOR.CYAN)
-        footer = PrintLn.set_color(">", COLOR.CYAN)
-        
-        # 将属性组装起来
-        elems = ""
-        for key, value in self.items():
-            elems += f" {PrintLn.set_color('.' + key, COLOR.GREEN)} = {PrintLn._argumentToString(value,compact=True)[0]}\n"
-        
-        return f"{header}\n{elems}{footer}"
-
-def _todictobj(dictionary: Any) -> DictObj:
-    """递归的将普通字典转换为 `DictObj` 类的实例。"""
-    if not isinstance(dictionary, dict):
-        return dictionary
-    return DictObj({key: _todictobj(value) for key, value in dictionary.items()})
-
-def idataclass(cls):
-    """可以直接使用 todict
-    """
-    cls.__new__ = todict
-    return cls
-
-def todict(cls):
-    """改进版本的 idataclass
-    
-    得到的就是一个字典，无需创建实例！！！
-    
-    Examples
-    --------
-    >>> import numpy as np
-    >>> from quante.basicfun import idataclass, println, save_hdf5
-    >>> @todict
-    >>> class para:
-    >>>     a = 1
-    >>>     b = 2
-    >>> save_hdf5("path.h5", "/", para)
-    """
-    newdict = dict()
-    for key, value in vars(cls).items():
-        if key.startswith('_'+cls.__name__+'__'):
-            raise ValueError(f"Can't use '__' to start the key: {key[len('_'+cls.__name__):]}")
-        if key not in ('__module__', '__qualname__', '__doc__', '__dict__', '__weakref__', '__new__', '__annotations__'):
-            newdict[key] = value
-    dct = _todictobj(newdict)
-    return dct
 
 # =======
 # 画图预设
 # =======
+
 def plt_style_use(stylename:str = "quante", svg: bool = True) -> None:
     """设置 pyplot 风格样式。
     

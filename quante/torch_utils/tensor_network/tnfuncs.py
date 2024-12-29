@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-08 16:14:01
+# @Last Modified time: 2024-12-25 16:03:18
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -95,6 +95,172 @@ def _add_each(tsrs: list[tc.Tensor]) -> tc.Tensor:
     return tc.cat(data, dim=-1)
 
 
+def add_many(
+    ψs: list[list[tc.Tensor]],
+    αs: list[float] = None,
+    trunc_para = (None,None,None),
+) -> list[tc.Tensor]:
+    """计算多个 MPS 相加，边相加边裁剪，但如果裁剪大于等于本身的应有维数，那么裁剪并没有意义
+    这样得到的 MPS 是右正则形式，但不能获得奇异谱
+
+    计算：
+    .. code-block:: text
+    
+        |    |   |   |     |    |   |   |
+        └-...┴---┴---┘  +  └-...┴---┴---┘
+
+    计算过程：
+    .. code-block:: text
+    
+        1). 最后一个格点：
+                                              |
+                  |                  |        ▽ V1
+        ψ1[-1]  ╭-┘        ψ2[-1]  ╭-┘        |
+        ψ1[-1]† ╰-┐  +     ψ2[-1]† ╰-┐   ->   ◇         记录：  --⨞--
+                  |                  |        |                  V1
+                                              △
+                                              |
+
+        2). 倒数第二个格点：
+
+              ┌-╨-┐            ┌-╨-┐       ║
+              |   △            |   △       ▽ V2
+            ╭-┴---┘          ╭-┴---┘       |                    |  |
+            ╰-┬---┐  +       ╰-┬---┐   ->  ◇           记录：  --⨞--⨞--
+              |   ▽            |   ▽       |                   V2  V1
+              └-╥-┘            └-╥-┘       △
+                                           ║
+
+        3). 倒数第三个格点：
+
+          ┌--╨--┐          ┌--╨--┐
+          |     △          |     △
+          |   ┌-╨-┐        |   ┌-╨-┐       ║
+          |   |   △        |   |   △       ▽ V3
+        ╭-┴---┴---┘      ╭-┴---┴---┘       |                    |  |  |
+        ╰-┬---┬---┐  +   ╰-┬---┬---┐   ->  ◇           记录：  --⨞--⨞--⨞--
+          |   |   ▽        |   |   ▽       |                   V3  V2  V1
+          |   └-╥-┘        |   └-╥-┘       △
+          |     ▽          |     ▽         ║
+          └--╥--┘          └--╥--┘
+
+        ... 依次类推
+
+        4). 最后一个格点： 
+
+          |     |          |     |
+          |     △          |     △
+          |   ┌-╨-...      |   ┌-╨-...                       |     |  |  |
+          |   |        +   |   |        ->   --◻--     记录： ◻-...-⨞--⨞--⨞--
+          └---┴---...      └---┴---...                            V3  V2  V1
+
+    Examples
+    --------
+    >>> N = 5
+    >>> linkdims = [1] + [4] * (N-1) + [1]
+    >>> ψ1 = [tc.randn(linkdims[i],2,linkdims[i+1], dtype=tc.complex128) for i in range(N)]
+    >>> ψ2 = [tc.randn(linkdims[i],2,linkdims[i+1], dtype=tc.complex128) for i in range(N)]
+    >>> ψ_out2 = add_many([ψ1, ψ2],[1., 1.])
+    """
+    chi_max, svd_min, trunc_cut = trunc_para
+    
+    N_mps = len(ψs)
+    assert all([len(ψs[1]) == len(ψi) for ψi in ψs])
+
+    if αs is None:
+        αs = [1.0] * N_mps
+
+    N = len(ψs[0])
+
+    ψs_mps, phydims = [], []
+    for i, ψ in enumerate(ψs):
+        ψ_mps, lognm = _left2right_QR(ψ, N)
+        ψ_mps[-1] = ψ_mps[-1] * tc.exp(lognm) * αs[i]
+        ψs_mps.append(ψ_mps)
+        phydim = [ψ_.shape[1:-1] for ψ_ in ψ_mps]
+        phydims.append(phydim)
+
+    assert all(phydims[0] == phydim for phydim in phydims)
+
+    ρns = []
+    for ψi in ψs_mps:
+        a, *s1, b = ψi[-1].shape
+        tmp = ψi[-1].reshape(a, -1, b).permute([1, 0, 2]).reshape(-1, a*b)
+        ρns.append(tmp @ tmp.conj().T)
+
+    ρn = sum(ρns)
+
+    # Maximum theoretical link dimensions
+    add_maxlinkdims = []
+    for i in range(N - 1):
+        add_maxlinkdims.append(sum([ψ[i].shape[-1] for ψ in ψs_mps]))
+
+    ψ_out = [None] * N
+
+    Cns = [ψ[-1] for ψ in ψs_mps]
+    linkdim = 1
+    for n in range(N, 1, -1):
+        nm = tc.norm(ρn)
+        ρn /= nm
+        Dn, Vn = tc.linalg.eigh(ρn)
+
+        Dn = Dn.flip(0)
+        Vn = Vn.flip(1)
+        # V 指标是 (cd,e)
+        tc.clamp_(Dn, min=0)  # 将 E 中的负数置为 0，避免根号错误
+        tc.sqrt_(Dn)  # 开根号之后才得到奇异值
+        good, trunc_err = truncate(Dn, chi_max, svd_min, trunc_cut)
+        if not all(good):
+            Vn = Vn[:, good]
+            Dn = Dn[good]
+        
+        maxdim = len(Dn)
+        Vn = Vn[:, 0:maxdim]
+        # Update the total state
+        ψ_out[n - 1] = Vn.T.reshape(maxdim, -1, linkdim)
+        linkdim = maxdim
+
+        # Compute the new density matrix
+        ρnm1 = 0
+        for i in range(N_mps):
+            # tmp_ = _np.einsum("abc,cde,df->abfe", ψs_mps[i][n - 2], Cns[i], Vn.conj(), optimize=True)
+
+            c, *d, e = Cns[i].shape
+            a, *b, c = ψs_mps[i][n - 2].shape
+            d, f = Vn.shape
+
+            # [(c,d,e) -> (c,e,d) -> (ce,d) @  (d,f)] = (ce,f) -> (c,ef)
+            tmp = (Cns[i].reshape(c,-1,e).permute([0, 2, 1]).reshape(-1, d) @ Vn.conj()).reshape(c, -1)
+            # [(a,b,c) -> (ab,c) @ (c,ef)] = (ab,ef) -> (a,b,e,f) -> (a,b,f,e)
+            tmp = (
+                (ψs_mps[i][n - 2].reshape(-1, c) @ tmp)
+                .reshape(a, -1, e, f)
+                .permute([0, 1, 3, 2])
+            )
+
+            s1, _, _, s2 = tmp.shape
+            Cns[i] = tmp.reshape(s1, -1, s2)
+            # Cnm1s.append(tmp.reshape(s1, -1, s2))
+            tmp = tmp.permute([1, 2, 0, 3]).reshape(-1, s1 * s2)
+            ρnm1 += tmp @ tmp.conj().T
+
+        ρn = ρnm1
+
+    ψ_out[0] = sum(Cns).reshape(1, -1, linkdim)
+
+    for i, B in enumerate(ψ_out):
+        linkdim1, linkdim2 = B.shape[0], B.shape[-1]
+        ψ_out[i] = B.reshape(linkdim1, *phydims[0][i], linkdim2)
+
+    return ψ_out
+
+
+
+#######################################################################
+# 完全收缩
+#######################################################################
+
+
 def _full_contract_right_mps(res: tc.Tensor, Wsi: tc.Tensor):
     """
     .. code-block:: text
@@ -110,47 +276,6 @@ def _full_contract_right_mps(res: tc.Tensor, Wsi: tc.Tensor):
     c, _, e = Wsi.shape
     res = res.reshape(-1, c) @ Wsi.reshape(c, -1)
     return res.reshape(a, -1, e)
-
-def _local_apply(res: tc.Tensor, Wsi: tc.Tensor):
-    """
-    .. code-block:: text
-    
-        plot:
-               (d)
-                |
-                ◻
-                |
-               (b)
-                |
-        --(a)--res--(c)--
-    """
-    a, b, *c = res.shape
-    d, b = Wsi.shape
-    return (Wsi @ res.swapaxes(0,1).reshape(b,-1)).reshape(d, a, *c).swapaxes(0,1)
-
-def _local_apply2(res: tc.Tensor, Ws1: tc.Tensor, Ws2: tc.Tensor):
-    """
-    .. code-block:: text
-    
-        _local_apply2:
-                |
-                ◻
-                |
-               (b)
-                |
-        --(a)--res--(c)--
-                |
-               (d)
-                |
-                ◻
-                |
-        
-    """
-    a, b, d, c = res.shape
-    res = res.swapaxes(0,1).swapaxes(2,3)  # (b,a,c,d)
-    res = Ws1 @ (res.reshape(-1,d) @ Ws2).reshape(b,-1)
-    return res.reshape(b,a,c,d).swapaxes(0,1).swapaxes(2,3)
-
 
 def _full_contract_right_mps2(res: tc.Tensor, Wsi: tc.Tensor):
     """
@@ -230,36 +355,12 @@ def full_contract(Ws: list[tc.Tensor]) -> tc.Tensor:
             f"ndim is {ndim}, which should be 3 for mps or 4 for mpo"
         )
 
-
-def _reshape2mps(ts: tc.Tensor, transpose=False):
-    """
-    .. code-block:: text
-    
-        _reshape2mps:
-               |                           |                    |
-              (b)                        (bc)                  (cb)
-               |                           |                    |
-        --(a)--W--(d)--    ---->    --(a)--W--(d)--  or  --(a)--W--(d)--
-               |
-              (c)                    not transpose          transpose
-               |
-    """
-    if transpose:
-        ts = ts.permute([0, 2, 1, 3])
-    shape = ts.shape
-    return ts.reshape(shape[0], -1, shape[-1])
+#######################################################################
+# 内积
+#######################################################################
 
 
-def _pre_local_tensor(Ws1i, Ws2i, conj_at_1, ismpo):
-    if conj_at_1:
-        Ws1i = Ws1i.conj()
-    if ismpo:
-        Ws1i = _reshape2mps(Ws1i, transpose=True)
-        Ws2i = _reshape2mps(Ws2i, transpose=False)
-    return Ws1i, Ws2i
-
-
-def _contract_init_pbc(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
+def _inner_init(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
     """
     .. code-block:: text
     
@@ -271,17 +372,23 @@ def _contract_init_pbc(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
     
     >>> Lenv = tc.einsum("abc,dbe->adce", Ws1i, Ws2i)
     """
-    a, b, c = Ws1i.shape
+    a, *_, c = Ws1i.shape
+    tsrMat1 = Ws1i.reshape(a, -1, c)
+
     # (a,b,c) -> (a,c,b) -> (ac,b)
-    Lenv = Ws1i.permute([0, 2, 1]).reshape(-1, b)
-    d, b, e = Ws2i.shape
+    tsrMat1 = tsrMat1.swapaxes(1,2).reshape(a*c, -1)
+
+    d, *_, e = Ws2i.shape
+    tsrMat2 = Ws2i.reshape(d, -1, e)
+
     # (d,b,e) -> (b,d,e) -> (b,de)
-    Lenv_down = Ws2i.permute([1, 0, 2]).reshape(b, -1)
+    tsrMat2 = tsrMat2.swapaxes(0,1).reshape(-1, d*e)
+
     # (ac,b)@(b,de) -> (ac,de) -> (a,c,d,e) -> (a,d,c,e)
-    return (Lenv @ Lenv_down).reshape(a, c, d, e).permute([0, 2, 1, 3])
+    return (tsrMat1 @ tsrMat2).reshape(a, c, d, e).swapaxes(1,2)
 
 
-def _inner_contract_right_pbc(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor):
+def _inner_step(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor):
     """
     .. code-block:: text
         
@@ -293,61 +400,18 @@ def _inner_contract_right_pbc(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor)
 
     >>> Lenv = tc.einsum("adce,cbf,ebg->adfg", Lenv, Ws1i, Ws2i)
     """
-    e, b, g = Ws2i.shape
+    e, *b, g = Ws2i.shape
+    c, *b, f = Ws1i.shape
     a, d, c, e = Lenv.shape
+
     # (adc,e) @ (e,bg) -> (adc,bg)
     Lenv = Lenv.reshape(-1, e) @ Ws2i.reshape(e, -1)
     # (adc,bg) -> (ad,cb,g) -> (ad,g,cb) -> (adg,cb)
-    Lenv = Lenv.reshape(-1, c * b, g).permute([0, 2, 1]).reshape(-1, c * b)
+    Lenv = Lenv.reshape(a*d, -1, g).swapaxes(1,2).reshape(a*d*g, -1)
     # (adg,cb) @ (cb,f) -> (adg,f)
-    Lenv = Lenv @ Ws1i.reshape(c * b, -1)
+    Lenv = Lenv @ Ws1i.reshape(-1, f)
     # (adg,f) -> (a,d,g,f) -> (a,d,f,g)
-    return Lenv.reshape(a, d, g, -1).permute([0, 1, 3, 2])
-
-
-def _contract_init_obc(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
-    """
-    .. code-block:: text
-        
-        ╭--(a)--Ws1i--(c)--           ╭--(c)--
-        |       |                     |  
-        |      (b)          --->     Lenv
-        |       |                     |  
-        ╰--(a)--Ws2i--(e)--           ╰--(e)--
-
-    >>> Lenv = tc.einsum("abc,abe->ce", Ws1i, Ws2i)
-    """
-    a, b, c = Ws1i.shape
-    # (a,b,c) -> (c,a,b) -> (c,ab)
-    Lenv = Ws1i.permute([2,0,1]).reshape(c, -1)
-    a, b, e = Ws2i.shape
-    # (a,b,e) -> (ab,e)
-    Lenv_down = Ws2i.reshape(-1, e)
-    return (Lenv @ Lenv_down).reshape(c,e)
-
-
-def _inner_contract_right_obc(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor):
-    """
-    .. code-block:: text
-        
-         ╭--(c)--Ws1i--(f)--          ╭--(c)--
-         |        |                   |  
-        Lenv     (b)          --->   Lenv
-         |        |                   |  
-         ╰--(e)--Ws2i--(g)--          ╰--(e)--
-
-    >>> Lenv = tc.einsum("adce,cbf,ebg->adfg", Lenv, Ws1i, Ws2i)
-    """
-    e, b, g = Ws2i.shape
-    c, e = Lenv.shape
-    # (c,e) @ (e,bg) -> (c,bg)
-    Lenv = Lenv @ Ws2i.reshape(e, -1)
-    # (c,bg) -> (cb,g) -> (g,cb)
-    Lenv = Lenv.reshape(-1, g).permute([1,0])
-    # (g,cb) @ (cb,f) -> (g,f)
-    Lenv = Lenv @ Ws1i.reshape(c * b, -1)
-    # (g,f) -> (f,g)
-    return Lenv.T
+    return Lenv.reshape(a, d, g, f).swapaxes(2,3)
 
 
 def _trace_Lenv(Lenv):
@@ -367,89 +431,30 @@ def _trace_Lenv(Lenv):
     return tc.trace(Lenv.reshape(a * d, a * d))
 
 
-def _inner_log_or_not(Lenv, logscale, lognm=0):
-    if logscale:
-        nm_ = tc.linalg.norm(Lenv)
-        Lenv /= nm_
-        return Lenv, lognm + tc.log(nm_)
-    else:
-        return Lenv, lognm
-
-
-def tn_inner_pbc(
-    Ws1: list[tc.Tensor], Ws2: list[tc.Tensor], logscale=False, conj_at_1=False
-) -> tc.Tensor:
-    """计算两个 MPS(MPO) 的内积
-
-    - 如果 logscale = True 那么就返回内积的对数值
-    - 如果 conj_at_1 = True 那么计算 Ws1.conj() 与 Ws2 的收缩
-
-    计算图：
-    .. code-block:: text
-    
-        Ws1 ┌---┬--...┬---┐
-        Ws2 └---┴--...┴---┘
-    """
-    ismpo = Ws1[0].ndim == 4  # 判断是否是 MPO
-    Ws1i, Ws2i = _pre_local_tensor(Ws1[0], Ws2[0], conj_at_1=conj_at_1, ismpo=ismpo)
-    Lenv = _contract_init_pbc(Ws1i, Ws2i)
-    Lenv, lognm = _inner_log_or_not(Lenv, logscale=logscale, lognm=0)
-
-    for i in range(1, len(Ws2)):
-        Ws1i, Ws2i = _pre_local_tensor(Ws1[i], Ws2[i], conj_at_1=conj_at_1, ismpo=ismpo)
-        Lenv = _inner_contract_right_pbc(Lenv, Ws1i, Ws2i)
-        Lenv, lognm = _inner_log_or_not(Lenv, logscale=logscale, lognm=lognm)
-
-    nm = _trace_Lenv(Lenv)
-
-    if logscale:
-        return lognm + tc.log(nm)
-
-    return nm
-
-
-def tn_inner_obc(
-    Ws1: list[tc.Tensor], Ws2: list[tc.Tensor], logscale=False, conj_at_1=False
-) -> tc.Tensor:
-    """计算两个 MPS(MPO) 的内积
-
-    - 如果 logscale = True 那么就返回内积的对数值
-    - 如果 conj_at_1 = True 那么计算 Ws1.conj() 与 Ws2 的收缩
-
-    计算图：
-    .. code-block:: text
-    
-        Ws1 ┌---┬--...┬---┐
-        Ws2 └---┴--...┴---┘
-    """
-    ismpo = Ws1[0].ndim == 4  # 判断是否是 MPO
-    Ws1i, Ws2i = _pre_local_tensor(Ws1[0], Ws2[0], conj_at_1=conj_at_1, ismpo=ismpo)
-    Lenv = _contract_init_obc(Ws1i, Ws2i)
-    Lenv, lognm = _inner_log_or_not(Lenv, logscale=logscale, lognm=0)
-
-    for i in range(1, len(Ws2)):
-        Ws1i, Ws2i = _pre_local_tensor(Ws1[i], Ws2[i], conj_at_1=conj_at_1, ismpo=ismpo)
-        Lenv = _inner_contract_right_obc(Lenv, Ws1i, Ws2i)
-        Lenv, lognm = _inner_log_or_not(Lenv, logscale=logscale, lognm=lognm)
-
-    nm = tc.trace(Lenv)
-
-    if logscale:
-        return lognm + tc.log(nm)
-
-    return nm
-
-
 def tn_inner(
-    Ws1: list[tc.Tensor], Ws2: list[tc.Tensor], logscale=False, conj_at_1=False, pbc=False
-) -> tc.Tensor:
-    if pbc:
-        return tn_inner_pbc(Ws1, Ws2, logscale, conj_at_1)
-    else:
-        return tn_inner_obc(Ws1, Ws2, logscale, conj_at_1)
+    Ws1: list[tc.Tensor], Ws2: list[tc.Tensor], logscale=False
+):
+    """计算两个 MPS(MPO) 的内积
 
+    - 如果 logscale = True 那么就返回内积的对数值
+    """
+    Lenv = _inner_init(Ws1[0], Ws2[0])
 
-def tn_norm(Ws: list[tc.Tensor], lognorm=False, pbc=False) -> tc.Tensor:
+    if logscale:
+        lognm = 0.0
+        for i in range(1, len(Ws2)):
+            Lenv = _inner_step(Lenv, Ws1[i], Ws2[i])
+            nm = tc.norm(Lenv)
+            Lenv /= nm
+            lognm += tc.log(nm)
+        return _trace_Lenv(Lenv), lognm
+        
+    for i in range(1, len(Ws2)):
+        Lenv = _inner_step(Lenv, Ws1[i], Ws2[i])
+    return _trace_Lenv(Lenv)
+   
+
+def tn_norm(Ws: list[tc.Tensor], lognorm=False) -> tc.Tensor:
     """计算 MPS(MPO) 的模（MPO 的模定义为： tr(M†M)）
 
     如果 lognorm = True 那么就返回模的对数值
@@ -459,13 +464,33 @@ def tn_norm(Ws: list[tc.Tensor], lognorm=False, pbc=False) -> tc.Tensor:
     
         Ws1 ┌---┬--...┬---┐
         Ws2 └---┴--...┴---┘
+    
+    Example:
+    --------
+    >>> a = [tc.rand((2,2,2,2), dtype=complexdtype, device=device) for i in range(3)]
+    >>> vec_a = tf.full_contract(a)
+    >>> print(tc.trace(vec_a.conj().T @ vec_a)**0.5)
+    >>> print(tf.tn_norm(a))
     """
-    norm2 = tn_inner(Ws, Ws, logscale=lognorm, conj_at_1=True, pbc=pbc)
-    if tc.is_complex(norm2):
-        norm2 = norm2.real
-    return norm2 / 2 if lognorm else norm2**0.5
+    Lenv = _inner_init(Ws[0], Ws[0].conj())
 
+    if lognorm:
+        lognm = 0.0
+        for i in range(1, len(Ws)):
+            Lenv = _inner_step(Lenv, Ws[i], Ws[i].conj())
+            nm = tc.norm(Lenv)
+            Lenv /= nm
+            lognm += tc.log(nm)
+        return _trace_Lenv(Lenv).real**0.5, lognm/2
+        
+    for i in range(1, len(Ws)):
+        Lenv = _inner_step(Lenv, Ws[i], Ws[i].conj())
+    return _trace_Lenv(Lenv).real**0.5
+ 
 
+#######################################################################
+# 正交中心与正则化
+#######################################################################
 
 def _left2right_QR_step(W1:tc.Tensor, W2:tc.Tensor)->tuple[tc.Tensor,tc.Tensor]:
     """
@@ -490,6 +515,7 @@ def _left2right_QR(Ws, L, qrnormalize=False)->tuple[tc.Tensor,tc.Tensor]:
     As, lognm = [None] * L, 0.0
     W1 = Ws[0]
     for i in range(L-1):
+        # print(i)
         As[i], W1 = _left2right_QR_step(W1, Ws[i+1])
         if qrnormalize:
             nm = tc.norm(W1)
@@ -554,6 +580,7 @@ def _right2left_SVD(As, L, trunc_para=(None,None,None)):
     trunc_err_sum = TruncationError(0.0, 1.0)
     lr_dims = [[0], list(range(1, As[0].ndim))]
     for i in range(L - 1, 0, -1):
+        # print(i)
         U, Ss[i], Bs[i], trunc_err = svd(As[i], lr_indx=lr_dims, trunc_para=trunc_para)
         As[i - 1] = _SVD_constract_right(As[i - 1], U, Ss[i])
         trunc_err_sum += trunc_err
@@ -569,7 +596,9 @@ def canonicalize(
     """
     assert Ws[0].shape[0] == Ws[-1].shape[-1] == 1, "正则形式只对开边界mps有定义！"
     L = len(Ws)
+    # print("QR")
     As, lognm = _left2right_QR(Ws, L, qrnormalize=qrnormalize)
+    # print("SVD")
     Bs, Ss, trunc_err = _right2left_SVD(As, L, trunc_para=trunc_para)
     Ss[0] = Ss[-1] = tc.tensor([1.], dtype=Ss[1].dtype, device=Ss[1].device)
     return Bs, Ss, lognm, trunc_err
@@ -593,6 +622,52 @@ def orthogonalize(Ws:list[tc.Tensor], j: int)->list[tc.Tensor]:
         # print(newWs[i-1].shape, newWs[i].shape)
         newWs[i-1], newWs[i] = _right2left_QR_step(newWs[i-1], newWs[i])
     return newWs
+
+
+#######################################################################
+# 作用门
+#######################################################################
+
+def _local_apply(res: tc.Tensor, Wsi: tc.Tensor):
+    """
+    .. code-block:: text
+    
+        plot:
+               (d)
+                |
+                ◻
+                |
+               (b)
+                |
+        --(a)--res--(c)--
+    """
+    a, b, *c = res.shape
+    d, b = Wsi.shape
+    return (Wsi @ res.swapaxes(0,1).reshape(b,-1)).reshape(d, a, *c).swapaxes(0,1)
+
+def _local_apply2(res: tc.Tensor, Ws1: tc.Tensor, Ws2: tc.Tensor):
+    """
+    .. code-block:: text
+    
+        _local_apply2:
+                |
+                ◻
+                |
+               (b)
+                |
+        --(a)--res--(c)--
+                |
+               (d)
+                |
+                ◻
+                |
+        
+    """
+    a, b, d, c = res.shape
+    res = res.swapaxes(0,1).swapaxes(2,3)  # (b,a,c,d)
+    res = Ws1 @ (res.reshape(-1,d) @ Ws2).reshape(b,-1)
+    return res.reshape(b,a,c,d).swapaxes(0,1).swapaxes(2,3)
+
 
 def _apply_2b_gate_mps(W1:tc.Tensor, W2:tc.Tensor, gate_2b:tc.Tensor) -> tc.Tensor:
     """
@@ -765,6 +840,11 @@ def _resume_canonical_mpo(W, V):
     a,b,f,c,g,d = W.shape
     return (W.reshape(-1, c*g*d) @ V.conj().reshape(-1, c*g*d).T).reshape(a,b,f,-1)
 
+
+#######################################################################
+# 其他操作
+#######################################################################
+
 def unitarize(gate_2b:tc.Tensor)->tc.Tensor:
     """
     .. code-block:: text
@@ -827,7 +907,6 @@ def mpo_eye(L, local_dims, dtype=tc.complex128, device=None) -> list[tc.Tensor]:
         dim = local_dims[i]
         eyempo[i] = tc.eye(dim, dtype=dtype, device=device).reshape(1, dim, dim, 1)
     return eyempo
-
 
 def _dm_left2right_mps(Lenv:tc.Tensor, B:tc.Tensor, A:tc.Tensor):
     """
@@ -1428,168 +1507,6 @@ def _prepare_solve_ground_state(H1:tc.Tensor, H2:tc.Tensor) -> tc.Tensor:
     # (f,d,i,e,jh) -> (d,e,f,i,jh)
     return out.reshape(f,d,i,e,j*h).permute([1,3,0,2,4]).reshape(d*e*f,-1)
 
-
-def add_many(
-    ψs: list[list[tc.Tensor]],
-    αs: list[float] = None,
-    trunc_para = (None,None,None),
-) -> list[tc.Tensor]:
-    """计算多个 MPS 相加，边相加边裁剪，但如果裁剪大于等于本身的应有维数，那么裁剪并没有意义
-    这样得到的 MPS 是右正则形式，但不能获得奇异谱
-
-    计算：
-    .. code-block:: text
-    
-        |    |   |   |     |    |   |   |
-        └-...┴---┴---┘  +  └-...┴---┴---┘
-
-    计算过程：
-    .. code-block:: text
-    
-        1). 最后一个格点：
-                                              |
-                  |                  |        ▽ V1
-        ψ1[-1]  ╭-┘        ψ2[-1]  ╭-┘        |
-        ψ1[-1]† ╰-┐  +     ψ2[-1]† ╰-┐   ->   ◇         记录：  --⨞--
-                  |                  |        |                  V1
-                                              △
-                                              |
-
-        2). 倒数第二个格点：
-
-              ┌-╨-┐            ┌-╨-┐       ║
-              |   △            |   △       ▽ V2
-            ╭-┴---┘          ╭-┴---┘       |                    |  |
-            ╰-┬---┐  +       ╰-┬---┐   ->  ◇           记录：  --⨞--⨞--
-              |   ▽            |   ▽       |                   V2  V1
-              └-╥-┘            └-╥-┘       △
-                                           ║
-
-        3). 倒数第三个格点：
-
-          ┌--╨--┐          ┌--╨--┐
-          |     △          |     △
-          |   ┌-╨-┐        |   ┌-╨-┐       ║
-          |   |   △        |   |   △       ▽ V3
-        ╭-┴---┴---┘      ╭-┴---┴---┘       |                    |  |  |
-        ╰-┬---┬---┐  +   ╰-┬---┬---┐   ->  ◇           记录：  --⨞--⨞--⨞--
-          |   |   ▽        |   |   ▽       |                   V3  V2  V1
-          |   └-╥-┘        |   └-╥-┘       △
-          |     ▽          |     ▽         ║
-          └--╥--┘          └--╥--┘
-
-        ... 依次类推
-
-        4). 最后一个格点： 
-
-          |     |          |     |
-          |     △          |     △
-          |   ┌-╨-...      |   ┌-╨-...                       |     |  |  |
-          |   |        +   |   |        ->   --◻--     记录： ◻-...-⨞--⨞--⨞--
-          └---┴---...      └---┴---...                            V3  V2  V1
-
-    Examples
-    --------
-    >>> N = 5
-    >>> linkdims = [1] + [4] * (N-1) + [1]
-    >>> ψ1 = [tc.randn(linkdims[i],2,linkdims[i+1], dtype=tc.complex128) for i in range(N)]
-    >>> ψ2 = [tc.randn(linkdims[i],2,linkdims[i+1], dtype=tc.complex128) for i in range(N)]
-    >>> ψ_out2 = add_many([ψ1, ψ2],[1., 1.])
-    """
-    chi_max, svd_min, trunc_cut = trunc_para
-    
-    N_mps = len(ψs)
-    assert all([len(ψs[1]) == len(ψi) for ψi in ψs])
-
-    if αs is None:
-        αs = [1.0] * N_mps
-
-    N = len(ψs[0])
-
-    ψs_mps, phydims = [], []
-    for i, ψ in enumerate(ψs):
-        ψ_mps, lognm = _left2right_QR(ψ, N)
-        ψ_mps[-1] = ψ_mps[-1] * tc.exp(lognm) * αs[i]
-        ψs_mps.append(ψ_mps)
-        phydim = [ψ_.shape[1:-1] for ψ_ in ψ_mps]
-        phydims.append(phydim)
-
-    assert all(phydims[0] == phydim for phydim in phydims)
-
-    ρns = []
-    for ψi in ψs_mps:
-        a, *s1, b = ψi[-1].shape
-        tmp = ψi[-1].reshape(a, -1, b).permute([1, 0, 2]).reshape(-1, a*b)
-        ρns.append(tmp @ tmp.conj().T)
-
-    ρn = sum(ρns)
-
-    # Maximum theoretical link dimensions
-    add_maxlinkdims = []
-    for i in range(N - 1):
-        add_maxlinkdims.append(sum([ψ[i].shape[-1] for ψ in ψs_mps]))
-
-    ψ_out = [None] * N
-
-    Cns = [ψ[-1] for ψ in ψs_mps]
-    linkdim = 1
-    for n in range(N, 1, -1):
-        nm = tc.norm(ρn)
-        ρn /= nm
-        Dn, Vn = tc.linalg.eigh(ρn)
-
-        Dn = Dn.flip(0)
-        Vn = Vn.flip(1)
-        # V 指标是 (cd,e)
-        tc.clamp_(Dn, min=0)  # 将 E 中的负数置为 0，避免根号错误
-        tc.sqrt_(Dn)  # 开根号之后才得到奇异值
-        good, trunc_err = truncate(Dn, chi_max, svd_min, trunc_cut)
-        if not all(good):
-            Vn = Vn[:, good]
-            Dn = Dn[good]
-        
-        maxdim = len(Dn)
-        Vn = Vn[:, 0:maxdim]
-        # Update the total state
-        ψ_out[n - 1] = Vn.T.reshape(maxdim, -1, linkdim)
-        linkdim = maxdim
-
-        # Compute the new density matrix
-        ρnm1 = 0
-        for i in range(N_mps):
-            # tmp_ = _np.einsum("abc,cde,df->abfe", ψs_mps[i][n - 2], Cns[i], Vn.conj(), optimize=True)
-
-            c, *d, e = Cns[i].shape
-            a, *b, c = ψs_mps[i][n - 2].shape
-            d, f = Vn.shape
-
-            # [(c,d,e) -> (c,e,d) -> (ce,d) @  (d,f)] = (ce,f) -> (c,ef)
-            tmp = (Cns[i].reshape(c,-1,e).permute([0, 2, 1]).reshape(-1, d) @ Vn.conj()).reshape(c, -1)
-            # [(a,b,c) -> (ab,c) @ (c,ef)] = (ab,ef) -> (a,b,e,f) -> (a,b,f,e)
-            tmp = (
-                (ψs_mps[i][n - 2].reshape(-1, c) @ tmp)
-                .reshape(a, -1, e, f)
-                .permute([0, 1, 3, 2])
-            )
-
-            s1, _, _, s2 = tmp.shape
-            Cns[i] = tmp.reshape(s1, -1, s2)
-            # Cnm1s.append(tmp.reshape(s1, -1, s2))
-            tmp = tmp.permute([1, 2, 0, 3]).reshape(-1, s1 * s2)
-            ρnm1 += tmp @ tmp.conj().T
-
-        ρn = ρnm1
-
-    ψ_out[0] = sum(Cns).reshape(1, -1, linkdim)
-
-    for i, B in enumerate(ψ_out):
-        linkdim1, linkdim2 = B.shape[0], B.shape[-1]
-        ψ_out[i] = B.reshape(linkdim1, *phydims[0][i], linkdim2)
-
-    return ψ_out
-
-
-
 def _cholesky_decomp(VL):
     vld = tc.diag(VL)
     tmp = vld[tc.abs(vld)>1e-10][0].conj()
@@ -1796,3 +1713,69 @@ def batched_canonicalize(
     batch_size = Ws[0].shape[0]
     Ss[0] = Ss[-1] = tc.ones(batch_size, dtype=Ss[1].dtype, device=Ss[1].device)
     return Bs, Ss, lognm, trunc_err
+
+
+def dm_apply_mpo_on_mps(mpo, mps, trunc_para=(None,None,None), normalize=False, updateS=True):
+    lognm = 0.0
+    n = len(mpo)
+    Ss = [None] * (n + 1)
+
+    if n == 1:
+        return mpo @ mps
+
+    Lenvs = []
+    dtype, device = mpo[0].dtype, mpo[0].device
+    Lenv = tc.tensor(1., dtype=dtype, device=device).reshape(1,1,1,1)
+
+    for j in range(n - 1):
+        Lenv = _dm_left2right_mps(Lenv, mpo[j], mps[j])
+        print(Lenv.shape)
+        Lenv = Lenv/tc.norm(Lenv)
+        Lenvs.append(Lenv)
+
+    V = tc.tensor(1., dtype=dtype, device=device).reshape(1,1)
+    R = tc.tensor(1., dtype=dtype, device=device).reshape(1,1,1)
+
+    R = _dm_get_R_mps(mpo[n-1], mps[n-1], R, V)
+    nm = tc.norm(V)
+    linkdim = 1
+    
+    trunc_err_sum = TruncationError(0.0, 1.0)
+    for j in range(n - 1, 0, -1):
+        # 拿到密度矩阵
+        rho = _dm_get_rho(Lenvs[j-1], R)
+        
+        # 本征分解
+        prod_dim = mps[j].shape[0] * mpo[j].shape[0]
+        chi_max = trunc_para[0]
+        iDc = min(chi_max, prod_dim) if chi_max is not None else prod_dim
+        
+        S, V = tc.linalg.eigh(rho)
+        print(rho.shape)
+        S, V = S.flip(0), V.flip(1)
+        tc.clamp_(S, min=0)
+        tc.sqrt_(S)
+        good, trunc_err = truncate(S, iDc, trunc_para[1], trunc_para[2])
+        S = S[good]
+        V = V[:, good]
+        trunc_err_sum += trunc_err
+        
+        # 替换
+        linkdim2 = len(S)
+        mps[j] = V.T.reshape(linkdim2, *mps[j].shape[1:-1], linkdim)
+        linkdim = linkdim2
+
+        # 前进一步
+        R = _dm_get_R_mps(mpo[j-1], mps[j-1], R, V)
+
+        if normalize:
+            nm0 = tc.linalg.norm(R)
+            R = R / nm0
+            nm *= nm0
+
+        if updateS:
+            Ss[j] = S
+        
+    mps[0] = R.reshape(1, *mps[0].shape[1:-1], linkdim)
+    lognm = lognm + tc.log(nm)
+    return lognm, trunc_err_sum

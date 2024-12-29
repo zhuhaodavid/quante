@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-26 17:09:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 17:33:55
+# @Last Modified time: 2024-12-28 16:46:14
 
 # todo: 实现 Arnoldi method 对角化非厄密矩阵；LanczosEvolution 计算 :math:`exp(delta H) |psi0>`
 
@@ -240,5 +240,31 @@ def lanczos_arpack(matvec:Callable[[np.ndarray], np.ndarray], psi0:np.ndarray, *
     ncv = kwargs.get("N_min", None)
     dim = psi0.shape[0]
     lo = spalg.LinearOperator(shape=(dim,dim), matvec=matvec, dtype=psi0.dtype) # type: ignore
-    Es, Vs = spalg.eigsh(lo, k=1, v0=psi0, which='SA', tol=tol, ncv=ncv)
+    # Es, Vs = spalg.eigsh(lo, k=1, v0=psi0, which='SA', tol=tol, ncv=ncv)
+    Es, Vs = spalg.eigs(lo, k=1, v0=psi0, which='LM', tol=tol, ncv=ncv)
     return Es[0], Vs[:, 0]
+
+
+def tenpy_arnoldi(lo, psi0:np.ndarray, **kwargs):
+    """
+    Examples
+    --------
+    >>> try:
+    >>>     from tenpy.linalg.sparse import NpcLinearOperator as LO
+    >>>     import tenpy.linalg.np_conserved as npc
+    >>>     from tenpy.linalg.krylov_based import Arnoldi
+    >>> except ImportError:
+    >>>     LO = object
+    >>> 
+    >>> class tpprojH(LO):
+    >>>     def __init__(self, dot):
+    >>>         self.matvec = lambda v: npc.Array.from_ndarray(dot(v.to_ndarray()), v.legs)
+    >>> 
+    >>> lo = tpprojH(matvec)
+    >>> tenpy_arnoldi(lo, psi0)
+    """
+    chinfo = npc.ChargeInfo()  # the second argument is just a descriptive name
+    legcharges = npc.LegCharge.from_trivial(psi0.shape[0], chinfo)
+    psi = npc.Array.from_ndarray(psi0,[legcharges])
+    val, vec, _ = Arnoldi(lo, psi, options=kwargs).run()
+    return val[0], vec[0].to_ndarray()

@@ -2,10 +2,10 @@
 # @Author: hzhu
 # @Date:   2024-11-20 02:20:47
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-13 01:14:10
+# @Last Modified time: 2024-12-28 16:53:23
 
 import numpy as np
-from .usenumba.numba_settings import njit, numba, numba_cache_dir
+# from .usenumba.numba_settings import njit, numba, numba_cache_dir
 
 __all__ = ['eigh_perturbation']
 
@@ -261,8 +261,8 @@ def _first_order_eigvecs(U0, E0, h1, E1, h2=None, eps=1e-10):
     
     return U1
 
-numba.config.CACHE_DIR = numba_cache_dir
-@njit(cache=True)
+# numba.config.CACHE_DIR = numba_cache_dir
+# @njit(cache=True)
 def find_start_end(v, n, left, right, eps):
     v0 = v[n]
     start = n

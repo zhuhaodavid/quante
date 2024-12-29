@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-15 22:37:27
+# @Last Modified time: 2024-12-29 19:53:07
 
 
 import numpy as np
@@ -95,7 +95,19 @@ def svd(tsr:tc.Tensor, *, lr_indx=None, trunc_para=(None, None, None), full_matr
         fg = [shp[i] for i in right_indx]
         mat = tsr.permute(*(left_indx + right_indx)).reshape(np.prod(ac), np.prod(fg))
 
+    # # with Timer('to gpu'):
+    # if True:
+    #     gpumat = mat.to('cuda')
+    # # with Timer('gpu svd'):
+    # if True:
+    #     U, S, V = tc.linalg.svd(gpumat, full_matrices=full_matrices, driver='gesvd')
+    # # with Timer('to cpu'):
+    # if True:
+    #     U, S, V = U.cpu(), S.cpu(), V.cpu()
+    #     tc.cuda.empty_cache()
+    
     U, S, V = tc.linalg.svd(mat, full_matrices=full_matrices)
+
     good, trunc_err = truncate(S, chi_max, svd_min, trunc_cut)
     if not all(good):
         U = U[:, good]

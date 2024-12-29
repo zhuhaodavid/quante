@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-17 15:22:41
+# @Last Modified time: 2024-12-25 16:10:13
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -21,7 +21,7 @@ from ..linalg.krylov import lanczos_ground_state, lanczos_evolve_state
 from ..utils import clone
 from ...generate.matrix import pauli_matrix
 from ...linalg.svd_robust import TruncationError
-from ...linalg.krylov import lanczos_arpack
+from ...linalg.krylov import lanczos_arpack, tenpy_arnoldi
 from ...linalg.evolve import expm_multiply
 
 import math as math_lib # type: ignore
@@ -29,6 +29,7 @@ import copy
 import numpy as np
 import time
 from numbers import Number
+from quante.basicfun import profile
 
 __all__ = [
     "MPS",
@@ -181,10 +182,15 @@ class TensorTrain:
         raise AttributeError("TensorTrain can not be full contract")
 
     def inner(self, anotherMPS, logscale=False, conj=False):
-        if logscale:
-            return tf.tn_inner(self.data, anotherMPS.data, logscale=True, conj_at_1=conj) + self.lognm + anotherMPS.lognm
+        if conj:
+            anotherMPSData = [i.conj() for i in anotherMPS.data]
         else:
-            return tf.tn_inner(self.data, anotherMPS.data, logscale=False, conj_at_1=conj) * tc.exp(self.lognm) * tc.exp(anotherMPS.lognm)
+            anotherMPSData = anotherMPS.data
+        if logscale:
+            coef, lognm = tf.tn_inner(self.data, anotherMPSData, logscale=True) 
+            return tc.log(coef) + lognm + self.lognm + anotherMPS.lognm
+        else:
+            return tf.tn_inner(self.data, anotherMPSData, logscale=False) * tc.exp(self.lognm) * tc.exp(anotherMPS.lognm)
 
     def norm(self, lognorm=False):
         if self.is_canonical_form():
@@ -196,7 +202,12 @@ class TensorTrain:
             else:
                 return nm * tc.exp(self.lognm)
         else:
-            return tf.tn_norm(self.data, lognorm=lognorm) * tc.exp(self.lognm)
+            if lognorm:
+                coef, lognm = tf.tn_norm(self.data, lognorm=True)
+                return tc.log(coef) + lognm + self.lognm
+            else:
+                coef = tf.tn_norm(self.data, lognorm=False)
+                return coef * tc.exp(self.lognm)
     
     def normalize_(self):
         if self.is_canonical_form():
@@ -781,6 +792,7 @@ class TensorTrain:
             iDc = min(chi_max, prod_dim) if chi_max is not None else prod_dim
             
             S, V = tc.linalg.eigh(rho)
+            print(rho.shape)
             S, V = S.flip(0), V.flip(1)
             tc.clamp_(S, min=0)
             tc.sqrt_(S)
@@ -816,6 +828,7 @@ class TensorTrain:
         Lenv = tc.tensor(1., dtype=dtype, device=self.device).reshape(1,1,1,1)
         for j in range(n - 1):
             Lenv = self._dm_left2right(Lenv, W[j], ψ[j])
+            print(Lenv.shape)
             Lenv = Lenv/tc.norm(Lenv)
             Lenvs.append(Lenv)
         return Lenvs
@@ -845,13 +858,13 @@ class MPS(TensorTrain):
         super().__init__(Ws, Ss, llim, rlim, lognm, L=L)
     
     @classmethod
-    def random(cls, N:int, linkdims:Union[list[int], int], dtype=tc.complex128, device=None):
+    def random(cls, N:int, linkdims:Union[list[int], int], localdim=2, dtype=tc.complex128, device=None):
         if isinstance(linkdims, int):
             linkdims_ = [1] + [linkdims] * (N - 1) + [1]
         else:
             assert len(linkdims) == N + 1
             linkdims_ = linkdims
-        ψ1 = [tc.randn(linkdims_[i],2,linkdims_[i+1], dtype=dtype, device=device) for i in range(N)]
+        ψ1 = [tc.randn(linkdims_[i],localdim,linkdims_[i+1], dtype=dtype, device=device) for i in range(N)]
         return cls(ψ1)
     
     @classmethod
@@ -1337,7 +1350,9 @@ class MPO(TensorTrain):
         
         energy = 0.0
         max_trunc_err = 1.e-14  # lanczos 误差
-        
+        count = 0
+        lasteng = np.nan
+
         # sweep
         for sw in range(nsweep):
             
@@ -1366,6 +1381,14 @@ class MPO(TensorTrain):
             
             if outputlevel >= 1:
                 print(f"After sweep {sw}: energy={(energy * tc.exp(self.lognm)).item()} maxchi={psi.maxbonddim()} maxtruncerr={max_trunc_err:.2e} time={sw_time:.3f}", flush=True)
+
+            if np.abs((lasteng - energy.item())/energy.item()) < 1e-3:
+                count += 1
+                if count >= 3:
+                    break
+            else:
+                count = 0
+            lasteng = energy.item()
         
         return energy * tc.exp(self.lognm), psi
 
@@ -1649,6 +1672,8 @@ class ProjMPO:
             return self.larpack_ground(v, tol=lanczos_tol)
         elif method == 'lanczos':
             return self.lanczos_ground(v, tol=lanczos_tol)
+        elif method == 'arnoldi':
+            return self.tenpy_arnoldi(v, tol=lanczos_tol)
         else:
             raise ValueError(f"Unknown method: {method}")
     
@@ -1707,7 +1732,19 @@ class ProjMPO:
         else:
             matvec = lambda v: tf._matrix_vector_product(Lenv.numpy(), H12.numpy(), Renv.numpy(), v)
         val, vec = lanczos_arpack(matvec, v.numpy().reshape(-1), tol=tol)
-        return tc.tensor(val, dtype=tc.float64, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
+        # return tc.tensor(val, dtype=tc.float64, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
+        return tc.tensor(val, dtype=tc.complex128, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
+    
+
+    def tenpy_arnoldi(self, v, tol):
+        s = v.shape
+        Lenv, H12, Renv = self.prepare_solve()
+        if self.nsite == 0:
+            matvec = lambda v: tf._matrix_vector_product0(Lenv.numpy(), Renv.numpy(), v)
+        else:
+            matvec = lambda v: tf._matrix_vector_product(Lenv.numpy(), H12.numpy(), Renv.numpy(), v)
+        val, vec = tenpy_arnoldi(matvec, v.numpy().reshape(-1))
+        return tc.tensor(val, dtype=tc.complex128, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
     
     
     def lanczos_ground(self, v, tol=1e-14):
@@ -1719,6 +1756,7 @@ class ProjMPO:
         val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=tol)
         return val, vec.reshape(*v.shape)
     
+
     def expm_multiply_evolve(self, v, delta, tol):
         Lenv, H12, Renv = self.prepare_solve()
         if self.nsite == 0:

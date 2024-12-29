@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-15 22:51:06
+# @Last Modified time: 2024-12-28 18:44:42
 
 import warnings
 import numpy as np
@@ -471,7 +471,7 @@ class SpinOper(Oper):
         L: int,
         pauli: bool = False,
         d: int = 2,
-        local_matrix = None,
+        S: str = '1/2',
     ):
         """
         生成算符的 mpo 形式
@@ -484,7 +484,7 @@ class SpinOper(Oper):
             是否使用 Pauli 矩阵作为局部矩阵。默认为 False，即使用常规矩阵。
         d : int, optional
             局部矩阵的维度。默认为 2，即二维矩阵。
-        local_matrix : Optional[Callable[[str], _np.ndarray]], optional
+        S : str, optional
             用于生成局部矩阵的函数。如果提供，该函数将根据字符串参数生成对应的局部矩阵。默认为 None，即使用默认的局部矩阵生成方式。
 
         Examples
@@ -493,12 +493,17 @@ class SpinOper(Oper):
         >>> ham = op.heisenberg_operator(L)
         >>> basis = (L, pauli=False)
         >>> mpo = ham.automata(L, pauli=False)
-        
         """
+        from ..matrix import pauli_matrix
+        local_matrix_function = lambda x: pauli_matrix(x.upper() if x in ['x', 'y', 'z'] else x, S=S) if pauli else pauli_matrix(x.upper() if x in ['X', 'Y', 'Z'] else x, S=S)
+        if L == 1:
+            tmp = np.sum(c*local_matrix_function(i) for i, _, c in self.each_term())
+            return [tmp.reshape(1,*tmp.shape,1)]
         from ...tensor.automata import automata_mpo
         hlocals, positions, coefficients = self.expandxy(pauli=pauli).split_data()
         coefficients = np.real_if_close(coefficients)
-        return automata_mpo(L, hlocals, positions, coefficients, d=d, pauli=pauli, local_matrix_function=local_matrix, dtype=coefficients.dtype)
+
+        return automata_mpo(L, hlocals, positions, coefficients, d=d, pauli=pauli, local_matrix_function=local_matrix_function, dtype=coefficients.dtype)
 
     def split_data(self):
         """这个函数是为 automata 写的，但 parallel_matrix 等函数可能会用到"""
@@ -824,17 +829,27 @@ class SpinOper(Oper):
     def to_mpo(self, L, pauli=False, backend='torch', device=None):
         if backend == 'torch':
             from ...torch_utils.tensor_network.tnclass import MPO
-            from ...torch_utils.utils import convert_to_torch 
+            from ...torch_utils.utils import totc 
             import torch as tc # type: ignore
             tt = self.automata(L, pauli=pauli)
             dtype = tc.float64
             for i in tt:
                 if np.iscomplexobj(i):
                     dtype = tc.complex128
-            return MPO(convert_to_torch(tt, dtype=dtype, device=device))
+            return MPO(totc(tt, dtype=dtype, device=device))
         elif backend == 'tensor':
             # todo 
             raise NotImplementedError("还没有实现")
+        elif backend == 'quimb':
+            import quimb.tensor as qtn
+            builder = qtn.SpinHam1D()
+            for oper, posn, coef in self.expandxy(pauli).each_term():
+                conuntZ = 2**oper.count('Z') # quimb 总是使用 spin oper 需要调整 Z
+                if len(posn) == 1:
+                    builder[posn[0]] += tuple([coef*conuntZ] + list(oper))
+                else:
+                    builder[*posn] += tuple([coef*conuntZ] + list(oper))
+            return builder.build_mpo(L=L)
         else:
             raise ValueError("backend should be 'torch' or 'tensor'")
 
@@ -1003,6 +1018,44 @@ def sum(oper) -> Oper:
     if stype is None:
         stype = 's'
     return SpinOper(newdata)
+
+
+class SpinOperBuilder:
+    def __init__(self):
+        """
+        可用的符号包括：I, p, m, x, y, z
+        
+        Example:
+        --------
+        >>> ham = SpinOperBuilder()
+        >>> for i in range(10):
+        >>>     ham += 1.0, 'x', i, 'x', i+1
+        >>>     ham += 1.0, 'y', i, 'y', i+1
+        >>>     ham += 1.0, 'z', i, 'z', i+1
+        >>>     ham += 1.0, 'x', i
+        >>> ham = ham.to_oper()
+        """
+        self.terms = {}
+
+    def __iadd__(self, term) -> 'SpinOperBuilder':
+        assert isinstance(term, tuple) and len(term) % 2 == 1, "term must be a tuple of odd length"
+        for i in range(1, len(term), 2):
+            assert term[i] in ['I', 'p', 'm', 'x', 'y', 'z'], "term must be a tuple of I, p, m, x, y, or z"
+        
+        opnm = "".join(term[1::2])
+        posnlist, coeflist = self.terms.setdefault(opnm, [[], []])
+        posnlist.append(np.array(term[2::2], dtype=int))
+        coeflist.append(np.array([term[0]]))
+        return self
+    
+    def to_oper(self):
+        data = {}
+        for name, (posnlist, coeflist) in self.terms.items():
+            newposn, newcoef = merge_poscoef(posnlist, coeflist)
+            if len(newposn) > 0:
+                data[name] = (newposn, newcoef)
+        return SpinOper(data, 's')
+
 
 def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> Oper:
     r"""
