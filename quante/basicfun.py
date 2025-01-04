@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-30 22:27:40
+# @Last Modified time: 2025-01-05 01:12:33
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -315,13 +315,13 @@ def create_folder(path1:str, path2: Union[None, str]=None) -> str:
 # 创建自定义的日志记录器
 logger = _logging.getLogger('quante_logger')
 
-def set_logging(level: int = _logging.INFO, savelog: bool = False, filenameTime: bool = False, logtime: bool = False, showlevel=False):
+def set_logging(level: int = 1, savelog: bool = False, filenameTime: bool = False, logtime: bool = False, showlevel=False):
     """配置日志记录功能.
     
     Parameters
     ----------
     level : int, optional
-        日志记录的级别，默认为 `_logging.WARNING`。
+        日志记录的级别，可以填 -1, 1, 2, 3, 4，分别对应 debug, info, warning, error, critical，默认为 1。
     savelog : bool, optional
         是否将日志保存到文件中，默认为 `False`。
     filenameTime : bool, optional
@@ -377,7 +377,8 @@ def set_logging(level: int = _logging.INFO, savelog: bool = False, filenameTime:
             pass
     
     # 设置日志记录级别
-    logger.setLevel(level)
+    assert level in [-1, 1, 2, 3, 4], "Invalid log level, should be in [-1, 1, 2, 3, 4]"
+    logger.setLevel({-1:_logging.DEBUG, 1:_logging.INFO, 2:_logging.WARNING, 3:_logging.ERROR, 4:_logging.CRITICAL}[level])
     logger.propagate = False  # 防止日志消息传播到root日志记录器
 
 set_logging()  # 使用默认日志记录器
@@ -534,6 +535,7 @@ class PrintLn:
         
         return result
 
+    
     def __call__(self, *inputargs, level=1):
         if level == 0:
             return None
