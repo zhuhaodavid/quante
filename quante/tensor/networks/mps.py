@@ -2,13 +2,13 @@
 # @Author: dzwang
 # @Date:   2024-12-11 11:26:43
 # @Last Modified by:   dzwang
-# @Last Modified time: 2025-01-02 10:31:50
+# @Last Modified time: 2025-01-05 00:22:33
 import numpy as np 
 from ...generate.state import spin_down, spin_up, xplus, xminus, yplus, yminus
 from ..linalg.decomposer import qr_tensor, rq_tensor, svd_tensor
 
 
-# todo list: solver "qr", "eig", "get_bond_dimension"
+# todo list: solver "qr", "eig", "get_bond_dimension" 
 
 
 __all__ = ["BaseMPSExpectationValue", "MPS"]
