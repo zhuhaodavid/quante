@@ -100,6 +100,26 @@ quspin 1.0.0 要求 numpy>=2.0.0
 
 - 查看历史版本：`git checkout <commit_hash>`
 
+## Merge Git 的流程
+
+- 首先确定自己分支的改动全部提交
+
+- 关闭 OneDrive 的同步
+
+- 切换到主分支 `git checkout master`
+
+- 从 github 上拉取最新代码 `git pull origin master`
+
+- merge 自己分支 `git merge branchname`
+
+- 解决冲突，解决完后提交 `git commit -m "merge branchname"` (没有冲突直接提交)
+
+- 上传到 github `git push origin master`
+
+- 同步到自己的分支上
+
+- 打开 OneDrive 的同步
+
 ## install slepc4py
 
 slepc is suggested to be used on linux or wsl on windows
