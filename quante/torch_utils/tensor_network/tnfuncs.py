@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-25 16:03:18
+# @Last Modified time: 2024-12-30 16:16:05
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -1564,7 +1564,7 @@ def canonicalize_infinite(tsr:tc.Tensor):
     这样 `s * res` 是左正交形式，`res * s` 是右正交形式
     """
     # 拿到转移矩阵：
-    tsf_mat = _contract_init_pbc(tsr.conj(), tsr)
+    tsf_mat = _inner_init(tsr.conj(), tsr)
     a,b,c,d = tsf_mat.shape
     tsf_mat = tsf_mat.reshape(a*b,c*d)
     

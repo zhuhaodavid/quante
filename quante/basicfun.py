@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-29 19:39:21
+# @Last Modified time: 2024-12-30 22:33:07
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -315,13 +315,13 @@ def create_folder(path1:str, path2: Union[None, str]=None) -> str:
 # 创建自定义的日志记录器
 logger = _logging.getLogger('quante_logger')
 
-def set_logging(level: int = _logging.INFO, savelog: bool = False, filenameTime: bool = False, logtime: bool = False):
+def set_logging(level: int = 1, savelog: bool = False, filenameTime: bool = False, logtime: bool = False, showlevel=False):
     """配置日志记录功能.
     
     Parameters
     ----------
     level : int, optional
-        日志记录的级别，默认为 `_logging.WARNING`。
+        日志记录的级别，可以填 -1, 1, 2, 3, 4，分别对应 debug, info, warning, error, critical，默认为 1。
     savelog : bool, optional
         是否将日志保存到文件中，默认为 `False`。
     filenameTime : bool, optional
@@ -342,10 +342,15 @@ def set_logging(level: int = _logging.INFO, savelog: bool = False, filenameTime:
         logger.removeHandler(handler)
         handler.close()
 
+    _format = ""
     if logtime:  # 根据 `logtime` 参数设置日志格式
-        _format = "%(asctime)s - %(levelname)s: %(message)s"
+        _format += "%(asctime)s"
+    if showlevel:
+        _format += " %(levelname)s"
+    if _format:
+        _format += ": %(message)s"
     else:
-        _format = "%(message)s"
+        _format += "%(message)s"
 
     if savelog:
         filename = "log/"
@@ -372,7 +377,8 @@ def set_logging(level: int = _logging.INFO, savelog: bool = False, filenameTime:
             pass
     
     # 设置日志记录级别
-    logger.setLevel(level)
+    assert level in [-1, 1, 2, 3, 4], "Invalid log level, should be in [-1, 1, 2, 3, 4]"
+    logger.setLevel({-1:_logging.DEBUG, 1:_logging.INFO, 2:_logging.WARNING, 3:_logging.ERROR, 4:_logging.CRITICAL}[level])
     logger.propagate = False  # 防止日志消息传播到root日志记录器
 
 set_logging()  # 使用默认日志记录器
@@ -530,14 +536,25 @@ class PrintLn:
         return result
 
     
-    def __call__(self, *inputargs):
+    def __call__(self, *inputargs, level=1):
+        if level == 0:
+            return None
         try:
             cf = _inspect.currentframe()  # 获取调用函数的栈帧
             if cf is None:
                 raise ValueError("Can't get the caller's frame")
             paraname = PrintLn._get_paraname(cf.f_back)
             out: str = self._constructArgumentOutput(paraname, inputargs)
-            logger.info(out)
+            if level == 1:
+                logger.info(out)
+            elif level == -1:
+                logger.debug(out)
+            elif level == 2:
+                logger.warning(out)
+            elif level == 3:
+                logger.error(out)
+            else:
+                logger.critical(out)
         except SyntaxError as e:
             logger.warning("SyntaxError")
             logger.warning(inputargs)
