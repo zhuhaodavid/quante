@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
-# @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-28 18:44:42
+# @Last Modified by:   dzwang
+# @Last Modified time: 2024-12-31 10:43:39
 
 import warnings
 import numpy as np
@@ -293,6 +293,10 @@ class Oper:
                 continue
             dic[key] = (val["posn"], val["coef"])
         return cls(dic, data['type'].decode('utf-8'))
+    
+    def trotter_gates(self) -> None:
+        raise NotImplementedError("Subclasses should implement this.")
+
 
 
 class SpinOper(Oper):

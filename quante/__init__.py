@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: dzwang
 # @Date:   2023-09-15 13:40:25
-# @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-28 16:48:53
+# @Last Modified by:   dzwang
+# @Last Modified time: 2024-12-30 17:09:26
 """Quante - 一个用于量子物理的Python库
 
 用于处理张量网络、精确对角化、保存工具、日志工具等的工具库。

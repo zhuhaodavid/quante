@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-29 19:39:21
+# @Last Modified time: 2024-12-30 22:27:40
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -315,7 +315,7 @@ def create_folder(path1:str, path2: Union[None, str]=None) -> str:
 # 创建自定义的日志记录器
 logger = _logging.getLogger('quante_logger')
 
-def set_logging(level: int = _logging.INFO, savelog: bool = False, filenameTime: bool = False, logtime: bool = False):
+def set_logging(level: int = _logging.INFO, savelog: bool = False, filenameTime: bool = False, logtime: bool = False, showlevel=False):
     """配置日志记录功能.
     
     Parameters
@@ -342,10 +342,15 @@ def set_logging(level: int = _logging.INFO, savelog: bool = False, filenameTime:
         logger.removeHandler(handler)
         handler.close()
 
+    _format = ""
     if logtime:  # 根据 `logtime` 参数设置日志格式
-        _format = "%(asctime)s - %(levelname)s: %(message)s"
+        _format += "%(asctime)s"
+    if showlevel:
+        _format += " %(levelname)s"
+    if _format:
+        _format += ": %(message)s"
     else:
-        _format = "%(message)s"
+        _format += "%(message)s"
 
     if savelog:
         filename = "log/"
@@ -529,20 +534,31 @@ class PrintLn:
         
         return result
 
-    
-    def __call__(self, *inputargs):
+    def __call__(self, *inputargs, level=1):
+        if level == 0:
+            return None
         try:
             cf = _inspect.currentframe()  # 获取调用函数的栈帧
             if cf is None:
                 raise ValueError("Can't get the caller's frame")
             paraname = PrintLn._get_paraname(cf.f_back)
             out: str = self._constructArgumentOutput(paraname, inputargs)
-            logger.info(out)
+            if level == 1:
+                logger.info(out)
+            elif level == -1:
+                logger.debug(out)
+            elif level == 2:
+                logger.warning(out)
+            elif level == 3:
+                logger.error(out)
+            else:
+                logger.critical(out)
         except SyntaxError as e:
             logger.warning("SyntaxError")
             logger.warning(inputargs)
         
         logger.handlers[0].flush()  # 立即刷新日志
+
 
     @staticmethod
     def _get_paraname(callFrame):

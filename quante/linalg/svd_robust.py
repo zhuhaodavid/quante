@@ -2,14 +2,71 @@
 # @Author: hzhu
 # @Date:   2023-09-19 22:25:55
 # @Last Modified by:   dzwang
-# @Last Modified time: 2024-12-13 23:50:12
-# This is from tenpy
-
+# @Last Modified time: 2024-12-30 11:51:13
 import scipy.linalg as sla
 import numpy as np
-from typing import Optional
 
-__all__ = ['svd', 'svd_truncate', 'truncate', 'TruncationError']
+
+__all__ = ['svd_truncate', 'TruncationError', 'truncate', 'svd']
+
+
+from typing import Optional
+def svd_truncate(mat:np.ndarray, Dc:Optional[int] = None, eps:float=1e-15) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    u, s, v = svd(mat, full_matrices=False)  # 如果要用 numba 只需把 svd 换成 np.linalg.svd
+    D_update = np.sum(s >= eps)
+    D = min(Dc, D_update) if Dc is not None else D_update
+    u, s, v = u[:, :D], s[:D], v[:D, :]
+    return u, s, v
+
+
+class TruncationError:
+    r"""
+    .. 警告 ::
+            对于虚时间演化，这不是你感兴趣的误差！
+
+    Parameters
+    ----------
+    eps : float
+        所有被丢弃的施密特值平方和的总和。
+        注意，如果你保留的奇异值达到 1.e-14（即比 64 位浮点数的机器精度稍高），
+        `eps` 大约是 1.e-28（由于平方的原因）！
+    ov : float
+        重叠的下界 :math:`|\langle \psi_{trunc} | \psi_{correct} \rangle|^2`
+        （假设两个状态都归一化）。
+        这可能是你真正感兴趣的量。
+        考虑了 `TEBD 维基百科文章 <https://en.wikipedia.org/wiki/Time-evolving_block_decimation>` 中误差部分解释的因子 2。
+    """
+    def __init__(self, eps:float=0., ov:float=1.) -> None:
+        self.eps = eps
+        self.ov = ov
+    
+    def __add__(self, other:"TruncationError") -> "TruncationError":
+        res = TruncationError()
+        res.eps = self.eps + other.eps
+        res.ov = self.ov * other.ov
+        return res
+    
+    def __iadd__(self, other):
+        self.eps += other.eps
+        self.ov *= other.ov
+        return self
+
+
+def truncate(S:np.ndarray, chi_max:int, svd_min:float, trunc_cut:float) -> tuple[np.ndarray, TruncationError]:
+    """ 输入保证 S 需要是降序排列，且全都是正数！ """
+    good = np.ones(len(S), dtype=np.bool_)
+    if chi_max is not None:
+        good2 = np.zeros(len(S), dtype=np.bool_)
+        good2[:chi_max] = True
+        good = good & good2
+    if svd_min is not None:
+        good = good & (S > svd_min)
+    if trunc_cut is not None:
+        revert_cumsum = np.cumsum(np.square(S)[::-1])[::-1]
+        good = good & (revert_cumsum > trunc_cut**2)
+    eps = S[~good].sum()
+    ov = 1. - 2. * eps
+    return good, TruncationError(eps, ov)
 
 
 # 我们经常需要执行奇异值分解（SVD）。
@@ -134,59 +191,3 @@ def svd(a,
         raise ValueError("invalid `lapack_driver`: " + str(lapack_driver))
     # 'gesvd' lapack driver
     return sla.svd(a, full_matrices, compute_uv, overwrite_a, check_finite, lapack_driver='gesvd')
-
-def svd_truncate(mat:np.ndarray, Dc:Optional[int] = None, eps:float=1e-15) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    u, s, v = svd(mat, full_matrices=False)  # 如果要用 numba 只需把 svd 换成 np.linalg.svd
-    D_update = np.sum(s >= eps)
-    D = min(Dc, D_update) if Dc is not None else D_update
-    u, s, v = u[:, :D], s[:D], v[:D, :]
-    return u, s, v
-
-
-class TruncationError:
-    r"""
-    .. 警告 ::
-            对于虚时间演化，这不是你感兴趣的误差！
-
-    Parameters
-    ----------
-    eps : float
-        所有被丢弃的施密特值平方和的总和。
-        注意，如果你保留的奇异值达到 1.e-14（即比 64 位浮点数的机器精度稍高），
-        `eps` 大约是 1.e-28（由于平方的原因）！
-    ov : float
-        重叠的下界 :math:`|\langle \psi_{trunc} | \psi_{correct} \rangle|^2`
-        （假设两个状态都归一化）。
-        这可能是你真正感兴趣的量。
-        考虑了 `TEBD 维基百科文章 <https://en.wikipedia.org/wiki/Time-evolving_block_decimation>` 中误差部分解释的因子 2。
-    """
-    def __init__(self, eps:float = 0., ov:float = 1.) -> None:
-        self.eps = eps
-        self.ov = ov
-    
-    def __add__(self, other):
-        res = TruncationError()
-        res.eps = self.eps + other.eps
-        res.ov = self.ov * other.ov
-        return res
-    
-    def __iadd__(self, other):
-        self.eps += other.eps
-        self.ov *= other.ov
-        return self
-
-def truncate(S:np.ndarray, chi_max:int, svd_min:float, trunc_cut:float) -> tuple[np.ndarray, TruncationError]:
-    """ 输入保证 S 需要是降序排列，且全都是正数！ """
-    good = np.ones(len(S), dtype=np.bool_)
-    if chi_max is not None:
-        good2 = np.zeros(len(S), dtype=np.bool_)
-        good2[:chi_max] = True
-        good = good & good2
-    if svd_min is not None:
-        good = good & (S > svd_min)
-    if trunc_cut is not None:
-        revert_cumsum = np.cumsum(np.square(S)[::-1])[::-1]
-        good = good & (revert_cumsum > trunc_cut**2)
-    eps = S[~good].sum()
-    ov = 1. - 2. * eps
-    return good, TruncationError(eps, ov)

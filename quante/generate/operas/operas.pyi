@@ -30,7 +30,8 @@ class Oper:
     def save(self, filename:str = 'ham.h5') -> None: ...
     @classmethod
     def load(cls, filename:str) -> 'Oper': ...
-    pass
+    def trotter_gates(self,) -> tuple[list[int], list[_np.ndarray]]: ...
+
 
 class SpinOper:
     type: Incomplete

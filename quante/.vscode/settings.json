@@ -1,0 +1,31 @@
+{
+    "cSpell.words": [
+        "catposcoef",
+        "coefs",
+        "dgesdd",
+        "dgesvd",
+        "elems",
+        "expandxy",
+        "gesdd",
+        "gesvd",
+        "igraph",
+        "kamada",
+        "LAPACK",
+        "newcoef",
+        "newoper",
+        "newopnm",
+        "newpos",
+        "newposn",
+        "Oper",
+        "opnm",
+        "opnm1",
+        "opnm2",
+        "poscoef",
+        "posn",
+        "stype",
+        "svdvals",
+        "tnclass",
+        "whichonm",
+        "zgesvd"
+    ]
+}
