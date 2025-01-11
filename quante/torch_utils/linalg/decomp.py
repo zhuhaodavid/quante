@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
-# @Last Modified by:   dzwang
-# @Last Modified time: 2024-12-30 11:37:15
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-01-11 17:22:27
 
 
 import numpy as np
@@ -22,7 +22,7 @@ def truncate(S, chi_max=None, svd_min=None, trunc_cut=None):
     if trunc_cut is not None:
         normS = S / tc.norm(S)
         revert_cumsum = tc.flip((tc.cumsum(tc.flip(normS**2, [0]), 0)), [0])
-        good = good & (revert_cumsum > trunc_cut**2)
+        good = good & (revert_cumsum > trunc_cut)
     eps = tc.square(S[~good]).sum()
     ov = 1. - 2. * eps
     return good, TruncationError(eps, ov)

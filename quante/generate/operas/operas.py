@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
-# @Last Modified by:   dzwang
-# @Last Modified time: 2024-12-31 10:43:39
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-01-11 15:00:10
 
 import warnings
 import numpy as np
@@ -443,7 +443,19 @@ class SpinOper(Oper):
             else:
                 return mat.toarray()
         else:
-            raise NotImplementedError(f"Spin Oper 不支持的 {type(basis).__name__} 作为基矢")
+            try:
+                from ..basis.quspin.quspin_basis.basis_1d.spin import spin_basis_1d
+                if isinstance(basis, spin_basis_1d):
+                    op_list = []
+                    for opstr, posn, coef in self.each_term():
+                        op_list.append([opstr, posn, coef])
+                    mat = basis._make_matrix(op_list, dtype=np.complex128)
+                    if sparse:
+                        return mat
+                    else:
+                        return mat.toarray()
+            except:
+                raise NotImplementedError(f"Spin Oper 不支持的 {type(basis).__name__} 作为基矢")
     
     def _convert_to_quick_form(self):
         """这个函数专门为 to_matrix 写的，其他函数不需要"""
@@ -503,7 +515,7 @@ class SpinOper(Oper):
         if L == 1:
             tmp = np.sum(c*local_matrix_function(i) for i, _, c in self.each_term())
             return [tmp.reshape(1,*tmp.shape,1)]
-        from ...tensor.automata import automata_mpo
+        from ...tensor_old.automata import automata_mpo
         hlocals, positions, coefficients = self.expandxy(pauli=pauli).split_data()
         coefficients = np.real_if_close(coefficients)
 

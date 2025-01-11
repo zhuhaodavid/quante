@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-15 18:34:27
+# @Last Modified time: 2025-01-10 21:54:18
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -162,6 +162,7 @@ def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, k
             (False,  True, False, False, False, False): _process_spin_half_kblock,
             (False, False,  True, False, False, False): _process_spin_half_pblock,
             (False, False, False,  True, False, False): _process_spin_half_zblock,
+            (False,  True,  True, False, False, False): _process_spin_half_kpblock,
             ( True,  True, False, False, False, False): _process_spin_half_Nup_kblock,
             ( True, False,  True, False, False, False): _process_spin_half_Nup_pblock,
             ( True, False, False,  True, False, False): _process_spin_half_Nup_zblock,
@@ -224,6 +225,10 @@ def _process_spin_half_zblock(L:int, block_dic:dict) -> SpinBasis:
 def _process_spin_half_pzblock(L:int, block_dic:dict) -> SpinBasis:
     from .spin_half.pzblock.defclass import SpinHalfBasisPZBlock
     return SpinHalfBasisPZBlock(L, block_dic['pzblock'])
+
+def _process_spin_half_kpblock(L:int, block_dic:dict) -> SpinBasis:
+    from .spin_half.kblock_pblock.defclass import SpinHalfBasisKPBlock
+    return SpinHalfBasisKPBlock(L, block_dic['kblock'], block_dic['pblock'])
 
 def _process_spin_half_Nup_kblock(L:int, block_dic:dict) -> SpinBasis:
     from .spin_half.Nup_kblock.defclass import SpinHalfBasisNupKBlock

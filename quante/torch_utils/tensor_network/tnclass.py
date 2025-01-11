@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-25 16:10:13
+# @Last Modified time: 2025-01-11 18:20:05
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -792,7 +792,7 @@ class TensorTrain:
             iDc = min(chi_max, prod_dim) if chi_max is not None else prod_dim
             
             S, V = tc.linalg.eigh(rho)
-            print(rho.shape)
+            # print(rho.shape)
             S, V = S.flip(0), V.flip(1)
             tc.clamp_(S, min=0)
             tc.sqrt_(S)
@@ -828,7 +828,7 @@ class TensorTrain:
         Lenv = tc.tensor(1., dtype=dtype, device=self.device).reshape(1,1,1,1)
         for j in range(n - 1):
             Lenv = self._dm_left2right(Lenv, W[j], ψ[j])
-            print(Lenv.shape)
+            # print(Lenv.shape)
             Lenv = Lenv/tc.norm(Lenv)
             Lenvs.append(Lenv)
         return Lenvs
@@ -1258,36 +1258,8 @@ class MPO(TensorTrain):
             Lenv = Lenv @ tf._up_bottom_tr(tsr)
         return tc.trace(Lenv) * tc.exp(self.lognm)
 
-    def dmrg(self, 
-            psi0:MPS, # 初始态
-            nsweep:int, # 扫多少次
-            chi_max:list[int],  # MPS 中最大的 bond 维度
-            cutoff:list[float],  # MPS 中奇异谱最小值
-            backend:str='default',  # 计算有效哈密顿量基态的方法，"default", "larpack", "lanczos"
-            svd_alg:str='svd',  # update MPS 中张量的方法
-            nsite=2,  # 几格点 dmrg, 1 或 2
-            outputlevel=1, # 输出等级，0 表示不输出中间信息
-            ):
+    def dmrg(self, psi0=None):
         r"""DMRG 方法求解 MPO 的基态
-        
-        Parameters
-        ----------
-        psi0 : MPS
-            初始态
-        nsweep : int
-            扫多少次
-        chi_max : list[int]
-            MPS 中最大的 bond 维度
-        cutoff : list[float]
-            MPS 中奇异谱最小值
-        backend : str, optional
-            计算有效哈密顿量基态的方法，"default", "larpack", "lanczos", by default 'default'
-        svd_alg : str, optional
-            update MPS 中张量的方法, by default'svd'
-        nsite : int, optional
-            几格点 dmrg, 1 或 2, by default 2
-        outputlevel : int, optional
-            输出等级，0 表示不输出中间信息, by default 1
         
         Returns
         -------
@@ -1295,11 +1267,6 @@ class MPO(TensorTrain):
             基态能量
         psi : MPS
             基态
-        
-        Notes
-        -----
-        - `svd` 的速度会比 `eig` 快，但是 `eig` 会更稳定
-        - `chi_max` 要从小增加，否则会出现 nan
         
         todo: eig pertube mixer 
         todo: dmrg 求第一激发态
@@ -1311,104 +1278,17 @@ class MPO(TensorTrain):
         >>> ham = qt.generate.operas.heisenberg_operator(L, j=(1, 1, 1))
         >>> ham = ham.expandxy(pauli=False)
         >>> H = tn.MPO(ham.automata(L, pauli=False, dtype=np.float64)).to(device='cpu')
-        >>> psi0 = tn.MPS.product_state(["up","down"]*(L//2), dtype=tc.float64)
-        >>> nsweeps = 10
-        >>> chi_max = [100] * nsweeps
-        >>> cutoff = [1E-10] * nsweeps
-        >>> eng, vec = H.dmrg(psi0, nsweeps, chi_max, cutoff)
+        >>> eng, vec = H.dmrg()
         >>> print(eng)
         tensor(-44.1277, dtype=torch.float64)
         """
-        # 参数检查
-        if len(chi_max) > nsweep:
-            chi_max = chi_max[:nsweep]
-        elif len(chi_max) < nsweep:
-            chi_max.extend([chi_max[-1]] * (nsweep - len(chi_max)))
-        
-        if len(cutoff) > nsweep:
-            cutoff = cutoff[:nsweep]
-        elif len(cutoff) < nsweep:
-            cutoff.extend([cutoff[-1]] * (nsweep - len(cutoff)))
-            
-        N = len(psi0.data)
-        assert N == len(self.data), 'MPS 和 MPO 的长度应该相等'
-        if N == 1:
-            raise Exception("长度 1 的 MPS 暂不支持，可以用 `numpy.linalg.eigh`, `scipy.eigsh` 等方法求解")
-        
-        # 初始设置
-        psi = psi0.copy()
-        psi.orthogonalize_(0)
-        
-        assert psi.llim == psi.rlim == 0 or psi.llim == psi.rlim == -1
-        
-        oper = self.copy()
-        if psi.dtype.is_complex and not self.dtype.is_complex:
-            oper.to(dtype=tc.complex128,device=self.device)
-        
-        projH = ProjMPO(oper, nsite=nsite)
-        projH.set_position_(psi, 0)
-        
-        energy = 0.0
-        max_trunc_err = 1.e-14  # lanczos 误差
-        count = 0
-        lasteng = np.nan
-
-        # sweep
-        for sw in range(nsweep):
-            
-            trunc_err_list = []  # 记录误差
-            sw_time_start = time.time()  # 记录时间
-            
-            # --------------main-------------
-            for position, direction in projH._sweep_schedule():
-                # print(position, N)
-                energy, trunc_err = projH.dmrg_sweep_(
-                    psi=psi,  # 当前态
-                    position=position,  # 优化 postion 位置的张量
-                    direction=direction,  # 方向 'left' 或 'right'
-                    svd_alg=svd_alg,   # update MPS 中张量的方法
-                    chi_max=chi_max[sw], # MPS 中最大的 bond 维度
-                    svd_min=cutoff[sw], # MPS 中奇异谱最小值
-                    backend=backend,  # 计算有效哈密顿量基态的方法，"default", "larpack", "lanczos"
-                    max_trunc_err=max_trunc_err  # lanczos 误差
-                    )
-                
-                trunc_err_list.append(trunc_err)
-            # -------------end main-----------
-            
-            max_trunc_err = max(trunc_err_list)  # 最大误差
-            sw_time = time.time() - sw_time_start  # 记录每步的时间
-            
-            if outputlevel >= 1:
-                print(f"After sweep {sw}: energy={(energy * tc.exp(self.lognm)).item()} maxchi={psi.maxbonddim()} maxtruncerr={max_trunc_err:.2e} time={sw_time:.3f}", flush=True)
-
-            if np.abs((lasteng - energy.item())/energy.item()) < 1e-3:
-                count += 1
-                if count >= 3:
-                    break
-            else:
-                count = 0
-            lasteng = energy.item()
-        
-        return energy * tc.exp(self.lognm), psi
-
+        return DMRG(self).run2()
 
     def tdvp(
             self,
             init: MPS,  # 初始态
             t: Number,  # 总时间
             time_step: Number,  # 时间步长
-            chi_max: list[int],  # MPS 中最大的 bond 维度
-            trunc_cut: list[float],  # MPS 中奇异谱最小值
-            *,
-            backend='default',  # 计算有效哈密顿量基态的方法，"default", "expm_multiply", "lanczos"
-            svd_alg='svd',  #  update MPS 中张量的方法
-            normalize=True,  # 是否归一化
-            reverse_step=True, # 时间演化必须是 True，虚时演化 False 回到 DMRG
-            time_start=0.0, # 起始时间
-            nsite=2,  # nsite = 1 不改变 bond dimension, nsite = 2 可以改变 bond dimension
-            order=2,  # 时间演化的阶数
-            outputlevel=1,  # 输出等级，0 表示不输出中间信息
             ):
         r"""利用 tdvp 方法求解时间演化
         
@@ -1420,27 +1300,7 @@ class MPO(TensorTrain):
             总时间
         time_step : Number
             时间步长
-        chi_max : list[int]
-            MPS 中最大的 bond 维度
-        trunc_cut : list[float]
-            MPS 中奇异谱最小值
-        backend : str, optional
-            计算有效哈密顿量基态的方法，"default", "expm_multiply", "lanczos", by default 'default'
-        svd_alg : str, optional
-            update MPS 中张量的方法, by default'svd'
-        normalize : bool, optional
-            是否归一化, by default True
-        reverse_step : bool, optional
-            时间演化必须是 True，虚时演化 False 回到 DMRG, by default True
-        time_start : float, optional
-            起始时间, by default 0.0
-        nsite : int, optional
-            nsite = 1 不改变 bond dimension, nsite = 2 可以改变 bond dimension, by default 2
-        order : int, optional
-            时间演化的阶数, by default 2
-        outputlevel : int, optional
-            输出等级，0 表示不输出中间信息, by default 1
-        
+               
         Returns
         -------
         phis : list[tuple[float, MPS]]
@@ -1456,14 +1316,11 @@ class MPO(TensorTrain):
         >>> L = 100
         >>> ham = qt.generate.operas.heisenberg_operator(L, j=(1, 1, 1))
         >>> ham = ham.expandxy(pauli=False)
-        >>> H = qtc.tn.MPO(ham.automata(L, pauli=False, dtype=np.float64)).to(device='cpu')
-        >>> psi0 = qtc.tn.MPS.product_state(["up","down"]*(L//2), dtype=tc.complex128)
-        >>> nsweeps = 8
-        >>> chi_max = [20]
-        >>> cutoff = [1E-10]
-        >>> phis = H.tdvp(init=psi0, t=1.0j, time_step=0.1j, chi_max=chi_max, trunc_cut=cutoff, nsite=2, order=1, outputlevel=1)
+        >>> H = tn.MPO(qtc.totc(ham.automata(L, pauli=False)))
+        >>> psi0 = tn.MPS.product_state(["up","down"]*(L//2), dtype=tc.complex128)
+        >>> psis = H.tdvp(init=psi0, time_step=0.1j, t=1.0j)
         >>> Ss = []
-        >>> for t, phi in phis:
+        >>> for t, phi in psis:
         >>>     Ss.append(phi.entanglement_entropy(bonds=[L//2])[0].item())
         >>> print(Ss)
         [0.017425858509214333, 0.05540147407158314, 0.10518787487322075, 0.16171880185660767, 0.22146216557201934, 0.2819921651885448, 0.34180493542491497, 0.40016281239278695, 0.4569178458476886, 0.5123157152579267]
@@ -1472,38 +1329,174 @@ class MPO(TensorTrain):
         ----------
         https://arxiv.org/abs/1408.5056
         """
-        # 参数检查
-        nsweeps = int(np.real(t/time_step))
-        if np.abs(nsweeps*time_step - t) > 1e-10:
-            raise ValueError(f"t / time_step = {t} / {time_step} = {t/time_step} 必须是整数")
+        return TDVP(mpo=self, psi0=init, time_step=time_step, final_time=t).run()
+    
+
+class DMRG:
+    def __init__(self, mpo, psi0=None):
+        self.mpo = mpo
+        self.nsweep = 5  # 扫描次数
+        self.maxengnum = 2  # 判断收敛的时候使用的能量数目
+        self.restol = 1.e-5  # 收敛精度
+        self.outputlevel = 1  # 输出级别
         
-        N = len(init.data)
-        assert N == len(self.data), 'MPS 和 MPO 的长度应该相等'
+        # lanczos 参数
+        self.backend = 'default'  # lanczos 后端
+        self.max_trunc_err = 1.e-14  # lanczos 误差
+
+        # mps 更新参数
+        self.svd_alg = 'eig'
+        self.chi_max = [10, 20, 100, 100, 200]  # 奇异值分解的最大 bond dimension
+        self.cutoff = [1E-5]
+        self.svd_min = 1E-10
+
+        self.normalize = True  # 是否归一化
+        
+        self.psi = MPS.random(len(mpo.data), linkdims=2) if psi0 is None else psi0
+        self.psi.orthogonalize_(0)
+        assert self.psi.llim == self.psi.rlim == 0 or self.psi.llim == self.psi.rlim == -1
+
+        self.N = len(mpo.data)  # 系统大小
+        assert self.N == len(self.psi.data), 'MPS 和 MPO 的长度应该相等'
+        assert self.N != 1, "MPS 长度不能为 1"
+    
+
+    def precheck(self):
+        """检查参数的正确性"""
+        if len(self.chi_max) > self.nsweep:
+            self.chi_max = self.chi_max[:self.nsweep]
+        elif len(self.chi_max) < self.nsweep:
+            new_chi_max = [self.chi_max[-1]] * (self.nsweep - len(self.chi_max))
+            self.chi_max.extend(new_chi_max)
+        if len(self.cutoff) > self.nsweep:
+            self.cutoff = self.cutoff[:self.nsweep]
+        elif len(self.cutoff) < self.nsweep:
+            new_cutoff = [self.cutoff[-1]] * (self.nsweep - len(self.cutoff))
+            self.cutoff.extend(new_cutoff)
+    
+
+    def build_projH(self, nsite):
+        """构建 projH"""
+        oper = self.mpo.copy()
+        if self.psi.dtype.is_complex and not self.mpo.dtype.is_complex:
+            oper.to(dtype=tc.complex128,device=self.psi.device)
+        projH = ProjMPO(oper, nsite=nsite)
+        projH.set_position_(self.psi, 0)
+        return projH
+
+
+    def run1(self):
+        self.precheck()
+        projH = self.build_projH(1)
+        energy_list = []
+        for sw in range(self.nsweep):
+            sw_time_start = time.time()
+            for pos, drt in projH._sweep_schedule():
+                # prepare_update_local
+                self.psi.orthogonalize_(pos)
+                projH.set_position_(self.psi, pos)
+                phi = self.psi.data[pos]
+                phi = phi/tc.norm(phi)
+                # solve for the ground state of the effective Hamiltonian
+                lanczos_tol=max(self.svd_min, 0.05*self.max_trunc_err) # todo `lanczos_tol` 有没有更好的选择？
+                energy, phi = projH.solve_ground_state(phi, method=self.backend, lanczos_tol=lanczos_tol)
+                # update the MPS
+                self.psi.update_single_site_(pos, phi)
+            sw_time = time.time() - sw_time_start  # 记录每步的时间
+            # post process
+            if self.outputlevel >= 1:
+                print(f"After sweep {sw}: energy={(energy * tc.exp(self.mpo.lognm)).item()} maxchi={self.psi.maxbonddim()} time={sw_time:.3f}", flush=True)
+            energy_list.append(energy)
+            if len(energy_list) > self.maxengnum:
+                energy_list.pop(0)
+                if all(np.diff(energy_list) < self.restol):
+                    break
+        return energy * tc.exp(self.mpo.lognm), self.psi
+
+
+    def run2(self):
+        self.precheck()
+        projH = self.build_projH(2)
+        energy_list = []
+        for sw in range(self.nsweep):
+            sw_time_start = time.time()
+            for pos, drt in projH._sweep_schedule():
+                # prepare_update_local
+                projH.set_position_(self.psi, pos)
+                phi = tf._full_contract_right_mps2(self.psi.data[pos], self.psi.data[pos + 1])
+                phi = phi/tc.norm(phi)
+                # solve for the ground state of the effective Hamiltonian
+                lanczos_tol=max(self.svd_min, 0.05*self.max_trunc_err) # todo `lanczos_tol` 有没有更好的选择？
+                energy, phi = projH.solve_ground_state(phi, method=self.backend, lanczos_tol=lanczos_tol)
+                # update the MPS
+                trunc_para = (self.chi_max[sw], self.cutoff[sw], self.svd_min)
+                self.psi.update_two_site_(pos, phi, direction=drt, svd_alg=self.svd_alg, trunc_para=trunc_para, normalize=self.normalize)
+            sw_time = time.time() - sw_time_start  # 记录每步的时间
+            # post process
+            if self.outputlevel >= 1:
+                print(f"After sweep {sw}: energy={(energy * tc.exp(self.mpo.lognm)).item()} maxchi={self.psi.maxbonddim()} time={sw_time:.3f}", flush=True)
+            energy_list.append(energy)
+            if len(energy_list) > self.maxengnum:
+                energy_list.pop(0)
+                if all(np.diff(energy_list) < self.restol):
+                    break
+        return energy * tc.exp(self.mpo.lognm), self.psi
+
+
+class TDVP:
+    def __init__(self, mpo, psi0, time_step, final_time):
+        self.mpo = mpo
+        self.init = psi0
+        self.time_step = time_step
+        self.start_time = 0.0
+        self.final_time = final_time
+
+        self.chi_max = [20]
+        self.trunc_cut = [1E-10]
+        self.backend='default'  # 计算有效哈密顿量基态的方法，"default", "expm_multiply", "lanczos"
+        self.svd_alg='svd'  #  update MPS 中张量的方法
+        self.normalize=True  # 是否归一化
+        self.reverse_step=True # 时间演化必须是 True，虚时演化 False 回到 DMRG
+        self.nsite=2  # nsite = 1 不改变 bond dimension, nsite = 2 可以改变 bond dimension
+        self.order=2  # 时间演化的阶数
+        self.outputlevel=1  # 输出等级，0 表示不输出中间信息
+
+    def precheck(self, nsweep):
+        """检查参数的正确性"""
+        if len(self.chi_max) > nsweep:
+            self.chi_max = self.chi_max[:nsweep]
+        elif len(self.chi_max) < nsweep:
+            new_chi_max = [self.chi_max[-1]] * (nsweep - len(self.chi_max))
+            self.chi_max.extend(new_chi_max)
+        if len(self.trunc_cut) > nsweep:
+            self.trunc_cut = self.trunc_cut[:nsweep]
+        elif len(self.trunc_cut) < nsweep:
+            new_cutoff = [self.trunc_cut[-1]] * (nsweep - len(self.trunc_cut))
+            self.trunc_cut.extend(new_cutoff)
+ 
+    def run(self):
+        # 参数检查
+        nsweeps = int(np.real(self.final_time/self.time_step))
+        if np.abs(nsweeps*self.time_step - self.final_time) > 1e-10:
+            raise ValueError(f"t / time_step = {self.final_time} / {self.time_step} = {self.final_time/self.time_step} 必须是整数")
+        
+        N = len(self.init.data)
+        assert N == len(self.mpo.data), 'MPS 和 MPO 的长度应该相等'
         if N == 1:
             raise Exception("长度 1 的 MPS 暂不支持，可以用 `numpy.linalg.eigh`, `scipy.eigsh` 等方法求解")
         
-        if len(chi_max) > nsweeps:
-            chi_max = chi_max[:nsweeps]
-        elif len(chi_max) < nsweeps:
-            chi_max.extend([chi_max[-1]] * (nsweeps - len(chi_max)))
-        
-        if len(trunc_cut) > nsweeps:
-            trunc_cut = trunc_cut[:nsweeps]
-        elif len(trunc_cut) < nsweeps:
-            trunc_cut.extend([trunc_cut[-1]] * (nsweeps - len(trunc_cut)))
+        self.precheck(nsweeps)
         
         # 初态设置
-        state = init.copy()
-        current_time = time_start
+        state = self.init.copy()
+        current_time = self.start_time
         
-        if np.iscomplex(time_step):
+        if np.iscomplex(self.time_step):
             if not state.dtype.is_complex:
                 state.to(dtype = tc.complex128,device=self.device)
         
         # 算符设置
-        oper = self.copy()
-        reduced_operator = ProjMPO(oper, nsite=nsite)
-        
+        reduced_operator = ProjMPO(self.mpo, nsite=self.nsite)
         
         for sweep in range(nsweeps):
             
@@ -1512,39 +1505,30 @@ class MPO(TensorTrain):
             # --------------main-------------
             current_time, max_trunc_err = reduced_operator.tdvp_sweep_(
                 state,  # 当前态
-                order,  # 时间演化的阶数
+                self.order,  # 时间演化的阶数
                 current_time,  # 当前时间
-                time_step,  # 时间步长
-                reverse_step,  # 时间演化必须是 True，虚时演化 False 回到 DMRG
-                backend=backend,  # 计算有效哈密顿量基态的方法，"default", "expm_multiply", "lanczos"
-                svd_alg=svd_alg,  # update MPS 中张量的方法，"svd", "eig"
-                normalize=normalize,  # 是否归一化
-                maxdim=chi_max[sweep],  # MPS 中最大的 bond 维度
-                cutoff=trunc_cut[sweep],  # MPS 中奇异谱最小值
+                self.time_step,  # 时间步长
+                self.reverse_step,  # 时间演化必须是 True，虚时演化 False 回到 DMRG
+                backend=self.backend,  # 计算有效哈密顿量基态的方法，"default", "expm_multiply", "lanczos"
+                svd_alg=self.svd_alg,  # update MPS 中张量的方法，"svd", "eig"
+                normalize=self.normalize,  # 是否归一化
+                maxdim=self.chi_max[sweep],  # MPS 中最大的 bond 维度
+                cutoff=self.trunc_cut[sweep],  # MPS 中奇异谱最小值
             )
             # -------------end main-----------
             
             sweep_elapsed_time = time.time() - sweep_elapsed_time
             
             if current_time.real == 0:
-                if outputlevel >= 1:
+                if self.outputlevel >= 1:
                     print(f"--> time: {round(- current_time.imag,3)}: maxchi={state.maxbonddim()} maxtruncerr={max_trunc_err:.2e} elapsed_time={sweep_elapsed_time:.3f}", flush=True)
                     
                 yield - current_time.imag, state
                 
             else:
-                if outputlevel >= 1:
+                if self.outputlevel >= 1:
                     print(f"--> time: {current_time/1j:.3f}: maxchi={state.maxbonddim()} maxtruncerr={max_trunc_err:.2e} elapsed_time={sweep_elapsed_time:.3f}", flush=True)
                 yield current_time/1j, state
-    
-    def _tdvp_sub_time_steps(self, order:int):
-        if order == 1:
-            return tc.tensor([1, 0], dtype=tc.float64)
-        elif order == 2:
-            return tc.tensor([1/2, 1/2], dtype=tc.float64)
-        elif order == 4:
-            s = 1 / (2 - 2**(1/3))
-            return tc.tensor([s/2, s/2, (1 - 2*s)/2, (1 - 2*s)/2, s/2, s/2], dtype=tc.float64)
 
 
 class ProjMPO:
@@ -1669,11 +1653,16 @@ class ProjMPO:
             else:
                 return self.lanczos_ground(v, tol=lanczos_tol)
         if method == 'larpack':
-            return self.larpack_ground(v, tol=lanczos_tol)
+            return self.larpack_ground(v, tol=lanczos_tol)[1:]
         elif method == 'lanczos':
             return self.lanczos_ground(v, tol=lanczos_tol)
         elif method == 'arnoldi':
-            return self.tenpy_arnoldi(v, tol=lanczos_tol)
+            return self.tenpy_arnoldi(v, tol=lanczos_tol)[1:]
+        elif method == 'eigs':
+            mat = self.to_matrix()
+            E, theta = tc.linalg.eig(mat)
+            i = tc.argmax(tc.abs(E))
+            return E[i], theta[:, i].reshape(*v.shape)
         else:
             raise ValueError(f"Unknown method: {method}")
     
@@ -1733,7 +1722,7 @@ class ProjMPO:
             matvec = lambda v: tf._matrix_vector_product(Lenv.numpy(), H12.numpy(), Renv.numpy(), v)
         val, vec = lanczos_arpack(matvec, v.numpy().reshape(-1), tol=tol)
         # return tc.tensor(val, dtype=tc.float64, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
-        return tc.tensor(val, dtype=tc.complex128, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
+        return matvec, tc.tensor(val, dtype=tc.complex128, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
     
 
     def tenpy_arnoldi(self, v, tol):
@@ -1744,7 +1733,7 @@ class ProjMPO:
         else:
             matvec = lambda v: tf._matrix_vector_product(Lenv.numpy(), H12.numpy(), Renv.numpy(), v)
         val, vec = tenpy_arnoldi(matvec, v.numpy().reshape(-1))
-        return tc.tensor(val, dtype=tc.complex128, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
+        return matvec, tc.tensor(val, dtype=tc.complex128, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
     
     
     def lanczos_ground(self, v, tol=1e-14):
@@ -1786,49 +1775,6 @@ class ProjMPO:
             matmul = lambda inipsi: tf._matrix_vector_product(Lenv, H12, Renv, inipsi)
         vec = lanczos_evolve_state(matmul, v.reshape(-1), delta, tol=tol)
         return vec.reshape(*v.shape)
-
-    def dmrg_sweep_(self, 
-                    psi:MPS,  # 当前态
-                    position:int,   # 优化 postion 位置的张量
-                    direction:str,   # 方向 'left' 或 'right'
-                    svd_alg:str,    # update MPS 中张量的方法
-                    chi_max:int,  # MPS 中最大的 bond 维度
-                    svd_min:float,  # MPS 中奇异谱最小值
-                    backend:str,   # 计算有效哈密顿量基态的方法，"default", "larpack", "lanczos"
-                    max_trunc_err:float  # 最大的误差
-                    ) -> tuple[float, float]:
-        """
-        优化 position 位置的张量:
-        参数如下：
-        .. code-block:: python
-            psi:MPS,  # 当前态
-            position:int,   # 优化 postion 位置的张量
-            direction:str,   # 方向 'left' 或 'right'
-            svd_alg:str,    # update MPS 中张量的方法
-            chi_max:int,  # MPS 中最大的 bond 维度
-            svd_min:float,  # MPS 中奇异谱最小值
-            backend:str,   # 计算有效哈密顿量基态的方法，"default", "larpack", "lanczos"
-            max_trunc_err:float  # 最大的误差
-        """
-        # prepare_update_local
-        self.set_position_(psi, position)
-        if self.nsite == 2:
-            phi = tf._full_contract_right_mps2(psi.data[position], psi.data[position + 1])
-        elif self.nsite == 1:
-            phi = psi.data[position]
-        phi = phi/tc.norm(phi)
-        
-        # solve for the ground state of the effective Hamiltonian
-        energy, phi = self.solve_ground_state(phi, method=backend, lanczos_tol=max(svd_min, 0.05*max_trunc_err))
-        # todo `lanczos_tol` 有没有更好的选择？
-        
-        # update the MPS
-        if self.nsite == 2:
-            err_step = psi.update_two_site_(position, phi, direction=direction, svd_alg=svd_alg, trunc_para=(chi_max, svd_min, None), normalize=True)
-            return energy, err_step.eps
-        elif self.nsite == 1:
-            psi.update_single_site_(position, phi)
-            return energy, 0.0
       
     def tdvp_sweep_(
             self,
