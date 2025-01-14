@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-11 15:00:10
+# @Last Modified time: 2025-01-15 01:12:48
 
 import warnings
 import numpy as np
@@ -869,6 +869,128 @@ class SpinOper(Oper):
         else:
             raise ValueError("backend should be 'torch' or 'tensor'")
 
+    def energies(self, pauli=None):
+        L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
+        assert L < 14, "L should be less than 21, otherwise the matrix size will be too large"
+        from ..basis import spin_basis
+        basis = spin_basis(L)
+        mat = self.to_matrix(basis, pauli=pauli, sparse=False)
+        isherm = (mat == mat.T.conj()).all()
+        return {True: np.linalg.eigvalsh,
+                    False: np.linalg.eigvals}[isherm](mat)
+
+    def gdenergy(self, pauli=None, k=1, return_eigenvectors=False):
+        L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
+        assert L < 21, "L should be less than 21, otherwise the matrix size will be too large"
+        from ..basis import spin_basis
+        basis = spin_basis(L)
+        mat = self.to_matrix(basis, pauli=pauli, sparse=True)
+        isherm = (mat != mat.T.conj()).nnz == 0
+        if mat.shape[0] < 1000:
+            if not return_eigenvectors:
+                return {True: np.linalg.eigvalsh,
+                        False: np.linalg.eigvals}[isherm](mat.todense())[:k]
+            else:
+                val, vec = {True: np.linalg.eigh,
+                        False: np.linalg.eig}[isherm](mat.todense())
+                return val[:k], vec[:, :k]
+        else:
+            if isherm:
+                return sp.linalg.eigsh(mat, k=k, which='SA', return_eigenvectors=return_eigenvectors)
+            else:
+                return sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=return_eigenvectors)
+
+    def evolve(self, inistate, tlist, obslist, pauli=False):
+        """计算观测量演化的示例
+
+        Parameters
+        ----------
+        inistate : np.ndarray
+            初始态
+        tlist : np.ndarray
+            时间
+        obslist : list[SpinOper]
+            观测量列表
+        pauli : bool, optional
+            是否使用 pauli 矩阵表示, by default False
+
+        Returns
+        -------
+        list[np.ndarray]
+            对应观测量的演化
+        
+        Example
+        -------
+        >>> op = qt.generate.operas
+        >>> builder = op.SpinOperBuilder()
+        >>> for i in range(L):
+        >>>     builder += (0. if i == L-1 else 1.), "z", i, "z", i+1
+        >>>     builder += -0.5, "x", i
+        >>>     builder += -0.5, "z", i
+        >>> ham = builder.build()
+        >>> sx = op.sum(op.x(i) for i in range(L))
+        >>> _, inistate = (-sx).gdenergy(pauli=True, return_eigenvectors=True)
+        >>> obslist = [sx] # + [op.x(i) for i in range(L)] + [op.z(i) for i in range(L)]
+        >>> sx_expect = ham.evolve(inistate, times, obslist, pauli=True)
+        """
+        from ..basis import spin_basis
+
+        L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
+
+        # Method to get evolve expectation values
+        basis = spin_basis(L)
+        if L < 12:  # 小尺寸的做法
+            ###################################################################################
+            # 严格对角化的写法
+            ###################################################################################
+            from ...linalg import get_time_evolution_states_ED, observe_states
+            hammat = self.to_matrix(basis, pauli=pauli)
+            engres = np.linalg.eigh(hammat)
+            evalstate = get_time_evolution_states_ED(inistate, *engres, tlist, failback_to_CPU=True)
+            return np.real_if_close([observe_states(evalstate, obs.to_matrix(basis, pauli=pauli)) for obs in obslist])
+        else:
+            hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
+            try:
+            ###################################################################################
+            # GPU expm_multiply
+            ###################################################################################
+                from ...torch_utils.linalg.expm_multiply import EvolveEngine
+                from ...torch_utils.sparse import to_csr
+                from ...torch_utils.utils import totc
+                from tqdm import tqdm
+                import torch as tc # type: ignore
+                assert tc.cuda.is_available(), "CUDA is not available"
+                device = tc.device('cuda')
+                hammat0 = to_csr(hammat, device=device)
+                inistate = totc(inistate, device=device)
+                evolve_engine = EvolveEngine(hammat0, inistate, ts=tlist, device=device)
+                obsmatlist = [to_csr(obs.to_matrix(basis, pauli=pauli, sparse=True), device=device, dtype=tc.complex128) for obs in obslist]
+                res = [[]*len(obslist)]
+                for _ in tqdm(tlist):
+                    evolve_engine.run()
+                    state = evolve_engine.psi
+                    for i in range(len(obslist)):
+                        value = state.conj().reshape(1,-1) @ (obsmatlist[i] @ state)
+                        res[i].append(value[0,0].item())
+                return [np.real_if_close(r) for r in res]
+            except:
+            ###################################################################################
+            # CPU parallel expm_multiply
+            ###################################################################################
+                from ...linalg import EvolveEngine
+                from tqdm import tqdm
+                evolve_engine = EvolveEngine(hammat, inistate, ts=tlist)
+                obsmatlist = [obs.to_matrix(basis, pauli=pauli, sparse=True) for obs in obslist]
+                res = [[]*len(obslist)]
+                for _ in tqdm(tlist):
+                    evolve_engine.run()
+                    state = evolve_engine.psi
+                    for i in range(len(obslist)):
+                        value = state.conj().reshape(1,-1) @ (obsmatlist[i] @ state)
+                        res[i].append(value[0,0])
+                return [np.real_if_close(r) for r in res]    
+
+
 #  from numba import njit
 # @njit
 def argsort_positions(pos_array):
@@ -1071,9 +1193,76 @@ class SpinOperBuilder:
             if len(newposn) > 0:
                 data[name] = (newposn, newcoef)
         return SpinOper(data, 's')
+    
+    build = to_oper
 
 
-def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> Oper:
+class HeisenbergOper(SpinOper):
+    def __init__(self, L, j=1.0, h=0.0, cyclic=False):
+        self.L = L
+        self.cyclic = cyclic
+        try:
+            jx, jy, jz = j # type: ignore
+        except TypeError:
+            jx = jy = jz = j
+        try:
+            hx, hy, hz = h # type: ignore
+        except TypeError:
+            hz = h
+            hx = hy = 0.0
+        self.jx = jx
+        self.jy = jy
+        self.jz = jz
+        self.hx = hx
+        self.hy = hy
+        self.hz = hz
+        data = {}
+        posn1 = np.arange(0,L, dtype=np.int32).reshape(L,1)
+        coef1 = np.ones(L, dtype=np.float64)
+        if cyclic:
+            posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=np.int32)
+            coef2 = np.ones(L, dtype=np.float64)
+        else:
+            posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
+            coef2 = np.ones(L-1, dtype=np.float64)
+        if jx != 0:
+            data["xx"] = (posn2, jx*coef2)
+        if jy != 0:
+            data["yy"] = (posn2, jy*coef2)
+        if jz != 0:
+            data["zz"] = (posn2, jz*coef2)
+        if hx != 0:
+            data["x"] = (posn1, hx*coef1)
+        if hy != 0:
+            data["y"] = (posn1, hy*coef1)
+        if hz != 0:
+            data["z"] = (posn1, hz*coef1)
+        super().__init__(data)
+
+    def energies(self, isinf=False, pauli=False):
+        from ...solvable_models.free_fermion import free_fermion as ff
+        L = self.L if not isinf else np.inf
+        if self.jz == self.hx == self.hy == 0 and not self.cyclic:
+            # xy model
+            return ff.XY_energies(L=L, jxx=self.jx, jyy=self.jy, hz=self.hz, pauli=pauli)
+        return super().energies(pauli=pauli)
+        
+
+    def gdenergy(self, isinf=False, pauli=False, *, k=1):
+        from ...solvable_models.free_fermion import free_fermion as ff
+        L = self.L if not isinf else np.inf
+        if self.hx == self.hy == self.hz == 0 and self.jx == self.jy == self.jz and not np.isinf(L) and self.cyclic and k == 1:
+            print("approximate: ", end='')
+            return ff.XXX_gdenergy_pbc_approx(L) * (4 if pauli else 1)
+        if self.jz == self.hx == self.hy == 0 and not self.cyclic and k == 1:
+            # xy model
+            return ff.XY_gdenergy(L=L, jxx=self.jx, jyy=self.jy, hz=self.hz, pauli=pauli)
+        return super().gdenergy(pauli=pauli, k=k)
+    
+        
+
+
+def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> HeisenbergOper:
     r"""
     生成 heisenberg 模型的哈密顿量，返回一个 'Oper' 的实例
     
@@ -1099,35 +1288,4 @@ def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> Oper:
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(1.0, 1.0, 0.0), h=0.0)  # xy model
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(0.0, 0.0, 1.0), h=(1.0, 0.0, 0.0))  # ising model
     """
-    try:
-        jx, jy, jz = j # type: ignore
-    except TypeError:
-        jx = jy = jz = j
-    try:
-        hx, hy, hz = h # type: ignore
-    except TypeError:
-        hz = h
-        hx = hy = 0.0
-    data = {}
-    posn1 = np.arange(0,L, dtype=np.int32).reshape(L,1)
-    coef1 = np.ones(L, dtype=np.float64)
-    if cyclic:
-        posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=np.int32)
-        coef2 = np.ones(L, dtype=np.float64)
-    else:
-        posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
-        coef2 = np.ones(L-1, dtype=np.float64)
-    if jx != 0:
-        data["xx"] = (posn2, jx*coef2)
-    if jy != 0:
-        data["yy"] = (posn2, jy*coef2)
-    if jz != 0:
-        data["zz"] = (posn2, jz*coef2)
-    if hx != 0:
-        data["x"] = (posn1, hx*coef1)
-    if hy != 0:
-        data["y"] = (posn1, hy*coef1)
-    if hz != 0:
-        data["z"] = (posn1, hz*coef1)
-    return SpinOper(data)
-
+    return HeisenbergOper(L=L, j=j, h=h, cyclic=cyclic)

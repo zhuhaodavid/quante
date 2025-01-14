@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-07-14 15:28:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 19:05:31
+# @Last Modified time: 2025-01-14 17:34:19
 from ...linalg import eigvalsh
 import numpy as _np
 import scipy as _sp
@@ -516,39 +516,92 @@ def XXX_gdenergy_pbc_approx(L):
     return (Einf - Efinite * correction) / 2
 
 
-def XXZ_gdenergy_inf(j=1, Delta=0):
-    η = - _np.arccos(-Delta)/2
-    E1 = Delta / 4 * j
-    from scipy.integrate import quad
-    E2 = 1/4 * _np.sin(2*η)**2 / (_np.pi - 2*η) * quad(
-            lambda λ: 1/(_np.cosh(_np.pi*λ/(_np.pi-2*η)) * _np.cosh(λ + 1j*η) * _np.cosh(λ - 1j*η)),
-            -1000,
-            1000,
-        )[0]
-    return E1 - E2
+def XXZ_gdenergy_inf(J=1, Δ=0):
+    # todo M. Takahashi, "Thermodynamics of One-Dimensional Solvable Models," Cambridge University Press, 1999.
+    # 但是只能给出 L->∞ 的近似结果? 并且需要 J < 0???
+    ####################################################
+    Δ = 3
+    L = 10
+    M = 0
+    J = -1
+    ham = qt.generate.operas.heisenberg_operator(L=L, j=(-J,-J,-J*Δ), cyclic=True)
+    basis = qt.generate.basis.spin_basis(L=L)
+    mat = ham.to_matrix(basis, pauli=False)
+    eigvals = np.linalg.eigvalsh(mat)
+    print(eigvals[0])
 
-if __name__ == "__main__":
-    import numpy as np
-    from quante import matrix as ed
-    from generate import operas as op
-    from quante import linalg as qla
-    from basicfun import println
-    
-    sitenum = 10
+    ϕ = np.arccosh(Δ)
+    print(-L*Δ/4)
 
-    np.random.seed(42)
-    Jx, Jy, Jxy, Jyx, hz = (
-        np.random.rand(sitenum-1),
-        np.random.rand(sitenum-1),
-        np.random.rand(sitenum-1),
-        np.random.rand(sitenum-1),
-        np.random.rand(sitenum),
-    )
+    # from quimb import *
+    # from quimb.tensor import *
+    # H = MPO_ham_heis(1000, j=(-J,-J,-J*Δ), cyclic=False)
+    # dmrg = DMRG2(H)
+    # dmrg.solve(max_sweeps=10, verbosity=1, cutoffs=1e-6)
 
-    ham: op.Oper = sum(Jx[i] * op.xx(i,i+1) + Jy[i] * op.yy(i,i+1) + Jxy[i] * op.xy(i,i+1) + Jyx[i] * op.yx(i,i+1) for i in range(sitenum-1)) + sum(hz[i] * op.z(i) for i in range(sitenum))
+    ####################################################
+    # Δ = -2
+    # L = 12
+    # M = L//2
+    # J = 1
+    # ham = qt.generate.operas.heisenberg_operator(L=L, j=(-J,-J,-J*Δ), cyclic=True)
+    # basis = qt.generate.basis.spin_basis(L=L, Nup=M)
+    # mat = ham.to_matrix(basis, pauli=False)
+    # eigvals = np.linalg.eigvalsh(mat)
+    # print(eigvals[0]/L)
 
-    basis = ed.get_spin_basis(L=sitenum, pauli=0)
-    mat = ham.get_matrix(basis)
-    println(qla.eigvalsh(mat))
-    println(XY_gdenergy(L=sitenum, jxx=Jx, jyy=Jy, jxy=Jxy, jyx=Jyx, hz=hz, pauli=0))
-    println(XY_energies(L=sitenum, jxx=Jx, jyy=Jy, jxy=Jxy, jyx=Jyx, hz=hz, pauli=0))
+    ϕ = np.arccosh(-Δ)
+    c = 2*sum(1/(np.exp(2*n*ϕ) + 1) for n in range(1,10))
+    print(-J*Δ/4 - J*np.sinh(ϕ) * (1/2 + c))
+
+    # from quimb import *
+    # from quimb.tensor import *
+    # H = MPO_ham_heis(1000, j=(-J,-J,-J*Δ), cyclic=False)
+    # dmrg = DMRG2(H)
+    # dmrg.solve(max_sweeps=10, verbosity=1, cutoffs=1e-6)
+
+
+    ####################################################
+
+    # Δ = 0.1
+    # J = 1
+    # ham = qt.generate.operas.heisenberg_operator(L=L, j=(-J,-J,-J*Δ), cyclic=True)
+    # basis = qt.generate.basis.spin_basis(L=L)
+    # mat = ham.to_matrix(basis, pauli=False)
+    # eigvals = np.linalg.eigvalsh(mat)
+    # print(eigvals[0]/L)
+
+    # γ = np.arccos(-Δ)
+    # from scipy.integrate import quad
+
+    # p0 = np.pi / γ
+    # print((-J*Δ/4 - J * np.sin(γ)/γ * quad(lambda w: np.sinh((p0-1)*w)/np.cosh(w)/np.sinh(p0*w), 1e-10, 100)[0])*1000)
+
+    # from quimb import *
+    # from quimb.tensor import *
+    # H = MPO_ham_heis(1000, j=(-J,-J,-J*Δ), cyclic=False)
+    # dmrg = DMRG2(H)
+    # dmrg.solve(max_sweeps=10, verbosity=1, cutoffs=1e-6)
+
+
+    # if Δ < -1:
+    #     e = - J * Δ / 4 - J * _np.sinh(ϕ) * (1/2 + 2 * sum(1/(_np.exp(2*n*ϕ) + 1) for n in range(1, 200)))
+    #     return e
+    # γ = _np.arccos(Delta)
+    # E0 = - J*Delta / 4
+    # E0 -= _np.sin(γ)/2/_np.pi * quad(
+    #     lambda u: _np.log(1 + _np.exp(-2*_np.pi*u)) / _np.cosh(γ * u),
+    #     -100,
+    #     100
+    # )[0]
+    # return E0
+
+    # from scipy.integrate import quad
+    # η = - _np.arccos(-Delta)/2
+    # E1 = Delta / 4 * j
+    # E2 = 1/4 * _np.sin(2*η)**2 / (_np.pi - 2*η) * quad(
+    #         lambda λ: 1/(_np.cosh(_np.pi*λ/(_np.pi - 2*η)) * _np.cosh(λ + 1j*η) * _np.cosh(λ - 1j*η)),
+    #         -10,
+    #         10,
+    #     )[0]
+    # return E1 - E2

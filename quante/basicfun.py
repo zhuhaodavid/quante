@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-05 01:12:33
+# @Last Modified time: 2025-01-14 21:20:58
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -422,24 +422,15 @@ class PrintLn:
     >>> a = "this is a test"
     >>> show(a)
     a: this is a test
-    >>> a; show>>1
+    >>> show>>1; a
     a: this is a test
-    >>> L, a = 1, 2; show>>1
+    >>> show>>1; L, a = 1, 2 
     L: 1; a: 2
     
     Warning
     -------
     可能存在的问题：
     - 只能在单行中使用，否则报 SyntaxError。
-    - 使用 >> 显示表达式，而不是赋值语句时，表达式会被 evaluate 两次，可能导致潜在问题，如：
-    >>> def f(L, a):
-    >>>     L.append(a)
-    >>>     return L
-    >>> L, a = [], 2
-    >>> f(L,a); show>>1
-    f(L, a): [2, 2]
-    >>> L = f(L,a); show>>1
-    L: [2]
     """
     def __init__(self, use_color=True):
         self.use_color = use_color
@@ -478,16 +469,16 @@ class PrintLn:
         if frame_info is None or frame_info.code_context is None:
             return [], []
         source_code = "".join(frame_info.code_context).strip()
-        
+
         # 解析为 AST 并查找函数调用的节点
         tree = _ast.parse(source_code)
-        
-        node = next(_itertools.islice(_ast.walk(tree), 3, 4))
+
+        node = next(_itertools.islice(_ast.walk(tree), 4, 5))
         if isinstance(node, _ast.Tuple):
             paraname = PrintLn.split_expression(_ast.unparse(node)[1:-1])
         else:
             paraname = PrintLn.split_expression(_ast.unparse(node))
-        
+
         values = []
         local_vars = callFrame.f_locals
         global_vars = callFrame.f_globals
@@ -495,7 +486,7 @@ class PrintLn:
             values.append(eval(arg, global_vars, local_vars))
         
         return paraname, values
-    
+
     @staticmethod
     def split_expression(expression):
         # 初始化计数器和结果列表

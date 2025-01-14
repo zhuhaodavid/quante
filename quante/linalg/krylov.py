@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-26 17:09:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-09 17:36:02
+# @Last Modified time: 2025-01-14 22:23:14
 
 # todo: 实现 Arnoldi method 对角化非厄密矩阵；LanczosEvolution 计算 :math:`exp(delta H) |psi0>`
 
@@ -240,9 +240,9 @@ def lanczos_arpack(matvec:Callable[[np.ndarray], np.ndarray], psi0:np.ndarray, *
     ncv = kwargs.get("N_min", None)
     dim = psi0.shape[0]
     lo = spalg.LinearOperator(shape=(dim,dim), matvec=matvec, dtype=psi0.dtype) # type: ignore
-    # Es, Vs = spalg.eigsh(lo, k=1, v0=psi0, which='SA', tol=tol, ncv=ncv)
-    k = 1 if dim < 5 else 3
-    Es, Vs = spalg.eigs(lo, k=k, v0=psi0, which='LM', tol=tol, ncv=ncv)
+    Es, Vs = spalg.eigsh(lo, k=1, v0=psi0, which='SA', tol=tol, ncv=ncv)
+    # k = 1 if dim < 5 else 3
+    # Es, Vs = spalg.eigs(lo, k=k, v0=psi0, which='LM', tol=tol, ncv=ncv)
     # show(Es)
     return Es[0], Vs[:, 0] #+ 1e-6*np.random.randn(dim)
 

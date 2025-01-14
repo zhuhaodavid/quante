@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-15 18:28:56
+# @Last Modified time: 2025-01-15 00:35:41
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -23,6 +23,7 @@ from scipy.sparse.linalg._onenormest import onenormest
 from .operations_numba import dot_parallel  # type: ignore
 from .operations_numba import addself, prodscale, addtwo
 
+from functools import lru_cache
 
 def _expm_multiply_numba(A, B, scale=1.0, start=None, stop=None, num=None,
                   endpoint=None, traceA=None, herm=False):
@@ -82,6 +83,53 @@ def _expm_multiply_simple(A, B, scale, t=1.0, traceA=None, balance=False, herm=F
     
     return F, s
 
+def _evolve_engine(A, scale, t=1.0, n0=1, traceA=None, balance=False, herm=False):
+    """
+    Notes
+    -----
+    This is algorithm (3.2) in Al-Mohy and Higham (2011).
+    """
+    if balance:
+        raise NotImplementedError
+    if len(A.shape) != 2 or A.shape[0] != A.shape[1]:
+        raise ValueError('expected A to be like a square matrix')
+    ident = _ident_like(A)
+    is_linear_operator = isinstance(A, scipy.sparse.linalg.LinearOperator)
+    n = A.shape[0]
+    u_d = 2**-53
+    tol = u_d
+    if traceA is None:
+        if is_linear_operator:
+            warn("Trace of LinearOperator not available, it will be estimated."
+                 " Provide `traceA` to ensure performance.", stacklevel=3)
+        # m3=1 is bit arbitrary choice, a more accurate trace (larger m3) might
+        # speed up exponential calculation, but trace estimation is more costly
+        traceA = traceest(A, m3=1) if is_linear_operator else _trace(A)
+    mu = traceA / float(n)
+    A = A - mu * ident
+    A_1_norm = onenormest(A) if is_linear_operator else _exact_1_norm(A)
+    if t*A_1_norm == 0:
+        m_star, s = 0, 1
+    else:
+        ell = 2
+        norm_info = LazyOperatorNormInfo(t*A, A_1_norm=t*A_1_norm, ell=ell, herm=herm)
+        m_star, s = _fragment_3_1(norm_info, n0, tol, ell=ell)
+   
+    if np.iscomplexobj(A) and scale == -1j:
+        A = (-1j) * A
+        scale = 1.0 
+
+    def _engine(B):
+        F = B.copy()
+        if n0 == 1:
+            assert B.ndim == 1 or B.shape[1] == 1
+        else:
+            assert B.shape[1] == n0
+        
+        _expm_multiply_simple_core(A, B, scale, F, t, mu, m_star, s, tol)
+        return F
+    
+    return _engine  
 
 def _expm_multiply_simple_core(A, B, scale, F, t, mu, m_star, s, tol=None, balance=False):
     """

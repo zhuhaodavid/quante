@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-05 01:09:24
+# @Last Modified time: 2025-01-14 14:52:25
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -1151,7 +1151,7 @@ def _up_bottom_tr(tsr):
     return diag_elements.sum(-1)
 
 
-def _contract_right_env(H:tc.Tensor, psi:tc.Tensor, Renv:tc.Tensor) -> tc.Tensor:
+def _ProjMPO_contract_right_env(H:tc.Tensor, psi:tc.Tensor, Renv:tc.Tensor) -> tc.Tensor:
     """
     .. code-block:: text
         
@@ -1184,7 +1184,26 @@ def _contract_right_env(H:tc.Tensor, psi:tc.Tensor, Renv:tc.Tensor) -> tc.Tensor
     return out.reshape(a,d,g)
 
 
-def _contract_left_env(H:tc.Tensor, psi:tc.Tensor, Lenv:tc.Tensor) -> tc.Tensor:
+def _ProjMPS_contract_right_env(H:tc.Tensor, psi:tc.Tensor, Renv:tc.Tensor) -> tc.Tensor:
+    """
+    .. code-block:: text
+        
+        .      ╭-╮          H.conj()  ╭-╮
+        --(d)--┤ │ <-  --(d)--◻--(e)--┤ │
+               │ │            │       │ │
+               │ │           (f)      │ │
+               │ │            │       │ │
+        --(g)--┤ │     --(g)--◻--(h)--┤ │
+               ╰-╯          psi       ╰-╯
+     
+    >>> tc.einsum("dfe,gfh,eh->dg", H.conj(), psi, Renv)
+    """
+    e, h = Renv.shape
+    g, f, h = psi.shape
+    return (H.conj().reshape(-1, e) @ Renv).reshape(-1, f*h) @ psi.reshape(g, -1).T
+
+
+def _ProjMPO_contract_left_env(H:tc.Tensor, psi:tc.Tensor, Lenv:tc.Tensor) -> tc.Tensor:
     """
     .. code-block:: text
         
@@ -1214,6 +1233,31 @@ def _contract_left_env(H:tc.Tensor, psi:tc.Tensor, Lenv:tc.Tensor) -> tc.Tensor:
     out = out.reshape(a,h,c,e).permute([3,1,0,2]).reshape(e*h, -1) @ psi.conj().reshape(a*c,-1)
     
     return out.T.reshape(h,e,h)
+
+
+def _ProjMPS_contract_left_env(H:tc.Tensor, psi:tc.Tensor, Lenv:tc.Tensor) -> tc.Tensor:
+    """
+    .. code-block:: text
+        
+        ╭-╮   M.conj()            ╭-╮       
+        │ ├--(d)--◻--(e)--  --->  │ ├--(e)--
+        │ │       │               │ │       
+        │ │      (f)              │ │       
+        │ │       │               │ │       
+        │ ├--(g)--◻--(h)--        │ ├--(h)--
+        ╰-╯     psi               ╰-╯       
+     
+    tc.einsum("dg,dfe,gfh->eh", Lenv, M.conj(), psi)
+    """
+    d, g = Lenv.shape
+    d, f, e = H.shape
+    g, f, h = psi.shape
+    
+    # (d,g) @ (g,f,h) -> (g,fh) = (d,fh)
+    out = Lenv @ psi.reshape(g, -1)
+    # (d,fh) -> (df,h) -> (h,df) @ (d,f,e) -> (df,e) = (h,e)
+    out = out.reshape(-1,h).T @ H.conj().reshape(d*f, -1)
+    return out.T
 
 
 def _matrix_vector_product0(Lenv, Renv, v):
@@ -1404,6 +1448,39 @@ def _matrix_vector_product(Lenv, H12, Renv, v):
     return (Lenv @ (H12 @ (v.reshape(-1,m) @ Renv).reshape(a, -1, m).swapaxes(0, 1).reshape(-1, a*m)).reshape(-1, fa, m).swapaxes(0, 1).reshape(fa, -1)).reshape(-1)
 
 
+def _projMPS_make_vec(Lenv, H12, Renv):
+    """
+    .. code-block:: text
+    
+        ╭-╮                       ╭-╮ 
+        │ ├--(f)--◻--(g)--◻--(h)--┤ │
+        │ │       │       │       │ │ 
+        │ │      (i)     (j)      │ │ 
+        │ │       │       │       │ │ 
+        │ ├--(k)--         --(m)--┤ │ 
+        ╰-╯                       ╰-╯ 
+        Lenv                      Renv
+    
+    输入：
+    
+    Lenv: (k, f)
+    
+    H12: (f, ijh)
+    
+    Renv: (h, m)
+    
+    前期准备：
+    ----------
+    >>> M12 = np.einsum("fig,gjh->fijh", M1, M2)
+    >>> f, i, j, h = M12.shape
+    >>> M12 = np.ascontiguousarray(M12.reshape(f, -1))
+    >>> Renv = np.ascontiguousarray(Renv.T)
+    
+    np.einsum("fk,fijh,kijm,hm->", Lenv, M12, Renv)
+    """
+    h, _ = Renv.shape
+    return (Lenv @ H12).reshape(-1, h) @ Renv
+
 
 def make_matrix(Lenv:tc.Tensor, H12:tc.Tensor, Renv:tc.Tensor):
     """
@@ -1506,6 +1583,22 @@ def _prepare_solve_ground_state(H1:tc.Tensor, H2:tc.Tensor) -> tc.Tensor:
     
     # (f,d,i,e,jh) -> (d,e,f,i,jh)
     return out.reshape(f,d,i,e,j*h).permute([1,3,0,2,4]).reshape(d*e*f,-1)
+
+
+def _projMPS_prepare_solve_ground_state(M1:tc.Tensor, M2:tc.Tensor) -> tc.Tensor:
+    """
+    .. code-block:: text
+    
+        --(f)--◻--(g)--◻--(h)--
+               |       |
+              (i)     (j)
+               |       |
+    
+    >>> tc.einsum("fig,gjh->fijh", M1, M2)
+    """
+    f,_,g = M1.shape
+    return (M1.reshape(-1, g) @ M2.reshape(g, -1)).reshape(f,-1)
+
 
 def _cholesky_decomp(VL):
     vld = tc.diag(VL)

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 19:29:37
+# @Last Modified time: 2025-01-15 00:52:31
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -16,8 +16,25 @@ import scipy.linalg  # type: ignore
 import scipy.sparse.linalg  # type: ignore
 import torch as tc
 from ..sparse import trace, norm, eye
+from typing import Union
+from functools import lru_cache
 
-__all__ = ['expm_multiply', 'evolve_engine']
+__all__ = ['expm_multiply', 'evolve_engine', 'expm']
+
+def expm(A:tc.Tensor, c: Union[float, complex] = 1.0) -> tc.Tensor:
+    """Exponential Matrix, Hermitian matrix can be accelerated
+    """
+    is_herm = tc.allclose(A, A.conj().T)
+    if is_herm:
+        eigenvalues, eigenstates = tc.linalg.eigh(A)
+        if tc.isreal(A).all() and tc.isreal(c):
+            new_eigenvalues = tc.exp(eigenvalues * c)
+        else:
+            new_eigenvalues = tc.exp(eigenvalues * c).astype(complex)
+        return (eigenstates * new_eigenvalues) @ eigenstates.conj().transpose()
+    else:
+        return tc.matrix_exp(c*A)
+
 
 def expm_multiply(A:tc.Tensor, B:tc.Tensor, scale=1.0, start=None, stop=None, num=None,
                   endpoint=None, traceA=None, norm1A=None, hasshifted=False, herm=False):
@@ -103,6 +120,38 @@ def evolve_engine(A:tc.Tensor, scale=1., n0=1, herm=False):
     
     return _engine
     
+
+class EvolveEngine:
+    def __init__(self, ham, init_state, ts, device='cuda'):
+        if init_state.ndim == 1:
+            self.psi = init_state.reshape(-1, 1).to(dtype=tc.complex128)
+        else:
+            self.psi = init_state.to(dtype=tc.complex128)
+        self.csr_mt = ham
+        self.dts = np.diff(ts)
+        self.dts = np.insert(self.dts, 0, ts[0])
+        self.evolved_time = 0
+        self.cur_step = 0
+    
+    @lru_cache(maxsize=None)
+    def get_evolve_engine(self, dt):
+        return evolve_engine(dt * self.csr_mt, scale=-1j)
+
+    def run(self):
+        try:
+            dt = self.dts[self.cur_step]
+        except:
+            warn(
+                f"t {self.evolved_time} has been reached, dt = {self.dts[-1]} will be used"
+            )
+            dt = self.dts[-1]
+        self.cur_step += 1
+        if dt != 0:
+            ee = self.get_evolve_engine(round(dt,14))
+            self.psi = ee(self.psi)
+            self.evolved_time += dt
+            
+
 
 def _expm_multiply_simple(A, B, scale, traceA=None, norm1A=None, hasshifted=False, herm=False):
     """

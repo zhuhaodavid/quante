@@ -2,21 +2,22 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2024-11-09 17:35:19
+# # @Last Modified time: 2025-01-15 00:42:42
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
 import numpy as _np
 import warnings as _warnings
 from typing import Callable, Union
+from functools import lru_cache
 
 __all__ = [
-    "evolve_engine_spexpm",
+    "EvolveEngine",
     "get_time_evolution_states_ED",
     "expm_multiply"
 ]
 
-def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], psi0:_np.ndarray, scale=1.0, *, start=None, stop=None, num=None, endpoint=None, traceA=None, herm=False, usecuda=False) -> _np.ndarray:
+def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], psi0:_np.ndarray, scale=1.0, *, start=None, stop=None, num=None, endpoint=None, traceA=None, herm=False, cudadevice=False) -> _np.ndarray:
     """
     计算 `exp(matvec).dot(psi0)` 或 `exp(- 1j * matvec).dot(psi0)`
     
@@ -81,7 +82,7 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
     """
     assert scale == 1.0 or scale == - 1j, "only scale=1.0 or scale=-1j is supported for now"
     
-    if usecuda is True:
+    if cudadevice:
         assert isinstance(mat, (_np.ndarray, _sparse.spmatrix, _sparse.sparray)), "cuda only support numpy.ndarray or scipy.sparse matrix"
         
         try:
@@ -107,8 +108,8 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
         
         dtype = tc.complex128 if scale == -1j or _np.iscomplexobj(mat) or _np.iscomplexobj(psi0) else tc.float64
         
-        res = expm_multiply(tc.tensor(mat, device='cuda') if isinstance(mat, _np.ndarray) else to_csr(mat, device='cuda'), 
-                            tc.tensor(psi0, device='cuda', dtype=dtype),
+        res = expm_multiply(tc.tensor(mat, device=cudadevice) if isinstance(mat, _np.ndarray) else to_csr(mat, device=cudadevice), 
+                            tc.tensor(psi0, device=cudadevice, dtype=dtype),
                             scale, start=start, stop=stop, num=num, endpoint=endpoint, 
                             traceA=traceA, herm=herm, norm1A=norm1A, hasshifted=hasshifted).cpu()
         
@@ -142,12 +143,25 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
     return _expm_multiply_numba(lo, psi0, scale=scale, start=start, stop=stop, num=num, endpoint=endpoint, traceA=traceA)
     
 
-class evolve_engine_spexpm:
+class EvolveEngine:
+    """            
+    >>> hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
+    >>> evolve_engine = EvolveEngine(hammat, inistate, ts=tlist)
+    >>> obsmatlist = [obs.to_matrix(basis, pauli=pauli, sparse=True) for obs in obslist]
+    >>> res = [[]*len(obslist)]
+    >>> for _ in tlist:
+    >>>     evolve_engine.run()
+    >>>     state = evolve_engine.psi
+    >>>     for i in range(len(obslist)):
+    >>>         value = state.conj().reshape(1,-1) @ (obsmatlist[i] @ state)
+    >>>         res[i].append(value[0,0])
+    >>> return [np.real_if_close(r) for r in res]
+    """
     def __init__(self, ham, init_state, ts):
         if init_state.ndim == 1:
-            self.psi = init_state.reshape(-1, 1)
+            self.psi = init_state.reshape(-1, 1).astype(_np.complex128)
         else:
-            self.psi = init_state
+            self.psi = init_state.astype(_np.complex128)
         try:
             self.csr_mt = ham.tocsr()
         except:
@@ -156,6 +170,11 @@ class evolve_engine_spexpm:
         self.dts = _np.insert(self.dts, 0, ts[0])
         self.evolved_time = 0
         self.cur_step = 0
+    
+    @lru_cache(maxsize=None)
+    def get_evolve_engine(self, dt):
+        from .usenumba.expm_multiply_numba import _evolve_engine
+        return _evolve_engine(self.csr_mt, scale=-1j, t=dt)
 
     def run(self):
         try:
@@ -167,7 +186,8 @@ class evolve_engine_spexpm:
             dt = self.dts[-1]
         self.cur_step += 1
         if dt != 0:
-            self.psi = _sparse.linalg.expm_multiply(-1j * dt * self.csr_mt, self.psi)
+            ee = self.get_evolve_engine(round(dt,14))
+            self.psi = ee(self.psi)
             self.evolved_time += dt
             
             
@@ -219,15 +239,15 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # 类型检查时，导入 torch
     import torch as _tc
 
-def _data_to_GPU(initial_state, eigenvalues, eigenstates, times) -> tuple['_tc.Tensor', '_tc.Tensor', '_tc.Tensor', '_tc.Tensor']:
+def _data_to_GPU(initial_state, eigenvalues, eigenstates, times, device) -> tuple['_tc.Tensor', '_tc.Tensor', '_tc.Tensor', '_tc.Tensor']:
     """
     将数据从 numpy 数组转换为 GPU 上的 torch.Tensor。
     """
     import torch as _tc
-    initial_state = _tc.from_numpy(initial_state).to("cuda")
-    eigenvalues = _tc.from_numpy(eigenvalues).to("cuda")
-    eigenstates = _tc.from_numpy(eigenstates).to("cuda")
-    times = _tc.from_numpy(times).to("cuda")
+    initial_state = _tc.from_numpy(initial_state).to(device)
+    eigenvalues = _tc.from_numpy(eigenvalues).to(device)
+    eigenstates = _tc.from_numpy(eigenstates).to(device)
+    times = _tc.from_numpy(times).to(device)
     return initial_state, eigenvalues, eigenstates, times
 
 def _change_dtype_GPU(eigenstates: '_tc.Tensor', initial_state: '_tc.Tensor') -> tuple['_tc.Tensor', '_tc.Tensor']:
@@ -261,19 +281,19 @@ def _gpu_real_dtype_method(times: '_tc.Tensor', udagger_psi: '_tc.Tensor', eigen
     imag_part = _tc.sin(times_E) * udagger_psi
     return eigenstates @ real_part.T - 1j * (eigenstates @ imag_part.T)
 
-def _in_GPU(initial_state: '_tc.Tensor', eigenvalues: '_tc.Tensor', eigenstates: '_tc.Tensor', times: '_tc.Tensor') -> _np.ndarray:
+def _in_GPU(initial_state: '_tc.Tensor', eigenvalues: '_tc.Tensor', eigenstates: '_tc.Tensor', times: '_tc.Tensor', device) -> _np.ndarray:
     """
     在 GPU 上计算初始态在不同时刻的时间演化态。
     """
     import torch as _tc
-    initial_state, eigenvalues, eigenstates, times = _data_to_GPU(initial_state, eigenvalues, eigenstates, times)
+    initial_state, eigenvalues, eigenstates, times = _data_to_GPU(initial_state, eigenvalues, eigenstates, times, device)
     eigenstates, initial_state = _change_dtype_GPU(eigenstates, initial_state)
     udagger_psi = eigenstates.T.conj() @ initial_state
     _method = _gpu_complex_exp_method if udagger_psi.dtype == _tc.complex128 else _gpu_real_dtype_method
     time_states = _method(times, udagger_psi, eigenstates, eigenvalues)
     return time_states.cpu().numpy()
 
-def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.ndarray, eigenstates: _np.ndarray, times: _np.ndarray) -> _np.ndarray:
+def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.ndarray, eigenstates: _np.ndarray, times: _np.ndarray, *, failback_to_CPU: bool = False, device_name='cuda') -> _np.ndarray:
     """
     基于严格对角化的时间演化
     
@@ -300,8 +320,11 @@ def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.nd
     """
     initial_state = _np.squeeze(initial_state)
     try:
-        time_states = _in_GPU(initial_state, eigenvalues, eigenstates, times)
+        import torch as tc
+        device = tc.device(device_name)
+        time_states = _in_GPU(initial_state, eigenvalues, eigenstates, times, device)
     except Exception as e:
-        print(f"Fallback to CPU due to: {e}")
+        if not failback_to_CPU:
+            raise e
         time_states = _in_CPU(initial_state, eigenvalues, eigenstates, times)
     return time_states

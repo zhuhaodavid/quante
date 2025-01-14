@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-11 18:20:05
+# @Last Modified time: 2025-01-14 22:30:35
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -73,6 +73,12 @@ class TensorTrain:
         self.dtype = Ws[0].dtype
         self.device = Ws[0].device
         self.lognm = lognm if lognm is not None else tc.tensor(0.0, dtype=tc.float64,device=self.device)
+    
+    def __len__(self):
+        return self.length
+    
+    def __getitem__(self, key):
+        return self.data[key]
     
     def add_(self, anotherTT):
         """Tensor Train 的加法，MPO,MPS 都可用
@@ -1258,7 +1264,7 @@ class MPO(TensorTrain):
             Lenv = Lenv @ tf._up_bottom_tr(tsr)
         return tc.trace(Lenv) * tc.exp(self.lognm)
 
-    def dmrg(self, psi0=None):
+    def dmrg(self, psi0=None, **kwargs):
         r"""DMRG 方法求解 MPO 的基态
         
         Returns
@@ -1273,16 +1279,19 @@ class MPO(TensorTrain):
         
         Examples
         --------
-        >>> from quante.torch_utils import tn
-        >>> L = 100
-        >>> ham = qt.generate.operas.heisenberg_operator(L, j=(1, 1, 1))
-        >>> ham = ham.expandxy(pauli=False)
-        >>> H = tn.MPO(ham.automata(L, pauli=False, dtype=np.float64)).to(device='cpu')
-        >>> eng, vec = H.dmrg()
-        >>> print(eng)
-        tensor(-44.1277, dtype=torch.float64)
+        >>> import quante as qt
+        >>> L = 4
+        >>> ham = qt.generate.operas.heisenberg_operator(L=L)
+        >>> show >> 1; ham.gdenergy(k=2)
+        >>> mpo = ham.to_mpo(L=L)
+        >>> eng, psi = mpo.dmrg()
+        >>> psi.lognm *= 0
+
+        激发态 DMRG
+        >>> eng, psi = mpo.dmrg(Ms=[psi])
+        >>> show >> 1; eng
         """
-        return DMRG(self).run2()
+        return DMRG(self, **kwargs).run2()
 
     def tdvp(
             self,
@@ -1333,33 +1342,37 @@ class MPO(TensorTrain):
     
 
 class DMRG:
-    def __init__(self, mpo, psi0=None):
+    def __init__(self, mpo, **kwargs):
         self.mpo = mpo
-        self.nsweep = 5  # 扫描次数
-        self.maxengnum = 2  # 判断收敛的时候使用的能量数目
-        self.restol = 1.e-5  # 收敛精度
-        self.outputlevel = 1  # 输出级别
+        self.Ms = kwargs.get('Ms', None)
+        self.nsweep = kwargs.get('nsweep', 5)  # 扫描次数
+        self.maxengnum = kwargs.get('maxengnum', 2)  # 判断收敛的时候使用的能量数目
+        self.restol = kwargs.get('restol', 1.e-5)  # 收敛精度
+        self.outputlevel = kwargs.get('outputlevel', 1)  # 输出级别
         
         # lanczos 参数
-        self.backend = 'default'  # lanczos 后端
-        self.max_trunc_err = 1.e-14  # lanczos 误差
+        self.backend = kwargs.get('backend', 'default')  # lanczos 后端
+        self.max_trunc_err = kwargs.get('max_trunc_err', 1.e-14)  # lanczos 误差
 
         # mps 更新参数
-        self.svd_alg = 'eig'
-        self.chi_max = [10, 20, 100, 100, 200]  # 奇异值分解的最大 bond dimension
-        self.cutoff = [1E-5]
-        self.svd_min = 1E-10
+        self.svd_alg = kwargs.get('svd_alg', 'eig')
+        self.chi_max = kwargs.get('chi_max', [10, 20, 100, 100, 200])  # 奇异值分解的最大 bond dimension
+        self.cutoff = kwargs.get('cutoff', [1E-5])
+        self.svd_min = kwargs.get('svd_min', 1E-10)
 
-        self.normalize = True  # 是否归一化
+        self.normalize = kwargs.get('normalize', True)  # 是否归一化
         
-        self.psi = MPS.random(len(mpo.data), linkdims=2) if psi0 is None else psi0
+        # 初态
+        self.psi = kwargs.get('psi0', None)
+        if self.psi is None:
+            dtype = kwargs.get('dtype', mpo.dtype)
+            self.psi = MPS.random(len(mpo.data), linkdims=2, dtype=dtype)
         self.psi.orthogonalize_(0)
         assert self.psi.llim == self.psi.rlim == 0 or self.psi.llim == self.psi.rlim == -1
 
         self.N = len(mpo.data)  # 系统大小
         assert self.N == len(self.psi.data), 'MPS 和 MPO 的长度应该相等'
         assert self.N != 1, "MPS 长度不能为 1"
-    
 
     def precheck(self):
         """检查参数的正确性"""
@@ -1373,25 +1386,27 @@ class DMRG:
         elif len(self.cutoff) < self.nsweep:
             new_cutoff = [self.cutoff[-1]] * (self.nsweep - len(self.cutoff))
             self.cutoff.extend(new_cutoff)
-    
 
     def build_projH(self, nsite):
         """构建 projH"""
         oper = self.mpo.copy()
         if self.psi.dtype.is_complex and not self.mpo.dtype.is_complex:
             oper.to(dtype=tc.complex128,device=self.psi.device)
-        projH = ProjMPO(oper, nsite=nsite)
+        if self.Ms is None:
+            projH = ProjMPO(oper, nsite=nsite)
+        else:
+            projH = ProjMPO_MPS.make_proj_mpomps(oper, self.Ms)
         projH.set_position_(self.psi, 0)
         return projH
 
-
     def run1(self):
+        nsite = 1
         self.precheck()
-        projH = self.build_projH(1)
+        projH = self.build_projH(nsite)
         energy_list = []
         for sw in range(self.nsweep):
             sw_time_start = time.time()
-            for pos, drt in projH._sweep_schedule():
+            for pos, drt in DMRG._sweep_schedule(self.N, nsite):
                 # prepare_update_local
                 self.psi.orthogonalize_(pos)
                 projH.set_position_(self.psi, pos)
@@ -1399,7 +1414,7 @@ class DMRG:
                 phi = phi/tc.norm(phi)
                 # solve for the ground state of the effective Hamiltonian
                 lanczos_tol=max(self.svd_min, 0.05*self.max_trunc_err) # todo `lanczos_tol` 有没有更好的选择？
-                energy, phi = projH.solve_ground_state(phi, method=self.backend, lanczos_tol=lanczos_tol)
+                energy, phi = solve_ground_state(projH, phi, method=self.backend, lanczos_tol=lanczos_tol)
                 # update the MPS
                 self.psi.update_single_site_(pos, phi)
             sw_time = time.time() - sw_time_start  # 记录每步的时间
@@ -1415,19 +1430,20 @@ class DMRG:
 
 
     def run2(self):
+        nsite = 2
         self.precheck()
-        projH = self.build_projH(2)
+        projH = self.build_projH(nsite)
         energy_list = []
         for sw in range(self.nsweep):
             sw_time_start = time.time()
-            for pos, drt in projH._sweep_schedule():
+            for pos, drt in DMRG._sweep_schedule(self.N, nsite):
                 # prepare_update_local
                 projH.set_position_(self.psi, pos)
                 phi = tf._full_contract_right_mps2(self.psi.data[pos], self.psi.data[pos + 1])
                 phi = phi/tc.norm(phi)
                 # solve for the ground state of the effective Hamiltonian
                 lanczos_tol=max(self.svd_min, 0.05*self.max_trunc_err) # todo `lanczos_tol` 有没有更好的选择？
-                energy, phi = projH.solve_ground_state(phi, method=self.backend, lanczos_tol=lanczos_tol)
+                energy, phi = solve_ground_state(projH, phi, method=self.backend, lanczos_tol=lanczos_tol)
                 # update the MPS
                 trunc_para = (self.chi_max[sw], self.cutoff[sw], self.svd_min)
                 self.psi.update_two_site_(pos, phi, direction=drt, svd_alg=self.svd_alg, trunc_para=trunc_para, normalize=self.normalize)
@@ -1442,6 +1458,12 @@ class DMRG:
                     break
         return energy * tc.exp(self.mpo.lognm), self.psi
 
+    @staticmethod
+    def _sweep_schedule(L, nsite):
+        for position in range(L - nsite):
+            yield (position, "right")
+        for position in range(L - nsite, -1, -1):
+            yield (position, "left") 
 
 class TDVP:
     def __init__(self, mpo, psi0, time_step, final_time):
@@ -1473,7 +1495,7 @@ class TDVP:
         elif len(self.trunc_cut) < nsweep:
             new_cutoff = [self.trunc_cut[-1]] * (nsweep - len(self.trunc_cut))
             self.trunc_cut.extend(new_cutoff)
- 
+
     def run(self):
         # 参数检查
         nsweeps = int(np.real(self.final_time/self.time_step))
@@ -1531,7 +1553,93 @@ class TDVP:
                 yield current_time/1j, state
 
 
-class ProjMPO:
+class ProjOper:
+    def __init__(self, mid, nsite=2) -> None:
+        self.mid = mid
+        self.lpos = -1
+        self.rpos = self.L = len(mid)
+        self.dtype = mid.dtype
+        self.device = mid.device
+        self.LR = [None] * self.L
+        self.nsite = nsite
+
+    def copy(self:'T') -> 'T':
+        new = self(self.data, nsite=self.nsite)
+        new.lpos = self.lpos
+        new.rpos = self.rpos
+        new.LR = [None if i is None else i.clone() for i in self.LR]
+        new.dtype = self.dtype
+        return new
+
+    def makeL_(self, psi:MPS, k:int):
+        if psi.llim <= k:
+            print("警告：ProjMPO.makeL_(): psi.llim <= k")
+            
+        if k <= self.lpos:
+            # 如果 k 比目前的 lpos 比小，那么就是从右往左移动，不需要重新计算
+            self.lpos = k
+        else:
+            # 否则就是从左向右移动，需要利用 psi 得到新的 Lenv
+            ll = max(self.lpos, -1)
+            Lenv = self.lproj()
+            while ll < k:
+                Lenv = self._contract_left_env(self.mid.data[ll+1].to(dtype=self.dtype, device=self.device), psi.data[ll+1], Lenv)
+                # 检查 Lenv 中是否有 inf, nan:
+                if not tc.isfinite(Lenv).all():
+                    raise ValueError(f"inf or nan in Lenv at {ll}")
+                self.LR[ll + 1] = Lenv
+                ll += 1
+            self.lpos = k
+
+    def makeR_(self, psi:MPS, k:int):
+        if psi.rlim >= k:
+            print("警告：ProjMPO.makeR_(): psi.rlim >= k")
+            
+        if self.rpos <= k:
+            # 如果 rpos 比目前的 k 比小，那么就是从左往右移动，不需要重新计算
+            self.rpos = k
+        else:
+            # 否则就是从右向左移动，需要利用 psi 得到新的 Renv
+            rl = min(self.rpos, len(self.mid.data))
+            Renv = self.rproj()
+            while rl > k:
+                Renv = self._contract_right_env(self.mid.data[rl - 1].to(dtype=self.dtype, device=self.device), psi.data[rl - 1], Renv)
+                # 检查 Lenv 中是否有 inf, nan:
+                if not tc.isfinite(Renv).all():
+                    raise ValueError(f"inf or nan in Lenv at {rl}")
+                self.LR[rl - 1] = Renv
+                rl -= 1
+            self.rpos = k
+
+    def lproj(self):
+        if self.lpos <= -1:
+            ndim = 3 if self.mid[0].ndim == 4 else 2
+            return tc.tensor([1.], dtype=self.dtype, device=self.device).reshape(*[1]*ndim)
+        return self.LR[self.lpos]
+    
+    def rproj(self):
+        if self.rpos >= len(self.mid.data):
+            ndim = 3 if self.mid[0].ndim == 4 else 2
+            return tc.tensor([1.], dtype=self.dtype, device=self.device).reshape(*[1]*ndim)
+        return self.LR[self.rpos]
+     
+    def set_position_(self, psi:MPS, pos:int):
+        self.dtype = psi.data[0].dtype
+        self.makeL_(psi, pos - 1)
+        self.makeR_(psi, pos + self.nsite)
+
+    @property
+    def site_range(self):
+        return range(self.lpos + 1, self.rpos)
+    
+    def set_nsite(self, nsite):
+        self.nsite = nsite
+    
+    def __len__(self):
+        return self.L
+
+
+class ProjMPO(ProjOper):
     def __init__(self, H, nsite=2) -> None:
         """
         ProjMPO 计算并存储 MPO 在由 MPS 定义的基中投影，保留 MPO 的某些站点索引未投影。
@@ -1549,29 +1657,56 @@ class ProjMPO:
                   ↑        ↑
                lpos=2    rpos=5
         """
-        self.lpos:int = -1
-        self.rpos:int = len(H.data)
-        self.nsite:int = nsite
-        self.L = len(H.data)
-        self.mpo:MPO = H
-        self.LR:list = [None] * len(H.data)
-        self.dtype = H.dtype
-        self.device = H.device
-    
-    def copy(self):
-        new = ProjMPO(self.mpo, nsite=self.nsite)
-        new.lpos = self.lpos
-        new.rpos = self.rpos
-        new.LR = [None if i is None else i.clone() for i in self.LR]
-        new.dtype = self.dtype
-        return new
-    
-    def _sweep_schedule(self):
-        for position in range(self.L - self.nsite):
-            yield (position, "right")
-        for position in range(self.L - self.nsite, -1, -1):
-            yield (position, "left")         
-    
+        super().__init__(mid=H, nsite=nsite)
+
+    _contract_left_env = staticmethod(tf._ProjMPO_contract_left_env)
+    _contract_right_env = staticmethod(tf._ProjMPO_contract_right_env)
+
+    def __matmul__(self, v:tc.Tensor) -> tc.Tensor:
+        Lenv, H12, Renv = self.prepare_solve()
+        if self.nsite == 0:
+            return tf._matrix_vector_product0(Lenv, Renv, v)
+        else:
+            return tf._matrix_vector_product(Lenv, H12, Renv, v).reshape(*v.shape)
+
+    def get_matmul_func(self, backend='numpy'):
+        Lenv, H12, Renv = self.prepare_solve()
+        if backend == 'numpy':
+            Lenv = Lenv.numpy()
+            H12 = H12.numpy() if H12 is not None else None
+            Renv = Renv.numpy()
+        if self.nsite == 0:
+            return lambda v: tf._matrix_vector_product0(Lenv, Renv, v)
+        else:
+            return lambda v: tf._matrix_vector_product(Lenv, H12, Renv, v)
+
+    def prepare_solve(self):
+        Lenv = self.lproj()
+        Lenv = Lenv.reshape(Lenv.shape[0], -1).contiguous()
+        
+        if self.nsite == 2:
+            H1 = self.mid.data[self.lpos + 1]
+            H2 = self.mid.data[self.lpos + 2]
+            H12 = tf._prepare_solve_ground_state(H1, H2).contiguous()
+        elif self.nsite == 1:
+            H12 = self.mid.data[self.lpos + 1]
+            d, e, *_ = H12.shape
+            H12 = H12.swapaxes(0,1).reshape(d*e, -1).contiguous()
+        elif self.nsite == 0:
+            H12 = None
+
+        Renv = self.rproj()
+        Renv = Renv.permute([2,1,0])
+        Renv = Renv.reshape(Renv.shape[0], -1).contiguous()
+        return Lenv, H12, Renv
+
+    def to_matrix(self):
+        Lenv, H12, Renv = self.prepare_solve()
+        if H12 is None:
+            return tf.make_matrix0(Lenv, Renv)
+        out = tf.make_matrix(Lenv, H12.to(dtype=self.dtype,device=self.device), Renv)
+        return out
+
     def get_dim(self):
         dimnum = 1
         
@@ -1580,92 +1715,19 @@ class ProjMPO:
             dimnum *= Lenv.shape[0]
         
         for i in range(self.lpos + 1, self.rpos):
-            dimnum *= self.mpo.data[i].shape[1]
+            dimnum *= self.mid.data[i].shape[1]
         
-        if self.rpos < len(self.mpo.data):
+        if self.rpos < len(self.mid.data):
             Renv = self.LR[self.rpos]
             dimnum *= Renv.shape[0]
         
         return dimnum
 
-    def makeL_(self, psi:MPS, k:int):
-        if psi.llim <= k:
-            print("警告：ProjMPO.makeL_(): psi.llim <= k")
-            
-        if k <= self.lpos:
-            # 如果 k 比目前的 lpos 比小，那么就是从右往左移动，不需要重新计算
-            self.lpos = k
-        else:
-            # 否则就是从左向右移动，需要利用 psi 得到新的 Lenv
-            ll = max(self.lpos, -1)
-            Lenv = self.lproj()
-            while ll < k:
-                Lenv = tf._contract_left_env(self.mpo.data[ll+1].to(dtype=self.dtype, device=self.device), psi.data[ll+1], Lenv)
-                # 检查 Lenv 中是否有 inf, nan:
-                if not tc.isfinite(Lenv).all():
-                    raise ValueError(f"inf or nan in Lenv at {ll}")
-                self.LR[ll + 1] = Lenv
-                ll += 1
-            self.lpos = k
+    ##########################################
+    # 以下为 tdvp_sweep_local_ 的实现,
+    # todo 需要重构到 TDVP 中
+    ##########################################
 
-    def lproj(self):
-        if self.lpos <= -1:
-            return tc.tensor([1.], dtype=self.dtype, device=self.device).reshape(1,1,1)
-        return self.LR[self.lpos]
-
-    def makeR_(self, psi:MPS, k:int):
-        if psi.rlim >= k:
-            print("警告：ProjMPO.makeR_(): psi.rlim >= k")
-            
-        if self.rpos <= k:
-            # 如果 rpos 比目前的 k 比小，那么就是从左往右移动，不需要重新计算
-            self.rpos = k
-        else:
-            # 否则就是从右向左移动，需要利用 psi 得到新的 Renv
-            rl = min(self.rpos, len(self.mpo.data))
-            Renv = self.rproj()
-            while rl > k:
-                Renv = tf._contract_right_env(self.mpo.data[rl - 1].to(dtype=self.dtype, device=self.device), psi.data[rl - 1], Renv)
-                # 检查 Lenv 中是否有 inf, nan:
-                if not tc.isfinite(Renv).all():
-                    raise ValueError(f"inf or nan in Lenv at {rl}")
-                self.LR[rl - 1] = Renv
-                rl -= 1
-            self.rpos = k
-
-    def rproj(self):
-        if self.rpos >= len(self.mpo.data):
-            return tc.tensor([1.], dtype=self.dtype, device=self.device).reshape(1,1,1)
-        return self.LR[self.rpos]
-    
-    def set_position_(self, psi:MPS, pos:int):
-        self.dtype = psi.data[0].dtype
-        self.makeL_(psi, pos - 1)
-        self.makeR_(psi, pos + self.nsite)
-    
-    def solve_ground_state(self, v, *, method='default', lanczos_tol=1e-14):
-        if method == 'default':
-            # use ED for small matrix dimensions, but lanczos by default
-            if self.get_dim() < 400:
-                mat = self.to_matrix()
-                E, theta = tc.linalg.eigh(mat)
-                return E[0], theta[:, 0].reshape(*v.shape)
-            else:
-                return self.lanczos_ground(v, tol=lanczos_tol)
-        if method == 'larpack':
-            return self.larpack_ground(v, tol=lanczos_tol)[1:]
-        elif method == 'lanczos':
-            return self.lanczos_ground(v, tol=lanczos_tol)
-        elif method == 'arnoldi':
-            return self.tenpy_arnoldi(v, tol=lanczos_tol)[1:]
-        elif method == 'eigs':
-            mat = self.to_matrix()
-            E, theta = tc.linalg.eig(mat)
-            i = tc.argmax(tc.abs(E))
-            return E[i], theta[:, i].reshape(*v.shape)
-        else:
-            raise ValueError(f"Unknown method: {method}")
-    
     def solve_evolve_state(self, v, delta, *, method='default', lanczos_tol=1e-14):
         if method == 'default':
             # use ED for small matrix dimensions, but lanczos by default
@@ -1685,66 +1747,6 @@ class ProjMPO:
             return self.lanczos_evolve(v, delta, tol=lanczos_tol)
         else:
             raise ValueError(f"Unknown method: {method}")
-        
-    def prepare_solve(self):
-        Lenv = self.lproj()
-        Lenv = Lenv.reshape(Lenv.shape[0], -1).contiguous()
-        
-        if self.nsite == 2:
-            H1 = self.mpo.data[self.lpos + 1]
-            H2 = self.mpo.data[self.lpos + 2]
-            H12 = tf._prepare_solve_ground_state(H1, H2).contiguous()
-        elif self.nsite == 1:
-            H12 = self.mpo.data[self.lpos + 1]
-            d, e, *ijh = H12.shape
-            H12 = H12.swapaxes(0,1).reshape(d*e, -1).contiguous()
-        elif self.nsite == 0:
-            H12 = None
-        
-        Renv = self.rproj()
-        Renv = Renv.permute([2,1,0])
-        Renv = Renv.reshape(Renv.shape[0], -1).contiguous()
-        return Lenv, H12, Renv
-        
-    def to_matrix(self):
-        Lenv, H12, Renv = self.prepare_solve()
-        if H12 is None:
-            return tf.make_matrix0(Lenv, Renv)
-        out = tf.make_matrix(Lenv, H12.to(dtype=self.dtype,device=self.device), Renv)
-        return out
-    
-    def larpack_ground(self, v, tol):
-        s = v.shape
-        Lenv, H12, Renv = self.prepare_solve()
-        if self.nsite == 0:
-            matvec = lambda v: tf._matrix_vector_product0(Lenv.numpy(), Renv.numpy(), v)
-        else:
-            matvec = lambda v: tf._matrix_vector_product(Lenv.numpy(), H12.numpy(), Renv.numpy(), v)
-        val, vec = lanczos_arpack(matvec, v.numpy().reshape(-1), tol=tol)
-        # return tc.tensor(val, dtype=tc.float64, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
-        return matvec, tc.tensor(val, dtype=tc.complex128, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
-    
-
-    def tenpy_arnoldi(self, v, tol):
-        s = v.shape
-        Lenv, H12, Renv = self.prepare_solve()
-        if self.nsite == 0:
-            matvec = lambda v: tf._matrix_vector_product0(Lenv.numpy(), Renv.numpy(), v)
-        else:
-            matvec = lambda v: tf._matrix_vector_product(Lenv.numpy(), H12.numpy(), Renv.numpy(), v)
-        val, vec = tenpy_arnoldi(matvec, v.numpy().reshape(-1))
-        return matvec, tc.tensor(val, dtype=tc.complex128, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
-    
-    
-    def lanczos_ground(self, v, tol=1e-14):
-        Lenv, H12, Renv = self.prepare_solve()
-        if self.nsite == 0:
-            matmul = lambda inipsi: tf._matrix_vector_product0(Lenv, Renv, inipsi)
-        else:
-            matmul = lambda inipsi: tf._matrix_vector_product(Lenv, H12, Renv, inipsi)
-        val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=tol)
-        return val, vec.reshape(*v.shape)
-    
 
     def expm_multiply_evolve(self, v, delta, tol):
         Lenv, H12, Renv = self.prepare_solve()
@@ -1754,7 +1756,7 @@ class ProjMPO:
             trmatul = tf._trace_matrix_vector_product0(Lenv, Renv).item() * delta
             # mat = self.to_matrix()
             # assert np.isclose(mat.trace().item(), trmatul)
-            
+
         else:
             H12 = H12.to(dtype=self.dtype,device=self.device)
             matmul = lambda inipsi: delta * tf._matrix_vector_product(Lenv.numpy(), H12.numpy(), Renv.numpy(), inipsi)
@@ -1762,10 +1764,10 @@ class ProjMPO:
             trmatul = tf._trace_matrix_vector_product(Lenv, H12, Renv).item() * delta
             # mat = self.to_matrix()
             # assert np.isclose(mat.trace().item(), trmatul)
-        
+
         res = expm_multiply(matmul, v.numpy().reshape(-1), traceA=trmatul, herm=rmatmul)
         return tc.tensor(res, dtype=v.dtype, device=v.device).reshape(*v.shape)
-    
+
     def lanczos_evolve(self, v, delta, tol=1e-14):
         Lenv, H12, Renv = self.prepare_solve()
         if self.nsite == 0:
@@ -1775,7 +1777,7 @@ class ProjMPO:
             matmul = lambda inipsi: tf._matrix_vector_product(Lenv, H12, Renv, inipsi)
         vec = lanczos_evolve_state(matmul, v.reshape(-1), delta, tol=tol)
         return vec.reshape(*v.shape)
-      
+
     def tdvp_sweep_(
             self,
             state, # 当前态
@@ -1794,14 +1796,14 @@ class ProjMPO:
         order_sub_time_steps = self.sub_time_steps(order)
         order_sub_time_steps = [i * time_step for i in order_sub_time_steps]
         maxtruncerr = 0.0
-        
+
         # subtime iteration
         for subtime, sub_time_step in enumerate(order_sub_time_steps):
             direction = order_orderings[subtime % 2]
-            
+
             N = len(state.data)
             nsite = self.nsite
-            
+
             if direction == 'forward':
                 if state.rlim != state.llim or state.llim != 0:
                     state.orthogonalize_(0)
@@ -1814,7 +1816,7 @@ class ProjMPO:
                 self.set_position_(state, N - nsite)
             else:
                 raise ValueError(f"direction = {direction} 不合法")
-            
+
             # site iteration
             for b in self.sweep_bonds(direction, N):
                 current_time, trunc_err = self.tdvp_sweep_local_(
@@ -1851,7 +1853,7 @@ class ProjMPO:
             return range(N - self.nsite, -1, -1)
         else:
             raise ValueError(f"direction = {direction} 不合法")
-        
+
     def tdvp_sweep_local_(
             self,
             reverse_step, # bool 时间演化必须是 True，虚时演化 False 回到 DMRG
@@ -1870,52 +1872,52 @@ class ProjMPO:
         # todo 整理这段代码
         nsite = self.nsite
         if nsite == 2:
-            
+
             self.set_position_(state, b)
             reduced_state = tf._full_contract_right_mps2(state.data[b], state.data[b + 1])
-            
+
             reduced_state = self.solve_evolve_state(reduced_state, time_step, method=backend, lanczos_tol=max(cutoff, 0.05*maxtruncerr))
-            
+
             current_time += time_step
             if normalize:
                 nm = tc.norm(reduced_state)
                 reduced_state = reduced_state / nm
                 state.lognm += tc.log(nm)
             ortho = "right" if direction == "forward" else "left"
-            
+
             trunc_err = state.update_two_site_(b, reduced_state, ortho, svd_alg=svd_alg, trunc_para=(maxdim, cutoff, None))
-            
+
             maxtruncerr = max(maxtruncerr, trunc_err.eps)
-            
+
             if not self.is_half_sweep_done(direction, b, len(state.data)) and reverse_step:
                 # Do backwards evolution step
                 b1 = b + 1 if direction == "forward" else b
-                
+
                 bond_reduced_state = state.data[b1]
                 self.nsite = nsite - 1
                 self.set_position_(state, b1)
-                
+
                 bond_reduced_state = self.solve_evolve_state(bond_reduced_state, -time_step, method=backend, lanczos_tol=max(cutoff, 0.05*maxtruncerr))
-                
+
                 current_time -= time_step
                 if normalize:
                     nm = tc.norm(bond_reduced_state)
                     bond_reduced_state = bond_reduced_state / nm
                     state.lognm += tc.log(nm)
-                
+
                 state.update_single_site_(b1, bond_reduced_state)
-                
+
                 self.nsite = nsite
             return current_time, trunc_err
-        
+
         # todo nsite = 1 以及 not reverse_step 的实现
         elif nsite == 1:
             self.set_position_(state, b)
-            
+
             reduced_state = state.data[b].clone()
-            
+
             reduced_state = self.solve_evolve_state(reduced_state, time_step, method=backend, lanczos_tol=max(cutoff, 0.05*maxtruncerr))
-            
+
             current_time += time_step
             if normalize:
                 nm = tc.norm(reduced_state)
@@ -1923,12 +1925,11 @@ class ProjMPO:
                 state.lognm += tc.log(nm)
 
             ortho = "right" if direction == "forward" else "left"
-            
+
             state.update_single_site_(b, reduced_state)
-            
+
             maxtruncerr = maxtruncerr
-            
-            
+
             if not self.is_half_sweep_done(direction, b, len(state.data)):
                 # Do backwards evolution step
                 if reverse_step:
@@ -1938,39 +1939,37 @@ class ProjMPO:
                         state.update_single_site_(b, U)
                         bond_reduced_state = S.reshape(-1,1) * V
                         state.llim += 1
-                        
+
                     elif direction == "backward":
                         b1 = b
                         U, S, V, _ = svd(reduced_state, lr_indx=[[0],[1,2]])
                         state.update_single_site_(b, V)
                         bond_reduced_state = S.reshape(1,-1) * U
                         state.rlim -= 1
-                        
-                        
-                    
+
                     self.nsite = nsite - 1
                     self.set_position_(state, b1)
-                    
+
                     bond_reduced_state = self.solve_evolve_state(bond_reduced_state, -time_step, method=backend, lanczos_tol=max(cutoff, 0.05*maxtruncerr))
-                    
+
                     current_time -= time_step
                     if normalize:
                         nm = tc.norm(bond_reduced_state)
                         bond_reduced_state = bond_reduced_state / nm
                         state.lognm += tc.log(nm)
-                        
+
                     if direction == "forward":
                         nexttsr = state.data[b + 1]
                         nexttsrshape = nexttsr.shape
                         state.data[b + 1] = (bond_reduced_state @ nexttsr.reshape(nexttsrshape[0], -1)).reshape(-1, *nexttsrshape[1:])
                         state.rlim += 1
-                        
+
                     elif direction == "backward":
                         nexttsr = state.data[b - 1]
                         nexttsrshape = nexttsr.shape
                         state.data[b - 1] = (nexttsr.reshape(-1, nexttsrshape[-1]) @ bond_reduced_state).reshape(*nexttsrshape[:-1],-1)
                         state.llim -= 1
-                    
+
                     self.nsite = nsite
                 else:
                     # only move ortho center
@@ -1978,10 +1977,161 @@ class ProjMPO:
                         state.orthogonalize_(b + 1)
                     elif direction == "backward":
                         state.orthogonalize_(b - 1)
-                
-                
+
             return current_time, TruncationError(0.0, 1.0)
 
     def is_half_sweep_done(self, direction, b, N):
         return (direction == "forward" and b == N - self.nsite) or \
                (direction == "backward" and b == 0)
+
+    ##########################################
+    # end
+    ##########################################
+
+class ProjMPS(ProjOper):
+    def __init__(self, M, nsite=2) -> None:
+        """
+        ProjMPS 计算并存储 MPS 在由另一个 MPS 定义的基中投影，保留 MPS 的某些站点索引未投影。
+        可以通过调用 `set_position_` 方法来移动未投影的格点。
+
+        ProjMPS `PH` 表示的网络图示（`PH.set_position_(psi, 3)`）：
+
+        .. code-block:: text
+        
+            o--o--o--o--o--o--o--o--o--o--o M
+            |  |  |  |  |  |  |  |  |  |  |
+            o--o--o-      -o--o--o--o--o--o |psi>
+                  ↑        ↑
+               lpos=2    rpos=5
+        """
+        assert nsite == 2, "Only two-site ProjMPS currently supported"
+        super().__init__(mid=M, nsite=nsite)
+       
+    _contract_left_env = staticmethod(tf._ProjMPS_contract_left_env)
+    _contract_right_env = staticmethod(tf._ProjMPS_contract_right_env)
+
+    def prepare_solve(self):
+        Lenv = self.lproj().T.contiguous()
+        
+        if self.nsite == 2:
+            M1 = self.mid.data[self.lpos + 1]
+            M2 = self.mid.data[self.lpos + 2]
+            M12 = tf._projMPS_prepare_solve_ground_state(M1, M2).contiguous()
+        elif self.nsite == 1:
+            M12 = self.mid.data[self.lpos + 1]
+            d, *_ = M12.shape
+            M12 = M12.reshape(d, -1)
+        elif self.nsite == 0:
+            M12 = None
+        
+        Renv = self.rproj()
+        return Lenv, M12, Renv
+        
+    def __matmul__(self, v:tc.Tensor) -> tc.Tensor:
+        Lenv, M12, Renv = self.prepare_solve()
+        if self.nsite > 0:
+            pm = tf._projMPS_make_vec(Lenv, M12.conj(), Renv)
+        else:
+            pm = Lenv @ Renv
+        scalar = pm.reshape(-1) @ v.reshape(-1)
+        return scalar * pm.reshape(*v.shape).conj()
+    
+    def to_matrix(self):
+        Lenv, M12, Renv = self.prepare_solve()
+        if self.nsite > 0:
+            pm = tf._projMPS_make_vec(Lenv, M12.conj(), Renv)
+        else:
+            pm = Lenv @ Renv
+        return pm.reshape(-1, 1).conj() @ pm.reshape(1, -1)
+
+    def get_matmul_func(self, backend='torch'):
+        Lenv, M12, Renv = self.prepare_solve()
+        if backend == 'numpy':
+            Lenv = Lenv.numpy()
+            M12 = M12.numpy() if M12 is not None else None
+            Renv = Renv.numpy()
+        if self.nsite > 0:
+            pm = tf._projMPS_make_vec(Lenv, M12.conj(), Renv)
+        else:
+            pm = Lenv @ Renv
+        return lambda v: (pm.reshape(-1) @ v.reshape(-1)) * pm.reshape(*v.shape).conj()
+        
+class ProjMPO_MPS:
+    def __init__(self, PH, pm):
+        self.PH:ProjMPO = PH
+        self.pm:list[ProjMPS] = pm
+    
+    @staticmethod
+    def make_proj_mpomps(H, mpsv):
+        return ProjMPO_MPS(ProjMPO(H), [ProjMPS(m) for m in mpsv])
+    
+    def copy(self):
+        return ProjMPO_MPS(self.PH.copy(), [m.copy() for m in self.pm])
+    
+    def set_nsite(self, nsite):
+        self.PH.set_nsite(nsite)
+        for p in self.pm:
+            p.set_nsite(nsite)
+    
+    def __len__(self):
+        return len(self.PH)
+    
+    def site_range(self):
+        return self.PH.site_range()
+    
+    def set_position_(self, psi, pos):
+        self.PH.set_position_(psi, pos)
+        for p in self.pm:
+            p.set_position_(psi, pos)
+    
+    def get_matmul_func(self, backend='torch'):
+        matmul1 = self.PH.get_matmul_func(backend) 
+        matmul2 = [p.get_matmul_func(backend) for p in self.pm]
+        def matmul(v):
+            res = matmul1(v)
+            for matmulp in matmul2:
+                res += matmulp(v)
+            return res
+        return matmul
+
+    def to_matrix(self):
+        mat = self.PH.to_matrix()
+        for p in self.pm:
+            mat += p.to_matrix()
+        return mat
+    
+    def get_dim(self):
+        return self.PH.get_dim()
+        
+
+def solve_ground_state(oper, v, *, method='default', lanczos_tol=1e-14):
+    if method == 'default':
+        # use ED for small matrix dimensions, but lanczos by default
+        if oper.get_dim() < 400:
+            mat = oper.to_matrix()
+            E, theta = tc.linalg.eigh(mat)
+            return E[0], theta[:, 0].reshape(*v.shape)
+        else:
+            s = v.shape
+            matmul = oper.get_matmul_func('torch')
+            val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=lanczos_tol)
+            return val, vec.reshape(*s)
+
+    s = v.shape
+    if method == 'lanczos':  # 自己实现的 lanczos
+        matmul = oper.get_matmul_func('torch')
+        val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=lanczos_tol)
+        return val, vec.reshape(*s)
+
+    matmul = oper.get_matmul_func('numpy')
+    if method == 'larpack': # scipy sparse eigs
+        val, vec = lanczos_arpack(matmul, v.numpy().reshape(-1), tol=lanczos_tol)
+        return tc.tensor(val, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
+
+    elif method == 'arnoldi':  # tenpy arnoldi 用来处理非厄密矩阵时可以考虑 #todo 自己实现
+        val, vec = tenpy_arnoldi(matmul, v.numpy().reshape(-1))
+        return tc.tensor(val, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
+
+    else:
+        raise ValueError(f"Unknown method: {method}")
+
