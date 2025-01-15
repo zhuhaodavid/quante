@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-15 23:54:28
+# @Last Modified time: 2025-01-16 01:39:12
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -1076,7 +1076,7 @@ class MPS(TensorTrain):
     def __repr__(self) -> str:
         return self._get_str()
     
-    def measure(self, operator:Union[tc.Tensor, str], pos:Union[int, list[int, int], None] = None):
+    def measure(self, operator:Union[tc.Tensor, str], pos:Union[int, list[int, int], None] = None, pauli=False):
         """
         局域算符的观测值：
         
@@ -1093,6 +1093,8 @@ class MPS(TensorTrain):
         移动正交中心到 pos 位置，然后将 operator 作用在 pos 位置上
         
         如果不是局域的测量，使用单体门作用后 inner 的方法计算
+        
+        pauli 只当 operator 是 SpinOper 时生效，表示 operator 是 Pauli 矩阵
 
         #todo 使用局部 MPO 的方法来计算非最近邻的观测值
         
@@ -1108,14 +1110,14 @@ class MPS(TensorTrain):
             try:
                 res = 0.
                 for i in range(self.length - 1):
-                    mat = totc(operator.local(i, L=self.length))
-                    if tc.norm(mat) < 1e-14:
+                    mat, hasoper = operator.expandxy(pauli).local(i, L=self.length)
+                    if not hasoper:
                         continue
+                    mat = totc(np.real_if_close(mat), device=self.device)
                     res += self.measure(mat, [i,i+1])
                 return res
             except TypeError as e:
-                raise e
-                # raise "might contain unsupported gate"
+                raise "might contain unsupported gate"
         
         try:
             minpos, maxpos = pos

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-15 23:02:04
+# @Last Modified time: 2025-01-16 01:29:22
 
 import warnings
 import numpy as np
@@ -730,9 +730,9 @@ class SpinOper(Oper):
         
         # * 逐个找到作用在 position 和 position+1 这两个格点上的局域哈密顿量
         for site_position in range(first_position, L-1, increment):
-            local_hamiltonian = self.local(site_position, L)
+            local_hamiltonian, hasoper = self.local(site_position, L)
             # 如果 local_hamiltonian == 0，表示没有算符作用在 site_position 和 site_position+1 这两个格点上，跳过
-            if np.all(local_hamiltonian == 0):
+            if hasoper:
                 continue
             site_positions.append(site_position)
             local_hamiltonians.append(local_hamiltonian)
@@ -752,6 +752,7 @@ class SpinOper(Oper):
         from ..matrix import PAULI_MAT
         
         local_hamiltonian = np.zeros((4,4), dtype=self.dtype)  # 用来储存所有作用到 position 和 position+1 这两个格点上的局域哈密顿量的和
+        hasoper = False  # 用来判断是否有算符作用在 position 和 position+1 这两个格点上
 
         # 遍历哈密顿量中的每一项，找到所有作用在 position 和 position+1 这两个格点上的局域哈密顿量
         for oper_operator, (posn, coef) in self.data.items():
@@ -762,17 +763,21 @@ class SpinOper(Oper):
                 if site_position == 0:
                     for i in indices:
                         local_hamiltonian += coef[i] * np.kron(PAULI_MAT[oper_operator], PAULI_MAT['i'])    
+                        hasoper = True
                 else:
                     for i in indices:
                         local_hamiltonian += (coef[i]/2) * np.kron(PAULI_MAT[oper_operator], PAULI_MAT['i'])
+                        hasoper = True
                 
                 indices = np.where(posn[:, 0] == site_position+1)[0]
                 if site_position+1 == L-1:
                     for i in indices:
                         local_hamiltonian += coef[i] * np.kron(PAULI_MAT['i'], PAULI_MAT[oper_operator])
+                        hasoper = True
                 else:
                     for i in indices:
                         local_hamiltonian += (coef[i]/2) * np.kron(PAULI_MAT['i'], PAULI_MAT[oper_operator])
+                        hasoper = True
                     
             elif position_length == 2:
                 assert all(np.abs(posn[:,1] - posn[:,0]) == 1), "非最最近邻模型不适合用局域门算法求解"
@@ -780,15 +785,17 @@ class SpinOper(Oper):
                 for i in indices:
                     if posn[i, 0] + 1 == posn[i, 1]:
                         local_hamiltonian += coef[i] * np.kron(PAULI_MAT[oper_operator[0]], PAULI_MAT[oper_operator[1]])
+                        hasoper = True
                 
                 indices = np.where(posn[:, 1] == site_position)[0]
                 for i in indices:
                     if posn[i, 0] == posn[i, 1] + 1:
                         local_hamiltonian += coef[i] * np.kron(PAULI_MAT[oper_operator[1]], PAULI_MAT[oper_operator[0]])
+                        hasoper = True
                 
             else:
                 raise NotImplementedError("超两体相互作用模型不适合用局域门算法求解")
-        return local_hamiltonian
+        return local_hamiltonian, hasoper
 
     @classmethod
     def _trotter_suzuki_time_steps(cls, order:str) -> list[float]:
