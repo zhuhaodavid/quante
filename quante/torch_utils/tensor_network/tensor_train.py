@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-15 23:13:17
+# @Last Modified time: 2025-01-15 23:54:28
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -444,7 +444,7 @@ class TensorTrain:
             return self.update_two_site_(pos, W, direction=direction, svd_alg=svd_alg, trunc_para=trunc_para, normalize=normalize, updateS=updateS)
             # -------------------------
 
-    
+
     def _convert_gate(self, gate, site_num):
         if gate.ndim == site_num == 2:
             try:
@@ -1093,6 +1093,8 @@ class MPS(TensorTrain):
         移动正交中心到 pos 位置，然后将 operator 作用在 pos 位置上
         
         如果不是局域的测量，使用单体门作用后 inner 的方法计算
+
+        #todo 使用局部 MPO 的方法来计算非最近邻的观测值
         
         Examples
         --------
@@ -1102,14 +1104,18 @@ class MPS(TensorTrain):
         if isinstance(operator, str):
             operator = tc.tensor(pauli_matrix(operator), device=self.device)
         if not isinstance(operator, tc.Tensor) and pos is None:
+            assert hasattr(operator, "local"), "operator must have local method"
             try:
                 res = 0.
                 for i in range(self.length - 1):
-                    mat = totc(operator.local(i), dtype=tc.complex128)
+                    mat = totc(operator.local(i, L=self.length))
+                    if tc.norm(mat) < 1e-14:
+                        continue
                     res += self.measure(mat, [i,i+1])
                 return res
-            except:
-                raise f"Not understand the operator, {type(operator)}, need Tensor, str or SpinOper with local method"
+            except TypeError as e:
+                raise e
+                # raise "might contain unsupported gate"
         
         try:
             minpos, maxpos = pos
@@ -1419,14 +1425,16 @@ class MPO(TensorTrain):
         >>> import quante as qt
         >>> L = 4
         >>> ham = qt.generate.operas.heisenberg_operator(L=L)
-        >>> show >> 1; ham.gdenergy(k=2)
         >>> mpo = ham.to_mpo(L=L)
         >>> eng, psi = mpo.dmrg()
         >>> psi.lognm *= 0
 
         激发态 DMRG
         >>> eng, psi = mpo.dmrg(Ms=[psi])
-        >>> show >> 1; eng
+        >>> eng
+        
+        对比
+        >>> ham.gdenergy(k=2)
         """
         from .proj_algrithms import DMRG
         return DMRG(self, psi0=psi0, **kwargs).run2()
