@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-15 01:12:48
+# @Last Modified time: 2025-01-15 23:02:04
 
 import warnings
 import numpy as np
@@ -32,6 +32,10 @@ class Oper:
     def __init__(self, data:dict, stype:str) -> None:  # todo 处理费米子系统
         self.data = data
         self.type = stype
+    
+    @property
+    def L(self):
+        return max([np.max(posn) for posn, _ in self.data.values()]) + 1 
     
     def __iadd__(self, oper, add_or_minus=1) -> 'Oper':
         """ self += oper """
@@ -158,10 +162,7 @@ class Oper:
         return newoper
     
     def _check_length(self, L:int) -> None:
-        for _, position, _ in self.each_term():
-            for pos in position:
-                if pos >= L:
-                    raise ValueError(f"position {pos} is larger than L {L}")
+        assert L >= self.L
 
     def show_string_form(self) -> None:
         """打印算符的字符串形式"""
@@ -341,10 +342,10 @@ class SpinOper(Oper):
                 return False
         return True
     
+    @property
     def dtype(self):
-        tmp = self if self._has_expanded() else self.expandxy()
-        for _, (_, coef) in tmp.data.items():
-            if np.iscomplexobj(coef):
+        for name, (_, coef) in self.data.items():
+            if np.iscomplexobj(coef) or 'y' in name:
                 return complex
         return float
     
@@ -484,7 +485,7 @@ class SpinOper(Oper):
 
     def automata(
         self,
-        L: int,
+        L: int | None = None,
         pauli: bool = False,
         d: int = 2,
         S: str = '1/2',
@@ -510,6 +511,10 @@ class SpinOper(Oper):
         >>> basis = (L, pauli=False)
         >>> mpo = ham.automata(L, pauli=False)
         """
+        if L is None:
+            L = self.L
+        else:
+            assert L >= self.L
         from ..matrix import pauli_matrix
         local_matrix_function = lambda x: pauli_matrix(x.upper() if x in ['x', 'y', 'z'] else x, S=S) if pauli else pauli_matrix(x.upper() if x in ['X', 'Y', 'Z'] else x, S=S)
         if L == 1:
@@ -733,16 +738,20 @@ class SpinOper(Oper):
             local_hamiltonians.append(local_hamiltonian)
         return site_positions, local_hamiltonians
 
-    def local(self, site_position:int, L:int) -> np.ndarray:
+    def local(self, site_position:int, L:int | None = None) -> np.ndarray:
         """
         根据 Oper 的实例得到作用在 position 和 position+1 这两个格点上的局域哈密顿量
         
         根据 self 的算符名称决定是否使用 pauli 矩阵。
         """
+        if L is None:
+            L = self.L
+        else:
+            assert L >= self.L
         assert site_position < L-1, "site_position should be less than L-1"
         from ..matrix import PAULI_MAT
         
-        local_hamiltonian = np.zeros((4,4), dtype=self.dtype())  # 用来储存所有作用到 position 和 position+1 这两个格点上的局域哈密顿量的和
+        local_hamiltonian = np.zeros((4,4), dtype=self.dtype)  # 用来储存所有作用到 position 和 position+1 这两个格点上的局域哈密顿量的和
 
         # 遍历哈密顿量中的每一项，找到所有作用在 position 和 position+1 这两个格点上的局域哈密顿量
         for oper_operator, (posn, coef) in self.data.items():
@@ -842,9 +851,11 @@ class SpinOper(Oper):
         # else
         raise ValueError("Unknown order {0!r} for Suzuki Trotter decomposition".format(order))
     
-    def to_mpo(self, L, pauli=False, backend='torch', device=None):
+    def to_mpo(self, L=None, pauli=False, backend='torch', device=None):
+        if L is None:
+            L = max([np.max(posn) for posn, _ in self.data.values()]) + 1 
         if backend == 'torch':
-            from ...torch_utils.tensor_network.tnclass import MPO
+            from ...torch_utils.tensor_network.tensor_train import MPO
             from ...torch_utils.utils import totc 
             import torch as tc # type: ignore
             tt = self.automata(L, pauli=pauli)
@@ -900,7 +911,7 @@ class SpinOper(Oper):
             else:
                 return sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=return_eigenvectors)
 
-    def evolve(self, inistate, tlist, obslist, pauli=False):
+    def evolve(self, inistate, tlist, obslist, L=None, pauli=False):
         """计算观测量演化的示例
 
         Parameters
@@ -934,8 +945,8 @@ class SpinOper(Oper):
         >>> sx_expect = ham.evolve(inistate, times, obslist, pauli=True)
         """
         from ..basis import spin_basis
-
-        L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
+        if L is None:
+            L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
 
         # Method to get evolve expectation values
         basis = spin_basis(L)
@@ -966,9 +977,8 @@ class SpinOper(Oper):
                 evolve_engine = EvolveEngine(hammat0, inistate, ts=tlist, device=device)
                 obsmatlist = [to_csr(obs.to_matrix(basis, pauli=pauli, sparse=True), device=device, dtype=tc.complex128) for obs in obslist]
                 res = [[]*len(obslist)]
-                for _ in tqdm(tlist):
-                    evolve_engine.run()
-                    state = evolve_engine.psi
+                for _ in tqdm(tlist, ascii=True):
+                    state = evolve_engine.run()
                     for i in range(len(obslist)):
                         value = state.conj().reshape(1,-1) @ (obsmatlist[i] @ state)
                         res[i].append(value[0,0].item())
@@ -982,9 +992,8 @@ class SpinOper(Oper):
                 evolve_engine = EvolveEngine(hammat, inistate, ts=tlist)
                 obsmatlist = [obs.to_matrix(basis, pauli=pauli, sparse=True) for obs in obslist]
                 res = [[]*len(obslist)]
-                for _ in tqdm(tlist):
-                    evolve_engine.run()
-                    state = evolve_engine.psi
+                for _ in tqdm(tlist, ascii=True):
+                    state = evolve_engine.run()
                     for i in range(len(obslist)):
                         value = state.conj().reshape(1,-1) @ (obsmatlist[i] @ state)
                         res[i].append(value[0,0])
@@ -1198,9 +1207,13 @@ class SpinOperBuilder:
 
 
 class HeisenbergOper(SpinOper):
-    def __init__(self, L, j=1.0, h=0.0, cyclic=False):
-        self.L = L
-        self.cyclic = cyclic
+    def __init__(self, data, type='s'):
+        super().__init__(data, type=type)
+        
+    @classmethod
+    def _make_spinoper(cls, L, j=1.0, h=0.0, cyclic=False):
+        cls.L = L
+        cls.cyclic = cyclic
         try:
             jx, jy, jz = j # type: ignore
         except TypeError:
@@ -1210,12 +1223,12 @@ class HeisenbergOper(SpinOper):
         except TypeError:
             hz = h
             hx = hy = 0.0
-        self.jx = jx
-        self.jy = jy
-        self.jz = jz
-        self.hx = hx
-        self.hy = hy
-        self.hz = hz
+        cls.jx = jx
+        cls.jy = jy
+        cls.jz = jz
+        cls.hx = hx
+        cls.hy = hy
+        cls.hz = hz
         data = {}
         posn1 = np.arange(0,L, dtype=np.int32).reshape(L,1)
         coef1 = np.ones(L, dtype=np.float64)
@@ -1237,7 +1250,7 @@ class HeisenbergOper(SpinOper):
             data["y"] = (posn1, hy*coef1)
         if hz != 0:
             data["z"] = (posn1, hz*coef1)
-        super().__init__(data)
+        return HeisenbergOper(data)
 
     def energies(self, isinf=False, pauli=False):
         from ...solvable_models.free_fermion import free_fermion as ff
@@ -1245,23 +1258,32 @@ class HeisenbergOper(SpinOper):
         if self.jz == self.hx == self.hy == 0 and not self.cyclic:
             # xy model
             return ff.XY_energies(L=L, jxx=self.jx, jyy=self.jy, hz=self.hz, pauli=pauli)
+        
+            # todo 其它的结论？
+            
+        if np.isinf(L):
+            raise ValueError("Infinite system size is not supported")
         return super().energies(pauli=pauli)
         
 
-    def gdenergy(self, isinf=False, pauli=False, *, k=1):
-        from ...solvable_models.free_fermion import free_fermion as ff
-        L = self.L if not isinf else np.inf
-        if self.hx == self.hy == self.hz == 0 and self.jx == self.jy == self.jz and not np.isinf(L) and self.cyclic and k == 1:
-            print("approximate: ", end='')
-            return ff.XXX_gdenergy_pbc_approx(L) * (4 if pauli else 1)
-        if self.jz == self.hx == self.hy == 0 and not self.cyclic and k == 1:
-            # xy model
-            return ff.XY_gdenergy(L=L, jxx=self.jx, jyy=self.jy, hz=self.hz, pauli=pauli)
-        return super().gdenergy(pauli=pauli, k=k)
+    def gdenergy(self, isinf=False, pauli=False, *, k=1, return_eigenvectors=False):
+        if not return_eigenvectors:
+            from ...solvable_models.free_fermion import free_fermion as ff
+            L = self.L if not isinf else np.inf
+            if self.hx == self.hy == self.hz == 0 and self.jx == self.jy == self.jz and not np.isinf(L) and self.cyclic and k == 1:
+                print("approximate: ", end='')
+                return ff.XXX_gdenergy_pbc_approx(L) * (4 if pauli else 1)
+            if self.jz == self.hx == self.hy == 0 and not self.cyclic and k == 1:
+                # xy model
+                return ff.XY_gdenergy(L=L, jxx=self.jx, jyy=self.jy, hz=self.hz, pauli=pauli)
+            
+            # todo 其它的结论？
+            
+        if np.isinf(L):
+            raise ValueError("Infinite system size is not supported")
+        return super().gdenergy(pauli=pauli, k=k, return_eigenvectors=return_eigenvectors)
     
         
-
-
 def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> HeisenbergOper:
     r"""
     生成 heisenberg 模型的哈密顿量，返回一个 'Oper' 的实例
@@ -1288,4 +1310,4 @@ def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> HeisenbergOper:
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(1.0, 1.0, 0.0), h=0.0)  # xy model
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(0.0, 0.0, 1.0), h=(1.0, 0.0, 0.0))  # ising model
     """
-    return HeisenbergOper(L=L, j=j, h=h, cyclic=cyclic)
+    return HeisenbergOper._make_spinoper(L=L, j=j, h=h, cyclic=cyclic)

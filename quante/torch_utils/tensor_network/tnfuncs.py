@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-14 14:52:25
+# @Last Modified time: 2025-01-15 22:32:35
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -1872,3 +1872,35 @@ def dm_apply_mpo_on_mps(mpo, mps, trunc_para=(None,None,None), normalize=False, 
     mps[0] = R.reshape(1, *mps[0].shape[1:-1], linkdim)
     lognm = lognm + tc.log(nm)
     return lognm, trunc_err_sum
+
+def _mele_contract_left_env(H:tc.Tensor, psi1:tc.Tensor, psi2:tc.Tensor, Lenv:tc.Tensor) -> tc.Tensor:
+    """
+    .. code-block:: text
+        
+        .      ╭-╮     psi1                     ╭-╮       
+        --(i)--┤ ├--(a)--◻--(b)--        --(i)--┤ ├--(b)--
+               │ │       │                      │ │       
+               │ │      (c)                     │ │       
+               │ │       │H                     │ │       
+        --(j)--┤ ├--(d)--◻--(e)--  --->  --(j)--┤ ├--(e)--
+               │ │       │                      │ │       
+               │ │      (f)                     │ │       
+               │ │       │                      │ │       
+        --(k)--┤ ├--(g)--◻--(h)--        --(k)--┤ ├--(h)--
+               ╰-╯     psi2                     ╰-╯       
+     
+    tc.einsum("ijkadg,acb,dcfe,gfh->ijkbeh", Lenv, psi1, H, psi2)
+    """
+    ijk, a, d, g = Lenv.shape
+    a, c, b = psi1.shape
+    g, f, h = psi2.shape
+    d, c, f, e = H.shape
+    
+    # (ijk,a,d,g) -> (ijkad,g) @ (g,f,h) -> (g,fh) = (ijkad,fh)
+    out = Lenv.reshape(-1,g) @ psi2.reshape(g, -1)
+    # (ijkad,fh) -> (ijk,a,df,h) -> (ijk,a,h,df) -> (ijkah,df) @ (d,c,f,e) -> (d,f,c,e) -> (df,ce) = (ijkah,ce)
+    out = out.reshape(ijk,a,-1,h).swapaxes(2,3).reshape(-1, d*f) @ H.swapaxes(1,2).reshape(d*f, -1)
+    # (ijkah,ce) -> (ijk,a,h,c,e) -> (ijk,e,h,a,c) -> (ijkeh,ac) @ (a,c,b) -> (ac,b) = (ijkeh,b)
+    out = out.reshape(ijk,a,h,c,e).permute([0,4,2,1,3]).reshape(-1, a*c) @ psi1.reshape(a*c,-1)
+    
+    return out.reshape(ijk, e, h, b).permute([0,3,1,2])

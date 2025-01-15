@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-01-15 00:42:42
+# # @Last Modified time: 2025-01-15 13:38:32
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
@@ -189,6 +189,7 @@ class EvolveEngine:
             ee = self.get_evolve_engine(round(dt,14))
             self.psi = ee(self.psi)
             self.evolved_time += dt
+        return self.psi
             
             
 # ====================

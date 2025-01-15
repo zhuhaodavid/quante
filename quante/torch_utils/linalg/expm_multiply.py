@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-15 00:52:31
+# @Last Modified time: 2025-01-15 13:37:40
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -150,6 +150,7 @@ class EvolveEngine:
             ee = self.get_evolve_engine(round(dt,14))
             self.psi = ee(self.psi)
             self.evolved_time += dt
+        return self.psi
             
 
 
