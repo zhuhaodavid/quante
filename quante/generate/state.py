@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:25
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-09 17:32:26
+# @Last Modified time: 2025-01-17 16:54:29
 
 """
 生成一些常用的态（`np.ndarray`）
@@ -53,6 +53,12 @@ def basis_state(i, dim, dtype=complex):
     x = _np.zeros(shape, dtype=dtype)
     x[i] = 1.0
     return x
+
+
+def state_from_string(coef:list[float], basis:list[str]):
+    rows = [int(i,2) for i in basis]
+    cols = _np.zeros_like(rows)
+    return _sparse.coo_array((coef, (rows, cols))).tocsr()
 
 
 def product_state(updns:list[str], dtype=float):

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-15 14:50:09
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-15 23:10:54
+# @Last Modified time: 2025-01-18 03:31:28
 
 import time
 import torch as tc
@@ -495,7 +495,7 @@ class DMRG:
         self.psi = kwargs.get('psi0', None)
         if self.psi is None:
             dtype = kwargs.get('dtype', self.mpo.dtype)
-            self.psi = MPS.random(self.N, linkdims=2, dtype=dtype)
+            self.psi = MPS.from_random(self.N, bond_dim=2, dtype=dtype)
         self.psi.orthogonalize_(0)
         assert self.psi.llim == self.psi.rlim == 0 or self.psi.llim == self.psi.rlim == -1
         assert self.N == len(self.psi.data), 'MPS 和 MPO 的长度应该相等'

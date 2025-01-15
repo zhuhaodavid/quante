@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: dzwang
 # @Date:   2024-12-11 11:26:43
-# @Last Modified by:   dzwang
-# @Last Modified time: 2025-01-05 00:22:33
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-01-17 17:37:49
 import numpy as np 
 from ...generate.state import spin_down, spin_up, xplus, xminus, yplus, yminus
 from ..linalg.decomposer import qr_tensor, rq_tensor, svd_tensor
@@ -160,17 +160,17 @@ class MPS(BaseMPSExpectationValue):
         >>> import quante as qt
         >>> L = 10
         >>> state = ["spin_up", "spin_down"] * (L//2)
-        >>> psi = qt.tensor_new.networks.MPS.from_product_state(L, state)
+        >>> psi = qt.tensor.networks.MPS.from_product_state(L, state)
         """
         str_to_vector = {
-            "spin_down": spin_down(dtype),
-            "spin_up": spin_up(dtype),
-            "xplus": xplus(dtype),
-            "xminus": xminus(dtype),
-            "yplus": yplus(),
-            "yminus": yminus()
+            "spin_down": spin_down,
+            "spin_up": spin_up,
+            "xplus": xplus,
+            "xminus": xminus,
+            "yplus": yplus,
+            "yminus": yminus
         }
-        Ws = [str_to_vector[site].reshape(1, -1, 1) for site in state]
+        Ws = [str_to_vector[site](dtype).reshape(1, -1, 1) for site in state]
         return cls(Ws, llim=0, rlim=L-1, bc=bc)
 
 

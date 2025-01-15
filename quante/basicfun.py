@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-14 21:20:58
+# @Last Modified time: 2025-01-17 22:37:34
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -422,9 +422,11 @@ class PrintLn:
     >>> a = "this is a test"
     >>> show(a)
     a: this is a test
-    >>> show>>1; a
+    >>> a;-show
     a: this is a test
-    >>> show>>1; L, a = 1, 2 
+    >>> L, a = 1, 2 ;show>>1
+    L: 1; a: 2
+    >>> _= L, a ;show>>1
     L: 1; a: 2
     
     Warning
@@ -473,19 +475,27 @@ class PrintLn:
         # 解析为 AST 并查找函数调用的节点
         tree = _ast.parse(source_code)
 
-        node = next(_itertools.islice(_ast.walk(tree), 4, 5))
+        node = next(_itertools.islice(_ast.walk(tree), 3, 4))
+
+        local_vars = callFrame.f_locals
+        global_vars = callFrame.f_globals
+
+        if _ast.unparse(node) == "_":
+            values = eval("_", global_vars, local_vars)
+            node = next(_itertools.islice(_ast.walk(tree), 4, 5))
+            if isinstance(node, _ast.Tuple):
+                paraname = PrintLn.split_expression(_ast.unparse(node)[1:-1])
+                return paraname, values
+            else:
+                paraname = PrintLn.split_expression(_ast.unparse(node))
+                return paraname, (values, )
+
         if isinstance(node, _ast.Tuple):
             paraname = PrintLn.split_expression(_ast.unparse(node)[1:-1])
         else:
             paraname = PrintLn.split_expression(_ast.unparse(node))
-
-        values = []
-        local_vars = callFrame.f_locals
-        global_vars = callFrame.f_globals
-        for arg in paraname:
-            values.append(eval(arg, global_vars, local_vars))
         
-        return paraname, values
+        return paraname, [eval(arg, global_vars, local_vars) for arg in paraname]
 
     @staticmethod
     def split_expression(expression):

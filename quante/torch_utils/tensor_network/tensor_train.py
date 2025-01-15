@@ -2,29 +2,27 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-15 23:13:17
-# @Description:
-#   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
-#   特点：
-#     - 此文件只调用 ./tensor/tcfuncs.py，以及 numpy 和 torch 中的函数，不依赖不调用 ./tensor 中任何其他的文件
-#     - 这个文件中的函数可以被 ./tensor/tcfuncs.py 之外的其他文件调用。
-#     - 此文件中的所有函数都应保证梯度链。
-#     - 所有改变类本身的方法都会加上下划线，如 `orthogonalize_`，`canonicalize_`，`apply_gate_2b_` 等
+# @Last Modified time: 2025-01-18 03:36:34
+
+# TODO: swap sites, apply submpo
 
 import torch as tc
-from typing import Union, TypeVar, Optional
-
+from typing import Union, TypeVar, Optional, TYPE_CHECKING, Generator
 
 from . import tnfuncs as tf
-from ..utils import clone, totc
-from ..linalg.decomp import eigh, qr, rq, svd, truncate
+from ..utils import clone, promote_dtype
+from ..linalg.decomp import eigh, qr, rq, svd, truncate, log_or_not_update
 from ...generate.matrix import pauli_matrix
 from ...linalg.svd_robust import TruncationError
 
 import math as math_lib # type: ignore
 import copy
+import warnings
 import numpy as np
 from numbers import Number
+
+if TYPE_CHECKING:  # 类型检查时，导入 torch
+    from quimb.tensor.tensor_1d import MatrixProductOperator, MatrixProductState
 
 __all__ = [
     "MPS",
@@ -52,10 +50,10 @@ class TensorTrain:
         assert isinstance(Ws[0], tc.Tensor)
         self.data = Ws
         
-        self.length = len(Ws) if L is None else L
-        assert self.length == len(Ws) or self.length == tc.inf
+        self.L = len(Ws) if L is None else L
+        assert self.L == len(Ws) or self.L == tc.inf
         
-        if self.length == tc.inf:
+        if self.L == tc.inf:
             self.llim, self.rlim = None, None
         else:
             self.llim = llim if llim is not None else 0
@@ -67,7 +65,7 @@ class TensorTrain:
         self.lognm = lognm if lognm is not None else tc.tensor(0.0, dtype=tc.float64,device=self.device)
     
     def __len__(self):
-        return self.length
+        return self.L
     
     def __getitem__(self, key):
         return self.data[key]
@@ -444,13 +442,13 @@ class TensorTrain:
             return self.update_two_site_(pos, W, direction=direction, svd_alg=svd_alg, trunc_para=trunc_para, normalize=normalize, updateS=updateS)
             # -------------------------
 
-    
+
     def _convert_gate(self, gate, site_num):
         if gate.ndim == site_num == 2:
             try:
                 gate = gate.reshape(2,2,2,2)
-            except:
-                raise ValueError("failed to reshape gate")
+            except Exception as e:
+                raise ValueError(f"gate shape error: {gate.shape}, site_num={site_num}")
         if isinstance(gate, np.ndarray):
             if np.iscomplexobj(gate):
                 gate = tc.tensor(gate, dtype=tc.complex128, device=self.device)
@@ -475,10 +473,7 @@ class TensorTrain:
             self.move_rlim_(pos)
         
         assert self.data[pos].ndim == phi.ndim, "维度不匹配"
-        if normalize:
-            nm = tc.norm(phi)
-            phi = phi / nm
-            self.lognm += tc.log(nm)
+        phi, self.lognm = log_or_not_update(phi, self.lognm, use_log=normalize)
         self.data[pos] = phi
         return TruncationError(0.0, 1.0)
     
@@ -525,19 +520,13 @@ class TensorTrain:
             direction = "right" if direction is None else direction
             if direction == "right":
                 U, A = qr(W.reshape(*Wshape[:halfdim],-1))
-                if normalize:
-                    nm = tc.norm(A)
-                    A = A / nm
-                    self.lognm += tc.log(nm)
+                A, self.lognm = log_or_not_update(A, self.lognm, use_log=normalize)
                 self.data[pos] = U
                 self.data[pos + 1] = A.reshape(-1,*Wshape[halfdim:])
                 self.llim = self.rlim = pos + 1
             elif direction == "left":
                 B, U = rq(W.reshape(-1,*Wshape[halfdim:]))
-                if normalize:
-                    nm = tc.norm(B)
-                    B = B / nm
-                    self.lognm += tc.log(nm)
+                B, self.lognm = log_or_not_update(B, self.lognm, use_log=normalize)
                 self.data[pos] = B.reshape(*Wshape[:halfdim],-1)
                 self.data[pos + 1] = U
                 self.llim = self.rlim = pos
@@ -549,11 +538,7 @@ class TensorTrain:
         elif svd_alg == "svd":
             assert pertube is None, 'svd method do not need pertube'
             W1, S, W2, trunc_err = svd(W, trunc_para=trunc_para)
-            
-            if normalize:
-                nm = tc.norm(S)
-                S = S / nm
-                self.lognm += tc.log(nm)
+            S, self.lognm = log_or_not_update(S, self.lognm, use_log=normalize)
                 
             direction = "right" if direction is None else direction
             if direction == "right":
@@ -596,16 +581,12 @@ class TensorTrain:
             self.data[pos + 1] = W2
             if direction == "right":
                 self.llim = self.rlim = pos + 1
-                if normalize:
-                    nm = tc.norm(self.data[pos + 1])
-                    self.data[pos + 1] = self.data[pos + 1] / nm
-                    self.lognm += tc.log(nm)
+                self.data[pos + 1], self.lognm = log_or_not_update(
+                    self.data[pos + 1], self.lognm, use_log=normalize)
             elif direction == "left":
                 self.llim = self.rlim = pos
-                if normalize:
-                    nm = tc.norm(self.data[pos])
-                    self.data[pos] = self.data[pos] / nm
-                    self.lognm += tc.log(nm)
+                self.data[pos], self.lognm = log_or_not_update(
+                    self.data[pos], self.lognm, use_log=normalize)
             else:
                 raise ValueError(f"not defined direction (left or right): {direction}")
             
@@ -664,33 +645,24 @@ class TensorTrain:
             W * W2.dagger()  =  S1^-1 * theta * W2.dagger()  =   --◇---▷--◇-
                                                                 S1^-1  W1  S
         """
-        next_pos = pos + 1 if self.length != tc.inf else (pos + 1) % len(self.data)
+        next_pos = pos + 1 if self.L != tc.inf else (pos + 1) % len(self.data)
         theta = self.Ss[pos].reshape(-1, *[1]*(W.ndim-1)) * W
         if svd_alg == 'eig':
             
-            if self.length == tc.inf:
+            if self.L == tc.inf:
                 raise ValueError("正则形式下不能使用 eig 方法，因为证明中用到了本征分解的正确性，如果有裁剪，会破坏左正交的正交性质，并且在无穷长链中，这个破坏会逐步积累。")
             
             W1, S, W2, err, direction = eigh(theta, trunc_para=trunc_para)
             if direction == 'right':
                 _, W2 = rq(W2)
-            # W1, S, W2, err = svd(theta, trunc_para=trunc_para)
             W1 = self._resume_canonical(W, W2)
-            # print(pos, tc.dist(W1.reshape(W1.shape[0],-1) @ W1.reshape(W1.shape[0],-1).H, tc.eye(W1.shape[0])))
-            # print((W1.reshape(W1.shape[0],-1) @ W1.reshape(W1.shape[0],-1).H).numpy())
-            if normalize:
-                nm = tc.norm(W1)/W1.shape[0]**0.5
-                W1 = W1 / nm
-                self.lognm += tc.log(nm)
+            W1, self.lognm = log_or_not_update(W1, self.lognm, use_log=normalize)
             self.data[pos] = W1
             self.Ss[next_pos], self.data[next_pos] = S/tc.norm(S) if normalize else S, W2
             
         elif svd_alg == 'svd':
             W1, S, W2, err = svd(theta, trunc_para=trunc_para)
-            if normalize:
-                nm = tc.norm(S)
-                S = S / nm
-                self.lognm += tc.log(nm)
+            S, self.lognm = log_or_not_update(S, self.lognm, use_log=normalize)
             self.Ss[next_pos] = S
             self.data[pos] = W1 * S / self.Ss[pos].reshape(-1,*([1]*(W1.ndim-1)))
             self.data[next_pos] = W2
@@ -702,7 +674,6 @@ class TensorTrain:
                 self,
                 Ws_mpo: 'MPO',
                 trunc_para: tuple[int, float, float] = (None, None, None),
-                dtype = tc.complex128,
                 updateS = True,
                 normalize = False,
             ) -> T:
@@ -790,6 +761,7 @@ class TensorTrain:
             self.data[0] = Ws_mpo.data[0] @ self.data[0]
             return None
         
+        dtype = self.dtype
         Lenvs = self._dm_get_Lenvs(Ws_mpo.data, self.data, n, dtype)
         
         V = tc.tensor(1., dtype=dtype, device=self.device).reshape(1,1)
@@ -877,7 +849,56 @@ class TensorTrain:
 
     def _apply_mpo_step(self, W, ψ):
         return {MPS: tf._apply_on_mps_step, MPO: tf._apply_on_mpo_step}[type(self)](W, ψ)
-{}
+
+    def apply_submpo_(self, 
+                      Ws_mpo: 'MPO',
+                      start_pos: int,
+                      trunc_para: tuple[int, float, float] = (None, None, None),
+                      updateS = True,
+                      normalize = False):
+        assert start_pos + Ws_mpo.L <= self.L, "超出范围"
+        self.move_llim_(start_pos)
+        self.move_rlim_(start_pos + Ws_mpo.L - 1)
+        subtt = self._partition(start_pos, start_pos + Ws_mpo.L - 1)
+        subtt.apply_mpo_naive_(Ws_mpo)
+        self._put_back_(subtt, start_pos)
+    
+    def _partition(self, startpos, endpos):
+        newtt, newSs = [], []
+        for i in range(startpos, endpos+1):
+            newtt.append(self.data[i].clone())
+            newSs.append(self.Ss[i].clone() if self.Ss[i] is not None else None)
+        
+        subL = endpos - startpos + 1
+        if self.llim < startpos:
+            warnings.warn("llim is out of range")
+            newllim = -1
+        elif self.llim > endpos:
+            warnings.warn("llim is out of range")
+            newllim = subL
+        else:
+            newllim = self.llim - startpos
+        
+        if self.rlim < startpos:
+            warnings.warn("rlim is out of range")
+            newrlim = -1
+        elif self.rlim > endpos:
+            warnings.warn("rlim is out of range")
+            newrlim = subL
+        else:
+            newrlim = self.rlim - startpos
+        
+        return type(self)(Ws=newtt, Ss=newSs, llim=newllim, rlim=newrlim)
+    
+    def _put_back_(self, subtt, startpos):
+        for i, W in enumerate(subtt.data):
+            self.data[startpos+i] = W
+        for i, S in enumerate(subtt.Ss):
+            self.Ss[startpos+i] = S
+        self.llim = subtt.llim + startpos
+        self.rlim = subtt.rlim + startpos
+        self.lognm += subtt.lognm
+
 
 class MPS(TensorTrain):
     def __init__(
@@ -890,8 +911,8 @@ class MPS(TensorTrain):
         L: int = None,
     ):
         super().__init__(Ws, Ss, llim, rlim, lognm, L=L)
-    
-    def to_quimb(self):
+
+    def to_quimb(self) -> 'MatrixProductState':
         import quimb.tensor as qtn
         if self.data[0].shape[0] == 1:
             res = []
@@ -905,8 +926,8 @@ class MPS(TensorTrain):
         # 周期 MPO
         res = [self.data[i].cpu().numpy().swapaxes(1,2) for i in range(len(self.data))]
         return np.exp(self.lognm).item() * qtn.MatrixProductState(res)
-    
-    def to_itensor(self):
+
+    def to_itensor(self) -> None:
         from ...basicfun import save_hdf5
         assert self.data[0].shape[0] == 1, "只能处理 OBC"
         data_dict = {}
@@ -922,7 +943,7 @@ class MPS(TensorTrain):
             else:
                 tsr[f"W{i+1}"] = self.data[i].cpu().numpy()
         data_dict["lognm"] = self.lognm.cpu().numpy()
-        data_dict["L"] = self.length
+        data_dict["L"] = self.L
         data_dict["linkdim"] = [self.data[i].shape[0] for i in range(1, len(self.data))]
         data_dict["code"] = """    sites, psi = 
     jldopen("mpsdata.h5", "r") do file
@@ -949,17 +970,51 @@ class MPS(TensorTrain):
         save_hdf5("mpsdata.h5", '/', data_dict)
     
     @classmethod
-    def random(cls, N:int, linkdims:Union[list[int], int], localdim=2, dtype=tc.complex128, device=None):
-        if isinstance(linkdims, int):
-            linkdims_ = [1] + [linkdims] * (N - 1) + [1]
+    def from_quimb(cls, mps: 'MatrixProductState', device='cpu') -> 'MPS':
+        device = 'cpu'
+        siteinds = mps.outer_inds()
+
+        inds1, inds2 = mps[0].inds
+        if inds1 in siteinds:
+            siteind, linkind1 = inds1, inds2
         else:
-            assert len(linkdims) == N + 1
-            linkdims_ = linkdims
-        ψ1 = [tc.randn(linkdims_[i],localdim,linkdims_[i+1], dtype=dtype, device=device) for i in range(N)]
+            siteind, linkind1 = inds2, inds1
+        tmp = mps[0].to_dense([siteind], [linkind1])
+
+        res = [tc.tensor(tmp, device=device).reshape(1, *tmp.shape)]
+        for j in range(1, mps.L-1):
+            inds1 = mps[j].inds
+            for i in inds1:
+                if i in siteinds:
+                    siteind = i
+                elif i != linkind1:
+                    linkind2 = i
+            tmp = mps[j].to_dense([linkind1], [siteind], [linkind2])
+            res.append(tc.tensor(tmp, device=device))
+            linkind1 = linkind2
+
+        inds1, inds2 = mps[-1].inds
+        if inds1 in siteinds:
+            siteind, linkind1 = inds1, inds2
+        else:
+            siteind, linkind1 = inds2, inds1
+        tmp = mps[-1].to_dense([linkind1], [siteind])
+        res.append(tc.tensor(tmp, device=device).reshape(*tmp.shape, 1))
+        return MPS(res)
+        
+        
+    @classmethod
+    def from_random(cls, L:int, bond_dim:Union[list[int], int], phys_dim=2, dtype=tc.complex128, device=None) -> 'MPS':
+        if isinstance(bond_dim, int):
+            linkdims_ = [1] + [bond_dim] * (L - 1) + [1]
+        else:
+            assert len(bond_dim) == L + 1
+            linkdims_ = bond_dim
+        ψ1 = [tc.randn(linkdims_[i],phys_dim,linkdims_[i+1], dtype=dtype, device=device) for i in range(L)]
         return cls(ψ1)
     
     @classmethod
-    def product_state(cls, state: list[str], dtype=tc.float64, device=None):
+    def from_product_state(cls, state: list[str], dtype=tc.float64, device=None) -> 'MPS':
         Ws = [tc.zeros(1, 2, 1, dtype=dtype, device=device) for i in range(len(state))]
         for i, s in enumerate(state):
             if s == "up":
@@ -971,7 +1026,7 @@ class MPS(TensorTrain):
         return cls(Ws)
     
     @classmethod
-    def ghz_state(cls, L, dtype=tc.float64, device=None):
+    def from_ghz_state(cls, L, dtype=tc.float64, device=None) -> 'MPS':
         if L == 1:
             return MPS([tc.tensor([[[1./np.sqrt(2)], [1./np.sqrt(2)]]], device=device)])
         tsr1 = tc.zeros(1, 2, 2, dtype=dtype, device=device)
@@ -990,7 +1045,7 @@ class MPS(TensorTrain):
         return cls(Ws, lognm=-tc.log(tc.tensor(2., device=device))/2)
 
     @classmethod
-    def w_state(cls, L, which='up', dtype=tc.float64, device=None):
+    def from_w_state(cls, L, which='up', dtype=tc.float64, device=None) -> 'MPS':
         if L == 1:
             return MPS([tc.tensor([[[1./np.sqrt(2)], [1./np.sqrt(2)]]], device=device)])
         i = 0 if which == 'up' else 1
@@ -1076,7 +1131,7 @@ class MPS(TensorTrain):
     def __repr__(self) -> str:
         return self._get_str()
     
-    def measure(self, operator:Union[tc.Tensor, str], pos:Union[int, list[int, int], None] = None):
+    def measure(self, operator:Union[tc.Tensor, str, list[str], list[tc.Tensor]], pos:Union[int, list[int, int], None] = None, pauli=False, logscale=False) -> tc.Tensor:
         """
         局域算符的观测值：
         
@@ -1094,47 +1149,169 @@ class MPS(TensorTrain):
         
         如果不是局域的测量，使用单体门作用后 inner 的方法计算
         
+        pauli 只当 operator 是 SpinOper 时生效，表示 operator 是 Pauli 矩阵
+
+        #todo 使用局部 MPO 的方法来计算非最近邻的观测值
+        
         Examples
         --------
-        >>> vec.measure("z", i)
-        >>> vec.measure("zz", [i,i+1])
+        >>> 𝜓.measure('z', 0)
+        >>> 𝜓.measure('xx', 0)
+        >>> 𝜓.measure('xix', 0)
+        >>> 𝜓.measure('xx+yy', 0)
+        >>> 𝜓.measure('xx+yy', 0)
+        >>> 𝜓.measure(qt.generate.pauli_matrix('xx'), 0)
+        >>> 𝜓.measure(np.random.randn(4,4), 0)
+        >>> 𝜓.measure(op.xx(0,1) + op.yy(0,1))
+        >>> 𝜓.measure(op.heisenberg_operator(L))
+        >>> 𝜓.measure(qtc.MPO.from_random(L=2, bond_dim=2, dtype=tc.float64), 0)
         """
-        if isinstance(operator, str):
-            operator = tc.tensor(pauli_matrix(operator), device=self.device)
-        if not isinstance(operator, tc.Tensor) and pos is None:
-            try:
-                res = 0.
-                for i in range(self.length - 1):
-                    mat = totc(operator.local(i), dtype=tc.complex128)
-                    res += self.measure(mat, [i,i+1])
-                return res
-            except:
-                raise f"Not understand the operator, {type(operator)}, need Tensor, str or SpinOper with local method"
-        
-        try:
-            minpos, maxpos = pos
-        except TypeError:
-            minpos = maxpos = pos
-        dim = 1
-        for i in range(minpos, maxpos+1):
-            dim *= self.data[i].shape[1]
-        assert operator.shape[0] == operator.shape[1] == dim, "operator shape is not match"
-        
-        if self.is_canonical_form():
-            contracted_tsr = self.Ss[minpos].reshape(-1, *([1]*(self.data[0].ndim-1))) * self.data[minpos]
-        else:
-            self.orthogonalize_(minpos)
-            contracted_tsr = self.data[minpos]
+        # -------- 单体门观测 --------
+        if isinstance(operator, list):
+            assert len(operator) == len(pos), f'长度需要一致, operator = {operator}, pos = {pos}'
+            assert len(pos) == len(set(pos)), f'位置必须唯一, pos = {pos}'
+            argpos = np.argsort(pos)
+            newpos, newlocalmat = [], []
+            for i in argpos:
+                p = pos[i]
+                newpos.append(p)
+                o = operator[i]
+                if isinstance(o, str):
+                    assert len(o) == 1, f'str 形式只支持单体门， o = {o}'
+                    local_mat = tc.tensor(pauli_matrix(o), device=self.device)
+                elif isinstance(o, np.ndarray):
+                    local_mat = tc.tensor(o, device=self.device)
+                else:
+                    local_mat = o
+                assert isinstance(local_mat, tc.Tensor), f'operator 必须是 Tensor 或 str, type = {type(local_mat)}'
+                assert local_mat.shape[0] == self.data[pos[i]].shape[1], 'list 形式只支持单体门'
+                newlocalmat.append(local_mat)
             
-        for i in range(minpos+1, maxpos+1):
-            contracted_tsr = tf._full_contract_right_mps(contracted_tsr, self.data[i])
+            firstpos, lastpos = newpos[0], newpos[-1]
+            if self.is_canonical_form():
+                firstdata = self.Ss[firstpos].reshape(-1, 1, 1) * self.data[firstpos]
+            else:
+                self.move_llim_(firstpos)
+                self.move_rlim_(newpos[-1])
+                firstdata = self.data[firstpos]
+            
+            firstdata, mat = promote_dtype(firstdata, newlocalmat[0])
+            Lenv = tf._ProjMPS_contract_left_env(firstdata, 
+                        tf._local_apply(firstdata, mat), 
+                        tc.eye(firstdata.shape[0], dtype=self.dtype, device=self.device))
+            
+            lognm = tc.tensor(0., dtype=self.dtype, device=self.device)
+            ct = 1
+            for i in range(firstpos+1, lastpos+1):
+                if i in newpos:
+                    Lenv, data, mat = promote_dtype(Lenv, self.data[i], newlocalmat[ct])
+                    Lenv = tf._ProjMPS_contract_left_env(data,
+                        tf._local_apply(data, mat), Lenv)
+                    ct += 1
+                else:
+                    Lenv, data = promote_dtype(Lenv, self.data[i])
+                    Lenv = tf._ProjMPS_contract_left_env(data, data, Lenv)
+                Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+            
+            if logscale:
+                return tc.log(Lenv.trace()) + self.lognm * 2
+            return Lenv.trace() * tc.exp(self.lognm)**2
+            
+        if isinstance(operator, str):
+            nop, npos = [], []
+            for i, o in enumerate(operator):
+                if o == 'I' or o == 'i':
+                    continue
+                if o not in ['x', 'y', 'z', 'X', 'Y', 'Z', 
+                             'I', 'i', 'p', 'P', 'm', 'M']:
+                    break
+                nop.append(o)
+                npos.append(i + pos)
+            else:
+                return self.measure(nop, npos, logscale=logscale)
+            operator = pauli_matrix(operator)
+
+        # -------- 局域门 --------
+        if isinstance(operator, np.ndarray):
+            operator = tc.tensor(operator, device=self.device)
+            
+        if isinstance(operator, tc.Tensor):
+            minpos = pos
+            dim = 1
+            for maxpos in range(pos, self.L):
+                dim *= self.data[maxpos].shape[1]
+                if dim == operator.shape[0]:
+                    break
+            else:
+                raise ValueError("operator shape is not match")
+            
+            if self.is_canonical_form():
+                contracted_tsr = self.Ss[minpos].reshape(-1, 1, 1) * self.data[minpos]
+            else:
+                self.orthogonalize_(minpos)
+                contracted_tsr = self.data[minpos]
+            for i in range(minpos+1, maxpos+1):
+                contracted_tsr = tf._full_contract_right_mps(contracted_tsr, self.data[i])
+            res = contracted_tsr.conj().reshape(-1) @ tf._local_apply(contracted_tsr, operator).reshape(-1)
+            if logscale:
+                return self.lognm * 2 + tc.log(res)
+            return tc.exp(self.lognm*2) * res
         
-        dtype = tc.complex128 if contracted_tsr.dtype.is_complex or operator.dtype.is_complex else tc.float64
-        contracted_tsr = contracted_tsr.to(dtype=dtype,device=self.device)
-        operator = operator.to(dtype=dtype,device=self.device)
+        # -------- 部分 MPO --------
+        from ...generate.operas import SpinOper
+        if isinstance(operator, SpinOper):
+            assert pos is None, "pos must be None when operator is SpinOper"
+            # 如果 operator 只包含一项
+            if (len(operator.data) == 1 and 
+                list(operator.data.values())[0][0].shape[0] == 1):
+                nop, npos = [], []
+                for i, j in zip(list(operator.data.keys())[0], 
+                                list(operator.data.values())[0][0][0]):
+                    if i == 'I':
+                        continue
+                    nop.append(i.upper() if pauli else i.lower())
+                    npos.append(j)
+                return self.measure(nop, npos, logscale=logscale)
+            
+            #!! 利用两体门，非最近邻的可以通过 swap 变换到最近邻，但是否更有效率？
+            # assert hasattr(operator, "local"), "operator must have local method"
+            # try:
+            #     res = 0.
+            #     for i in range(self.L - 1):
+            #         mat, hasoper = operator.expandxy(pauli).local(i, L=self.L)
+            #         if not hasoper:
+            #             continue
+            #         mat = totc(np.real_if_close(mat), device=self.device)
+            #         res += self.measure(mat, [i,i+1])
+            #     return res
+            # except TypeError as e:
+            #     raise "might contain unsupported gate"
+            
+            # 利用 MPO 方法
+            pos, operator = operator._minimal_shift()
+            operator = operator.to_mpo(pauli=pauli, backend='torch', device=self.device)
         
-        res = contracted_tsr.conj().reshape(-1) @ tf._local_apply(contracted_tsr, operator).reshape(-1)
-        return tc.exp(self.lognm*2) * res
+        if isinstance(operator, MPO):
+            if self.is_canonical_form():
+                firstdata = self.Ss[pos].reshape(-1, 1, 1) * self.data[pos]
+            else:
+                self.move_llim_(pos)
+                self.move_rlim_(pos + operator.L - 1)
+                firstdata = self.data[pos]
+            Lenv = tf._mele_init_left_env(operator.data[0], firstdata.conj(), firstdata)
+            lognm = tc.tensor(0., dtype=self.dtype, device=self.device)
+            for i in range(1, operator.L):
+                Lenv = tf._mele_contract_left_env(operator.data[i], self.data[pos+i].conj(), self.data[pos+i], Lenv)
+                Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+            a, b, c, d = Lenv.shape
+            assert a==1 and c == 1, "should be 1"
+            trLenv = Lenv.reshape(b,d).trace()
+            if logscale:
+                return tc.log(trLenv) + self.lognm * 2 + operator.lognm
+            return trLenv * tc.exp(self.lognm)**2 * tc.exp(operator.lognm)
+
+        raise ValueError(f"operator type {type(operator)} is not supported")
+ 
     
     def _apply_1b_gate(self, pos, gate_1b):
         gate_1b = self._convert_gate(gate_1b, 1)
@@ -1142,7 +1319,7 @@ class MPS(TensorTrain):
 
     def _apply_2b_gate(self, pos, gate_2b):
         gate_2b = self._convert_gate(gate_2b, 2)
-        next_pos = pos + 1 if self.length != tc.inf else (pos + 1) % len(self.data)
+        next_pos = pos + 1 if self.L != tc.inf else (pos + 1) % len(self.data)
         W1, W2 = self.data[pos], self.data[next_pos]
         return tf._apply_2b_gate_mps(W1, W2, gate_2b)
 
@@ -1158,23 +1335,23 @@ class MPO(TensorTrain):
         L: int = None,
     ):
         super().__init__(Ws, Ss, llim, rlim, lognm, L=L)
-    
-    def to_quimb(self):
+
+    def to_quimb(self) -> 'MatrixProductOperator':
         import quimb.tensor as qtn
         if self.data[0].shape[0] == 1:
             res = []
             a,b,c,d = self.data[0].shape
-            res.append(self.data[0].cpu().numpy().reshape(b,c,d).transpose([2,1,0]))
+            res.append(self.data[0].cpu().numpy().reshape(b,c,d).transpose([2,0,1]))
             for i in range(1,len(self.data)-1):
-                res.append(self.data[i].cpu().numpy().transpose([0,3,2,1]))
+                res.append(self.data[i].cpu().numpy().transpose([0,3,1,2]))
             a,b,c,d = self.data[-1].shape
-            res.append(self.data[-1].cpu().numpy().reshape(a,b,c).swapaxes(1,2))
+            res.append(self.data[-1].cpu().numpy().reshape(a,b,c))
             return np.exp(self.lognm).item() * qtn.MatrixProductOperator(res)
         # 周期 MPO
         res = [self.data[i].cpu().numpy().transpose([0,3,1,2]) for i in range(len(self.data))]
         return np.exp(self.lognm).item() * qtn.MatrixProductOperator(res)
-    
-    def to_itensor(self):
+
+    def to_itensor(self) -> None:
         from ...basicfun import save_hdf5
         assert self.data[0].shape[0] == 1, "只能处理 OBC"
         data_dict = {}
@@ -1190,7 +1367,7 @@ class MPO(TensorTrain):
             else:
                 tsr[f"W{i+1}"] = self.data[i].cpu().numpy()
         data_dict["lognm"] = self.lognm.cpu().numpy()
-        data_dict["L"] = self.length
+        data_dict["L"] = self.L
         data_dict["linkdim"] = [self.data[i].shape[0] for i in range(1, len(self.data))]
         data_dict["code"] = """    sites, Hs = 
     jldopen("mpodata.h5", "r") do file
@@ -1217,36 +1394,56 @@ class MPO(TensorTrain):
         save_hdf5("mpodata.h5", '/', data_dict)
 
     @classmethod
-    def random(cls, N:int, linkdims:Union[list[int], int], phydim:int=2, dtype=tc.complex128, device=None):
-        if isinstance(linkdims, int):
-            linkdims_ = [1] + [linkdims] * (N - 1) + [1]
-        else:
-            assert len(linkdims) == N + 1
-            linkdims_ = linkdims
-        Ws = [tc.randn(linkdims_[i], phydim, phydim, linkdims_[i+1], dtype=dtype, device=device) for i in range(N)]
-        return cls(Ws)
-    
+    def from_quimb(cls, mpo: 'MatrixProductOperator', device='cpu', upper='k', lower='b') -> 'MPO':
+        linkinds = [i for i in mpo[0].inds if (
+            not i.startswith(lower) and not i.startswith(upper)
+            )][0]
+        tmp = mpo[0].to_dense([f'{upper}0'], [f'{lower}0'], [linkinds])
+        res = [tc.tensor(tmp, device=device).reshape(1, *tmp.shape)]
+
+        for j in range(1, mpo.L-1):
+            linkinds_ = [i for i in mpo[j].inds if (
+                not i.startswith(lower) and not i.startswith(upper)
+                and i != linkinds
+                )][0]
+            tmp = mpo[j].to_dense([linkinds], [f'{upper}{j}'], [f'{lower}{j}'], [linkinds_])
+            res.append(tc.tensor(tmp, device=device))
+            linkinds = linkinds_
+
+        tmp = mpo[-1].to_dense([linkinds], [f'{upper}{mpo.L-1}'], [f'{lower}{mpo.L-1}'])
+        res.append(tc.tensor(tmp, device=device).reshape(*tmp.shape, 1))
+        return MPO(res)
+
     @classmethod
-    def heisenberg(cls, L, j=1, h=0, cyclic=False, pauli=True, device=None):
+    def from_random(cls, L:int, bond_dim:Union[list[int], int], phys_dim:int=2, dtype=tc.complex128, device=None) -> 'MPO':
+        if isinstance(bond_dim, int):
+            linkdims_ = [1] + [bond_dim] * (L - 1) + [1]
+        else:
+            assert len(bond_dim) == L + 1
+            linkdims_ = bond_dim
+        Ws = [tc.randn(linkdims_[i], phys_dim, phys_dim, linkdims_[i+1], dtype=dtype, device=device) for i in range(L)]
+        return cls(Ws)
+
+    @classmethod
+    def from_heisenberg(cls, L, j=1, h=0, cyclic=False, pauli=True, device=None) -> 'MPO':
         from ...generate.operas import heisenberg_operator
         ham = heisenberg_operator(L, j=j, h=h, cyclic=cyclic)
-        npmpo = ham.automata(L=L, pauli=pauli)
-        return cls([tc.tensor(i,device=device) for i in npmpo])
-    
+        return ham.to_mpo(pauli=pauli, backend='torch', device=device)
+
     @classmethod
-    def eye(cls, L, local_dims=2, dtype=tc.float64, device=None):
+    def from_eye(cls, L, phys_dim=2, dtype=tc.float64, device=None) -> 'MPO':
         eyempo = [None] * L
-        if isinstance(local_dims, int):
-            local_dims = [local_dims] * L
+        if isinstance(phys_dim, int):
+            phys_dim = [phys_dim] * L
         for i in range(L):
-            dim = local_dims[i]
+            dim = phys_dim[i]
             eyempo[i] = tc.eye(dim, dtype=dtype, device=device).reshape(1, dim, dim, 1)
         return cls(eyempo)
-    
-    def from_oper(cls, ham, L, pauli=True, device=None):
-        npmpo = ham.automata(L=L, pauli=pauli)
-        return cls([tc.tensor(i,device=device) for i in npmpo])
-    
+
+    @classmethod
+    def from_oper(cls, ham, L, pauli=True, device=None) -> 'MPO':
+        return ham.to_mpo(L, pauli=pauli, backend='torch', device=device)
+
     def _get_str(self, full=False):
         out1 = self.__class__.__name__ +";  " + str(self.data[0].dtype) + ";  " + f"norm: {self.norm():.3e}" + ";  " + f"maxbonddim: {self.maxbonddim()}" + ";  " + f"device: {self.device.type}"  + ";\n"
         L = len(self.data)
@@ -1310,10 +1507,10 @@ class MPO(TensorTrain):
         out4 += "\n"
         out = out1 + out2 + out3 + out6 + out4 + out5
         return out
-        
+
     def show(self, full=False):
         print(self._get_str(full=full))
-    
+
     def __repr__(self) -> str:
         return self._get_str()
 
@@ -1338,9 +1535,9 @@ class MPO(TensorTrain):
             except TypeError:
                 gate = self._convert_gate(gate, 1)
                 return tf._local_apply2(self.data[pos], gate, gate)
-    
+
     def _apply_2b_gate(self, pos, gate_2b):
-        next_pos = pos + 1 if self.length != tc.inf else (pos + 1) % len(self.data)
+        next_pos = pos + 1 if self.L != tc.inf else (pos + 1) % len(self.data)
         
         if isinstance(gate_2b, (tc.Tensor, np.ndarray)):
             gate_2b = self._convert_gate(gate_2b, 2)
@@ -1363,16 +1560,21 @@ class MPO(TensorTrain):
                 gate = self._convert_gate(gate, 2)
                 return tf._apply_2b_gate_mpo_from_topbottom(self.data[pos], self.data[next_pos], gate, gate)
 
-    def mele(self, y, x):
+    def mele(self, y, x, logscale=False):
         """
         Compute ⟨y|A|x⟩ = ⟨y|Ax⟩
         """
-        Lenv = tc.tensor(1., dtype=self.dtype, device=self.device).reshape(1,1,1,1)
-        for i in range(self.length):
+        Lenv = tf._mele_init_left_env(self.data[0], y.data[0].conj(), x.data[0])
+        # Lenv = tc.tensor(1., dtype=self.dtype, device=self.device).reshape(1,1,1,1)
+        lognm = tc.tensor(0., dtype=self.dtype, device=self.device)
+        for i in range(1, self.L):
             Lenv = tf._mele_contract_left_env(self.data[i], y.data[i].conj(), x.data[i], Lenv)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
         a, *_ = Lenv.shape
+        if logscale:
+            return tc.log(Lenv.reshape(a,a).trace()) + self.lognm + x.lognm + y.lognm
         return Lenv.reshape(a,a).trace() * tc.exp(self.lognm) * tc.exp(x.lognm) * tc.exp(y.lognm)
-    
+
     def diag_inner(self, mps):
         return tf.diagonal_inner(self.data, mps.data)
     
@@ -1401,7 +1603,7 @@ class MPO(TensorTrain):
             Lenv = Lenv @ tf._up_bottom_tr(tsr)
         return tc.trace(Lenv) * tc.exp(self.lognm)
 
-    def dmrg(self, psi0=None, **kwargs):
+    def dmrg(self, psi0=None, **kwargs) -> tuple[float, MPS]:
         r"""DMRG 方法求解 MPO 的基态
         
         Returns
@@ -1419,19 +1621,21 @@ class MPO(TensorTrain):
         >>> import quante as qt
         >>> L = 4
         >>> ham = qt.generate.operas.heisenberg_operator(L=L)
-        >>> show >> 1; ham.gdenergy(k=2)
         >>> mpo = ham.to_mpo(L=L)
         >>> eng, psi = mpo.dmrg()
         >>> psi.lognm *= 0
 
         激发态 DMRG
         >>> eng, psi = mpo.dmrg(Ms=[psi])
-        >>> show >> 1; eng
+        >>> eng
+        
+        对比
+        >>> ham.gdenergy(k=2)
         """
         from .proj_algrithms import DMRG
         return DMRG(self, psi0=psi0, **kwargs).run2()
 
-    def tdvp(self, init: MPS, final_time: Number, time_step: Number, **kwargs):
+    def tdvp(self, init: MPS, final_time: Number, time_step: Number, **kwargs) -> Generator[tuple[Union[float, complex], MPS], None, None]:
         r"""利用 tdvp 方法求解时间演化
 
         计算 `exp( time_step * H ) | init >`
