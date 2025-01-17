@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-16 01:29:22
+# @Last Modified time: 2025-01-17 15:37:51
 
 import warnings
 import numpy as np
@@ -520,7 +520,7 @@ class SpinOper(Oper):
         if L == 1:
             tmp = np.sum(c*local_matrix_function(i) for i, _, c in self.each_term())
             return [tmp.reshape(1,*tmp.shape,1)]
-        from ...tensor_old.automata import automata_mpo
+        from ..automata import automata_mpo
         hlocals, positions, coefficients = self.expandxy(pauli=pauli).split_data()
         coefficients = np.real_if_close(coefficients)
 
