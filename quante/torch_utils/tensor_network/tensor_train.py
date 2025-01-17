@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-16 01:39:12
+# @Last Modified time: 2025-01-17 17:24:28
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -52,10 +52,10 @@ class TensorTrain:
         assert isinstance(Ws[0], tc.Tensor)
         self.data = Ws
         
-        self.length = len(Ws) if L is None else L
-        assert self.length == len(Ws) or self.length == tc.inf
+        self.L = len(Ws) if L is None else L
+        assert self.L == len(Ws) or self.L == tc.inf
         
-        if self.length == tc.inf:
+        if self.L == tc.inf:
             self.llim, self.rlim = None, None
         else:
             self.llim = llim if llim is not None else 0
@@ -67,7 +67,7 @@ class TensorTrain:
         self.lognm = lognm if lognm is not None else tc.tensor(0.0, dtype=tc.float64,device=self.device)
     
     def __len__(self):
-        return self.length
+        return self.L
     
     def __getitem__(self, key):
         return self.data[key]
@@ -664,11 +664,11 @@ class TensorTrain:
             W * W2.dagger()  =  S1^-1 * theta * W2.dagger()  =   --◇---▷--◇-
                                                                 S1^-1  W1  S
         """
-        next_pos = pos + 1 if self.length != tc.inf else (pos + 1) % len(self.data)
+        next_pos = pos + 1 if self.L != tc.inf else (pos + 1) % len(self.data)
         theta = self.Ss[pos].reshape(-1, *[1]*(W.ndim-1)) * W
         if svd_alg == 'eig':
             
-            if self.length == tc.inf:
+            if self.L == tc.inf:
                 raise ValueError("正则形式下不能使用 eig 方法，因为证明中用到了本征分解的正确性，如果有裁剪，会破坏左正交的正交性质，并且在无穷长链中，这个破坏会逐步积累。")
             
             W1, S, W2, err, direction = eigh(theta, trunc_para=trunc_para)
@@ -922,7 +922,7 @@ class MPS(TensorTrain):
             else:
                 tsr[f"W{i+1}"] = self.data[i].cpu().numpy()
         data_dict["lognm"] = self.lognm.cpu().numpy()
-        data_dict["L"] = self.length
+        data_dict["L"] = self.L
         data_dict["linkdim"] = [self.data[i].shape[0] for i in range(1, len(self.data))]
         data_dict["code"] = """    sites, psi = 
     jldopen("mpsdata.h5", "r") do file
@@ -1109,8 +1109,8 @@ class MPS(TensorTrain):
             assert hasattr(operator, "local"), "operator must have local method"
             try:
                 res = 0.
-                for i in range(self.length - 1):
-                    mat, hasoper = operator.expandxy(pauli).local(i, L=self.length)
+                for i in range(self.L - 1):
+                    mat, hasoper = operator.expandxy(pauli).local(i, L=self.L)
                     if not hasoper:
                         continue
                     mat = totc(np.real_if_close(mat), device=self.device)
@@ -1150,7 +1150,7 @@ class MPS(TensorTrain):
 
     def _apply_2b_gate(self, pos, gate_2b):
         gate_2b = self._convert_gate(gate_2b, 2)
-        next_pos = pos + 1 if self.length != tc.inf else (pos + 1) % len(self.data)
+        next_pos = pos + 1 if self.L != tc.inf else (pos + 1) % len(self.data)
         W1, W2 = self.data[pos], self.data[next_pos]
         return tf._apply_2b_gate_mps(W1, W2, gate_2b)
 
@@ -1198,7 +1198,7 @@ class MPO(TensorTrain):
             else:
                 tsr[f"W{i+1}"] = self.data[i].cpu().numpy()
         data_dict["lognm"] = self.lognm.cpu().numpy()
-        data_dict["L"] = self.length
+        data_dict["L"] = self.L
         data_dict["linkdim"] = [self.data[i].shape[0] for i in range(1, len(self.data))]
         data_dict["code"] = """    sites, Hs = 
     jldopen("mpodata.h5", "r") do file
@@ -1348,7 +1348,7 @@ class MPO(TensorTrain):
                 return tf._local_apply2(self.data[pos], gate, gate)
     
     def _apply_2b_gate(self, pos, gate_2b):
-        next_pos = pos + 1 if self.length != tc.inf else (pos + 1) % len(self.data)
+        next_pos = pos + 1 if self.L != tc.inf else (pos + 1) % len(self.data)
         
         if isinstance(gate_2b, (tc.Tensor, np.ndarray)):
             gate_2b = self._convert_gate(gate_2b, 2)
@@ -1376,7 +1376,7 @@ class MPO(TensorTrain):
         Compute ⟨y|A|x⟩ = ⟨y|Ax⟩
         """
         Lenv = tc.tensor(1., dtype=self.dtype, device=self.device).reshape(1,1,1,1)
-        for i in range(self.length):
+        for i in range(self.L):
             Lenv = tf._mele_contract_left_env(self.data[i], y.data[i].conj(), x.data[i], Lenv)
         a, *_ = Lenv.shape
         return Lenv.reshape(a,a).trace() * tc.exp(self.lognm) * tc.exp(x.lognm) * tc.exp(y.lognm)

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-15 22:32:35
+# @Last Modified time: 2025-01-17 17:42:53
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -323,8 +323,7 @@ def _full_contract_right_mpo(res: tc.Tensor, Wsi: tc.Tensor):
     res = res.reshape(-1, d) @ Wsi.reshape(d, -1)
     # (a,b,c,e,f,g) -> (a,b,e,c,f,g) -> (a,be,cf,g)
     return (
-        res.reshape(a, b, c, e, f, g)
-        .permute([0, 1, 3, 2, 4, 5])
+        res.reshape(a, b, c, e, f, g).swapaxes(2,3)
         .reshape(a, b * e, c * f, g)
     )
 
