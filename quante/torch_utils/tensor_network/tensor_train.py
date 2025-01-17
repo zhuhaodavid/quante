@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-10 21:48:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-17 17:24:28
+# @Last Modified time: 2025-01-17 18:16:44
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将关于 MPS/MPO 的功能集中到一个类中
 #   特点：
@@ -949,7 +949,7 @@ class MPS(TensorTrain):
         save_hdf5("mpsdata.h5", '/', data_dict)
     
     @classmethod
-    def random(cls, N:int, linkdims:Union[list[int], int], localdim=2, dtype=tc.complex128, device=None):
+    def from_random(cls, N:int, linkdims:Union[list[int], int], localdim=2, dtype=tc.complex128, device=None):
         if isinstance(linkdims, int):
             linkdims_ = [1] + [linkdims] * (N - 1) + [1]
         else:
@@ -959,7 +959,7 @@ class MPS(TensorTrain):
         return cls(ψ1)
     
     @classmethod
-    def product_state(cls, state: list[str], dtype=tc.float64, device=None):
+    def from_product_state(cls, state: list[str], dtype=tc.float64, device=None):
         Ws = [tc.zeros(1, 2, 1, dtype=dtype, device=device) for i in range(len(state))]
         for i, s in enumerate(state):
             if s == "up":
@@ -971,7 +971,7 @@ class MPS(TensorTrain):
         return cls(Ws)
     
     @classmethod
-    def ghz_state(cls, L, dtype=tc.float64, device=None):
+    def from_ghz_state(cls, L, dtype=tc.float64, device=None):
         if L == 1:
             return MPS([tc.tensor([[[1./np.sqrt(2)], [1./np.sqrt(2)]]], device=device)])
         tsr1 = tc.zeros(1, 2, 2, dtype=dtype, device=device)
@@ -990,7 +990,7 @@ class MPS(TensorTrain):
         return cls(Ws, lognm=-tc.log(tc.tensor(2., device=device))/2)
 
     @classmethod
-    def w_state(cls, L, which='up', dtype=tc.float64, device=None):
+    def from_w_state(cls, L, which='up', dtype=tc.float64, device=None):
         if L == 1:
             return MPS([tc.tensor([[[1./np.sqrt(2)], [1./np.sqrt(2)]]], device=device)])
         i = 0 if which == 'up' else 1
@@ -1166,7 +1166,7 @@ class MPO(TensorTrain):
         L: int = None,
     ):
         super().__init__(Ws, Ss, llim, rlim, lognm, L=L)
-    
+
     def to_quimb(self):
         import quimb.tensor as qtn
         if self.data[0].shape[0] == 1:
@@ -1181,7 +1181,7 @@ class MPO(TensorTrain):
         # 周期 MPO
         res = [self.data[i].cpu().numpy().transpose([0,3,1,2]) for i in range(len(self.data))]
         return np.exp(self.lognm).item() * qtn.MatrixProductOperator(res)
-    
+
     def to_itensor(self):
         from ...basicfun import save_hdf5
         assert self.data[0].shape[0] == 1, "只能处理 OBC"
@@ -1225,7 +1225,7 @@ class MPO(TensorTrain):
         save_hdf5("mpodata.h5", '/', data_dict)
 
     @classmethod
-    def random(cls, N:int, linkdims:Union[list[int], int], phydim:int=2, dtype=tc.complex128, device=None):
+    def from_random(cls, N:int, linkdims:Union[list[int], int], phydim:int=2, dtype=tc.complex128, device=None):
         if isinstance(linkdims, int):
             linkdims_ = [1] + [linkdims] * (N - 1) + [1]
         else:
@@ -1233,16 +1233,15 @@ class MPO(TensorTrain):
             linkdims_ = linkdims
         Ws = [tc.randn(linkdims_[i], phydim, phydim, linkdims_[i+1], dtype=dtype, device=device) for i in range(N)]
         return cls(Ws)
-    
+
     @classmethod
-    def heisenberg(cls, L, j=1, h=0, cyclic=False, pauli=True, device=None):
+    def from_heisenberg(cls, L, j=1, h=0, cyclic=False, pauli=True, device=None):
         from ...generate.operas import heisenberg_operator
         ham = heisenberg_operator(L, j=j, h=h, cyclic=cyclic)
-        npmpo = ham.automata(L=L, pauli=pauli)
-        return cls([tc.tensor(i,device=device) for i in npmpo])
-    
+        return ham.to_mpo(pauli=pauli, backend='torch', device=device)
+
     @classmethod
-    def eye(cls, L, local_dims=2, dtype=tc.float64, device=None):
+    def from_eye(cls, L, local_dims=2, dtype=tc.float64, device=None):
         eyempo = [None] * L
         if isinstance(local_dims, int):
             local_dims = [local_dims] * L
@@ -1250,11 +1249,11 @@ class MPO(TensorTrain):
             dim = local_dims[i]
             eyempo[i] = tc.eye(dim, dtype=dtype, device=device).reshape(1, dim, dim, 1)
         return cls(eyempo)
-    
+
+    @classmethod
     def from_oper(cls, ham, L, pauli=True, device=None):
-        npmpo = ham.automata(L=L, pauli=pauli)
-        return cls([tc.tensor(i,device=device) for i in npmpo])
-    
+        return ham.to_mpo(L, pauli=pauli, backend='torch', device=device)
+
     def _get_str(self, full=False):
         out1 = self.__class__.__name__ +";  " + str(self.data[0].dtype) + ";  " + f"norm: {self.norm():.3e}" + ";  " + f"maxbonddim: {self.maxbonddim()}" + ";  " + f"device: {self.device.type}"  + ";\n"
         L = len(self.data)
@@ -1318,10 +1317,10 @@ class MPO(TensorTrain):
         out4 += "\n"
         out = out1 + out2 + out3 + out6 + out4 + out5
         return out
-        
+
     def show(self, full=False):
         print(self._get_str(full=full))
-    
+
     def __repr__(self) -> str:
         return self._get_str()
 
@@ -1346,7 +1345,7 @@ class MPO(TensorTrain):
             except TypeError:
                 gate = self._convert_gate(gate, 1)
                 return tf._local_apply2(self.data[pos], gate, gate)
-    
+
     def _apply_2b_gate(self, pos, gate_2b):
         next_pos = pos + 1 if self.L != tc.inf else (pos + 1) % len(self.data)
         
@@ -1380,7 +1379,7 @@ class MPO(TensorTrain):
             Lenv = tf._mele_contract_left_env(self.data[i], y.data[i].conj(), x.data[i], Lenv)
         a, *_ = Lenv.shape
         return Lenv.reshape(a,a).trace() * tc.exp(self.lognm) * tc.exp(x.lognm) * tc.exp(y.lognm)
-    
+
     def diag_inner(self, mps):
         return tf.diagonal_inner(self.data, mps.data)
     
