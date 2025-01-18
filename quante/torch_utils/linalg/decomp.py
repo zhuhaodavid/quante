@@ -2,12 +2,20 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-11 17:22:27
+# @Last Modified time: 2025-01-18 00:46:29
 
 
 import numpy as np
 from ...linalg.svd_robust import TruncationError
 import torch as tc
+
+def log_or_not_update(data, lognm, use_log):
+    if use_log:
+        nm = tc.norm(data)
+        data /= nm
+        lognm += tc.log(nm)
+        return data, lognm
+    return data, lognm
 
 
 def truncate(S, chi_max=None, svd_min=None, trunc_cut=None):

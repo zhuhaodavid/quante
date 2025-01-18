@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-17 15:37:51
+# @Last Modified time: 2025-01-18 14:48:28
 
 import warnings
 import numpy as np
@@ -298,6 +298,12 @@ class Oper:
     def trotter_gates(self) -> None:
         raise NotImplementedError("Subclasses should implement this.")
 
+    def _minimal_shift(self):
+        l = min([np.min(posn) for posn, _ in self.data.values()])
+        newdata = {}
+        for oper, (posn, coef) in self.data.items():
+            newdata[oper] = (posn-l, coef)
+        return l, SpinOper(newdata)
 
 
 class SpinOper(Oper):
@@ -732,7 +738,7 @@ class SpinOper(Oper):
         for site_position in range(first_position, L-1, increment):
             local_hamiltonian, hasoper = self.local(site_position, L)
             # 如果 local_hamiltonian == 0，表示没有算符作用在 site_position 和 site_position+1 这两个格点上，跳过
-            if hasoper:
+            if not hasoper:
                 continue
             site_positions.append(site_position)
             local_hamiltonians.append(local_hamiltonian)
@@ -857,6 +863,7 @@ class SpinOper(Oper):
             return steps * N_steps
         # else
         raise ValueError("Unknown order {0!r} for Suzuki Trotter decomposition".format(order))
+    
     
     def to_mpo(self, L=None, pauli=False, backend='torch', device=None):
         if L is None:

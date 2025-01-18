@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-25 22:20:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-16 01:31:04
+# @Last Modified time: 2025-01-18 14:51:14
 
 # 梯度下降的工具
 
@@ -17,6 +17,14 @@ if tc.cuda.is_available():
 else:
     device = tc.device("cpu")
 
+def promote_dtype(*datas):
+    """将输入数据类型转换为相同的类型
+    """
+    if any(data.dtype.is_complex for data in datas):
+        dtype = tc.complex128
+    else:
+        dtype = tc.float64
+    return [data.to(dtype=dtype) for data in datas]
 
 def open_grad(tensors: list | tc.Tensor) -> None:
     """打开梯度

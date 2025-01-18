@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-17 17:42:53
+# @Last Modified time: 2025-01-18 14:51:07
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -14,7 +14,7 @@
 import torch as tc
 
 from ..utils import clone
-from ..linalg.decomp import qr, svd, truncate, rq
+from ..linalg.decomp import qr, svd, truncate, rq, log_or_not_update
 from ...linalg.svd_robust import TruncationError
 
 __all__ = [
@@ -443,9 +443,7 @@ def tn_inner(
         lognm = 0.0
         for i in range(1, len(Ws2)):
             Lenv = _inner_step(Lenv, Ws1[i], Ws2[i])
-            nm = tc.norm(Lenv)
-            Lenv /= nm
-            lognm += tc.log(nm)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=True)
         return _trace_Lenv(Lenv), lognm
         
     for i in range(1, len(Ws2)):
@@ -477,9 +475,7 @@ def tn_norm(Ws: list[tc.Tensor], lognorm=False) -> tc.Tensor:
         lognm = 0.0
         for i in range(1, len(Ws)):
             Lenv = _inner_step(Lenv, Ws[i], Ws[i].conj())
-            nm = tc.norm(Lenv)
-            Lenv /= nm
-            lognm += tc.log(nm)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=True)
         return _trace_Lenv(Lenv).real**0.5, lognm/2
         
     for i in range(1, len(Ws)):
@@ -516,15 +512,9 @@ def _left2right_QR(Ws, L, qrnormalize=False)->tuple[tc.Tensor,tc.Tensor]:
     for i in range(L-1):
         # print(i)
         As[i], W1 = _left2right_QR_step(W1, Ws[i+1])
-        if qrnormalize:
-            nm = tc.norm(W1)
-            lognm = tc.log(nm) + lognm
-            W1 = W1 / nm
+        W1, lognm = log_or_not_update(W1, lognm, use_log=qrnormalize)
     As[-1] = W1
-    if not qrnormalize:
-        nm = tc.norm(As[-1])
-        lognm = tc.log(nm)
-        As[-1] = As[-1] / nm
+    As[-1], lognm = log_or_not_update(As[-1], lognm, use_log=qrnormalize)
     return As, lognm
 
 
@@ -1903,3 +1893,32 @@ def _mele_contract_left_env(H:tc.Tensor, psi1:tc.Tensor, psi2:tc.Tensor, Lenv:tc
     out = out.reshape(ijk,a,h,c,e).permute([0,4,2,1,3]).reshape(-1, a*c) @ psi1.reshape(a*c,-1)
     
     return out.reshape(ijk, e, h, b).permute([0,3,1,2])
+
+def _mele_init_left_env(H:tc.Tensor, psi1:tc.Tensor, psi2:tc.Tensor) -> tc.Tensor:
+    """
+    .. code-block:: text
+        
+        .     psi1                     ╭-╮       
+        --(i)---◻--(b)--        --(i)--┤ ├--(b)--
+                │                      │ │       
+               (c)                     │ │       
+                │H                     │ │       
+        --(j)---◻--(e)--  --->  --(j)--┤ ├--(e)--
+                │                      │ │       
+               (f)                     │ │       
+                │                      │ │       
+        --(k)---◻--(h)--        --(k)--┤ ├--(h)--
+              psi2                     ╰-╯       
+     
+    tc.einsum("ijkadg,acb,dcfe,gfh->ijkbeh", Lenv, psi1, H, psi2)
+    """
+    i, c, b = psi1.shape
+    k, f, h = psi2.shape
+    j, c, f, e = H.shape
+    
+    # (k,f,h) -> (k,h,f) -> (kh, f) @ (j,c,f,e) -> (f,c,j,e) -> (f,cje) = (kh,cje)
+    out = psi2.swapaxes(1,2).reshape(-1, f) @ H.swapaxes(0,2).reshape(f, -1)
+    # (kh,cje) -> (kh,c,je) -> (kh,je,c) -> (khje,c) @ (i,c,b) -> (c,i,b) -> (c,ib) = (khje,ib)
+    out = out.reshape(-1,c,j*e).swapaxes(1,2).reshape(-1, c) @ psi1.swapaxes(0,1).reshape(c,-1)
+    
+    return out.reshape(k,h,j,e,i,b).permute([4,2,0,5,3,1]).reshape(-1,b,e,h)

@@ -100,6 +100,8 @@ quspin 1.0.0 要求 numpy>=2.0.0
 
 - 查看历史版本：`git checkout <commit_hash>`
 
+- 合并 commit, 首先通过 git log --oneline 查看 commit 的 hash 值，然后 `git rebase -i <commit_hash>` 进入交互模式，将需要合并的 commit 前面的 pick 改为 squash（保留提交的第一个pick不动），然后保存退出，运行 `git rebase --continue` 完成合并。
+
 ## Merge Git 的流程
 
 - 首先确定自己分支的改动全部提交

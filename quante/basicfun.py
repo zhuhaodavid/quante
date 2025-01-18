@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-16 00:24:42
+# @Last Modified time: 2025-01-18 14:51:33
 
 #!! 这个文件不应该 import quante 中的任何其他文件！
 
@@ -485,9 +485,10 @@ class PrintLn:
             node = next(_itertools.islice(_ast.walk(tree), 4, 5))
             if isinstance(node, _ast.Tuple):
                 paraname = PrintLn.split_expression(_ast.unparse(node)[1:-1])
+                return paraname, values
             else:
                 paraname = PrintLn.split_expression(_ast.unparse(node))
-            return paraname, values
+                return paraname, (values, )
 
         if isinstance(node, _ast.Tuple):
             paraname = PrintLn.split_expression(_ast.unparse(node)[1:-1])
