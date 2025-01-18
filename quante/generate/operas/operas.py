@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 14:48:28
+# @Last Modified time: 2025-01-18 16:04:32
 
 import warnings
 import numpy as np
@@ -869,7 +869,7 @@ class SpinOper(Oper):
         if L is None:
             L = max([np.max(posn) for posn, _ in self.data.values()]) + 1 
         if backend == 'torch':
-            from ...torch_utils.tensor_network.tensor_train import MPO
+            from ...torch_utils.networks import MPO
             from ...torch_utils.utils import totc 
             import torch as tc # type: ignore
             tt = self.automata(L, pauli=pauli)
@@ -980,7 +980,7 @@ class SpinOper(Oper):
             # GPU expm_multiply
             ###################################################################################
                 from ...torch_utils.linalg.expm_multiply import EvolveEngine
-                from ...torch_utils.sparse import to_csr
+                from ...torch_utils.linalg.sparse import to_csr
                 from ...torch_utils.utils import totc
                 from tqdm import tqdm
                 import torch as tc # type: ignore

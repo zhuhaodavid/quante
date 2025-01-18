@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 17:48:30
+# @Last Modified time: 2025-01-18 16:11:32
 
 import unittest
 import scipy.sparse
@@ -93,7 +93,7 @@ class TestTN(unittest.TestCase):
 
     def test_expm_multiply_torch(self):
         from quante.torch_utils.linalg.expm_multiply import _expm_multiply_simple, _expm_multiply_interval
-        from quante.torch_utils.sparse import to_csr
+        from quante.torch_utils.linalg.sparse import to_csr
         import torch as tc
         mat, state = self._gen_mat_state(16)
         # tcmat = tc.tensor(mat, device="cuda").to_sparse_csr()

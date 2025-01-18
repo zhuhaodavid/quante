@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-14 00:59:50
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-14 23:10:04
+# @Last Modified time: 2025-01-18 16:13:18
 
 import numpy as np
 import cupy as cp
@@ -11,11 +11,11 @@ from numba import cuda
 import cupyx as cpx
 
 from ...linalg.usenumba.numba_settings import numba_cache_dir, config
-from ...generate.symmetry.basis_class_nb import _is_diagonal, _update_diag, add_, _get_index_type
-from ...generate.symmetry.spin_half.bitsoperation import operateon
+from ...generate.basis.symmetry.basis_class_nb import _is_diagonal, _update_diag, add_, _get_index_type
+from ...generate.basis.symmetry.spin_half.bitsoperation import operateon
 
 def to_matrix_cuda(basis, eachterm, hascomplex):
-    from ...generate.symmetry.spin_half.noblock.defclass import SpinHalfBasisNoBlock
+    from ...generate.basis.symmetry.spin_half.noblock.defclass import SpinHalfBasisNoBlock
     if isinstance(basis, (SpinHalfBasisNoBlock, )):
         Bp_cuda, Bj_cuda, Bx_cuda, n_row = matrix_fullcuda(basis, eachterm, hascomplex)
     else:

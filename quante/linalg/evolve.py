@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-01-15 13:38:32
+# # @Last Modified time: 2025-01-18 16:11:08
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
@@ -102,7 +102,7 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
             hasshifted = True
             
         
-        from ..torch_utils.sparse import to_csr
+        from ..torch_utils.linalg.sparse import to_csr
         from ..torch_utils.linalg.expm_multiply import expm_multiply
         import torch as tc
         

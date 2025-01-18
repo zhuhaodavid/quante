@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-09 19:28:03
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-11-22 02:05:52
+# @Last Modified time: 2025-01-18 16:14:54
 
 """
 ============================================
@@ -33,10 +33,10 @@ torch_utils (:mod:`quante.torch_utils`)
 
 稀疏工具
 ----------
-.. autofunction:: quante.torch_utils.sparse.to_csr
-.. autofunction:: quante.torch_utils.sparse.eye
-.. autofunction:: quante.torch_utils.sparse.trace
-.. autofunction:: quante.torch_utils.sparse.norm
+.. autofunction:: quante.torch_utils.linalg.sparse.to_csr
+.. autofunction:: quante.torch_utils.linalg.sparse.eye
+.. autofunction:: quante.torch_utils.linalg.sparse.trace
+.. autofunction:: quante.torch_utils.linalg.sparse.norm
 
 梯度工具
 ----------
@@ -51,27 +51,26 @@ torch_utils (:mod:`quante.torch_utils`)
 
 张量网络工具
 --------------
-.. autoclass:: quante.torch_utils.tensor_network.MPS
-.. autoclass:: quante.torch_utils.tensor_network.MPO
+.. autoclass:: quante.torch_utils.networks.MPS
+.. autoclass:: quante.torch_utils.networks.MPO
 
-.. autofunction:: quante.torch_utils.tensor_network.mpo_eye
-.. autofunction:: quante.torch_utils.tensor_network.full_contract
-.. autofunction:: quante.torch_utils.tensor_network.tn_inner
-.. autofunction:: quante.torch_utils.tensor_network.tn_norm
-.. autofunction:: quante.torch_utils.tensor_network.canonicalize
-.. autofunction:: quante.torch_utils.tensor_network.orthogonalize
-.. autofunction:: quante.torch_utils.tensor_network.add
-.. autofunction:: quante.torch_utils.tensor_network.canonicalize_infinite
-.. autofunction:: quante.torch_utils.tensor_network.periodic_trace
+.. autofunction:: quante.torch_utils.linalg.tensor_operations.mpo_eye
+.. autofunction:: quante.torch_utils.linalg.tensor_operations.full_contract
+.. autofunction:: quante.torch_utils.linalg.tensor_operations.tn_inner
+.. autofunction:: quante.torch_utils.linalg.tensor_operations.tn_norm
+.. autofunction:: quante.torch_utils.linalg.tensor_operations.canonicalize
+.. autofunction:: quante.torch_utils.linalg.tensor_operations.orthogonalize
+.. autofunction:: quante.torch_utils.linalg.tensor_operations.add
+.. autofunction:: quante.torch_utils.linalg.tensor_operations.canonicalize_infinite
+.. autofunction:: quante.torch_utils.linalg.tensor_operations.periodic_trace
 
 """
 # 使用： import quante.torch_utils as qtc
 
-from . import sparse
 from . import linalg
-from . import tensor_network
+from .networks import tensor_operations as tf
 
 # 这两个为了方便使用
 from .utils import *
-from .tensor_network import *
+from .networks import *
 

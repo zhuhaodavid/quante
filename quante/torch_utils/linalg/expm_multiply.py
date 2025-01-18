@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-15 13:37:40
+# @Last Modified time: 2025-01-18 16:10:40
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -15,7 +15,7 @@ import numpy as np
 import scipy.linalg  # type: ignore
 import scipy.sparse.linalg  # type: ignore
 import torch as tc
-from ..sparse import trace, norm, eye
+from .sparse import trace, norm, eye
 from typing import Union
 from functools import lru_cache
 

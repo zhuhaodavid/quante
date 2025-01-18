@@ -2,8 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-28 21:21:02
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 03:37:07
-
+# @Last Modified time: 2025-01-18 16:09:53
 
 import unittest
 
@@ -14,7 +13,6 @@ spin_basis = qt.generate.basis.spin_basis
 
 import numpy as np
 import torch as tc
-
 
 class TestTN(unittest.TestCase):
     def test_canonicalize(self):
@@ -196,21 +194,21 @@ class TestTN(unittest.TestCase):
         
         ψ1 = ψ.copy()
         ψ1.apply_mpo_(M1)
-        # vec1 = ψ1.to_matrix()
-        # vec2 = M1.to_matrix() @ ψ.to_matrix()
-        # self.assertTrue(tc.allclose(vec1, vec2))
+        vec1 = ψ1.to_matrix()
+        vec2 = M1.to_matrix() @ ψ.to_matrix()
+        self.assertTrue(tc.allclose(vec1, vec2))
         
-        # ψ1 = ψ.copy()
-        # ψ1.apply_mpo_naive_(M1)
-        # vec1 = ψ1.to_matrix()
-        # vec2 = M1.to_matrix() @ ψ.to_matrix()
-        # self.assertTrue(tc.allclose(vec1, vec2))
+        ψ1 = ψ.copy()
+        ψ1.apply_mpo_naive_(M1)
+        vec1 = ψ1.to_matrix()
+        vec2 = M1.to_matrix() @ ψ.to_matrix()
+        self.assertTrue(tc.allclose(vec1, vec2))
        
         
 
 if __name__ == "__main__":
-    # unittest.main()
-    suite = unittest.TestSuite()
-    suite.addTest(TestTN("test_dm"))
-    runner = unittest.TextTestRunner()
-    runner.run(suite)
+    unittest.main()
+    # suite = unittest.TestSuite()
+    # suite.addTest(TestTN("test_dm"))
+    # runner = unittest.TextTestRunner()
+    # runner.run(suite)

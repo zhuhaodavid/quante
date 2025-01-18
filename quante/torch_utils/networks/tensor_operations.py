@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 14:51:07
+# @Last Modified time: 2025-01-18 16:16:15
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -13,8 +13,8 @@
 
 import torch as tc
 
-from ..utils import clone
 from ..linalg.decomp import qr, svd, truncate, rq, log_or_not_update
+from ..utils import clone
 from ...linalg.svd_robust import TruncationError
 
 __all__ = [
