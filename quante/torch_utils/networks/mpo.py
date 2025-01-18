@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:14:59
+# @Last Modified time: 2025-01-18 16:46:20
 
 import numpy as np
 import torch as tc
@@ -16,7 +16,7 @@ if TYPE_CHECKING:  # 类型检查时，导入 torch
 
 from .tensortrain import TensorTrain
 from . import tensor_operations as tf
-from ..linalg.decomp import log_or_not_update
+from ..linalg.decomp import log_or_not_update, tt_decompose
 
 class MPO(TensorTrain):
     def __init__(
@@ -145,6 +145,11 @@ class MPO(TensorTrain):
     @classmethod
     def from_oper(cls, ham, L, pauli=True, device=None) -> 'MPO':
         return ham.to_mpo(L, pauli=pauli, backend='torch', device=device)
+
+    @classmethod
+    def from_matrix(cls, vec: tc.Tensor, phys_dim=2, trunc_para=(None, None, None)) -> 'MPS':
+        tt, Ss, lognm = tt_decompose(vec, phys_dim, trunc_para=trunc_para)
+        return MPO(Ws=tt, Ss=Ss, llim=0, rlim=0, lognm=lognm)
 
     def _get_str(self, full=False):
         out1 = self.__class__.__name__ +";  " + str(self.data[0].dtype) + ";  " + f"norm: {self.norm():.3e}" + ";  " + f"maxbonddim: {self.maxbonddim()}" + ";  " + f"device: {self.device.type}"  + ";\n"

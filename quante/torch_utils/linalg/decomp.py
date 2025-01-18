@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 00:46:29
+# @Last Modified time: 2025-01-18 16:44:27
 
 
 import numpy as np
@@ -396,7 +396,7 @@ def tt_decompose(tsr:tc.Tensor, phys_dim:int|list, trunc_para:tuple=(None,None,N
             phys_dim = phys_dim[:-1]
     else:
         raise ValueError("The tensor must be 1- or 2-dimensional.")
-    tt[0] *= tc.sign(u[0,0])
+    tt[0] *= tc.sign(u[0,0].real)
     lognm += tc.log(tc.abs(u[0,0]))
     Ss[0] = tc.tensor([1.], dtype=tc.float64)
     return tt, Ss, lognm
