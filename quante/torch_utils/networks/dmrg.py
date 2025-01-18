@@ -129,7 +129,7 @@ class DMRG:
             for pos, drt in DMRG._sweep_schedule(self.N, nsite):
                 # prepare_update_local
                 projH.set_position_(self.psi, pos)
-                phi = tf._full_contract_right_mps2(self.psi.data[pos], self.psi.data[pos + 1])
+                phi = tf._full_contract_two(self.psi.data[pos], self.psi.data[pos + 1])
                 phi = phi/tc.norm(phi)
                 # solve for the ground state of the effective Hamiltonian
                 lanczos_tol=max(self.svd_min, 0.05*self.max_trunc_err) # todo `lanczos_tol` 有没有更好的选择？

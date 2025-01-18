@@ -141,7 +141,7 @@ class TDVP:
         if nsite == 2:
 
             reduced_operator.set_position_(self.cur_state, b)
-            reduced_state = tf._full_contract_right_mps2(self.cur_state.data[b], self.cur_state.data[b + 1])
+            reduced_state = tf._full_contract_two(self.cur_state.data[b], self.cur_state.data[b + 1])
 
             reduced_state = solve_evolve_state(reduced_operator, reduced_state, time_step, method=self.backend, lanczos_tol=max(cutoff, 0.05*maxtruncerr))
 

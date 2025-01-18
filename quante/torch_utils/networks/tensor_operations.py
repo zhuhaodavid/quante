@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:16:15
+# @Last Modified time: 2025-01-18 17:35:50
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -277,7 +277,7 @@ def _full_contract_right_mps(res: tc.Tensor, Wsi: tc.Tensor):
     res = res.reshape(-1, c) @ Wsi.reshape(c, -1)
     return res.reshape(a, -1, e)
 
-def _full_contract_right_mps2(res: tc.Tensor, Wsi: tc.Tensor):
+def _full_contract_two(res: tc.Tensor, Wsi: tc.Tensor):
     """
     .. code-block:: text
     
@@ -289,10 +289,10 @@ def _full_contract_right_mps2(res: tc.Tensor, Wsi: tc.Tensor):
     
     res = tc.einsum("abc,cde->abde", res, Ws[i])
     """
-    a, b, c = res.shape
-    c, d, e = Wsi.shape
+    a, *b, c = res.shape
+    c, *d, e = Wsi.shape
     res = res.reshape(-1, c) @ Wsi.reshape(c, -1)
-    return res.reshape(a, b, d, e)
+    return res.reshape(a, *b, *d, e)
 
 def _full_contract_mps(Ws):
     result = Ws[0]

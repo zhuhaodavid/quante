@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:15:33
+# @Last Modified time: 2025-01-18 18:15:15
 
 import copy
 import warnings
@@ -487,8 +487,8 @@ class TensorTrain:
         if self.is_canonical_form():
             return self.update_two_site_cannonical_(pos, W, svd_alg=svd_alg, trunc_para=trunc_para, normalize=normalize)
         
-        self.move_llim_(pos)
-        self.move_rlim_(pos+1)
+        # self.move_llim_(pos)
+        # self.move_rlim_(pos+1)
         
         # -------------- 使用 qr ------------
         if svd_alg == "qr":
@@ -862,4 +862,22 @@ class TensorTrain:
         self.rlim = subtt.rlim + startpos
         self.lognm += subtt.lognm
 
+    def swapsite_(self, i, j, **kwargs):
+        assert 0 <= i < self.L-1 and 0 < j < self.L, "超出范围"
+        assert i < j
+        
+        if i != j - 1:
+            for a in range(i, j-1):
+                self.swapsite_(a, a+1, **kwargs)
+            for a in range(j-1, i-1, -1):
+                self.swapsite_(a, a+1, **kwargs)
+            return
 
+        contracted_tsr = tf._full_contract_two(self.data[i], self.data[i+1])
+        if contracted_tsr.ndim == 4:
+            contracted_tsr = contracted_tsr.permute(0, 2, 1, 3)
+        else:
+            contracted_tsr = contracted_tsr.permute(0, 3, 4, 1, 2, 5)
+        
+        direction = kwargs.get('direction', 'right')
+        self.update_two_site_(i, contracted_tsr, direction=direction, **kwargs)

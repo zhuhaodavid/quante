@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 16:49:50
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:52:39
+# @Last Modified time: 2025-01-18 18:16:16
 
 import unittest
 import torch as tc
@@ -46,6 +46,14 @@ class TestTN(unittest.TestCase):
         M1.apply_gate_(1, ((lmat.T.conj(), rmat), "topbottom"), svd_alg='svd', direction='right', trunc_para=(12, 1e-10, 1e-10))
         mat2 = M1.to_matrix().cpu().numpy()
         self.assertTrue(np.allclose(mat1, mat2))
+
+    def test_swapsite(self):
+        d = 5
+        mat = tc.randn(*[2]*(2*d), dtype=tc.float64)
+        mpo = qtc.MPO.from_matrix(mat.reshape(2**d, 2**d))
+        mpo.swapsite_(1,4)
+        self.assertTrue(tc.allclose(mpo.to_matrix() , mat.swapaxes(1,4).swapaxes(1+d,4+d).reshape(2**d, 2**d)))
+
 
 if __name__ == "__main__":
     unittest.main()
