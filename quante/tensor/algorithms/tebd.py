@@ -2,29 +2,38 @@
 # @Author: dzwang
 # @Date:   2024-12-11 11:25:59
 # @Last Modified by:   dzwang
-# @Last Modified time: 2025-01-02 10:32:03
+# @Last Modified time: 2025-01-12 16:42:40
 import numpy as np
-from ..networks import MPS
-from ..linalg import TruncationError
 from ...generate.operas import Oper
-
-# todo list : "run_Gs"
+from ..networks.mps import MPS
 
 
 __all__ = ["TEBDEngine"]
 
 
 class TEBDEngine:
+    """Time Evolving Block Decimation (TEBD) algorithm.
+    """
     def __init__(self, psi:MPS, model:Oper) -> None:
         self.psi = psi
         self.model = model
-    
-    def run_evolve(self, pos:list[int], gates:list[np.ndarray]):
-        """evolution. Every step information is needed.
+        
+    def run_GS(self,) -> None:
+        """TEBD algorithm in imaginary time to find the ground state.
         """
-        for j, (pos_cur, gate) in enumerate(zip(pos, gates)):
-            direction = 1 if pos_cur<=pos[j+1] else 0
-            self.update_bond(i=pos_cur, U_bond=gate, direction=direction)
+        pass
+    
+    def evolve(self, N_steps:int, dt:float):
+        """Evolve by `` N_steps * dt``.
+        """
+        # for j, (pos_cur, gate) in enumerate(zip(pos, gates)):
+        #     direction = 1 if pos_cur<=pos[j+1] else 0
+        #     self.update_bond(i=pos_cur, U_bond=gate, direction=direction)
+        self.evolve_step()
+
+    def evolve_step(self):
+        self.update_bond()
+        pass
     
     def update_bond(self, i:int, U_bond:np.ndarray, direction:int=0):
         """ Update bond sites MPSs
@@ -59,6 +68,13 @@ class TEBDEngine:
         self.psi.llim += direction
         self.psi.rlim += direction
         
+    def update_imag(self,):
+        self.update_bond_imag()
+        pass
+    
+    def update_bond_imag(self):
+        pass
+
 
     def contract_U_bond_mps(U_bond:np.ndarray, W1:np.ndarray, W2:np.ndarray) -> np.ndarray:
         """
@@ -86,26 +102,21 @@ class TEBDEngine:
     
     
 
-    def update_two_site(theta, direction:int, 
-                        solver="svd",
-                        trunc_para:tuple[int,float,float]=(None,None,None),
-                        normalize=False,
-                        pertube=None,
-                        ) -> tuple[None, None]:
-        # direction = 0 (left) or 1 (right)
-        u, s, vt, trunc_err = svd_tensor(theta, trunc_para=trunc_para)
 
-        if direction == 1:
-            W1p = u
-            W2p = np.einsum("i,ijk->ijk", s, vt)  # todo need to check
-        else:
-            W1p = u * s  # todo need to check
-            W2p = vt
+def update_two_site(theta, direction:int, 
+                    solver="svd",
+                    trunc_para:tuple[int,float,float]=(None,None,None),
+                    normalize=False,
+                    pertube=None,
+                    ) -> tuple[None, None]:
+    # direction = 0 (left) or 1 (right)
+    u, s, vt, trunc_err = svd_tensor(theta, trunc_para=trunc_para)
 
-        return W1p, W2p, trunc_err  
+    if direction == 1:
+        W1p = u
+        W2p = np.einsum("i,ijk->ijk", s, vt)  # todo need to check
+    else:
+        W1p = u * s  # todo need to check
+        W2p = vt
 
-
-    def run_GS(self,):
-        """non_Unitary evolution
-        """
-        pass
+    return W1p, W2p, trunc_err  
