@@ -2,7 +2,7 @@
 # @Author: dzwang
 # @Date:   2024-12-30 14:31:20
 # @Last Modified by:   dzwang
-# @Last Modified time: 2025-01-02 10:12:22
+# @Last Modified time: 2025-01-12 16:43:20
 import quante.generate.operas as op
 from quante.basicfun import println
 from quante.tensor.networks.mps import MPS
@@ -20,12 +20,10 @@ println(pos)
 
 state = ["spin_up"] * L
 psi = MPS.from_product_state(L, state)
-Ds = psi.get_bond_dimension()
-println(Ds)
 
 eng = TEBDEngine(psi, H)
 for n in range(N_steps):
-    eng.run_evolve(pos, gates)
+    eng.evolve(pos, gates)
     
     Ds = eng.psi.get_bond_dimension()
     eng.psi.check_mixed_canonical_form()

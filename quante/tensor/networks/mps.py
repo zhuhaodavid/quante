@@ -2,7 +2,7 @@
 # @Author: dzwang
 # @Date:   2024-12-11 11:26:43
 # @Last Modified by:   dzwang
-# @Last Modified time: 2025-01-05 00:22:33
+# @Last Modified time: 2025-01-10 12:32:01
 import numpy as np 
 from ...generate.state import spin_down, spin_up, xplus, xminus, yplus, yminus
 from ..linalg.decomposer import qr_tensor, rq_tensor, svd_tensor
@@ -61,10 +61,10 @@ class MPS(BaseMPSExpectationValue):
         ----▷-------⬜-------⬜-------⬜-------⬜-------⬜-------⨞-----
            Ws[0]   Ws[1]   Ws[2]   Ws[3]   Ws[4]   Ws[5]   Ws[6]
                     ↑                               ↑
-                llim = 1                         llim = 5 
+                llim = 1                         rlim = 5 
 
     """
-    def __init__(self, Ws:list[np.ndarray], llim:int, rlim:int, bc="finite"):
+    def __init__(self, Ws:list[np.ndarray], llim:int, rlim:int, bc="finite") -> None:
         super().__init__(Ws, bc)
         self.llim = llim
         self.rlim = rlim
@@ -75,36 +75,8 @@ class MPS(BaseMPSExpectationValue):
         return len(self.sites)
 
     @property
-    def dim(self) -> list:
+    def chi(self) -> list[int]:
         """List of local physical dimensions."""
-        return [site.dim for site in self.sites]
-
-    @property
-    def finite(self):
-        """Distinguish MPS vs iMPS.
-
-        True for an MPS (``bc='finite', 'segment'``), False for an iMPS (``bc='infinite'``).
-        """
-        assert (self.bc in self._valid_bc)
-        return self.bc != 'infinite'
-
-    @property
-    def chi(self):
-        """Dimensions of the (nontrivial) virtual bonds."""
-        # s.shape[0] == len(s) for 1D numpy array, but works also for a 2D npc Array.
-        return [min(s.shape) for s in self._S[self.nontrivial_bonds]]
-
-    @property
-    def nontrivial_bonds(self):
-        """Slice of the non-trivial bond indices, depending on ``self.bc``."""
-        if self.bc == 'finite':
-            return slice(1, self.L)
-        elif self.bc == 'segment':
-            return slice(0, self.L + 1)
-        elif self.bc == 'infinite':
-            return slice(0, self.L)
-
-    def get_bond_dimension(self,) -> list[int]:
         return [self.Ws[i].shape[-1] for i in range(self.L-1)]
 
     def check_mixed_canonical_form(self) -> None:
@@ -129,7 +101,7 @@ class MPS(BaseMPSExpectationValue):
                                     ↑
                             llim = llim = 3
         """
-        assert self.llim <= self.rlim
+        assert self.llim <= self.rlim, "'llim' should at the left side of 'rlim'"
         self._move_llim(i)
         self._move_rlim(i)
     
@@ -148,7 +120,7 @@ class MPS(BaseMPSExpectationValue):
             self.Ws[a], self.Ws[b] = _right2left_QR_step(self.Ws[a], self.Ws[b])
             self.rlim = self.rlim - 1
             if self.llim > self.rlim: self.llim = self.rlim
-            
+
 
     @classmethod
     def from_product_state(cls, L:int, state:list[str], bc="finite", dtype=np.float64) -> "MPS":
