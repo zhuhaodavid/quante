@@ -2,7 +2,21 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:15:08
+# @Last Modified time: 2025-01-22 19:09:50
+
+# 定义了 ProjOper, ProjMPO, ProjMPS, ProjSumMPO, ProjMPOMPS 等类
+# 它们关系为：
+
+# ProjOper
+#    |
+#    |--- ProjMPO
+#    |
+#    |--- ProjMPS
+# 
+# ProjSumMPO
+# 
+# ProjMPOMPS
+
 
 import torch as tc
 import numpy as np
@@ -12,40 +26,58 @@ T = TypeVar('T')
 
 from . import MPS, MPO
 from . import tensor_operations as tf
-from ..linalg import lanczos_ground_state, lanczos_evolve_state, expm_multiply
-from ...linalg.krylov import lanczos_arpack, tenpy_arnoldi
+from ..linalg import (lanczos_ground_state, lanczos_evolve_state, 
+                      expm_multiply, arnoldi_ground_state)
+from ..linalg.krylov import argsort
+from ...linalg.krylov import lanczos_arpack 
 
-def solve_ground_state(oper:'ProjMPO', v, *, method='default', lanczos_tol=1e-14):
+def solve_ground_state(oper:'ProjMPO', v, *, 
+                       method='default', which='LM', isherm=True, lanczos_tol=1e-14,
+                       **lanczos_kwargs):
     """计算 ProjMPO 的 ground state """
-    if method == 'default':
-        # use ED for small matrix dimensions, but lanczos by default
-        if oper.shape < 400:
-            mat = oper.to_matrix()
-            E, theta = tc.linalg.eigh(mat)
-            return E[0], theta[:, 0].reshape(*v.shape)
+    if method == 'default' and isherm:
+        if isherm:
+            # use ED for small matrix dimensions, but lanczos by default
+            if oper.shape < 400:
+                mat = oper.to_matrix()
+                E, theta = tc.linalg.eigh(mat)
+                sort = argsort(E, which)
+                return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
+            else:
+                method = 'lanczos' if which == 'LM' else 'arnoldi'
         else:
-            s = v.shape
-            matmul = oper.get_matmul_func('torch')
-            val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=lanczos_tol)
-            return val, vec.reshape(*s)
+            # use ED for small matrix dimensions, but lanczos by default
+            if oper.shape < 400:
+                mat = oper.to_matrix()
+                E, theta = tc.linalg.eig(mat)
+                sort = argsort(E, which)
+                return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
+            else:
+                method = 'arnoldi'
 
+    matmul = oper.get_matmul_func('torch')
     s = v.shape
+
     if method == 'lanczos':  # 自己实现的 lanczos
-        matmul = oper.get_matmul_func('torch')
-        val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=lanczos_tol)
+        assert which == 'SA' and isherm
+        val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=lanczos_tol, 
+                                        which=which, **lanczos_kwargs)
         return val, vec.reshape(*s)
+
+    elif method == 'arnoldi':  # tenpy arnoldi 用来处理非厄密矩阵时可以考虑 #todo 自己实现
+        val, vec = arnoldi_ground_state(matmul, v.reshape(-1), 
+                                        which=which, **lanczos_kwargs)  # tol 并没有用
+        return val[0], vec[0].reshape(*s)
 
     matmul = oper.get_matmul_func('numpy')
     if method == 'larpack': # scipy sparse eigs
-        val, vec = lanczos_arpack(matmul, v.numpy().reshape(-1), tol=lanczos_tol)
-        return tc.tensor(val, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
-
-    elif method == 'arnoldi':  # tenpy arnoldi 用来处理非厄密矩阵时可以考虑 #todo 自己实现
-        val, vec = tenpy_arnoldi(matmul, v.numpy().reshape(-1))
+        val, vec = lanczos_arpack(matmul, v.numpy().reshape(-1), tol=lanczos_tol, 
+                                  which=which, **lanczos_kwargs)
         return tc.tensor(val, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
 
     else:
         raise ValueError(f"Unknown method: {method}")
+
 
 def solve_evolve_state(oper:'ProjMPO', v, delta, *, method='default', lanczos_tol=1e-14):
     """计算 ProjMPO 的 evolve state """
@@ -101,6 +133,16 @@ class ProjOper:
         new.LR = [None if i is None else i.clone() for i in self.LR]
         new.dtype = self.dtype
         return new
+
+    @property
+    def site_range(self):
+        return range(self.lpos + 1, self.rpos)
+    
+    def set_nsite(self, nsite):
+        self.nsite = nsite
+    
+    def __len__(self):
+        return self.L
 
     def makeL_(self, psi:MPS, k:int):
         if psi.llim <= k:
@@ -158,16 +200,20 @@ class ProjOper:
         self.dtype = psi.data[0].dtype
         self.makeL_(psi, pos - 1)
         self.makeR_(psi, pos + self.nsite)
-
-    @property
-    def site_range(self):
-        return range(self.lpos + 1, self.rpos)
     
-    def set_nsite(self, nsite):
-        self.nsite = nsite
-    
-    def __len__(self):
-        return self.L
+    def noiseterm(self, phi:MPS, drt='left'):
+        assert self.nsite == 2, "Only two-site ProjMPO currently supported"
+        if drt == 'right':  # 如果向右移动需要计算哦左侧的噪声？
+            nt = tf._noise_proj_left(
+                self.lproj(), self.mid[self.lpos+1], phi
+            )
+        elif drt == 'left':
+            nt = tf._noise_proj_right(
+                phi, self.mid[self.rpos-1], self.rproj()
+            )
+        else:
+            raise ValueError(f"Unknown ortho: {drt}, should be 'left' or 'right'")
+        return nt @ nt.conj().T
 
 
 class ProjMPO(ProjOper):

@@ -122,7 +122,7 @@ def evolve_engine(A:tc.Tensor, scale=1., n0=1, herm=False):
     
 
 class EvolveEngine:
-    def __init__(self, ham, init_state, ts, device='cuda'):
+    def __init__(self, ham, init_state, ts):
         if init_state.ndim == 1:
             self.psi = init_state.reshape(-1, 1).to(dtype=tc.complex128)
         else:

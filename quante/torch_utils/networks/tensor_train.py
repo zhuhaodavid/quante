@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 18:15:15
+# @Last Modified time: 2025-01-22 18:14:48
 
 import copy
 import warnings
@@ -16,6 +16,8 @@ from ..utils import clone
 from ..linalg.decomp import eigh, qr, rq, svd, truncate, log_or_not_update
 from ...linalg.svd_robust import TruncationError
 
+from ...basicfun import save_hdf5
+
 class TensorTrain:
     def __init__(self, Ws: list[tc.Tensor], Ss: Optional[list[tc.Tensor]] = None, llim: Optional[int] = None, rlim: Optional[int] = None, lognm: Optional[float] = None, L:Optional[int] = None) -> None:
         """
@@ -26,8 +28,8 @@ class TensorTrain:
                    Ws[0]  Ws[1]  Ws[2]  Ws[3]  Ws[4]  Ws[5]  Ws[6]
                 ∘       ∘       ∘      ∘       ∘      ∘      ∘      ∘
               Ss[0]  Ss[1]   Ss[2]   Ss[3]  Ss[4]  Ss[5]  Ss[6]  Ss[7]
-                                 ↑             ↑
-                              llim=2         rlim=4
+                                   ↑             ↑
+                                llim=2         rlim=4
         
         无论是 MPO 还是 MPS 都遵从这个格式
         对于标准的正则形式，llim=-1, rlim=1
@@ -311,6 +313,7 @@ class TensorTrain:
             
             llim = rlim = None
 
+
         一旦进入这个形式不能再移动正交中心
         
         前从左到右 qr，再从右到左 svd
@@ -339,6 +342,8 @@ class TensorTrain:
         *,
         direction: str = None,
         svd_alg: str = "svd", 
+        eigdirection: str = None,
+        pertube: tc.Tensor = None,
         trunc_para: tuple[int, float, float] = (None, None, None),
         updateS=False,
         normalize=False,
@@ -386,7 +391,7 @@ class TensorTrain:
                    ├-gate2_b-┤              
                    |         |                      |         |        
                   (3)       (4)                    (c)       (f)       
-                   |         |                      |         |            
+                   |         |                      |         |        
             --(a)--⨞---(d)---⨞--(g)--  -->   --(a)--⨞---(d)---⨞--(g)-- 
         
         Examples
@@ -396,6 +401,10 @@ class TensorTrain:
         >>> for pos_cur, gate in zip(*gates):
         >>>     U_tau.apply_gate_(pos_cur, gate)
         """
+        if pertube is not None:
+            assert svd_alg == "eig", "pertube 仅支持 eig 算法"
+            assert eigdirection is not None, "eigdirection 必须给定"
+
         if gate_range == 1:
             if not unitary_gate:
                 self.move_llim_(pos)
@@ -417,7 +426,11 @@ class TensorTrain:
             
             # ------- main part -------
             W = self._apply_2b_gate(pos, gate)
-            return self.update_two_site_(pos, W, direction=direction, svd_alg=svd_alg, trunc_para=trunc_para, normalize=normalize, updateS=updateS)
+            return self.update_two_site_(
+                pos, W, direction=direction, svd_alg=svd_alg, 
+                trunc_para=trunc_para, normalize=normalize, 
+                updateS=updateS, pertube=pertube, eigdirection=eigdirection
+            )
             # -------------------------
 
 
@@ -459,6 +472,7 @@ class TensorTrain:
                    svd_alg="eig",
                    trunc_para:tuple[int,float,float]=(None,None,None),
                    normalize=False,
+                   eigdirection=None,
                    pertube=None,
                    updateS=True
                    ) -> TruncationError:
@@ -485,7 +499,9 @@ class TensorTrain:
         """
         # todo 正则形式如何更新
         if self.is_canonical_form():
-            return self.update_two_site_cannonical_(pos, W, svd_alg=svd_alg, trunc_para=trunc_para, normalize=normalize)
+            return self.update_two_site_cannonical_(
+                pos, W, svd_alg=svd_alg, trunc_para=trunc_para, normalize=normalize,
+            )
         
         # self.move_llim_(pos)
         # self.move_rlim_(pos+1)
@@ -543,7 +559,8 @@ class TensorTrain:
         # -------------- 使用 eig ------------
         elif svd_alg == "eig":
             # todo 目前 eig 使用的是自动判断方向，是否有更好的做法？
-            W1, S, W2, trunc_err, eigdirection = eigh(W, direction=None, trunc_para=trunc_para, pertube=pertube)
+            W1, S, W2, trunc_err, eigdirection = eigh(W, eigdirection=eigdirection, trunc_para=trunc_para, pertube=pertube, pos=pos, drt=direction)
+            # save_hdf5("log.h5", f"{(pos, direction)}/7eigoutput", {f"W1": W1.reshape(-1), "S": S.reshape(-1), "W2": W2.reshape(-1)})
             
             # 如果 eig 选择的方向与需要的方向不一样，通过 qr 调整回来
             if direction is None:

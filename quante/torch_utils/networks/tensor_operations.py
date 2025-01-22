@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 17:35:50
+# @Last Modified time: 2025-01-22 17:58:53
 # @Description:
 #   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
 #   注
@@ -897,6 +897,11 @@ def mpo_eye(L, local_dims, dtype=tc.complex128, device=None) -> list[tc.Tensor]:
         eyempo[i] = tc.eye(dim, dtype=dtype, device=device).reshape(1, dim, dim, 1)
     return eyempo
 
+#######################################################################
+# density matrix
+#######################################################################
+
+
 def _dm_left2right_mps(Lenv:tc.Tensor, B:tc.Tensor, A:tc.Tensor):
     """
     .. code-block:: text
@@ -1139,6 +1144,67 @@ def _up_bottom_tr(tsr):
     diag_elements = tsr.permute([0,3,1,2]).diagonal(offset=0, dim1=-2, dim2=-1)
     return diag_elements.sum(-1)
 
+#######################################################################
+# ProjMPO
+#######################################################################
+
+def _noise_proj_left(lproj:tc.Tensor, mid:tc.Tensor, phi:tc.Tensor) -> tc.Tensor:
+    """
+    .. code-block:: text
+
+        lproj 
+        ╭-╮                       
+        │ ├--(a)-- 
+        │ │       |
+        │ │      (c)
+        │ │       | mid
+        │ ├--(d)--◻--(e)-- 
+        │ │       │       │        
+        │ │      (f)     (b)       
+        │ │       │       │        
+        │ ├--(g)--◻-------◻--(i)-- 
+        ╰-╯      phi
+    tc.einsum("adg,dcfe,gfbi->acbie", lproj, mid, phi)
+    """
+    a, d, g = lproj.shape
+    d, c, f, e = mid.shape
+    g, f, b, i = phi.shape
+
+    # (a,d,g) -> (ad,g) @ (g,f,b,i) -> (g,fbi) = (ad,fbi)
+    res = lproj.reshape(-1,g) @ phi.reshape(g,-1)
+    # (ad,fbi) -> (a,df,bi) -> (a,bi,df) -> (abi,df) @ (d,c,f,e) -> (d,f,c,e) -> (df,ce) = (abi,ce)
+    res = res.reshape(a,-1,b*i).swapaxes(1,2).reshape(-1, d*f) @ mid.swapaxes(1,2).reshape(d*f, -1)
+    # (a,bi,c,e) -> (a,c,bi,e) -> (ac,bie)
+    return res.reshape(a,b*i,c,e).swapaxes(1,2).reshape(a*c,-1)
+
+def _noise_proj_right(phi:tc.Tensor, mid:tc.Tensor, rproj=tc.Tensor) -> tc.Tensor:
+    """
+    .. code-block:: text
+
+                                rproj 
+                                 ╭-╮        
+                         --(b)---┤ │
+                        |        │ │ 
+                       (c)       │ │
+                        | mid    │ │
+                 --(d)--◻--(e)---┤ │ 
+                │       │        │ │ 
+               (g)     (f)       │ │ 
+                │       │        │ │ 
+        ---(a)--◻-------◻--(h)---┤ │ 
+                 phi             ╰-╯
+    tc.einsum("agfh,dcfe,beh->cbdag", phi, mid, rproj)
+    """
+    b, e, h = rproj.shape
+    d, c, f, e = mid.shape
+    a, g, f, h = phi.shape
+
+    # (b,e,h) -> (be,h) @ (a,g,f,h) -> (agf,h) -> (h,agf) = (be,agf)
+    res = rproj.reshape(-1,h) @ phi.reshape(-1,h).T
+    # (be,agf) -> (b,e,ag,f) -> (b,ag,e,f) -> (bag,ef) @ (d,c,f,e) -> (d,c,e,f) -> (dc,ef) -> (ef,dc) = (bag,dc)
+    res = res.reshape(b,e,a*g,f).swapaxes(1,2).reshape(-1, e*f) @ mid.swapaxes(2,3).reshape(d*c, -1).T
+    # (bag,dc) -> (b,ag, d, c) -> (b,c,d,ag)
+    return res.reshape(b,a*g,d,c).permute([3,0,1,2]).reshape(b*c,-1)
 
 def _ProjMPO_contract_right_env(H:tc.Tensor, psi:tc.Tensor, Renv:tc.Tensor) -> tc.Tensor:
     """
@@ -1587,6 +1653,11 @@ def _projMPS_prepare_solve_ground_state(M1:tc.Tensor, M2:tc.Tensor) -> tc.Tensor
     """
     f,_,g = M1.shape
     return (M1.reshape(-1, g) @ M2.reshape(g, -1)).reshape(f,-1)
+
+
+#######################################################################
+# infinite
+#######################################################################
 
 
 def _cholesky_decomp(VL):

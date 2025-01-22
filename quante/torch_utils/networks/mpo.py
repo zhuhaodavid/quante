@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:46:20
+# @Last Modified time: 2025-01-20 19:24:47
 
 import numpy as np
 import torch as tc
@@ -14,7 +14,7 @@ if TYPE_CHECKING:  # 类型检查时，导入 torch
     from .mps import MPS
     from quimb.tensor.tensor_1d import MatrixProductOperator
 
-from .tensortrain import TensorTrain
+from .tensor_train import TensorTrain
 from . import tensor_operations as tf
 from ..linalg.decomp import log_or_not_update, tt_decompose
 
@@ -53,7 +53,7 @@ class MPO(TensorTrain):
         res = [self.data[i].cpu().numpy().transpose([0,3,1,2]) for i in range(len(self.data))]
         return np.exp(self.lognm).item() * qtn.MatrixProductOperator(res)
 
-    def to_itensor(self) -> None:
+    def to_itensor(self, filename) -> None:
         from ...basicfun import save_hdf5
         assert self.data[0].shape[0] == 1, "只能处理 OBC"
         data_dict = {}
@@ -69,6 +69,8 @@ class MPO(TensorTrain):
             else:
                 tsr[f"W{i+1}"] = self.data[i].cpu().numpy()
         data_dict["lognm"] = self.lognm.cpu().numpy()
+        data_dict["llim"] = self.llim
+        data_dict["rlim"] = self.rlim + 2
         data_dict["L"] = self.L
         data_dict["linkdim"] = [self.data[i].shape[0] for i in range(1, len(self.data))]
         data_dict["code"] = """    sites, Hs = 
@@ -93,7 +95,7 @@ class MPO(TensorTrain):
         end   
         sites, exp(file["lognm"]) * MPO(v)
     end"""  # 在 julia 中运行这段还没就可以还原 mpo 了
-        save_hdf5("mpodata.h5", '/', data_dict)
+        save_hdf5(filename, '/', data_dict)
 
     @classmethod
     def from_quimb(cls, mpo: 'MatrixProductOperator', device='cpu', upper='k', lower='b') -> 'MPO':
@@ -310,7 +312,7 @@ class MPO(TensorTrain):
             Lenv = Lenv @ tf._up_bottom_tr(tsr)
         return tc.trace(Lenv) * tc.exp(self.lognm)
 
-    def dmrg(self, psi0=None, **kwargs) -> tuple[float, 'MPS']:
+    def dmrg(self, psi=None, **kwargs) -> tuple[float, 'MPS']:
         r"""DMRG 方法求解 MPO 的基态
         
         Returns
@@ -340,7 +342,7 @@ class MPO(TensorTrain):
         >>> ham.gdenergy(k=2)
         """
         from .dmrg import DMRG
-        return DMRG(self, psi0=psi0, **kwargs).run2()
+        return DMRG(self, psi=psi, **kwargs).run2()
 
     def tdvp(self, init: 'MPS', final_time: Number, time_step: Number, **kwargs) -> Generator[tuple[Union[float, complex], 'MPS'], None, None]:
         r"""利用 tdvp 方法求解时间演化
