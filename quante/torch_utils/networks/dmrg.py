@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:45:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 18:33:09
+# @Last Modified time: 2025-01-22 22:19:46
 
 import time  # type: ignore
 import torch as tc
@@ -13,8 +13,6 @@ from .mpo import MPO, SumMPO
 from .projtt import (ProjMPO, ProjMPOMPS, ProjSumMPO,
                      solve_ground_state)
 from . import tensor_operations as tf
-
-from ...basicfun import save_hdf5, load_hdf5
 
 class DMRG:
     def __init__(self, mpo, **kwargs):
@@ -60,7 +58,8 @@ class DMRG:
         self.backend = kwargs.get('backend', 'default')  # lanczos 后端
         # 'lanczos', 'arnoldi', 'larpack'
         self.max_trunc_err = kwargs.get('max_trunc_err', 1.e-14)  # lanczos 误差
-        self.lanczos_kwargs = kwargs.get('lanczos_kwargs', {})
+        
+        self.eigs_kwargs = kwargs.get('eigs_kwargs', {})
 
         # mps 更新参数
         self.noise = kwargs.get('noise', None)  # 噪声
@@ -149,12 +148,13 @@ class DMRG:
                 # save_hdf5("log.h5", f"{(pos, drt)}", {f"1phi": phi.reshape(-1)})
                 
                 # solve for the ground state of the effective Hamiltonian
+                lanczos_tol=max(self.svd_min, 0.05*self.max_trunc_err) # todo `lanczos_tol` 有没有更好的选择？
                 energy, phi = solve_ground_state(projH, phi, 
                             method=self.backend,
-                            lanczos_tol=self.max_trunc_err,
+                            lanczos_tol=lanczos_tol,
                             which=self.which,
                             isherm=self.isherm,
-                            **self.lanczos_kwargs)
+                            **self.eigs_kwargs)
                 
                 # jlphi2 = load_hdf5("D:\OneDrive\软件\Julia\jllog.h5", '/', f'/({pos}, {drt})/2phi')
                 # shape_phi1, shape_phi2, *_ = phi.shape

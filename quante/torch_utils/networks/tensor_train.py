@@ -16,7 +16,6 @@ from ..utils import clone
 from ..linalg.decomp import eigh, qr, rq, svd, truncate, log_or_not_update
 from ...linalg.svd_robust import TruncationError
 
-from ...basicfun import save_hdf5
 
 class TensorTrain:
     def __init__(self, Ws: list[tc.Tensor], Ss: Optional[list[tc.Tensor]] = None, llim: Optional[int] = None, rlim: Optional[int] = None, lognm: Optional[float] = None, L:Optional[int] = None) -> None:

@@ -5,7 +5,7 @@ from typing import Callable, Generator, Union, overload, Literal, Type, Optional
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # 类型检查时，导入 torch
-    from ...torch_utils.tensor_network.tensor_train import MPO as tcMPO
+    from ...torch_utils.networks import MPO as tcMPO
     from quimb.tensor.tensor_1d import MatrixProductOperator as quMPO
 
 number = Union[int,float,complex]

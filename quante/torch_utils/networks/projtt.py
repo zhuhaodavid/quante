@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 19:09:50
+# @Last Modified time: 2025-01-22 22:51:09
 
 # 定义了 ProjOper, ProjMPO, ProjMPS, ProjSumMPO, ProjMPOMPS 等类
 # 它们关系为：
@@ -26,14 +26,14 @@ T = TypeVar('T')
 
 from . import MPS, MPO
 from . import tensor_operations as tf
-from ..linalg import (lanczos_ground_state, lanczos_evolve_state, 
+from ..linalg import (lanczos_ground_state, lanczos_evolve_state, lanczos_ground_state2,
                       expm_multiply, arnoldi_ground_state)
+from ...linalg import lanczos_arpack
 from ..linalg.krylov import argsort
-from ...linalg.krylov import lanczos_arpack 
 
 def solve_ground_state(oper:'ProjMPO', v, *, 
                        method='default', which='LM', isherm=True, lanczos_tol=1e-14,
-                       **lanczos_kwargs):
+                       **eigs_kwargs):
     """计算 ProjMPO 的 ground state """
     if method == 'default' and isherm:
         if isherm:
@@ -44,7 +44,7 @@ def solve_ground_state(oper:'ProjMPO', v, *,
                 sort = argsort(E, which)
                 return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
             else:
-                method = 'lanczos' if which == 'LM' else 'arnoldi'
+                method = 'lanczos' if which == 'SA' else 'arnoldi'
         else:
             # use ED for small matrix dimensions, but lanczos by default
             if oper.shape < 400:
@@ -55,26 +55,25 @@ def solve_ground_state(oper:'ProjMPO', v, *,
             else:
                 method = 'arnoldi'
 
-    matmul = oper.get_matmul_func('torch')
     s = v.shape
-
+    matmul = oper.get_matmul_func('torch')
     if method == 'lanczos':  # 自己实现的 lanczos
         assert which == 'SA' and isherm
+
         val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=lanczos_tol, 
-                                        which=which, **lanczos_kwargs)
+                                         **eigs_kwargs)
         return val, vec.reshape(*s)
 
     elif method == 'arnoldi':  # tenpy arnoldi 用来处理非厄密矩阵时可以考虑 #todo 自己实现
         val, vec = arnoldi_ground_state(matmul, v.reshape(-1), 
-                                        which=which, **lanczos_kwargs)  # tol 并没有用
+                                        which=which, **eigs_kwargs)  # tol 并没有用
         return val[0], vec[0].reshape(*s)
 
     matmul = oper.get_matmul_func('numpy')
     if method == 'larpack': # scipy sparse eigs
         val, vec = lanczos_arpack(matmul, v.numpy().reshape(-1), tol=lanczos_tol, 
-                                  which=which, **lanczos_kwargs)
+                                  which=which, **eigs_kwargs)
         return tc.tensor(val, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
-
     else:
         raise ValueError(f"Unknown method: {method}")
 
@@ -93,7 +92,7 @@ def solve_evolve_state(oper:'ProjMPO', v, delta, *, method='default', lanczos_to
             return exp_dH_v.reshape(*v.shape)
         else:
             matmul = oper.get_matmul_func('torch')
-            vec = lanczos_evolve_state(matmul, v.reshape(-1), delta, tol=lanczos_tol)
+            vec = lanczos_evolve_state(matmul, v.reshape(-1), delta, P_tol=lanczos_tol)
             return vec.reshape(*v.shape)
     if method == 'lanczos':  # 使用 lanczos 进行演化
         matmul = oper.get_matmul_func('torch')
@@ -423,6 +422,12 @@ class ProjSumMPO:
     def to_matrix(self):
         lognms = [tc.exp(H.mid.lognm).item() for H in self.Hs]
         return sum(coef*H.to_matrix() for H, coef in zip(self.Hs, lognms))
+    
+    def noiseterm(self, phi:MPS, drt='left'):
+        nt = self.Hs[0].noiseterm(phi, drt)
+        for H in self.Hs[1:]:
+            nt += H.noiseterm(phi, drt)
+        return nt
 
     @property
     def shape(self):
@@ -472,4 +477,7 @@ class ProjMPOMPS:
         for p in self.pm:
             mat += p.to_matrix()
         return mat
+    
+    def noiseterm(self, phi:MPS, drt='left'):
+        return self.PH.noiseterm(phi, drt)
 
