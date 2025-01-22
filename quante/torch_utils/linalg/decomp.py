@@ -2,12 +2,13 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:44:27
+# @Last Modified time: 2025-01-22 18:19:24
 
 
 import numpy as np
 from ...linalg.svd_robust import TruncationError
 import torch as tc
+from ...basicfun import save_hdf5, load_hdf5
 
 def log_or_not_update(data, lognm, use_log):
     if use_log:
@@ -218,7 +219,7 @@ def rq(tsr:tc.Tensor, *, lr_indx=None) -> tuple[tc.Tensor, tc.Tensor]:
     return L.reshape(*ac, -1), U.reshape(-1, *fg)
 
 
-def eigh(tsr:tc.Tensor, *, lr_indx=None, direction=None, trunc_para=(None, None, None), pertube=None) -> tuple[tc.Tensor, tc.Tensor, tc.Tensor, TruncationError]:
+def eigh(tsr:tc.Tensor, *, lr_indx=None, eigdirection=None, trunc_para=(None, None, None), pertube=None, pos=None, drt=None) -> tuple[tc.Tensor, tc.Tensor, tc.Tensor, TruncationError]:
     """
     注意！！
     虽然返回的是 U, S, V，但 U, V 不一定是半幺的！！
@@ -277,26 +278,32 @@ def eigh(tsr:tc.Tensor, *, lr_indx=None, direction=None, trunc_para=(None, None,
         cd = [shp[i] for i in right_indx]
         mat = tsr.permute(*(left_indx + right_indx)).reshape(np.prod(ab), np.prod(cd))
 
-    if direction is None:
+    if pertube is not None:
+        assert eigdirection is not None, "direction must be specified when eigen_perturbation is not None"
+
+    if eigdirection is None:
         # 如果没有给 direction 优先选择小维数方向分解
-        direction = "right" if mat.shape[0] < mat.shape[1] else "left"
-    else:
+        eigdirection = "right" if mat.shape[0] < mat.shape[1] else "left"
+    elif pertube is None:
         if chi_max is not None:
             chi_max = min(min(mat.shape), chi_max)  # 给定方向时，chi_max 不需要超过最小维数
         else:
             chi_max = min(mat.shape)
+        # if (eigdirection == "right" and mat.shape[0] > mat.shape[1]) \
+        #     or (eigdirection == "left" and mat.shape[0] < mat.shape[1]):
+        #         print("eig 方向指定，存在效率问题")
+        #         # todo: 此时是否要用qr？
 
-        if (direction == "right" and mat.shape[0] > mat.shape[1]) \
-            or (direction == "left" and mat.shape[0] < mat.shape[1]):
-                print("eig 方向指定，存在效率问题")
-                # todo: 此时是否要用qr？
-
-    if direction == "right":
+    if eigdirection == "right":
         # mat 的指标为 (ab,cd)，现在可以实施本征分解：
         rho = mat @ mat.conj().T if pertube is None else mat @ mat.conj().T + pertube
+        # save_hdf5("log.h5", f"{(pos, drt)}", {"3before": mat @ mat.conj().T})
+        # save_hdf5("log.h5", f"{(pos, drt)}", {"4drho": pertube})
+        # save_hdf5("log.h5", f"{(pos, drt)}", {"5mat": rho})
         S, U = tc.linalg.eigh(rho)
         S = S.flip(0)
         U = U.flip(1)
+        
         # U 指标是 (ab,e)
         tc.clamp_(S, min=0)  # 将 E 中的负数置为 0，避免根号错误
         tc.sqrt_(S)  # 开根号之后才得到奇异值
@@ -304,15 +311,27 @@ def eigh(tsr:tc.Tensor, *, lr_indx=None, direction=None, trunc_para=(None, None,
         if not all(good):
             U = U[:, good]
             S = S[good]
+        
+        # jlU = tc.tensor(load_hdf5("D:\OneDrive\软件\Julia\jllog.h5", "/", f"/({pos}, {drt})/6eigvec"))
+        # U *= (tc.sign(jlU[0,:]) * tc.sign(U[0,:])).reshape(1,-1)
+        # save_hdf5("log.h5", f"{(pos, drt)}", {"6eigvec": U})
 
         # (e,ab) @ (ab,cd) = (e,cd)
-        V = U.conj().T @ mat  # 这实际上是 A
-    elif direction == "left":
+        Vt = U.conj().T @ mat  # 这实际上是 A
+    elif eigdirection == "left":
+        # 首先交换指标，为了与 pertube 相加
+        
         rho = mat.conj().T @ mat if pertube is None else mat.conj().T @ mat + pertube
+        
+        # save_hdf5("log.h5", f"{(pos, drt)}", {"3before": mat.conj().T @ mat})
+        # save_hdf5("log.h5", f"{(pos, drt)}", {"4drho": pertube})
+        # save_hdf5("log.h5", f"{(pos, drt)}", {"5mat": rho})
         # mat 的指标为 (ab,cd)，现在可以实施本征分解：
+
         S, V = tc.linalg.eigh(rho)
         S = S.flip(0)
         V = V.flip(1)
+        
         # V 指标是 (cd,e)
         tc.clamp_(S, min=0)  # 将 E 中的负数置为 0，避免根号错误
         tc.sqrt_(S)  # 开根号之后才得到奇异值
@@ -320,14 +339,32 @@ def eigh(tsr:tc.Tensor, *, lr_indx=None, direction=None, trunc_para=(None, None,
         if not all(good):
             V = V[:, good]
             S = S[good]
+        
 
-        # (ab,cd) @ (cd,e) = (ab,e)
-        U = mat @ V  # 这实际上是 A
-        V = V.T.conj()
+        # jlV = tc.tensor(load_hdf5("D:\OneDrive\软件\Julia\jllog.h5", "/", f"/({pos}, {drt})/6eigvec"))
+        # V *= (tc.sign(jlV[0,:]) * tc.sign(V[0,:])).reshape(1,-1)
+        # # print(tc.norm(jlV - V))
+        # if (pos == 3 or pos == 2 or pos == 1) and drt == "left":
+        #     V = jlV
+        # save_hdf5("log.h5", f"{(pos, drt)}", {"6eigvec": V})
+        
+        Vt = V.T.conj()
+        U = mat @ V
+
+        # # 到此处总是有 mat = U @ V
+        # print("="*100)
+        # print(f"{pos, drt}: {tc.norm(mat - U @ Vt)}, eps = {trunc_err.eps}, {(chi_max, svd_min, trunc_cut)}")
+        # print("="*100)
+        
+        # 最后需要将指标交换回来：
+        # Vt = Vt.reshape(-1, *cd).swapaxes(1,2).reshape(-1,np.prod(cd))
+    
     else:
         raise ValueError("direction must be 'left' or 'right'")
 
-    return U.reshape(*ab, -1), S, V.reshape(-1, *cd), trunc_err, direction
+    # save_hdf5("log.h5", f"{(pos, drt)}/7eigoutput", {f"U": U, "S": S, "V": Vt})
+    
+    return U.reshape(*ab, -1), S, Vt.reshape(-1, *cd), trunc_err, eigdirection
 
 def tt_decompose(tsr:tc.Tensor, phys_dim:int|list, trunc_para:tuple=(None,None,None)):
     """

@@ -2,13 +2,13 @@
 # @Author: hzhu
 # @Date:   2024-09-09 18:07:00
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 19:29:53
+# @Last Modified time: 2025-01-22 19:09:28
 
 import torch as tc
 
-
 from typing import Callable
 from torch.autograd import Function
+from ..utils import real_if_close
 
 class Lanczos(Function):
     """
@@ -722,3 +722,152 @@ def lanczos_evolve_state(linear_oper:Callable[[tc.Tensor],tc.Tensor], v:tc.Tenso
     }
     params.update(kwargs)
     return LanczosEvolveState(linear_oper, v, **params).run(delta)
+
+####################################
+# 以下是 arnoldi 算法的实现（仿照 numpy 的实现）
+####################################
+#!! TODO: 如何支持梯度下降
+
+def arnoldi_ground_state(matvec:Callable[[tc.Tensor], tc.Tensor], psi0:tc.Tensor, **kwargs) -> tuple[float, tc.Tensor]:
+    paras = {
+        "N_min": 2,  #  要执行的最小步数
+        "N_max": 20,  # 要执行的最大步数
+        "P_tol": 1.e-14,  # 来自 Ritz 残差的误差估计的容差
+        "min_gap": 1.e-12,  # 用于 P_tol 标准的间隙估计的下限
+        "cutoff": tc.finfo(psi0.dtype if not isinstance(psi0, list) else psi0[0].dtype).eps * 100,  #  如果新 Krylov 向量的范数太小，则中止的截止值
+        "E_tol": tc.inf,  #  本征值误差容差
+        "which": 'LM',
+        "num_ev": 1,
+        "E_shift": None
+    }
+    paras.update(kwargs)
+    eng, vec, N = _arnoldi_ground_state(matvec, psi0, **paras)
+    # N 是迭代次数
+    return eng, vec
+
+
+def _arnoldi_ground_state(matvec, psi0, N_min, N_max, P_tol, min_gap, cutoff, E_tol, which, num_ev, E_shift):
+    Es = tc.zeros((N_max, N_max), dtype=tc.complex128)
+    h = tc.zeros((N_max + 1, N_max + 1), dtype=tc.complex128)
+    basis = []
+    w = psi0
+    norm = tc.linalg.norm(w)
+    for k in range(N_max):
+        w /= norm
+        basis.append(w)
+        w = matvec(w)
+        for i, v_i in enumerate(basis):
+            h[i, k] = ov = v_i.conj() @ w
+            w -= ov * v_i
+        h[k + 1, k] = norm = tc.linalg.norm(w)
+        # self._calc_result_krylov(k)
+        if k == 0:
+            Es[0, 0] = h[0, 0]
+            eigenvector = tc.ones(1, 1, dtype=tc.complex128)
+        else:
+            eng, vec = tc.linalg.eig(h[:k + 1, :k + 1])
+            sort = argsort(eng, which)
+            Es[k, :k + 1] = eng[sort]  # 保存本征值
+            eigenvector = vec[:, sort]  # 保存最小值对应的本征向量
+
+        if norm < cutoff:
+            break
+
+        if k + 1 < N_min:
+            continue
+
+        Es_k = Es[k, :]  # current energies
+        RitzRes = abs(eigenvector[k, 0]) * h[k + 1, k]
+        gap = max(min([tc.min(tc.abs(Es_k[i+1:] - Es_k[i])) for i in range(num_ev)]), min_gap)
+        P_err = (RitzRes / gap)**2
+        Delta_E0 = Es[k - 1, 0] - Es_k[0]
+
+        if tc.abs(P_err) < P_tol and tc.abs(Delta_E0) < E_tol:
+            break
+    
+    N = k + 1
+    E0 = Es[N - 1, :num_ev]
+    if E_shift is not None:
+        E0 -= E_shift
+    if N == 1:
+        return E0, [psi0.clone()], N
+
+    psis = []
+    for i in range(min(N, num_ev)):
+        vf = eigenvector[:, i]
+        vf = real_if_close(vf)
+        assert N == len(vf) > 1
+        assert len(basis) >= N
+        
+        if isinstance(psi0, list):
+            psi = [p * vf[0] for p in basis[0]]
+        else:
+            psi = vf[0] * basis[0]
+
+        for k in range(1, N):
+            psi += vf[k] * basis[k]
+        
+        psi_norm = tc.linalg.norm(psi)
+        
+        if abs(1. - psi_norm) > 1.e-5:
+            print(f"poorly conditioned H matrix in Arnoldi! |psi| = {psi_norm:.2e}")
+        
+        psi /= psi_norm
+        psis.append(psi)
+        
+    return E0, psis, N
+  
+
+def argsort(a, sort=None, **kwargs):
+    """wrapper around np.argsort to allow sorting ascending/descending and by magnitude.
+
+    Parameters
+    ----------
+    a : array_like
+        The array to sort.
+    sort : ``'m>', 'm<', '>', '<', None``
+        Specify how the arguments should be sorted.
+
+        ==================== =============================
+        `sort`               order
+        ==================== =============================
+        ``'m>', 'LM'``       Largest magnitude first
+        -------------------- -----------------------------
+        ``'m<', 'SM'``       Smallest magnitude first
+        -------------------- -----------------------------
+        ``'>', 'LR', 'LA'``  Largest real part first
+        -------------------- -----------------------------
+        ``'<', 'SR', 'SA'``  Smallest real part first
+        -------------------- -----------------------------
+        ``'LI'``             Largest imaginary part first
+        -------------------- -----------------------------
+        ``'SI'``             Smallest imaginary part first
+        -------------------- -----------------------------
+        ``None``             numpy default: same as '<'
+        ==================== =============================
+
+    **kwargs :
+        Further keyword arguments given directly to :func:`numpy.argsort`.
+
+    Returns
+    -------
+    index_array : ndarray, int
+        Same shape as `a`, such that ``a[index_array]`` is sorted in the specified way.
+    """
+    if sort is not None:
+        if sort == 'm<' or sort == 'SM':
+            a = tc.abs(a)
+        elif sort == 'm>' or sort == 'LM':
+            a = -tc.abs(a)
+        elif sort == '<' or sort == 'SR' or sort == 'SA':
+            a = tc.real(a)
+        elif sort == '>' or sort == 'LR' or sort == 'LA':
+            a = -tc.real(a)
+        elif sort == 'SI':
+            a = tc.imag(a)
+        elif sort == 'LI':
+            a = -tc.imag(a)
+        else:
+            raise ValueError("unknown sort option " + repr(sort))
+    return tc.argsort(a, **kwargs)
+

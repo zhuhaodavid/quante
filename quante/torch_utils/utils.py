@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-25 22:20:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 14:51:14
+# @Last Modified time: 2025-01-22 00:20:40
 
 # 梯度下降的工具
 
@@ -25,6 +25,16 @@ def promote_dtype(*datas):
     else:
         dtype = tc.float64
     return [data.to(dtype=dtype) for data in datas]
+
+
+def real_if_close(a, tol=100):
+    # 检查输入是否为复数类型
+    if not a.is_complex():
+        return a
+    etal = tol * tc.finfo(a.imag.dtype).eps
+    if all(tc.abs(a.imag) < etal):
+        return a.real
+ 
 
 def open_grad(tensors: list | tc.Tensor) -> None:
     """打开梯度

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 18:23:42
+# @Last Modified time: 2025-01-20 19:25:00
 
 import numpy as np
 import torch as tc
@@ -10,7 +10,7 @@ from typing import Union, TYPE_CHECKING
 if TYPE_CHECKING:  # 类型检查时，导入 torch
     from quimb.tensor.tensor_1d import MatrixProductState
 
-from .tensortrain import TensorTrain
+from .tensor_train import TensorTrain
 from . import tensor_operations as tf
 from ..utils import promote_dtype
 from ..linalg.decomp import log_or_not_update, tt_decompose
@@ -53,7 +53,7 @@ class MPS(TensorTrain):
         res = [self.data[i].cpu().numpy().swapaxes(1,2) for i in range(len(self.data))]
         return np.exp(self.lognm).item() * qtn.MatrixProductState(res)
 
-    def to_itensor(self) -> None:
+    def to_itensor(self, filename) -> None:
         from ...basicfun import save_hdf5
         assert self.data[0].shape[0] == 1, "只能处理 OBC"
         data_dict = {}
@@ -69,6 +69,8 @@ class MPS(TensorTrain):
             else:
                 tsr[f"W{i+1}"] = self.data[i].cpu().numpy()
         data_dict["lognm"] = self.lognm.cpu().numpy()
+        data_dict["llim"] = self.llim
+        data_dict["rlim"] = self.rlim + 2
         data_dict["L"] = self.L
         data_dict["linkdim"] = [self.data[i].shape[0] for i in range(1, len(self.data))]
         data_dict["code"] = """    sites, psi = 
@@ -93,7 +95,7 @@ class MPS(TensorTrain):
         end   
         sites, exp(file["lognm"]) * MPS(v)
     end"""  # 在 julia 中运行这段还没就可以还原 mpo 了
-        save_hdf5("mpsdata.h5", '/', data_dict)
+        save_hdf5(filename, '/', data_dict)
     
     @classmethod
     def from_quimb(cls, mps: 'MatrixProductState', device='cpu') -> 'MPS':

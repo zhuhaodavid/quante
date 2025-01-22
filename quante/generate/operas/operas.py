@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:04:32
+# @Last Modified time: 2025-01-18 18:40:27
 
 import warnings
 import numpy as np
@@ -894,21 +894,23 @@ class SpinOper(Oper):
         else:
             raise ValueError("backend should be 'torch' or 'tensor'")
 
-    def energies(self, pauli=None):
+    def energies(self, pauli=None, basis=None):
         L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
         assert L < 14, "L should be less than 21, otherwise the matrix size will be too large"
-        from ..basis import spin_basis
-        basis = spin_basis(L)
+        if basis is None:
+            from ..basis import spin_basis
+            basis = spin_basis(L)
         mat = self.to_matrix(basis, pauli=pauli, sparse=False)
         isherm = (mat == mat.T.conj()).all()
         return {True: np.linalg.eigvalsh,
                     False: np.linalg.eigvals}[isherm](mat)
 
-    def gdenergy(self, pauli=None, k=1, return_eigenvectors=False):
+    def gdenergy(self, pauli=None, k=1, return_eigenvectors=False, basis=None):
         L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
         assert L < 21, "L should be less than 21, otherwise the matrix size will be too large"
-        from ..basis import spin_basis
-        basis = spin_basis(L)
+        if basis is None:
+            from ..basis import spin_basis
+            basis = spin_basis(L)
         mat = self.to_matrix(basis, pauli=pauli, sparse=True)
         isherm = (mat != mat.T.conj()).nnz == 0
         if mat.shape[0] < 1000:
@@ -925,7 +927,7 @@ class SpinOper(Oper):
             else:
                 return sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=return_eigenvectors)
 
-    def evolve(self, inistate, tlist, obslist, L=None, pauli=False):
+    def evolve(self, inistate, tlist, obslist, L=None, pauli=False, basis=None):
         """计算观测量演化的示例
 
         Parameters
@@ -958,19 +960,20 @@ class SpinOper(Oper):
         >>> obslist = [sx] # + [op.x(i) for i in range(L)] + [op.z(i) for i in range(L)]
         >>> sx_expect = ham.evolve(inistate, times, obslist, pauli=True)
         """
-        from ..basis import spin_basis
         if L is None:
             L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
 
+        if basis is None:
+            from ..basis import spin_basis
+            basis = spin_basis(L)
+
         # Method to get evolve expectation values
-        basis = spin_basis(L)
         if L < 12:  # 小尺寸的做法
             ###################################################################################
             # 严格对角化的写法
             ###################################################################################
             from ...linalg import get_time_evolution_states_ED, observe_states
-            hammat = self.to_matrix(basis, pauli=pauli)
-            engres = np.linalg.eigh(hammat)
+            engres = np.linalg.eigh(self.to_matrix(basis, pauli=pauli))
             evalstate = get_time_evolution_states_ED(inistate, *engres, tlist, failback_to_CPU=True)
             return np.real_if_close([observe_states(evalstate, obs.to_matrix(basis, pauli=pauli)) for obs in obslist])
         else:
