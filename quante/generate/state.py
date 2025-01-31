@@ -20,7 +20,7 @@ import numpy as _np
 import scipy.sparse as _sparse
 import math as _math
 
-from ..linalg.operations import eye, kron
+from ..linalg.operations import kron
 from ..linalg.eig_modified import eigh
 
 from typing import Union, Optional

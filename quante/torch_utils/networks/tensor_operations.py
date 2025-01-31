@@ -2,14 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 17:58:53
-# @Description:
-#   目的：为了方便使用 torch 编写（带梯度的）张量网络程序，将一些常用的函数集中到此文件夹中。
-#   注
-#       - 此文件只调用 numpy 和 torch 两个包，不依赖不调用 ./tensor 中任何其他的包。
-#       - 这个文件中的函数可以被 ./tensor 中任何其他文件调用。
-#       - 根据系统 cuda 是否可用，这个文件中的函数统一使用 device = cuda 或 cpu。
-#       - 此文件中的所有函数都应保证梯度链。
+# @Last Modified time: 2025-01-24 14:35:47
 
 import torch as tc
 

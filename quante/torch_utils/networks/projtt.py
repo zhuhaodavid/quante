@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 22:51:09
+# @Last Modified time: 2025-01-24 14:31:35
 
 # 定义了 ProjOper, ProjMPO, ProjMPS, ProjSumMPO, ProjMPOMPS 等类
 # 它们关系为：
@@ -19,101 +19,12 @@
 
 
 import torch as tc
-import numpy as np
 from typing import TypeVar
 from functools import reduce
 T = TypeVar('T')
 
 from . import MPS, MPO
 from . import tensor_operations as tf
-from ..linalg import (lanczos_ground_state, lanczos_evolve_state, lanczos_ground_state2,
-                      expm_multiply, arnoldi_ground_state)
-from ...linalg import lanczos_arpack
-from ..linalg.krylov import argsort
-
-def solve_ground_state(oper:'ProjMPO', v, *, 
-                       method='default', which='LM', isherm=True, lanczos_tol=1e-14,
-                       **eigs_kwargs):
-    """计算 ProjMPO 的 ground state """
-    if method == 'default' and isherm:
-        if isherm:
-            # use ED for small matrix dimensions, but lanczos by default
-            if oper.shape < 400:
-                mat = oper.to_matrix()
-                E, theta = tc.linalg.eigh(mat)
-                sort = argsort(E, which)
-                return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
-            else:
-                method = 'lanczos' if which == 'SA' else 'arnoldi'
-        else:
-            # use ED for small matrix dimensions, but lanczos by default
-            if oper.shape < 400:
-                mat = oper.to_matrix()
-                E, theta = tc.linalg.eig(mat)
-                sort = argsort(E, which)
-                return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
-            else:
-                method = 'arnoldi'
-
-    s = v.shape
-    matmul = oper.get_matmul_func('torch')
-    if method == 'lanczos':  # 自己实现的 lanczos
-        assert which == 'SA' and isherm
-
-        val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=lanczos_tol, 
-                                         **eigs_kwargs)
-        return val, vec.reshape(*s)
-
-    elif method == 'arnoldi':  # tenpy arnoldi 用来处理非厄密矩阵时可以考虑 #todo 自己实现
-        val, vec = arnoldi_ground_state(matmul, v.reshape(-1), 
-                                        which=which, **eigs_kwargs)  # tol 并没有用
-        return val[0], vec[0].reshape(*s)
-
-    matmul = oper.get_matmul_func('numpy')
-    if method == 'larpack': # scipy sparse eigs
-        val, vec = lanczos_arpack(matmul, v.numpy().reshape(-1), tol=lanczos_tol, 
-                                  which=which, **eigs_kwargs)
-        return tc.tensor(val, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
-    else:
-        raise ValueError(f"Unknown method: {method}")
-
-
-def solve_evolve_state(oper:'ProjMPO', v, delta, *, method='default', lanczos_tol=1e-14):
-    """计算 ProjMPO 的 evolve state """
-    if method == 'default':
-        # use ED for small matrix dimensions, but lanczos by default
-        if oper.shape < 400:
-            mat = oper.to_matrix()
-            E, theta = tc.linalg.eigh(mat)
-            expE = tc.exp(E * delta)
-            theta = theta.to(dtype=expE.dtype,device=oper.device)
-            v = v.to(dtype=expE.dtype,device=oper.device)
-            exp_dH_v = theta @ (expE * (theta.H @ v.reshape(-1)))
-            return exp_dH_v.reshape(*v.shape)
-        else:
-            matmul = oper.get_matmul_func('torch')
-            vec = lanczos_evolve_state(matmul, v.reshape(-1), delta, P_tol=lanczos_tol)
-            return vec.reshape(*v.shape)
-    if method == 'lanczos':  # 使用 lanczos 进行演化
-        matmul = oper.get_matmul_func('torch')
-        vec = lanczos_evolve_state(matmul, v.reshape(-1), delta, tol=lanczos_tol)
-        return vec.reshape(*v.shape)
-    elif method == 'expm_multiply':  # 使用 expm_multiply 进行演化
-        Lenv, H12, Renv = oper.prepare_solve()
-        if oper.nsite == 0:
-            matmul = lambda inipsi: delta * tf._matrix_vector_product0(Lenv, Renv, inipsi)
-            rmatmul = lambda inipsi: np.conj(delta) * tf._matrix_vector_product0(Lenv, Renv, inipsi)
-            trmatul = tf._trace_matrix_vector_product0(Lenv, Renv).item() * delta
-        else:
-            H12 = H12.to(dtype=oper.dtype,device=oper.device)
-            matmul = lambda inipsi: delta * tf._matrix_vector_product(Lenv, H12, Renv, inipsi)
-            rmatmul = lambda inipsi: np.conj(delta)* tf._matrix_vector_product(Lenv, H12, Renv, inipsi)
-            trmatul = tf._trace_matrix_vector_product(Lenv, H12, Renv).item() * delta
-        res = expm_multiply(matmul, v, traceA=trmatul, herm=rmatmul)
-        return res.reshape(*v.shape)
-    else:
-        raise ValueError(f"Unknown method: {method}")
-
 
 class ProjOper:
     def __init__(self, mid, nsite=2) -> None:

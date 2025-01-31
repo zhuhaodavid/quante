@@ -2,17 +2,69 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:45:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 22:19:46
+# @Last Modified time: 2025-01-24 15:00:19
 
 import time  # type: ignore
 import torch as tc
-import numpy as np  # type: ignore
+import numpy as np
+
+from ...linalg.krylov import lanczos_arpack
+from ..linalg.krylov import argsort, arnoldi_ground_state, lanczos_ground_state
 
 from .mps import MPS
 from .mpo import MPO, SumMPO
-from .projtt import (ProjMPO, ProjMPOMPS, ProjSumMPO,
-                     solve_ground_state)
+from .projtt import (ProjMPO, ProjMPOMPS, ProjSumMPO)
 from . import tensor_operations as tf
+
+
+def solve_ground_state(oper:'ProjMPO', v, *,
+                       method='default', 
+                       which='LM', 
+                       isherm=True,
+                       lanczos_tol=1e-14,
+                       **eigs_kwargs):
+    """计算 ProjMPO 的 ground state """
+    if method == 'default' and isherm:
+        if isherm:
+            # use ED for small matrix dimensions, but lanczos by default
+            if oper.shape < 400:
+                mat = oper.to_matrix()
+                E, theta = tc.linalg.eigh(mat)
+                sort = argsort(E, which)
+                return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
+            else:
+                method = 'lanczos' if which == 'SA' else 'arnoldi'
+        else:
+            # use ED for small matrix dimensions, but lanczos by default
+            if oper.shape < 400:
+                mat = oper.to_matrix()
+                E, theta = tc.linalg.eig(mat)
+                sort = argsort(E, which)
+                return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
+            else:
+                method = 'arnoldi'
+
+    s = v.shape
+    matmul = oper.get_matmul_func('torch')
+    if method == 'lanczos':  # 自己实现的 lanczos
+        assert which == 'SA' and isherm
+
+        val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=lanczos_tol,
+                                         **eigs_kwargs)
+        return val, vec.reshape(*s)
+
+    elif method == 'arnoldi':  # tenpy arnoldi 用来处理非厄密矩阵时可以考虑 #todo 自己实现
+        val, vec = arnoldi_ground_state(matmul, v.reshape(-1),
+                                        which=which, **eigs_kwargs)  # tol 并没有用
+        return val[0], vec[0].reshape(*s)
+
+    matmul = oper.get_matmul_func('numpy')
+    if method == 'larpack': # scipy sparse eigs
+        val, vec = lanczos_arpack(matmul, v.numpy().reshape(-1), tol=lanczos_tol,
+                                  which=which, **eigs_kwargs)
+        return tc.tensor(val, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
+    else:
+        raise ValueError(f"Unknown method: {method}")
 
 class DMRG:
     def __init__(self, mpo, **kwargs):
@@ -38,7 +90,7 @@ class DMRG:
         if self.psi is None:
             # 如果没有指定初态，那就随机出来，数据类型与 self.mpo 相同
             dtype = kwargs.get('dtype', self.mpo.dtype)
-            self.psi = MPS.from_random(self.L, bond_dim=2, dtype=dtype)
+            self.psi = MPS.from_random(self.L, bond_dim=2, dtype=dtype, device=self.mpo.device)
         # 正交中心移到最左侧
         self.psi.orthogonalize_(0)
         # 检查 psi 与 mpo 的链长一致

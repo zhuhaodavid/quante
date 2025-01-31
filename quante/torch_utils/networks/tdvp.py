@@ -2,20 +2,58 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:45:38
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:16:20
+# @Last Modified time: 2025-01-24 14:53:40
 
 import time  # type: ignore
 import torch as tc
 import numpy as np
-from typing import TypeVar, Generator, Union
-T = TypeVar('T')
+from typing import Generator, Union
 
 from .mps import MPS
-from .projtt import ProjMPO, solve_evolve_state
-
+from .projtt import ProjMPO
 from . import tensor_operations as tf
+from ..linalg import lanczos_evolve_state
 from ..linalg import svd
 from ...linalg.svd_robust import TruncationError
+from ...linalg import expm_multiply
+
+
+def solve_evolve_state(oper:'ProjMPO', v, delta, *, method='default', lanczos_tol=1e-14):
+    """计算 ProjMPO 的 evolve state """
+    if method == 'default':
+        # use ED for small matrix dimensions, but lanczos by default
+        if oper.shape < 400:
+            mat = oper.to_matrix()
+            E, theta = tc.linalg.eigh(mat)
+            expE = tc.exp(E * delta)
+            theta = theta.to(dtype=expE.dtype,device=oper.device)
+            v = v.to(dtype=expE.dtype,device=oper.device)
+            exp_dH_v = theta @ (expE * (theta.H @ v.reshape(-1)))
+            return exp_dH_v.reshape(*v.shape)
+        else:
+            matmul = oper.get_matmul_func('torch')
+            vec = lanczos_evolve_state(matmul, v.reshape(-1), delta, P_tol=lanczos_tol)
+            return vec.reshape(*v.shape)
+    if method == 'lanczos':  # 使用 lanczos 进行演化
+        matmul = oper.get_matmul_func('torch')
+        vec = lanczos_evolve_state(matmul, v.reshape(-1), delta, tol=lanczos_tol)
+        return vec.reshape(*v.shape)
+    elif method == 'expm_multiply':  # 使用 expm_multiply 进行演化
+        # todo 用 torch 实现 LinearOperator 的乘法
+        Lenv, H12, Renv = oper.prepare_solve()
+        if oper.nsite == 0:
+            matmul = lambda inipsi: delta * tf._matrix_vector_product0(Lenv.numpy(), Renv.numpy(), inipsi)
+            rmatmul = lambda inipsi: np.conj(delta) * tf._matrix_vector_product0(Lenv.numpy(), Renv.numpy(), inipsi)
+            trmatul = tf._trace_matrix_vector_product0(Lenv, Renv).item() * delta
+        else:
+            H12 = H12.to(dtype=v.dtype, device=v.device)
+            matmul = lambda inipsi: delta * tf._matrix_vector_product(Lenv.numpy(), H12.numpy(), Renv.numpy(), inipsi)
+            rmatmul = lambda inipsi: np.conj(delta)* tf._matrix_vector_product(Lenv.numpy(), H12.numpy(), Renv.numpy(), inipsi)
+            trmatul = tf._trace_matrix_vector_product(Lenv, H12, Renv).item() * delta
+        res = expm_multiply(matmul, v.numpy().reshape(-1), traceA=trmatul, herm=rmatmul)
+        return tc.tensor(res, dtype=v.dtype, device=v.device).reshape(*v.shape)
+    else:
+        raise ValueError(f"Unknown backend: {method}")
 
 class TDVP:
     def __init__(self, mpo, psi0, time_step, final_time, **kwargs):

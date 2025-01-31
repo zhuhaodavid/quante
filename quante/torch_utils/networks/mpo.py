@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-20 19:24:47
+# @Last Modified time: 2025-01-24 15:00:44
 
 import numpy as np
 import torch as tc
@@ -408,6 +408,10 @@ class SumMPO:
     @property
     def dtype(self):
         return self.Hs[0].dtype
+    
+    @property
+    def device(self):
+        return self.Hs[0].device
     
     def __iter__(self):
         return iter(self.Hs)
