@@ -8,16 +8,7 @@
 import unittest
 import numpy as np
 import quante as qt
-import sys
-sys.dont_write_bytecode = True
-
-import os
-# 增加当前路径的上级路径
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-grandparent_dir = os.path.dirname(parent_dir)
-great_grandparent_dir = os.path.dirname(grandparent_dir)
-sys.path.append(great_grandparent_dir)
+import quante.generate.operas as op
 
 
 class TestSpinHigh(unittest.TestCase):
@@ -26,7 +17,7 @@ class TestSpinHigh(unittest.TestCase):
         L = 6
         j = np.random.randn(3)
         h = np.random.randn(3)
-        ham = qt.generate.operas.heisenberg_operator(L, j=j, h=h)
+        ham = op.heisenberg_operator(L, j=j, h=h)
         ham = ham.expandxy()
         
         for S in np.arange(0.5, 2, 0.5):

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-15 00:35:41
+# @Last Modified time: 2025-02-02 15:56:22
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动

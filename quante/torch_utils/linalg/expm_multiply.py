@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:10:40
+# @Last Modified time: 2025-02-02 15:47:40
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -221,6 +221,9 @@ def _expm_multiply_simple_core(A, B, scale, F, t, mu, m_star, s, tol=None):
                 # B =  (- 1j) * (A @ B)
                 # B.mul_(coeff)
                 tc.matmul(A, tmp1, out=tmp2).mul_(-1j*coeff)
+            elif scale.imag == 0 and not A.is_complex() and tmp1.is_complex():
+                tc.matmul(A, tmp1.real, out=tmp2.real).mul_(coeff)
+                tc.matmul(A, tmp1.imag, out=tmp2.imag).mul_(coeff)
             else:
                 tc.matmul(A, tmp1, out=tmp2)
                 tmp2.mul_(coeff)
@@ -678,6 +681,9 @@ def _expm_multiply_interval_core_1(A, X, scale, h, mu, m_star, s, q, tol):
                         # K[p] = (-1j) * A.matmul(K[p-1])
                         tc.matmul(A, K[p-1], out=K[p])
                         K[p].mul_(-1j*h/float(p))
+                    elif scale.imag == 0 and not A.is_complex() and K[p-1].is_complex():
+                        tc.matmul(A, K[p-1].real, out=K[p].real).mul_(h/float(p))
+                        tc.matmul(A, K[p-1].imag, out=K[p].imag).mul_(h/float(p))
                     else:
                         # K[p] = A.matmul(K[p-1])
                         tc.matmul(A, K[p-1], out=K[p])
@@ -737,6 +743,9 @@ def _expm_multiply_interval_core_2(A, X, scale, h, mu, m_star, s, q, tol):
                         # K[p] = (-1j) * A.matmul(K[p-1])
                         tc.matmul(A, K[p-1], out=K[p])
                         K[p].mul_(-1j*h/float(p))
+                    elif scale.imag == 0 and not A.is_complex() and K[p-1].is_complex():
+                        tc.matmul(A, K[p-1].real, out=K[p].real).mul_(h/float(p))
+                        tc.matmul(A, K[p-1].imag, out=K[p].imag).mul_(h/float(p))
                     else:
                         # K[p] = A.matmul(K[p-1])
                         tc.matmul(A, K[p-1], out=K[p])
@@ -861,8 +870,8 @@ def every_col_of_X_is_parallel_to_a_col_of_Y(X, Y):
 def _max_abs_axis1(X):
     return tc.max(tc.abs(X), axis=1).values
 
-def elementary_vector(n, i):
-    v = tc.zeros(n, dtype=tc.float64, device='cuda')
+def elementary_vector(n, i, device):
+    v = tc.zeros(n, dtype=tc.float64, device=device)
     v[i] = 1
     return v
 
@@ -975,10 +984,10 @@ def _onenormest_core(A, AT, p, t, itmax):
             seen = tc.isin(ind, ind_hist)
             ind = tc.concatenate((ind[~seen], ind[seen]))
         for j in range(t):
-            X[:, j] = elementary_vector(n, ind[j])
+            X[:, j] = elementary_vector(n, ind[j], device=A.device)
 
         new_ind = ind[:t][~tc.isin(ind[:t], ind_hist)]
         ind_hist = tc.concatenate((ind_hist, new_ind))
         k += 1
-    v = elementary_vector(n, ind_best)
+    v = elementary_vector(n, ind_best, device=A.device)
     return est, v, w, nmults, nresamples

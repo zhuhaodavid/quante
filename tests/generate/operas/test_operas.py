@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-09 19:48:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-08 16:03:58
+# @Last Modified time: 2025-02-02 15:32:35
 
 import unittest
 
@@ -41,7 +41,7 @@ class TestOperas(unittest.TestCase):
         
         for form in forms:
             gates = ham.gate2_decomposition(L, tau=tau, form=form, pauli=False)
-            U_tau = qtc.tensor_network.MPO(qtc.tensor_network.mpo_eye(L, [2]*L))  # 生成单位矩阵
+            U_tau = qtc.MPO.from_eye(L, [2]*L)
             for i in range(len(gates[0])):
                 local_evolve = tc.tensor(gates[1][i]).reshape(2,2,2,2)
                 U_tau.apply_gate_(gates[0][i], local_evolve, svd_alg='svd')
@@ -89,7 +89,7 @@ class TestOperas(unittest.TestCase):
             gates = ham.trotter_gates(L, tau=tau, order=orders[i], evolve_type='time', pauli=False)
             
             # 使用案例
-            U_tau = qtc.tensor_network.MPO(qtc.tensor_network.mpo_eye(L, [2]*L))  # 生成单位矩阵
+            U_tau = qtc.MPO.from_eye(L, [2]*L)
             for pos_cur, gate in zip(*gates):
                 local_evolve = tc.tensor(gate).reshape(2,2,2,2)
                 U_tau.apply_gate_(pos_cur, local_evolve, svd_alg='eig')
@@ -108,7 +108,7 @@ class TestOperas(unittest.TestCase):
             gates = ham.trotter_gates(L, tau=tau, order=orders[i], evolve_type='time', pauli=False, N_step=3)
             
             # 使用案例
-            U_tau = qtc.tensor_network.MPO(qtc.tensor_network.mpo_eye(L, [2]*L))  # 生成单位矩阵
+            U_tau = qtc.MPO.from_eye(L, [2]*L)
             for pos_cur, gate in zip(*gates):
                 local_evolve = tc.tensor(gate).reshape(2,2,2,2)
                 U_tau.apply_gate_(pos_cur, local_evolve, svd_alg='eig')

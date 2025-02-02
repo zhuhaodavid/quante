@@ -2,21 +2,12 @@
 # @Author: hzhu
 # @Date:   2024-09-08 17:12:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-11 17:51:32
-
-# !! 不知道为什么这个测试程序会在 symmtry 文件夹的子文件夹中增加 pycache 文件夹
+# @Last Modified time: 2025-02-02 15:28:25
 
 import unittest
 import quante as qt
 import numpy as np
-import sys
 
-import os
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-grandparent_dir = os.path.dirname(parent_dir)
-great_grandparent_dir = os.path.dirname(grandparent_dir)
-sys.path.append(great_grandparent_dir)
 
 class TestSpinHalfProj(unittest.TestCase):
 

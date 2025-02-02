@@ -4,18 +4,18 @@ quante 是处理一维自旋量子系统的 python 工具集合，包含了一�
 
 ## Installation
 
-- 建立虚拟环境：`conda create -n py311 python=3.11`.
+- 建立虚拟环境：`conda create -n py312 python=3.12`.
 
-- 激活虚拟环境：`conda activate py311`.
+- 激活虚拟环境：`conda activate py312`.
 
-- 安装依赖：`conda install numba=0.60 numpy=1 scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler`
+- 安装依赖：`conda install -c conda-forge numba numpy scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler`
+
+- 按照 torch: 确认 gpu 版本：`nvcc --version`, 通过 https://pytorch.org/ 说明安装对应版本 pytorch，cpu 安装命令为：`pip3 install torch torchvision torchaudio`
+
+- 安装 quspin-extensions: `pip install quspin-extensions`
 
 - 进入 setup.py 所在的文件夹：`cd path/to/setup.py`
 
 - 使用开发者模式安装：`pip install -e .`（如何需要安装到本地，可以使用`pip install .`）
 
-- （可选）torch tenpy 的安装，确认 gpu 版本：`nvcc --version`
 
-- （可选）通过 https://pytorch.org/ 说明安装对应版本 pytorch，cpu 安装命令为：`conda install pytorch torchvision torchaudio cpuonly -c pytorch`
-
-- （可选）安装 quspin-extension: `pip install quspin-extension`

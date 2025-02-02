@@ -2,18 +2,25 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 21:59:41
+# @Last Modified time: 2025-02-02 16:05:18
 
 import unittest
 
-from tenpy.linalg.krylov_based import LanczosEvolution, LanczosGroundState
-import tenpy.linalg.np_conserved as npc
 import quante.torch_utils as qtc
 import quante as qt
 import numpy as np
 
+try:
+    import tenpy
+    tenpy_installed = True
+except ImportError:
+    tenpy_installed = False
+
 class TestTN(unittest.TestCase):
+    @unittest.skipIf(not tenpy_installed, "tenpy is not installed")
     def test_lanczos_ground(self):
+        from tenpy.linalg.krylov_based import LanczosEvolution, LanczosGroundState
+        import tenpy.linalg.np_conserved as npc
         dim = 10
         chinfo = npc.ChargeInfo()  # the second argument is just a descriptive name
         legcharges1 = npc.LegCharge.from_trivial(dim, chinfo)
@@ -30,7 +37,10 @@ class TestTN(unittest.TestCase):
         self.assertAlmostEqual(res0, res00)
         self.assertTrue(np.allclose(vec, res1.to_ndarray()))
     
+    @unittest.skipIf(not tenpy_installed, "tenpy is not installed")
     def test_lanczos_evolve(self):
+        from tenpy.linalg.krylov_based import LanczosEvolution, LanczosGroundState
+        import tenpy.linalg.np_conserved as npc
         chinfo = npc.ChargeInfo()  # the second argument is just a descriptive name
         legcharges1 = npc.LegCharge.from_trivial(10, chinfo)
         legcharges2 = npc.LegCharge.from_trivial(10, chinfo)
@@ -45,7 +55,10 @@ class TestTN(unittest.TestCase):
         res0, res1 = LanczosEvolution(H, psi0, {}).run(0.1)
         self.assertTrue(np.allclose(vec, res0.to_ndarray()))
 
+    @unittest.skipIf(not tenpy_installed, "tenpy is not installed")
     def test_lanczos_ground(self):
+        from tenpy.linalg.krylov_based import LanczosEvolution, LanczosGroundState
+        import tenpy.linalg.np_conserved as npc
         import torch as tc
         dim = 10
         chinfo = npc.ChargeInfo()  # the second argument is just a descriptive name

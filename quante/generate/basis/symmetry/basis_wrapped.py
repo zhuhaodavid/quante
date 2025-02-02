@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-10 21:54:18
+# @Last Modified time: 2025-02-02 15:25:55
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -39,7 +39,7 @@ def _check_spin_number(value:Union[str, float, int]) -> Union[float, int]:
 from .basis_class import SpinBasis
 
 def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, kblock: Optional[int] = None, pblock: Optional[int] = None, zblock: Optional[int] = None, pzblock: Optional[int] = None,jmblock: Optional[Union[int, tuple[int,int]]] = None) -> SpinBasis:
-    """计算自旋基矢
+    """计算自旋基矢，这个基矢生成速度较快，如果需要未实现的对称性，可以使用 quspin_spin_basis 中的函数。
     
     Parameters
     ----------
