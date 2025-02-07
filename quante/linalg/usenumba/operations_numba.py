@@ -2,16 +2,46 @@
 # @Author: hzhu
 # @Date:   2023-11-29 16:50:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-03 01:14:26
+# @Last Modified time: 2025-02-06 19:21:27
 
 import numpy as _np
 import numpy as np
 
-from .numba_settings import njit, pnjit, prange, vectorize
+from .numba_settings import njit, pnjit, prange, vectorize, numba_cache_dir, config
 
 ##########################################
 # 格式转换，如 密矩阵和系数矩阵的转换
 ##########################################
+
+config.CACHE_DIR = numba_cache_dir
+@vectorize(['float64(float64)'], target='parallel', cache=True)
+def parallel_exp_real(A):
+    return _np.exp(A)
+
+config.CACHE_DIR = numba_cache_dir
+@vectorize(['complex128(complex128)'], target='parallel', cache=True)
+def parallel_exp_complex(A):
+    return _np.exp(A)
+
+config.CACHE_DIR = numba_cache_dir
+@vectorize(['complex128(float64, complex128)'], target='parallel', cache=True)
+def parallel_expmul_rc(A, c):
+    return _np.exp(A*c)
+
+config.CACHE_DIR = numba_cache_dir
+@vectorize(['complex128(complex128, complex128)'], target='parallel', cache=True)
+def parallel_expmul_cc(A, c):
+    return _np.exp(A*c)
+
+config.CACHE_DIR = numba_cache_dir
+@vectorize(['complex128(complex128, float64)'], target='parallel', cache=True)
+def parallel_expmul_cr(A, c):
+    return _np.exp(A*c)
+
+config.CACHE_DIR = numba_cache_dir
+@vectorize(['float64(float64, float64)'], target='parallel', cache=True)
+def parallel_expmul_rr(A, c):
+    return _np.exp(A*c)
 
 @pnjit
 def coo2array(xdata, ydata, zdata, dim) -> _np.ndarray:
@@ -149,11 +179,6 @@ def clebsch(j1, j2, j3, m1, m2, m3):
     S = sum([(-1)**i * _to_long(vec) for i,vec in enumerate(numerators)]) * \
         sign / _to_long(common_denominator)
     return C * S
-
-
-@vectorize(['complex128(complex128)'], target='parallel')
-def numba_exp(x):# -> Any:
-    return _np.exp(x)
 
 import scipy
 

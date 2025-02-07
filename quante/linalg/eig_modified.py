@@ -6,7 +6,6 @@
 
 #!! linalg 中不要 import linalg 之外的文件
 
-import logging as _logging
 import os as _os
 import platform as _platform
 import warnings as _warnings

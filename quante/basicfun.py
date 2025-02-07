@@ -2,9 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 14:51:33
-
-#!! 这个文件不应该 import quante 中的任何其他文件！
+# @Last Modified time: 2025-02-06 14:20:18
 
 import gc as _gc
 import os as _os
@@ -31,7 +29,6 @@ from typing import Callable, Any, Dict, Union
 
 _os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'  # 为了让 ctrl+c 中断程序可用
 _os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'  # 为了避免 scipy svd 与 gpu torch 冲突
-
 _np.set_printoptions(linewidth=1000000, suppress=True) # 为了让 print 出的矩阵的宽度没有限制
 
 # =================
@@ -383,10 +380,9 @@ def set_logging(level: int = 1, savelog: bool = False, filenameTime: bool = Fals
 
 set_logging()  # 使用默认日志记录器
 
-import traceback
 def custom_exception_handler(exc_type, exc_value, exc_traceback):
     # logger.debug("发生错误！这是固定的提示信息。")
-    tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    tb_str = "".join(_traceback.format_exception(exc_type, exc_value, exc_traceback))
     logger.error(tb_str)  # 输出格式化的traceback字符串
 
 # 下面这句话可以让 logging 记录所有的报错信息
