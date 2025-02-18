@@ -5,6 +5,6 @@
 # @Last Modified time: 2024-12-16 16:36:39
 
 
-from .operas import *
+from .spin import *
 from .fermion import FermionOper, SpinfulFermionOper
 from .boson import BosonOper

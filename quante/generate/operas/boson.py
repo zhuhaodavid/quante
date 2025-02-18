@@ -2,9 +2,9 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-16 16:50:49
+# @Last Modified time: 2025-02-18 12:12:53
 import numpy as np
-from .operas import Oper, merge_poscoef, _single_term
+from .spin import Oper, _merge_poscoef, _single_term
 
 # todo spinful boson
 # todo photon

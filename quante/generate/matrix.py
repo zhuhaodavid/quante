@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-31 13:17:54
+# @Last Modified time: 2025-02-18 15:17:50
 """
 生成矩阵：(`np.ndarray`)
 - `pauli_matrix`
@@ -15,6 +15,7 @@ import functools
 
 import re
 import numpy as _np
+from scipy.special import factorial
 import scipy.sparse as _sparse
 
 from ..linalg.operations import kron, ikron
@@ -42,6 +43,7 @@ __all__ += [
     "heisenberg_matrix",
     "random_phase_model",
     "local_hamiltonian_spin_1D",
+    "syk_matrix"
 ]
 
 
@@ -599,7 +601,7 @@ def heisenberg_matrix(
         return basis._heimat(jx, jz, cyclic) # type: ignore
     except:
         # 如果失败使用一般方法
-        from .operas.operas import heisenberg_operator
+        from .operas.spin import heisenberg_operator
         ham = heisenberg_operator(L, j, h, cyclic)
         return ham.to_matrix(basis, pauli=pauli, sparse=False)
 
@@ -838,4 +840,102 @@ def get_sparse_matrix(
         # cp.get_default_memory_pool().free_all_blocks()
         
     return res
+
+
+def syk_matrix(L:int, J:_np.ndarray, sparse=False):
+    r"""生成 SYK 模型的哈密顿量
+
+    #??? 两种方法，分别是利用 Majorana 费米子和 Dirac 费米子实现的；如何排除 Majorana 方法的对称性？
+    
+    SYK 模型的哈密顿量为：
+    .. math::
+        H = -\frac{1}{4!}\sum_{i,j,k,l=0}^{L-1} J_{ijkl} c^x_{i}c^x_{j}c^x_{k}c^x_{l},
+
+    Parameters
+    ----------
+    L : int
+        费米子个数
+    J : _np.ndarray
+        (LxLxLxL) 的张量
+    sparse : bool, optional
+        是否返回系数矩阵, by default False
+
+    Returns
+    -------
+    _np.ndarray | _sparse.csr_matrix
+        SYM模型矩阵
+    """
+    # # 这个是 quspin 的 example
+    # op_list = [
+    #     (
+    #         "xxxx",
+    #         (i, j, k, l),
+    #         J[i, j, k, l],
+    #     )
+    #     for i in range(L)
+    #     for j in range(i+1, L)
+    #     for k in range(j+1, L)
+    #     for l in range(k+1, L)
+    # ]
+    # from .basis.quspin.quspin_basis.basis_general.fermion import spinless_fermion_basis_general
+    # basis = spinless_fermion_basis_general(L)
+    # mat = basis._make_matrix(op_list, dtype=J.dtype)/4
+    # if sparse:
+    #     return mat.tocsr()
+    # else:
+    #     return mat.toarray()
+    
+    # 这个是文献中的方法 https://arxiv.org/pdf/1611.04650
+    # from .operas.fermion import FermionOper as op
+    # from .basis import quspin_spinless_fermion_basis
+    # assert L % 2 == 0, "L must be even"
+    # basis = quspin_spinless_fermion_basis(L//2, Nf=range(0,L//2,2))
+    # def psi(i):
+    #     if i % 2 == 0:
+    #         return (op.m(i//2) + op.p(i//2))/_np.sqrt(2)
+    #     else:
+    #         return 1j*(op.m(i//2) - op.p(i//2))/_np.sqrt(2)
+
+    # ham = op.sum(J[a,b,c,d] * psi(a) * psi(b) * psi(c) * psi(d) for a in range(L) for b in range(a+1, L) for c in range(b+1, L) for d in range(c+1, L))
+    # return ham.to_matrix(basis, sparse=sparse)
+    
+    #########################################################
+    # 优化之后
+    #########################################################
+    assert L % 2 == 0, "L must be even"
+    from .operas.fermion import SpinlessFermionOperBuilder
+    from .basis import quspin_spinless_fermion_basis
+    builder = SpinlessFermionOperBuilder()
+    #!! 这个循环还是比较慢，但相对于生成矩阵元的时间可以接受
+    for a in range(L):
+        for b in range(a+1, L):
+            for c in range(b+1, L):
+                for d in range(c+1, L):
+                    Jabcd = J[a,b,c,d] * (1j)**(a%2+b%2+c%2+d%2) / 4
+                    if a//2 != b//2:
+                        builder +=           Jabcd * (-1)**(c%2), '-', a//2, '-', b//2, '+', c//2, '-', d//2
+                        builder +=   Jabcd * (-1)**(a%2+b%2+d%2), '+', a//2, '+', b//2, '-', c//2, '+', d//2
+                    if b//2 != c//2:
+                        builder +=       Jabcd * (-1)**(b%2+c%2), '-', a//2, '+', b//2, '+', c//2, '-', d//2
+                        builder +=       Jabcd * (-1)**(a%2+d%2), '+', a//2, '-', b//2, '-', c//2, '+', d//2
+                    if c//2 != d//2:
+                        builder +=           Jabcd * (-1)**(b%2), '-', a//2, '+', b//2, '-', c//2, '-', d//2
+                        builder +=   Jabcd * (-1)**(a%2+c%2+d%2), '+', a//2, '-', b//2, '+', c//2, '+', d//2
+                    if a//2 != b//2 and b//2 != c//2:
+                        builder +=           Jabcd * (-1)**(d%2), '-', a//2, '-', b//2, '-', c//2, '+', d//2
+                        builder +=   Jabcd * (-1)**(a%2+b%2+c%2), '+', a//2, '+', b//2, '+', c//2, '-', d//2
+                    if a//2 != b//2 and c//2 != d//2:
+                        builder +=       Jabcd * (-1)**(a%2+b%2), '+', a//2, '+', b//2, '-', c//2, '-', d//2
+                        builder +=       Jabcd * (-1)**(c%2+d%2), '-', a//2, '-', b//2, '+', c//2, '+', d//2
+                    if b//2 != c//2 and c//2 != d//2:
+                        builder +=   Jabcd * (-1)**(b%2+c%2+d%2), '-', a//2, '+', b//2, '+', c//2, '+', d//2
+                        builder +=           Jabcd * (-1)**(a%2), '+', a//2, '-', b//2, '-', c//2, '-', d//2
+                    if a//2 != b//2 and b//2 != c//2 and c//2 != d//2:
+                        builder +=                         Jabcd, '-', a//2, '-', b//2, '-', c//2, '-', d//2
+                        builder += Jabcd*(-1)**(a%2+b%2+c%2+d%2), '+', a//2, '+', b//2, '+', c//2, '+', d//2
+                    builder +=           Jabcd * (-1)**(b%2+d%2), '-', a//2, '+', b//2, '-', c//2, '+', d//2
+                    builder +=           Jabcd * (-1)**(a%2+c%2), '+', a//2, '-', b//2, '+', c//2, '-', d//2
+    ham = builder.build()
+    basis = quspin_spinless_fermion_basis(L//2, Nf=range(0,L//2,2))
+    return ham.to_matrix(basis, sparse=sparse)  # todo 能否并行实现？
 

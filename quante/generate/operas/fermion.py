@@ -2,10 +2,10 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-15 22:19:54
+# @Last Modified time: 2025-02-18 15:24:34
 
 import numpy as np
-from .operas import Oper, merge_poscoef, _single_term
+from .spin import Oper, _single_term, _merge_poscoef
 
 class FermionOper(Oper):
     """
@@ -13,11 +13,9 @@ class FermionOper(Oper):
     
     提供最重要的功能包括:
     
-    - 算符的加减、乘法、幂运算, 以及将 x,y 用 +,- 展开 (`expandxy`)
-
     - 转化为 quspin 接受的格式 (`quspin_form`)
 
-    - 算符生成矩阵 (`to_matrix`) 、MPO (`automata`)
+    - 算符生成矩阵 (`to_matrix`)
 
     .. code-block:: python
     
@@ -31,43 +29,23 @@ class FermionOper(Oper):
         assert type == 'f'
         super().__init__(data, stype='f')
    
-    def expandxy(self) -> 'FermionOper':
+    def sort(self):
         """
-        
-        展开算符中的 `x`,`y`,`z`，
-        只保留 `I`, `p`, `m`, `n` 四种算符
-        
-        展开之后，应当只包含 `p`, `m`, `I`, `Z` 这三种算符
-       
-        Examples
-        --------
-        >>> ham = op.heisenberg_operator(L=4)
-        >>> ham = ham.expandxy()
-        >>> ham.show_string_form()
-        
-        注:只是自旋
+        对算符进行排序，使得所有的位置信息按照从小到大的顺序排列。
         """
-        if self._has_expanded():
-            return self.copy()
-        if self.type == "f":
-            res = FermionOper({})
-            for name, (posn, coef) in _sort_subindx(self.data).items():
-                expanded_names, expanded_coefs = _expand_term(name)
-                for expanded_name, expanded_coef in zip(expanded_names, expanded_coefs):
-                    res += FermionOper({expanded_name: (posn, coef * expanded_coef)})
-            return res
-        else:
-            raise NotImplementedError()
-
-    def _has_expanded(self) -> bool:
-        for opnm in self.data.keys():
-            if opnm not in ['I', "+", "-", "n", 'z']:
-                return False
-        return True
+        data = {}
+        for oper, posn, coef in self.each_term():
+            posn_sorted = _sort_pm([
+                _sort_posn(oper, posn, coef)
+            ])
+            for new_oper, new_posn, new_coef in posn_sorted:
+                posnlist, coeflist = data.setdefault(new_oper, ([], []))
+                posnlist.append(new_posn)
+                coeflist.append(new_coef)
+        return FermionOper(data)
     
     def dtype(self):
-        tmp = self if self._has_expanded() else self.expandxy()
-        for _, (_, coef) in tmp.data.items():
+        for _, (_, coef) in self.data.items():
             if np.iscomplexobj(coef):
                 return complex
         return float
@@ -121,15 +99,11 @@ class FermionOper(Oper):
 
     @classmethod
     def x(cls, i:int=0) -> "FermionOper":
-        return cls({'x': _single_term((i,), 1.)})
+        return cls.p(i) + cls.m(i)
 
     @classmethod
     def y(cls, i:int=0) -> "FermionOper":
-        return cls({'y': _single_term((i,), 1.)})
-
-    @classmethod
-    def z(cls, i:int=0) -> "FermionOper":
-        return cls({'z': _single_term((i,), 1.)})
+        return (cls.p(i) - cls.m(i))*1j
 
     @classmethod
     def n(cls, i:int=0) -> "FermionOper":
@@ -138,10 +112,6 @@ class FermionOper(Oper):
     @classmethod
     def nn(cls, i:int, j:int) -> "FermionOper":
         return cls({'nn': _single_term((i, j), 1.)})
-
-    @classmethod
-    def zz(cls, i:int, j:int) -> "FermionOper":
-        return cls({'zz': _single_term((i, j), 1.)})
 
     @classmethod
     def mp(cls, i:int, j:int) -> "FermionOper":
@@ -153,22 +123,6 @@ class FermionOper(Oper):
     def pm(cls, i:int, j:int) -> "FermionOper":
         return cls({'+-': _single_term((i, j), 1.)})
 
-    @classmethod
-    def xx(cls, i:int, j:int) -> "FermionOper":
-        return cls({'xx': _single_term((i, j), 1.)})
-
-    @classmethod
-    def yy(cls, i:int, j:int) -> "FermionOper":
-        return cls({'yy': _single_term((i, j), 1.)})
-
-    @classmethod
-    def xy(cls, i:int, j:int) -> "FermionOper":
-        return cls({'xy': _single_term((i, j), 1.)})
-
-    @classmethod
-    def yx(cls, i:int, j:int) -> "FermionOper":
-        return cls({'yx': _single_term((i, j), 1.)})
-    
     @classmethod
     def sum(cls, oper) -> "FermionOper":
         data = {}
@@ -188,7 +142,7 @@ class FermionOper(Oper):
         # merge terms
         newdata = {}
         for name, (posnlist, coeflist) in data.items():
-            newposn, newcoef = merge_poscoef(posnlist, coeflist)
+            newposn, newcoef = _merge_poscoef(posnlist, coeflist)
             if len(newposn) > 0:
                 newdata[name] = (newposn, newcoef)
         return cls(newdata)
@@ -230,6 +184,101 @@ class FermionOper(Oper):
         data['n'] = (posn2, coef2)
         return cls(data)
 
+
+# from functools import lru_cache
+def is_even_permutation(arr):
+    """判断排列是否为偶排列。"""
+    n = len(arr)
+    cnt = 0
+    for i in range(n):
+        for j in range(i+1, n):
+            if arr[i] > arr[j]:
+                cnt += 1
+    return cnt % 2 == 0
+
+
+def _sort_pm(tmp_res):
+    res = []
+    for oper, posn, coef in tmp_res:
+        sorted_ones = [(oper, posn, coef)]
+        for i in range(1, len(posn)):
+            if posn[i-1] == posn[i]: 
+                if oper[i-1:i+1] == '-+':
+                    sorted_ones = [
+                        (oper[:i-1] + '+-' + oper[i+1:], posn, -coef),
+                    ]
+                    if len(posn) == 2:
+                        sorted_ones.append(('I', np.array([0]), coef))
+                    else:
+                        sorted_ones.append(
+                            (
+                                oper[:i-1] + oper[i+1:],
+                                np.delete(posn, [i-1, i]),
+                                coef
+                            )
+                        )
+                    sorted_ones = _sort_pm(sorted_ones)
+                elif oper[i-1:i+1] != '+-':
+                    sorted_ones = []
+        res += sorted_ones
+    return res
+
+
+def _sort_posn(oper, posn, coef):
+    inc_indx = np.argsort(posn, stable=True)
+    sign = 1 if is_even_permutation(inc_indx) else -1
+    new_oper = ''.join(oper[i] for i in inc_indx)
+    new_posn = np.array(posn)[inc_indx]
+    new_coef = sign * coef
+    return new_oper, new_posn, new_coef
+
+
+class SpinlessFermionOperBuilder:
+    def __init__(self):
+        """
+        可用的符号包括：I, p, m, x, y, z
+        
+        Example:
+        --------
+        >>> ham = SpinOperBuilder()
+        >>> for i in range(10):
+        >>>     ham += 1.0, 'x', i, 'x', i+1
+        >>>     ham += 1.0, 'y', i, 'y', i+1
+        >>>     ham += 1.0, 'z', i, 'z', i+1
+        >>>     ham += 1.0, 'x', i
+        >>> ham = ham.to_oper()
+        """
+        self.terms = {}
+
+    def __iadd__(self, term) -> 'SpinlessFermionOperBuilder':
+        assert isinstance(term, tuple) and len(term) % 2 == 1, "term must be a tuple of odd length"
+        for i in range(1, len(term), 2):
+            assert term[i] in ['I', '+', '-', 'n'], "term must be a tuple of I, p, m, n"
+        
+        opnm = "".join(term[1::2])
+        posn = np.array(term[2::2])
+        coef = term[0]
+        if np.all(np.diff(posn) >= 0):
+            posn_sorted = (opnm, posn, coef)
+        else:
+            posn_sorted = _sort_posn(opnm, posn, coef)
+        posn_sorteds = _sort_pm([posn_sorted])
+        for new_oper, new_posn, new_coef in posn_sorteds:
+            posnlist, coeflist = self.terms.setdefault(new_oper, [[], []])
+            posnlist.append(new_posn)
+            coeflist.append(new_coef)
+        return self
+    
+    def to_oper(self):
+        data = {}
+        for name, (posnlist, coeflist) in self.terms.items():
+            data[name] = _merge_poscoef(posnlist, coeflist)
+        return FermionOper(data)
+    
+    build = to_oper
+
+#####################################################################
+#####################################################################
 
 class SpinfulFermionOper(Oper):
     
@@ -353,7 +402,7 @@ class SpinfulFermionOper(Oper):
         # merge terms
         newdata = {}
         for name, (posnlist, coeflist) in data.items():
-            newposn, newcoef = merge_poscoef(posnlist, coeflist)
+            newposn, newcoef = _merge_poscoef(posnlist, coeflist)
             if len(newposn) > 0:
                 newdata[name] = (newposn, newcoef)
         if stype is None:
@@ -402,69 +451,3 @@ class SpinfulFermionOper(Oper):
         data['|-+'] =  (posn2, J*coef2)
         data['n|n'] = (posn1, U*coef1)
         return cls(data)
-        
-
-def is_even_permutation(arr):
-    """判断排列是否为偶排列。"""
-    indices = np.arange(arr.shape[1])
-    inversions = np.sum(
-        (arr[:, :, None] > arr[:, None, :]) & (indices[None, :, None] < indices[None, None, :]), axis=(1, 2)
-    )
-    return 1 - 2 * (inversions % 2)
-
-def _sort_subindx(dic):
-    """Sort the subindices of operators"""
-    newdic = {}
-    for opnm, (posn, coef) in dic.items():
-        indx = np.argsort(posn, axis=1)
-        percoef = is_even_permutation(indx)
-        newposn = np.take_along_axis(posn, indx, axis=1)
-        for i in range(len(indx)):
-            curnewname = ''.join(opnm[j] for j in indx[i])
-            tmp1, tmp2 = newdic.setdefault(curnewname, ([], []))
-            tmp1.append(newposn[i])
-            tmp2.append(coef[i] * percoef[i])
-    
-    keys_to_delete = []
-    for key, (newposn, newcoef) in newdic.items():
-        tmp1, tmp2 = merge_poscoef(newposn, newcoef)
-        if len(tmp2) > 0:
-            newdic[key] = (tmp1, np.real_if_close(tmp2))
-        else:
-            keys_to_delete.append(key)
-
-    # 删除暂存的键
-    for key in keys_to_delete:
-        del newdic[key]
-        
-    return newdic
-
-def _expand_term(name):
-    """Expand the term based on the given name and coefficient."""
-    # Initialize with base case
-    expanded_names = ['']
-    expanded_coefs = [1]
-
-    for char in reversed(name):  # Process characters from the end to the start
-        if char == 'x':
-            prefixes = ['+', '-']
-            factors = [1., 1.]
-        elif char == 'y':
-            prefixes = ['+', '-']
-            factors = [-1j, 1j]
-        else:
-            prefixes = [char]
-            factors = [1.]
-
-        # Combine prefixes and coefficients with the current expansions
-        new_names = []
-        new_coefs = []
-        for p, f in zip(prefixes, factors):
-            for n, coef in zip(expanded_names, expanded_coefs):
-                new_names.append(p + n)
-                new_coefs.append(f * coef)
-
-        # Update expanded terms
-        expanded_names, expanded_coefs = new_names, new_coefs
-
-    return expanded_names, expanded_coefs
