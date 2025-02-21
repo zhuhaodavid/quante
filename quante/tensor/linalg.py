@@ -2,7 +2,7 @@
 # @Author: dzwang
 # @Date:   2025-01-27 02:52:23
 # @Last Modified by:   dzwang
-# @Last Modified time: 2025-02-15 15:12:52
+# @Last Modified time: 2025-02-21 16:17:26
 import numpy as np
 from ..linalg.svd_robust import TruncationError, svd_truncate
 from quante.basicfun import println
@@ -116,7 +116,6 @@ def rq(tensor:np.ndarray, lr_index:list=None) -> tuple[np.ndarray, np.ndarray]:
 
 def left2right_QR_step(W1:np.ndarray, W2:np.ndarray, lr_index1:list=None, lr_index2:list=None) -> tuple[np.ndarray, np.ndarray]:
     """
-    W2 has been invert transposed BUT W1 not.
     .. code-block:: text
         .
                |       |                         |       |
@@ -151,7 +150,7 @@ def left2right_QR_step(W1:np.ndarray, W2:np.ndarray, lr_index1:list=None, lr_ind
         lr_index2 = [[0], list(range(1, W2.ndim))]
     W2_mat, l_shape, r_shape = tensor2matrix(W2, lr_index2)
     W2_update = S @ W2_mat
-    assert len(lr_index1[-1]) == len(lr_index2[0]) ==1, "The last index of lr_index1 and the first index of lr_index2 must be the one index."
+    assert len(lr_index1[-1]) == len(lr_index2[0]) == 1, "The last index of lr_index1 and the first index of lr_index2 must be the one index."
     # c. reshape W2 back to tensor
     W2_update = W2_update.reshape(*l_shape, *r_shape)
     # d. revert the order of W2
@@ -162,7 +161,6 @@ def left2right_QR_step(W1:np.ndarray, W2:np.ndarray, lr_index1:list=None, lr_ind
 
 def right2left_QR_step(W1:np.ndarray, W2:np.ndarray, lr_index1:list=None, lr_index2:list=None) -> tuple[np.ndarray, np.ndarray]:
     """
-    W1 has been invert transposed BUT W2 not.
     .. code-block:: text
         .
                |       |                        |       |        
@@ -194,10 +192,10 @@ def right2left_QR_step(W1:np.ndarray, W2:np.ndarray, lr_index1:list=None, lr_ind
     W2_update = W2_update.transpose(invert_transpose(index2_order))
     # b. shift OC into W1
     if lr_index1 == None:
-        lr_index1 = [list(range(W1.ndim-1)), [W1.ndim-1]]    
+        lr_index1 = [list(range(W1.ndim-1)), [W1.ndim-1]]
     W1_mat, l_shape, r_shape = tensor2matrix(W1, lr_index1)
     W1_update = W1_mat @ S
-    assert len(lr_index1[-1]) == len(lr_index2[0]) ==1, "The last index of lr_index1 and the first index of lr_index2 must be the one index."
+    assert len(lr_index1[-1]) == len(lr_index2[0]) == 1, "The last index of lr_index1 and the first index of lr_index2 must be the one index."
     # c. reshape W1 back to tensor
     W1_update = W1_update.reshape(*l_shape, *r_shape)
     # d. revert the order of W1
