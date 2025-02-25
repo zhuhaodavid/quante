@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-15 14:19:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-06 19:24:13
+# @Last Modified time: 2025-02-21 23:15:35
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -23,6 +23,7 @@ __all__ = [
     "expm",
     "sqrtm",
     "logm",
+    "matrix_power",
 ]
 
 __all__ += [
@@ -35,6 +36,7 @@ __all__ += [
 
 __all__ += [
     "kron",
+    "kron_power",
     "ikron",
     "partial_trace",
 ]
@@ -261,10 +263,8 @@ def kron_dispatch(a, b, stype=None, chopped=True):
     if _sparse.issparse(a) or _sparse.issparse(b):
         return _kron_sparse(a, b, stype=stype, chopped=chopped)
 
-    return _kron_dense(a, b)
-
-def _kron_dense(a, b):
     return _np.kron(a, b)
+ 
 
 def _kron_sparse(a, b, stype=None, chopped=True):
     if stype is None:
@@ -281,6 +281,25 @@ def _kron_sparse(a, b, stype=None, chopped=True):
     if chopped:
         chop(res)
     return res
+
+
+def kron_power(A, n):
+    if n == 1:
+        return A
+    elif n % 2 == 0:
+        half_power = kron_power(A, n // 2)
+        return kron_dispatch(half_power, half_power)
+    else:
+        return kron_dispatch(A, kron_power(A, n - 1))
+
+def matrix_power(A, n):
+    if n == 1:
+        return A
+    elif n % 2 == 0:
+        half_power = matrix_power(A, n // 2)
+        return half_power @ half_power
+    else:
+        return A @ matrix_power(A, n - 1)
 
 def chop(data, tol=1.0e-15, inplace=True):
     """

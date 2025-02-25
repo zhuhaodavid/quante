@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-18 15:17:50
+# @Last Modified time: 2025-02-23 20:17:57
 """
 生成矩阵：(`np.ndarray`)
 - `pauli_matrix`
@@ -15,10 +15,9 @@ import functools
 
 import re
 import numpy as _np
-from scipy.special import factorial
 import scipy.sparse as _sparse
 
-from ..linalg.operations import kron, ikron
+from ..linalg.operations import kron, ikron, kron_power, exp
 from .basis.symmetry.basis_wrapped import _check_spin_number # type: ignore
 
 from typing import Optional, Callable, Union
@@ -43,7 +42,10 @@ __all__ += [
     "heisenberg_matrix",
     "random_phase_model",
     "local_hamiltonian_spin_1D",
-    "syk_matrix"
+    "syk_matrix",
+    "KIM_Hi",
+    "KIM_Hk",
+    "KIM_matrix",
 ]
 
 
@@ -938,4 +940,21 @@ def syk_matrix(L:int, J:_np.ndarray, sparse=False):
     ham = builder.build()
     basis = quspin_spinless_fermion_basis(L//2, Nf=range(0,L//2,2))
     return ham.to_matrix(basis, sparse=sparse)  # todo 能否并行实现？
+
+
+def KIM_Hk(b:float, L:int):
+    cosb, sinb = _np.cos(b), _np.sin(b)
+    exp_sx = _np.array([[cosb, -1j*sinb], [-1j*sinb, cosb]])
+    return exp_sx if L == 1 else kron_power(exp_sx, L)
+
+
+def KIM_Hi(J:float, h:_np.ndarray, L:int):
+    from ..linalg.usenumba.operations_numba import _Hi_model
+    assert len(h) == L
+    hammat = _Hi_model(J, h, L)
+    return exp(hammat, -1j)
+
+
+def KIM_matrix(b:float, J:float, h:_np.ndarray, L:int):
+    return KIM_Hk(b, L) * KIM_Hi(J, h, L)
 

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-15 18:28:36
+# @Last Modified time: 2025-02-22 18:15:26
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -24,6 +24,38 @@ __all__ += [
     "plot_energy_hist", 
     "plot_level_spacing_distribution", 
     ]
+
+
+def spectral_form_factor(engs:_np.ndarray, times:_np.ndarray | float):
+    """谱形因子.
+    
+    计算谱形因子，谱形因子是一个描述能级统计性质的指标，它是能级分布的傅里叶变换。
+
+    Parameters
+    ----------
+    engs : _np.ndarray
+        能级矩阵，可以包含多个系统的能级，将计算平均值
+    times : _np.ndarray
+        时间
+    
+    Returns
+    -------
+    _np.ndarray
+        谱形因子
+    """
+    if engs.ndim == 1:
+        engs = engs.reshape(-1, 1)
+    
+    if isinstance(times, float):
+        from .linalg.usenumba.operations_numba import _spectral_form_factor_single
+        return _spectral_form_factor_single(engs, times)
+    
+    if isinstance(times, list):
+        times = _np.array(times)
+    assert _np.isrealobj(engs), "engs must be real"
+    from .linalg.usenumba.operations_numba import _spectral_form_factor
+    return _spectral_form_factor(engs, times)
+
 
 def entanglement_spectrum(state:_np.ndarray, L:int, left_number:int, basis=None) -> _np.ndarray:
     """纯态纠缠谱.

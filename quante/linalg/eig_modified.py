@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-29 18:00:35
+# @Last Modified time: 2025-02-25 21:40:47
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -162,7 +162,7 @@ def eigensolve_core(
 
 def _load_eigres(E_file):
     """load eigen result from E_file"""
-    res = load_hdf5(E_file)
+    res = load_hdf5(E_file, "", "/")
     try:
         return res["real"] + 1j * res["imag"]
     except:
@@ -979,17 +979,37 @@ def matlabeig_pre(H, file_name=None, path_save_to="EigData/"):
     if isinstance(H, _np.ndarray):
         spaceRequired = (H.nbytes + _np.sqrt(H.nbytes)) / 1024 / 1024 / 1024 * 1.01
         assert spaceRequired < get_free_space(tempPath)
-        _sio.savemat(tempPath + file_name + ".mat", {"H": H, "dim": H.shape[0]})
-
+        # save_hdf5(tempPath + file_name + ".h5", "", {"H": H, "dim": H.shape[0]})
+        try:
+            _sio.savemat(tempPath + file_name + ".mat", {"H": H, "dim": H.shape[0]})
+        except Exception as e:
+            # 删除已创建的 .mat 文件
+            mat_file = tempPath + file_name + ".mat"
+            if _os.path.exists(mat_file):
+                _os.remove(mat_file)
+            # 改为保存为 .h5 文件
+            save_hdf5(tempPath + file_name + ".h5", "", {"H": H, "dim": H.shape[0]})
     else:
         row, col, data, dim = coo2list(H)
         assert (
             data.nbytes + 2 * row.nbytes
         ) / 1024 / 1024 / 1024 * 1.01 < get_free_space(tempPath)
-        _sio.savemat(
-            tempPath + file_name + ".mat",
-            {"row": row, "col": col, "data": data, "dim": dim},
-        )
+        try:
+            _sio.savemat(
+                tempPath + file_name + ".mat",
+                {"row": row, "col": col, "data": data, "dim": dim},
+            )
+        except Exception as e:
+            # 删除已创建的 .mat 文件
+            mat_file = tempPath + file_name + ".mat"
+            if _os.path.exists(mat_file):
+                _os.remove(mat_file)
+            # 改为保存为 .h5 文件
+            save_hdf5(
+                tempPath + file_name + ".h5",
+                "",
+                {"row": row, "col": col, "data": data, "dim": dim},
+            )
         spaceRequired = data.itemsize * dim * (dim + 1) / 1024 / 1024 / 1024
     return spaceRequired
 
@@ -1024,7 +1044,7 @@ def __get_last_line(filename):
         return None
 
 
-def matlabeig_list(path_save_to="EigData/", file_names=None, return_vecs=True):
+def matlabeig_list(path_save_to="EigData/", file_names=None, return_vecs=True, usegpu=0):
     path_save_to = create_folder(path_save_to)
     tempPath = path_save_to + "mat4py/"
     if file_names is None:
@@ -1042,7 +1062,7 @@ def matlabeig_list(path_save_to="EigData/", file_names=None, return_vecs=True):
         command += f"matlabeig("
     else:
         command += f"matlabeigvals("
-    command += f"'{tempPath}','{path_save_to}',{para}); catch ME; fprintf('%s\\n', string(getReport(ME, 'extended','hyperlinks', 'off'))); end; quit\""
+    command += f"'{tempPath}','{path_save_to}','{usegpu}',{para}); catch ME; fprintf('%s\\n', string(getReport(ME, 'extended','hyperlinks', 'off'))); end; quit\""
     if _platform.system() != "Windows":
         command += f" >> {tempPath}outfile.log 2>&1"
     logger.warning(f"change to matlab by command:\n {command}")
