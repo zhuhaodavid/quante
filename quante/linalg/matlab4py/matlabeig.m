@@ -5,6 +5,7 @@ function matlabeig(varargin)
     % Get the values of the arguments
     LoadPath = string(varargin(1));
     SavePath = string(varargin(2));
+    usegpu = str2double(string(varargin(3)));
     
     fprintf('===============================================================\n');
     t = datetime('now','TimeZone','local','Format','yyyy-MM-dd HH:mm:ss');
@@ -12,19 +13,62 @@ function matlabeig(varargin)
     fprintf('loading from %s\n', LoadPath);
     fprintf('saving to %s\n', SavePath);
     fprintf('\n');
-    for i = 3:nargs
+    for i = 4:nargs
         cur_file = string(varargin(i));
         fprintf('dealing with %s\n', cur_file);
 
-        load(LoadPath + cur_file + '.mat');
+        try
+            % 尝试加载 .mat 文件
+            load(LoadPath + cur_file + '.mat');
+        catch
+            % 如果加载 .mat 文件失败，尝试加载 HDF5 文件
+            fprintf('Failed to load .mat file, trying to load HDF5 file...\n');
+            h5_file = LoadPath + cur_file + '.h5';
+            try
+                info = h5info(h5_file);
+                if any(strcmp({info.Datasets.Name}, 'H')) && any(strcmp({info.Datasets.Name}, 'dim'))
+                    H = h5read(h5_file, '/H');
+                    if isstruct(H) && isfield(H, 'r') && isfield(H, 'i')
+                        H = H.r + 1i * H.i;
+                        clear H.r H.i; % 释放不再需要的变量
+                    end
+                    dim = h5read(h5_file, '/dim');
+                elseif any(strcmp({info.Datasets.Name}, 'row')) && any(strcmp({info.Datasets.Name}, 'col')) && any(strcmp({info.Datasets.Name}, 'data')) && any(strcmp({info.Datasets.Name}, 'dim'))
+                    row = h5read(h5_file, '/row');
+                    col = h5read(h5_file, '/col');
+                    data = h5read(h5_file, '/data');
+                    if isstruct(data) && isfield(data, 'r') && isfield(data, 'i')
+                        data = data.r + 1i * data.i;
+                        clear data.r data.i; % 释放不再需要的变量
+                    end
+                    dim = h5read(h5_file, '/dim');
+                else
+                    error('HDF5 file does not contain the required datasets.');
+                end
+            catch
+                error('Failed to load HDF5 file.');
+            end
+        end
         dim = double(dim);
 
         if ~exist('H', 'var')
             fprintf('convert to full ...\n')
+            if usegpu
+                parallel.gpu.enableCUDAForwardCompatibility(true)
+                row = gpuArray(row);
+                col = gpuArray(col);
+                data = gpuArray(data);
+            end
             H0 = sparse(double(row)+1, double(col)+1, double(data), dim, dim);
             Hmatrix123 = full(H0);
         else
-            Hmatrix123 = H;
+            if usegpu
+                fprintf('converting to gpu ...\n')
+                parallel.gpu.enableCUDAForwardCompatibility(true)
+                Hmatrix123 = gpuArray(H);
+            else
+                Hmatrix123 = H;
+            end
         end
 
         tr0 = trace(Hmatrix123);
@@ -34,6 +78,10 @@ function matlabeig(varargin)
         [psi, E] = eig(Hmatrix123, 'vector');
         psi = psi';
         toc;
+        if usegpu
+            E = gather(E);
+            psi = gather(psi);
+        end
 
         fprintf('trace before: %f,  trace after: %f\n', tr0, sum(E))
 

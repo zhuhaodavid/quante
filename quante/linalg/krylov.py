@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-26 17:09:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 18:37:41
+# @Last Modified time: 2025-02-24 18:34:40
 
 # todo: 实现 Arnoldi method 对角化非厄密矩阵；LanczosEvolution 计算 :math:`exp(delta H) |psi0>`
 
@@ -279,6 +279,10 @@ def _arnoldi_ground_state(matvec, psi0, N_min, N_max, P_tol, min_gap, cutoff, E_
             h[i, k] = ov = v_i.conj() @ w
             w -= ov * v_i
         h[k + 1, k] = norm = np.linalg.norm(w)
+        
+        if k + 1 < N_min:
+            continue
+
         # self._calc_result_krylov(k)
         if k == 0:
             Es[0, 0] = h[0, 0]
@@ -292,8 +296,6 @@ def _arnoldi_ground_state(matvec, psi0, N_min, N_max, P_tol, min_gap, cutoff, E_
         if norm < cutoff:
             break
 
-        if k + 1 < N_min:
-            continue
 
         Es_k = Es[k, :]  # current energies
         RitzRes = abs(eigenvector[k, 0]) * h[k + 1, k]

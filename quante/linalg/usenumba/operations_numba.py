@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-11-29 16:50:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-06 19:21:27
+# @Last Modified time: 2025-02-23 16:22:55
 
 import numpy as _np
 import numpy as np
@@ -261,3 +261,115 @@ def prodscale_float(a, coef):
 def addtwo(a, b):
     for i in prange(len(a)):
         a[i] += b[i]
+
+@njit
+def _z_sum(h:float, L:int):
+    mat = np.zeros((2 ** L,), dtype=float)
+    for i in range(1<<L):
+
+        zsum = 0.
+        mask = 1 << (L-1)
+        for j in range(L):
+            if i & mask:
+                zsum += - h[j]
+            else:
+                zsum += h[j]
+            mask >>= 1
+        mat[i] = zsum
+    return mat
+
+@njit
+def _zz_sum(J:float, L:int, pbc:bool):
+    mat = np.zeros((2 ** L,), dtype=float)
+    for i in range(1<<L):
+
+        zzsum = 0
+        mask11 = 0b11 << (L-2)
+        for j in range(L-1):
+            if mask11 & i == 0 or mask11 & i == mask11:
+                zzsum += 1
+            mask11 >>= 1
+        if (i & 1) == (i >> (L-1)) and pbc == 1:
+            zzsum += 1
+        
+        mat[i] = J * (2 * zzsum - L) 
+    return mat
+
+@njit
+def _Hi_model(J:float, h:np.ndarray, L:int):
+    mat = np.zeros((2 ** L,), dtype=float)
+    for i in range(1<<L):
+
+        zsum = 0.
+        mask = 1 << (L-1)
+        for j in range(L):
+            if i & mask:
+                zsum += - h[j]
+            else:
+                zsum += h[j]
+            mask >>= 1
+
+        zzsum = 0
+        mask11 = 0b11 << (L-2)
+        for j in range(L-1):
+            if mask11 & i == 0 or mask11 & i == mask11:
+                zzsum += 1
+            mask11 >>= 1
+        if (i & 1) == (i >> (L-1)):
+            zzsum += 1
+
+        mat[i] = J * (2 * zzsum - L) + zsum
+    return mat
+
+@pnjit
+def _spectral_form_factor(engs, ts):
+    """
+    Calculate the spectral form factor of a matrix ensemble.
+
+    Parameters
+    ----------
+    engs : ndarray
+        The spectrum of the matrix ensemble.
+    times : ndarray
+        The time points to evaluate the spectral form factor.
+
+    Returns
+    -------
+    sff : ndarray
+        The spectral form factor at the given time points.
+    """
+    iternum, dim = engs.shape
+    mat = np.empty((iternum, dim), dtype=float)
+    for i in prange(iternum):
+        mat[i,:] = engs[i]
+    sff = np.empty_like(ts)
+    l = len(ts)
+    for j in prange(l):
+        sff[j] = np.mean(np.abs(np.sum(np.exp(1j*mat*ts[j]), axis=1))**2)
+    return sff
+
+
+@pnjit
+def _spectral_form_factor_single(engs, t):
+    """
+    Calculate the spectral form factor of a matrix ensemble.
+
+    Parameters
+    ----------
+    engs : ndarray
+        The spectrum of the matrix ensemble.
+    times : ndarray
+        The time points to evaluate the spectral form factor.
+
+    Returns
+    -------
+    sff : ndarray
+        The spectral form factor at the given time points.
+    """
+    # return np.mean(np.abs(np.sum(np.exp(1j*engs*t), axis=1))**2)
+    sff = 0
+    for i in prange(engs.shape[0]):
+        sff += np.abs(np.sum(np.exp(1j*engs[i]*t)))**2
+    return sff/engs.shape[0]
+    
+

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-06 14:20:18
+# @Last Modified time: 2025-02-27 11:00:56
 
 import gc as _gc
 import os as _os
@@ -19,6 +19,7 @@ import logging as _logging
 import platform as _platform
 import traceback as _traceback
 import itertools as _itertools
+import difflib
 import builtins
 
 from dataclasses import is_dataclass, asdict
@@ -305,6 +306,34 @@ def create_folder(path1:str, path2: Union[None, str]=None) -> str:
     _os.makedirs(whole_path, exist_ok=True)  # 创建文件夹（包括所有父文件夹）
     return whole_path if whole_path.endswith("/") else whole_path+"/"   # 确保返回路径以斜杠结尾
  
+
+def check_file_exists(filename):
+    """检查文件是否存在"""
+    if not _os.path.exists(filename):
+        directory = _os.path.dirname(filename)
+        basename, ext = _os.path.splitext(_os.path.basename(filename))
+        all_files_folders = _os.listdir(directory)
+        all_files = [f for f in all_files_folders if _os.path.isfile(_os.path.join(directory, f))]
+        similar_files = difflib.get_close_matches(basename, [f.split('.')[0] for f in all_files])
+        if similar_files:
+            similar_files_with_ext = [f for f in all_files if f.split('.')[0] in similar_files]
+            raise FileNotFoundError(f"similar files: {similar_files_with_ext}")
+        else:
+            import textwrap
+            wrapped_filename = textwrap.fill(", ".join(all_files), width=80)
+            all_folder = [f for f in all_files_folders if _os.path.isdir(_os.path.join(directory, f))]
+            if all_folder:
+                wrapped_foldername = textwrap.fill(", ".join(all_folder), width=80)
+                raise FileNotFoundError(
+                    f"\nall available files here: \n"
+                    f"   {wrapped_filename} \n"
+                    f"folders: \n"
+                    f"   {wrapped_foldername}"
+                    )
+            else:
+                raise FileNotFoundError(f"\nall available files here: \n   {wrapped_filename}")
+    
+    
 #############################################################
 #  日志工具
 #############################################################
@@ -901,15 +930,11 @@ def load_hdf5(filename:str, group:str, dataname:str) -> Any:
     >>> save_hdf5("data.h5", "/", {"mat": mat})
     >>> mat = load_hdf5("data.h5", "/", "mat")
     """
-    if not _os.path.exists(filename):
-        raise FileNotFoundError(f"File {filename} not found.")
+    check_file_exists(filename)
     with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
         group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
-        group_location = f[group]  # 获取组对象
-        if isinstance(group_location, _h5py.Group):
-            data_location = group_location[dataname]
-        else:
-            raise ValueError(f"Group {group} not found in {filename}.")
+        group_location = _get_data_location(f, group)
+        data_location = _get_data_location(group_location, dataname)
         data_type_str = data_location.attrs.get("object_type", None)
         if data_type_str is None and isinstance(data_location, _h5py.Group):
             data_type_str = 'dict'
@@ -917,6 +942,25 @@ def load_hdf5(filename:str, group:str, dataname:str) -> Any:
         data = load_func(data_location)
     return data
 
+def _get_data_location(f: _h5py.File | _h5py.Group, name: str) -> _h5py.Group:
+    # 检查 f 中是否存在 name 的 group 或者 dataset
+    try:
+        return f[name]
+    except:
+        res = []
+        names = name.split("/")
+        for eachname in names:
+            try:
+                f = f[eachname]
+                res.append(eachname)
+            except:
+                import textwrap
+                available_names = list(f.keys())
+                wrapped_names = textwrap.fill(str(available_names), width=80)
+                raise ValueError(
+                    f"Available names:\n{wrapped_names}.\n"
+                    f"Data '{eachname}' not found in '/{"/".join(res)}'."
+                )
 
 def _default_load(data_location: _h5py.Group) -> Any:
     return data_location[()]
@@ -1091,6 +1135,7 @@ def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], li
     >>> bf.save_h5("data.h5", mat)
     >>> mat, = bf.saveh5("data.h5", "mat")
     """
+    check_file_exists(filename)
     logger.debug("Loading from " + _os.path.abspath(filename) + " ... ")
     if group is None:
         group = []
@@ -1101,15 +1146,13 @@ def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], li
     
     with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
         group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
-        group_location = f[group]  # 获取组对象
-        if not isinstance(group_location, _h5py.Group):
-            raise ValueError(f"Group {group} not found in {filename}.")
+        group_location = _get_data_location(f, group)
         if len(datanames) == 0:
             data: Union[Dict[str, Any], list[Any]] = _load_dict(group_location)
         else:
             data = []
             for dataname in datanames:
-                data_location = group_location[dataname]
+                data_location = _get_data_location(group_location, dataname)
                 data_type_str = data_location.attrs.get("object_type", None)
                 if data_type_str is None and isinstance(data_location, _h5py.Group):
                     data_type_str = 'dict'
