@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-22 18:15:26
+# @Last Modified time: 2025-02-27 11:22:09
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -46,6 +46,21 @@ def spectral_form_factor(engs:_np.ndarray, times:_np.ndarray | float):
     if engs.ndim == 1:
         engs = engs.reshape(-1, 1)
     
+    try:
+        import torch as tc
+        from tqdm import tqdm
+        assert tc.cuda.is_available()
+        ts = (times.to('cuda') if isinstance(times, tc.Tensor) 
+              else tc.tensor(times, device='cuda'))
+        mat = (engs.to('cuda') if isinstance(engs, tc.Tensor)
+               else tc.tensor(engs, device='cuda'))
+        sff = tc.zeros(len(ts), device='cuda', dtype=tc.float64)
+        for j in tqdm(range(len(ts)), ascii=True):
+            sff[j] = tc.mean(tc.abs(tc.sum(tc.exp(1j*mat*ts[j]), dim=1))**2)
+        return sff.cpu().numpy()
+    except:
+        pass
+
     if isinstance(times, float):
         from .linalg.usenumba.operations_numba import _spectral_form_factor_single
         return _spectral_form_factor_single(engs, times)
