@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-27 11:00:56
+# @Last Modified time: 2025-02-27 11:35:10
 
 import gc as _gc
 import os as _os
@@ -311,13 +311,18 @@ def check_file_exists(filename):
     """检查文件是否存在"""
     if not _os.path.exists(filename):
         directory = _os.path.dirname(filename)
+        if not directory:
+            directory = _os.getcwd()
         basename, ext = _os.path.splitext(_os.path.basename(filename))
         all_files_folders = _os.listdir(directory)
         all_files = [f for f in all_files_folders if _os.path.isfile(_os.path.join(directory, f))]
         similar_files = difflib.get_close_matches(basename, [f.split('.')[0] for f in all_files])
         if similar_files:
             similar_files_with_ext = [f for f in all_files if f.split('.')[0] in similar_files]
-            raise FileNotFoundError(f"similar files: {similar_files_with_ext}")
+            raise FileNotFoundError(
+                f"similar files: {similar_files_with_ext}\n"
+                f"    not found file: {filename}"
+                )
         else:
             import textwrap
             wrapped_filename = textwrap.fill(", ".join(all_files), width=80)
@@ -325,13 +330,17 @@ def check_file_exists(filename):
             if all_folder:
                 wrapped_foldername = textwrap.fill(", ".join(all_folder), width=80)
                 raise FileNotFoundError(
-                    f"\nall available files here: \n"
-                    f"   {wrapped_filename} \n"
-                    f"folders: \n"
-                    f"   {wrapped_foldername}"
+                    f"\n    all available files here: \n"
+                    f"       {wrapped_filename} \n"
+                    f"    folders: \n"
+                    f"       {wrapped_foldername}\n"
+                    f"    not found file: {filename}"
                     )
             else:
-                raise FileNotFoundError(f"\nall available files here: \n   {wrapped_filename}")
+                raise FileNotFoundError(
+                    f"    \nall available files here: \n   {wrapped_filename}\n"
+                    f"    not found file: {filename}"
+                    )
     
     
 #############################################################
