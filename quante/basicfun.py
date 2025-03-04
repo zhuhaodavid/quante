@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-27 11:35:10
+# @Last Modified time: 2025-03-04 11:21:10
 
 import gc as _gc
 import os as _os
@@ -317,29 +317,32 @@ def check_file_exists(filename):
         all_files_folders = _os.listdir(directory)
         all_files = [f for f in all_files_folders if _os.path.isfile(_os.path.join(directory, f))]
         similar_files = difflib.get_close_matches(basename, [f.split('.')[0] for f in all_files])
+        import textwrap
         if similar_files:
             similar_files_with_ext = [f for f in all_files if f.split('.')[0] in similar_files]
+            wrapped_filename = textwrap.fill("   ".join(similar_files_with_ext), width=80)
             raise FileNotFoundError(
-                f"similar files: {similar_files_with_ext}\n"
-                f"    not found file: {filename}"
+                f"Did you mean: \n"
+                f"{wrapped_filename}\n"
+                f"desired file: {filename}"
                 )
         else:
-            import textwrap
-            wrapped_filename = textwrap.fill(", ".join(all_files), width=80)
+            wrapped_filename = textwrap.fill("   ".join(all_files), width=80)
             all_folder = [f for f in all_files_folders if _os.path.isdir(_os.path.join(directory, f))]
             if all_folder:
-                wrapped_foldername = textwrap.fill(", ".join(all_folder), width=80)
+                wrapped_foldername = textwrap.fill("   ".join(all_folder), width=80)
                 raise FileNotFoundError(
-                    f"\n    all available files here: \n"
-                    f"       {wrapped_filename} \n"
-                    f"    folders: \n"
-                    f"       {wrapped_foldername}\n"
-                    f"    not found file: {filename}"
+                    f"\navailable files here: \n"
+                    f"    {wrapped_filename} \n"
+                    f"folders here: \n"
+                    f"    {wrapped_foldername}\n"
+                    f"desired file: {filename}"
                     )
             else:
                 raise FileNotFoundError(
-                    f"    \nall available files here: \n   {wrapped_filename}\n"
-                    f"    not found file: {filename}"
+                    f"\navailable files here: \n"
+                    f"    {wrapped_filename}\n"
+                    f"desired file: {filename}"
                     )
     
     
@@ -966,9 +969,10 @@ def _get_data_location(f: _h5py.File | _h5py.Group, name: str) -> _h5py.Group:
                 import textwrap
                 available_names = list(f.keys())
                 wrapped_names = textwrap.fill(str(available_names), width=80)
+                tmp = "/".join(res)
                 raise ValueError(
                     f"Available names:\n{wrapped_names}.\n"
-                    f"Data '{eachname}' not found in '/{"/".join(res)}'."
+                    f"Data '{eachname}' not found in '/{tmp}'."
                 )
 
 def _default_load(data_location: _h5py.Group) -> Any:
@@ -1021,7 +1025,7 @@ _LOAD_FUNC: Dict[Union[str,None], Callable]  = {
 }
 
 
-def view_hdf5(filename:str, group:str, depth=1):
+def view_hdf5(filename:str, group:str='/', depth=1):
     """显示 HDF5 文件中的目录结构.
     
     Parameters
@@ -1045,26 +1049,42 @@ def view_hdf5(filename:str, group:str, depth=1):
     >>> save_hdf5("data.h5", "/", {"mat": mat})
     >>> view_hdf5("data.h5", "/")
     """
-    def _print_attrs(name, obj):
-        shift = name.count("/") * "    "
-        namelist = name.split("/")
-        item_name = namelist[-1]
-        print(shift + item_name)
-        if len(namelist) == depth:
-            try:
-                dic = dict(obj.attrs)
-                dic["dtype"], dic["shape"] = obj.dtype, obj.shape
-                for key, val in dic.items():
-                    print(shift + "    " + f"{key}: {val}")
-            except:
-                pass
+    try:
+        from anytree import Node, RenderTree
+        useanytree = True
+    except ImportError:
+        useanytree = False
     
-    with _h5py.File(filename.encode("utf-8"), "r") as f:
-        gp = f[group]
-        if isinstance(gp, _h5py.Group):
-            gp.visititems(_print_attrs)
-        else:
-            raise ValueError(f"Group {group} not found in {filename}.")
+    if useanytree:
+        with _h5py.File(filename.encode("utf-8"), "r") as f:
+            # 定义一个递归函数来构建树状结构
+            def build_tree(name, obj, parent=None, level=0):
+                node = Node(name, parent=parent)
+                if isinstance(obj, _h5py.Group) and level < depth:
+                    for key in obj.keys():
+                        build_tree(key, obj[key], parent=node, level=level+1)
+                return node
+            
+            # 构建树状结构
+            g = _get_data_location(f, group)
+            root = build_tree(group, g)
+    
+        # 可视化树状结构
+        for pre, fill, node in RenderTree(root):
+            print(f"{pre}{node.name}")
+        
+    else:
+        with _h5py.File(filename.encode("utf-8"), "r") as f:
+            def print_tree(name, obj, level=0):
+                indent = '  ' * level
+                print(f"{indent}{name}")
+                if isinstance(obj, _h5py.Group) and level < depth:
+                    for key in obj.keys():
+                        print_tree(key, obj[key], level + 1)
+            
+            # 使用递归函数遍历所有组和数据集，并只显示一个层级
+            g = _get_data_location(f, group)
+            print_tree(group, g)
 
 # 下面两个是更高级的 save, load 用法
 # 功能实现起来比较复杂，图方便的时候可以用

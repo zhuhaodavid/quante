@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-24 14:35:47
+# @Last Modified time: 2025-03-02 16:46:11
 
 import torch as tc
 
@@ -168,6 +168,7 @@ def add_many(
     ψs_mps, phydims = [], []
     for i, ψ in enumerate(ψs):
         ψ_mps, lognm = _left2right_QR(ψ, N)
+        # ψ_mps, lognm = clone(ψ), tc.tensor(0.0, dtype=tc.float64, device=ψs[0][0].device)
         ψ_mps[-1] = ψ_mps[-1] * tc.exp(lognm) * αs[i]
         ψs_mps.append(ψ_mps)
         phydim = [ψ_.shape[1:-1] for ψ_ in ψ_mps]
@@ -216,7 +217,7 @@ def add_many(
         # Compute the new density matrix
         ρnm1 = 0
         for i in range(N_mps):
-            # tmp_ = _np.einsum("abc,cde,df->abfe", ψs_mps[i][n - 2], Cns[i], Vn.conj(), optimize=True)
+            # tmp_ = tc.einsum("abc,cde,df->abfe", ψs_mps[i][n - 2], Cns[i], Vn.conj())
 
             c, *d, e = Cns[i].shape
             a, *b, c = ψs_mps[i][n - 2].shape
@@ -238,6 +239,8 @@ def add_many(
             ρnm1 += tmp @ tmp.conj().T
 
         ρn = ρnm1
+    
+    # print(Cns)
 
     ψ_out[0] = sum(Cns).reshape(1, -1, linkdim)
 
@@ -500,7 +503,7 @@ def _left2right_QR_step(W1:tc.Tensor, W2:tc.Tensor)->tuple[tc.Tensor,tc.Tensor]:
 
 
 def _left2right_QR(Ws, L, qrnormalize=False)->tuple[tc.Tensor,tc.Tensor]:
-    As, lognm = [None] * L, 0.0
+    As, lognm = [None] * L, tc.tensor(0.0, dtype=Ws[0].dtype, device=Ws[0].device)
     W1 = Ws[0]
     for i in range(L-1):
         # print(i)
