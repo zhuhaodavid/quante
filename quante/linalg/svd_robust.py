@@ -2,21 +2,12 @@
 # @Author: hzhu
 # @Date:   2023-09-19 22:25:55
 # @Last Modified by:   dzwang
-# @Last Modified time: 2024-12-30 11:51:13
+# @Last Modified time: 2025-01-28 19:12:03
 import scipy.linalg as sla
 import numpy as np
 
 
-__all__ = ['svd_truncate', 'TruncationError', 'truncate', 'svd']
-
-
-from typing import Optional
-def svd_truncate(mat:np.ndarray, Dc:Optional[int] = None, eps:float=1e-15) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    u, s, v = svd(mat, full_matrices=False)  # 如果要用 numba 只需把 svd 换成 np.linalg.svd
-    D_update = np.sum(s >= eps)
-    D = min(Dc, D_update) if Dc is not None else D_update
-    u, s, v = u[:, :D], s[:D], v[:D, :]
-    return u, s, v
+__all__ = ['TruncationError', 'truncate', 'svd', 'svd_truncate_toy', 'svd_truncate']
 
 
 class TruncationError:
@@ -191,3 +182,45 @@ def svd(a,
         raise ValueError("invalid `lapack_driver`: " + str(lapack_driver))
     # 'gesvd' lapack driver
     return sla.svd(a, full_matrices, compute_uv, overwrite_a, check_finite, lapack_driver='gesvd')
+
+
+
+from typing import Optional
+def svd_truncate_toy(mat:np.ndarray, Dc:Optional[int]=None, eps:float=1e-15) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    u, s, v = svd(mat, full_matrices=False)  # 如果要用 numba 只需把 svd 换成 np.linalg.svd
+    D_update = np.sum(s >= eps)
+    D = min(Dc, D_update) if Dc is not None else D_update
+    u, s, v = u[:, :D], s[:D], v[:D, :]
+    return u, s, v
+
+
+def svd_truncate(tensor:np.ndarray, lr_index:list=None, trunc_para=(None, None, None)) -> tuple[np.ndarray, np.ndarray, np.ndarray, TruncationError]:
+    """
+    >>> tensor = np.random.rand(2, 3, 4, 5)
+    >>> tensor /= np.linalg.norm(tensor)
+    >>> tensor_ = tensor.transpose(2, 3, 0, 1)
+    >>> u1, s1, vt1, trunc_error1 = qt.linalg.svd_truncate(tensor_, trunc_para=(5, 1.e-10, 1.e-10))
+    >>> lr_index = [[2, 3,], [0, 1]]
+    >>> u2, s2, vt2, trunc_error2 = qt.linalg.svd_truncate(tensor, lr_index=lr_index, trunc_para=(5, 1.e-10, 1.e-10))
+    """
+    # 1. reshape tensor to matrix
+    ndim = tensor.ndim
+    shape = tensor.shape
+    if lr_index == None:
+        l_shape, r_shape = shape[:ndim//2], shape[ndim//2:]
+        matrix = tensor.reshape(np.prod(l_shape), np.prod(r_shape))
+    else:
+        l_index, r_index = lr_index
+        l_shape = [shape[i] for i in l_index]
+        r_shape = [shape[i] for i in r_index]
+        matrix = tensor.transpose(*(l_index+r_index)).reshape(np.prod(l_shape), np.prod(r_shape))
+    # 2. svd
+    u, s, vt = svd(matrix)
+    # 3. truncate
+    chi_max, svd_min, trunc_cut = trunc_para
+    good, trunc_error = truncate(s, chi_max, svd_min, trunc_cut)
+    u, s, vt = u[:, good], s[good], vt[good, :]
+    # 4. reshape back to tensor
+    u = u.reshape(*l_shape, -1)
+    vt = vt.reshape(-1, *r_shape)
+    return u, s, vt, trunc_error

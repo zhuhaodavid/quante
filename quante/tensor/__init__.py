@@ -2,17 +2,14 @@
 # @Author: hzhu
 # @Date:   2023-10-22 18:27:12
 # @Last Modified by:   dzwang
-# @Last Modified time: 2024-12-12 11:46:59
+# @Last Modified time: 2025-02-19 14:52:26
 """
 ==================================
 tensor (:mod:`quante.tensor`)
 ==================================
 
-张量网络
+numpy 张量网络
 """
 
-from . import algorithms
-from . import linalg
-from . import networks
-
-__all__ = ["algorithms", "linalg", "networks"]
+from .linalg import *
+from .tensortrain import *
