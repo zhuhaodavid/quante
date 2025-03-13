@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:45:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-24 15:00:19
+# @Last Modified time: 2025-03-13 16:47:21
 
 import time  # type: ignore
 import torch as tc
@@ -13,7 +13,7 @@ from ..linalg.krylov import argsort, arnoldi_ground_state, lanczos_ground_state
 
 from .mps import MPS
 from .mpo import MPO, SumMPO
-from .projtt import (ProjMPO, ProjMPOMPS, ProjSumMPO)
+from .projtt import (ProjMPO, ProjMPOMPS, ProjSumMPO, ProjOper)
 from . import tensor_operations as tf
 
 
@@ -22,15 +22,16 @@ def solve_ground_state(oper:'ProjMPO', v, *,
                        which='LM', 
                        isherm=True,
                        lanczos_tol=1e-14,
+                       refer=None,
                        **eigs_kwargs):
     """计算 ProjMPO 的 ground state """
-    if method == 'default' and isherm:
+    if method == 'default':
         if isherm:
             # use ED for small matrix dimensions, but lanczos by default
             if oper.shape < 400:
                 mat = oper.to_matrix()
                 E, theta = tc.linalg.eigh(mat)
-                sort = argsort(E, which)
+                sort = argsort(E, which, refer=refer)
                 return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
             else:
                 method = 'lanczos' if which == 'SA' else 'arnoldi'
@@ -39,7 +40,7 @@ def solve_ground_state(oper:'ProjMPO', v, *,
             if oper.shape < 400:
                 mat = oper.to_matrix()
                 E, theta = tc.linalg.eig(mat)
-                sort = argsort(E, which)
+                sort = argsort(E, which, refer=refer)
                 return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
             else:
                 method = 'arnoldi'
@@ -54,7 +55,7 @@ def solve_ground_state(oper:'ProjMPO', v, *,
         return val, vec.reshape(*s)
 
     elif method == 'arnoldi':  # tenpy arnoldi 用来处理非厄密矩阵时可以考虑 #todo 自己实现
-        val, vec = arnoldi_ground_state(matmul, v.reshape(-1),
+        val, vec = arnoldi_ground_state(matmul, v.reshape(-1),refer=refer,
                                         which=which, **eigs_kwargs)  # tol 并没有用
         return val[0], vec[0].reshape(*s)
 
@@ -69,7 +70,7 @@ def solve_ground_state(oper:'ProjMPO', v, *,
 class DMRG:
     def __init__(self, mpo, **kwargs):
         # 保存 mpo 数据
-        if isinstance(mpo, MPO):
+        if isinstance(mpo, MPO) or isinstance(mpo, ProjOper) or isinstance(mpo, ProjMPOMPS) or isinstance(mpo, ProjSumMPO):
             # 如果输入 mpo，那就保存这个 mpo
             self.mpo = mpo  
         elif (isinstance(mpo, list) and 
@@ -98,13 +99,16 @@ class DMRG:
 
         # 要排除的子空间基矢
         self.Ms = kwargs.get('Ms', None)
+        self.weight = kwargs.get('weight', None if self.Ms is None else [1.0]*len(self.Ms))
+        assert self.weight is None or isinstance(self.weight, list), "weight 必须为 list"
 
         # DMRG 参数
         self.nsweep = kwargs.get('nsweep', 5)  # 扫描次数
         self.restol = kwargs.get('restol', 1.e-7)  # 能量收敛精度
         self.outputlevel = kwargs.get('outputlevel', 1)  # 输出级别
         self.which = kwargs.get('which', 'SA')  # 计算基态还是边界态
-        self.isherm = True
+        self.isherm = kwargs.get('isherm', True)  # 是否厄密
+        self.ifnorm = kwargs.get('normenv', False)  # 环境是否归一
 
         # lanczos 参数
         self.backend = kwargs.get('backend', 'default')  # lanczos 后端
@@ -123,6 +127,7 @@ class DMRG:
 
         # 记录结果：
         self.energy = tc.inf
+        self.sw = 0
 
     def precheck(self):
         """检查参数的正确性"""
@@ -139,16 +144,19 @@ class DMRG:
 
     def build_projH(self, nsite) -> ProjMPO | ProjMPOMPS | ProjSumMPO:
         """构建 projH"""
+        if isinstance(self.mpo, ProjOper) or isinstance(self.mpo, ProjMPOMPS) or isinstance(self.mpo, ProjSumMPO):
+            return self.mpo
+
         oper = self.mpo.copy()
         if self.psi.dtype.is_complex and not self.mpo.dtype.is_complex:
             oper.to(dtype=tc.complex128,device=self.psi.device)
         if isinstance(self.mpo, MPO) and self.Ms is None:
-            projH = ProjMPO(oper, nsite=nsite)
+            projH = ProjMPO(oper, nsite=nsite, ifnorm=self.ifnorm)
         elif isinstance(self.mpo, MPO) and isinstance(self.Ms, list) and all(isinstance(x, MPS) for x in self.Ms):
-            projH = ProjMPOMPS(oper, self.Ms)
+            projH = ProjMPOMPS(oper, self.Ms, self.weight, ifnorm=self.ifnorm)
             assert nsite == 2, "nsite 必须为 2"
         elif isinstance(self.mpo, SumMPO) and self.Ms is None:
-            projH = ProjSumMPO(oper)
+            projH = ProjSumMPO(oper, ifnorm=self.ifnorm)
             assert nsite == 2, "nsite 必须为 2"
         else:
             raise ValueError(
@@ -176,6 +184,7 @@ class DMRG:
                 energy, phi = solve_ground_state(projH, phi, method=self.backend, lanczos_tol=lanczos_tol)
                 # update the MPS
                 self.psi.update_single_site_(pos, phi)
+            energy *= tc.exp(self.mpo.lognm + projH.lrlognm)
             sw_time = time.time() - sw_time_start  # 记录每步的时间
             self.logstate(sw, sw_time, energy)
             if self.checkdone(energy):
@@ -188,6 +197,7 @@ class DMRG:
         self.precheck()
         projH = self.build_projH(nsite)
         # save_hdf5("log.h5", f"init", {f"{i}": self.psi.data[i].reshape(-1) for i in range(self.psi.L)}, mode='w')
+        energy = self.energy
         for sw in range(self.nsweep):
             sw_time_start = time.time()
             for pos, drt in DMRG._sweep_schedule(self.L, nsite):
@@ -206,8 +216,13 @@ class DMRG:
                             lanczos_tol=lanczos_tol,
                             which=self.which,
                             isherm=self.isherm,
+                            refer=energy,
                             **self.eigs_kwargs)
-                
+               
+                # print and delete
+                # print('\r', end='', flush=True)
+                # print(tc.exp(self.mpo.lognm + projH.lrlognm) * energy, end='', flush=True)
+                # print(f'{pos:3d}: {energy:+.4e}', end='', flush=True)
                 # jlphi2 = load_hdf5("D:\OneDrive\软件\Julia\jllog.h5", '/', f'/({pos}, {drt})/2phi')
                 # shape_phi1, shape_phi2, *_ = phi.shape
                 # phi = phi * (np.sign(jlphi2[*[0]*jlphi2.ndim]) * tc.sign(phi[*[0]*phi.ndim]))
@@ -220,15 +235,22 @@ class DMRG:
                                           svd_alg=self.svd_alg, trunc_para=trunc_para, normalize=self.normalize,
                                           eigdirection=drt, pertube=drho, updateS=True)
 
+            energy *= tc.exp(self.mpo.lognm + projH.lrlognm)
             sw_time = time.time() - sw_time_start  # 记录每步的时间
+            # print()
             self.logstate(sw, sw_time, energy)
             if self.checkdone(energy):
                 break
+        self.sw = sw
         self.psi.lognm *= 0. # 归一
-        return energy * tc.exp(self.mpo.lognm), self.psi
+        return self.energy, self.psi
 
     @staticmethod
     def _sweep_schedule(L, nsite):
+        for position in range(L - nsite + 1):
+            yield (position, "right")
+        for position in range(L - nsite, -1, -1):
+            yield (position, "left") 
         for position in range(L - nsite + 1):
             yield (position, "right")
         for position in range(L - nsite, -1, -1):
@@ -237,11 +259,10 @@ class DMRG:
     def logstate(self, sw, sw_time, energy):
         # post process
         if self.outputlevel >= 1:
-            print(f"After sweep {sw}: energy={(energy * tc.exp(self.mpo.lognm)).item()} "
+            print(f"After sweep {sw}: energy={(energy).item()} "
                     f"maxchi={self.psi.maxbonddim()} time={sw_time:.3f}", flush=True)
     
     def checkdone(self, energy):
-        isdone = tc.abs(self.energy - energy) < self.restol
+        isdone = tc.abs(self.energy - energy) < self.restol * tc.abs(energy)
         self.energy = energy
         return isdone
-        

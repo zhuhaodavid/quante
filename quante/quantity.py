@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-27 11:22:09
+# @Last Modified time: 2025-03-06 12:41:42
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -44,7 +44,7 @@ def spectral_form_factor(engs:_np.ndarray, times:_np.ndarray | float):
         谱形因子
     """
     if engs.ndim == 1:
-        engs = engs.reshape(-1, 1)
+        engs = engs.reshape(1, -1)
     
     try:
         import torch as tc
@@ -58,7 +58,11 @@ def spectral_form_factor(engs:_np.ndarray, times:_np.ndarray | float):
         for j in tqdm(range(len(ts)), ascii=True):
             sff[j] = tc.mean(tc.abs(tc.sum(tc.exp(1j*mat*ts[j]), dim=1))**2)
         return sff.cpu().numpy()
-    except:
+    #     sff = tc.zeros(len(ts), engs.shape[0], device='cuda', dtype=tc.float64)
+    #     for j in tqdm(range(len(ts)), ascii=True):
+    #         sff[j] = tc.abs(tc.sum(tc.exp(1j*mat*ts[j]), dim=1))**2
+    #     return sff
+    except Exception as e:
         pass
 
     if isinstance(times, float):
