@@ -62,12 +62,12 @@ class MPS(TensorTrain):
         for i in range(len(self.data)):
             if i == 0:
                 a,b,d = self.data[i].shape
-                tsr[f"W{i+1}"] = self.data[i].cpu().numpy().reshape(b,d)
+                tsr[f"W{i+1}"] = self.data[i].cpu().resolve_conj().numpy().reshape(b,d)
             elif i == len(self.data)-1:
                 a,b,d = self.data[i].shape
-                tsr[f"W{i+1}"] = self.data[i].cpu().numpy().reshape(a,b)
+                tsr[f"W{i+1}"] = self.data[i].cpu().resolve_conj().numpy().reshape(a,b)
             else:
-                tsr[f"W{i+1}"] = self.data[i].cpu().numpy()
+                tsr[f"W{i+1}"] = self.data[i].cpu().resolve_conj().numpy()
         data_dict["lognm"] = self.lognm.cpu().numpy()
         data_dict["llim"] = self.llim
         data_dict["rlim"] = self.rlim + 2
@@ -428,6 +428,9 @@ class MPS(TensorTrain):
         
         from .mpo import MPO
         if isinstance(operator, MPO):
+            if pos is None:
+                assert len(operator.data) == self.L, "operator length must be equal to MPS length"
+                pos = 0
             if self.is_canonical_form():
                 firstdata = self.Ss[pos].reshape(-1, 1, 1) * self.data[pos]
             else:

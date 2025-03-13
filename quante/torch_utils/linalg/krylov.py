@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-09 18:07:00
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 22:27:58
+# @Last Modified time: 2025-03-13 16:06:21
 
 import torch as tc
 import numpy as np
@@ -953,7 +953,7 @@ def _lanczos_evolve_state(matvec, psi0, delta, N_min, N_max, P_tol, reortho, cut
 
 def arnoldi_ground_state(matvec:Callable[[tc.Tensor], tc.Tensor], psi0:tc.Tensor, **kwargs) -> tuple[float, tc.Tensor]:
     paras = {
-        "N_min": 2,  #  要执行的最小步数
+        "N_min": 4,  #  要执行的最小步数
         "N_max": 20,  # 要执行的最大步数
         "P_tol": 1.e-14,  # 来自 Ritz 残差的误差估计的容差
         "min_gap": 1.e-12,  # 用于 P_tol 标准的间隙估计的下限
@@ -961,7 +961,8 @@ def arnoldi_ground_state(matvec:Callable[[tc.Tensor], tc.Tensor], psi0:tc.Tensor
         "E_tol": tc.inf,  #  本征值误差容差
         "which": 'LM',
         "num_ev": 1,
-        "E_shift": None
+        "E_shift": None,
+        "refer": None
     }
     paras.update(kwargs)
     eng, vec, N = _arnoldi_ground_state(matvec, psi0, **paras)
@@ -969,7 +970,7 @@ def arnoldi_ground_state(matvec:Callable[[tc.Tensor], tc.Tensor], psi0:tc.Tensor
     return eng, vec
 
 
-def _arnoldi_ground_state(matvec, psi0, N_min, N_max, P_tol, min_gap, cutoff, E_tol, which, num_ev, E_shift):
+def _arnoldi_ground_state(matvec, psi0, N_min, N_max, P_tol, min_gap, cutoff, E_tol, which, num_ev, E_shift, refer):
     Es = tc.zeros((N_max, N_max), dtype=tc.complex128)
     h = tc.zeros((N_max + 1, N_max + 1), dtype=tc.complex128)
     basis = []
@@ -989,7 +990,7 @@ def _arnoldi_ground_state(matvec, psi0, N_min, N_max, P_tol, min_gap, cutoff, E_
             eigenvector = tc.ones(1, 1, dtype=tc.complex128)
         else:
             eng, vec = tc.linalg.eig(h[:k + 1, :k + 1])
-            sort = argsort(eng, which)
+            sort = argsort(eng, which, refer)
             Es[k, :k + 1] = eng[sort]  # 保存本征值
             eigenvector = vec[:, sort]  # 保存最小值对应的本征向量
 
@@ -1041,7 +1042,7 @@ def _arnoldi_ground_state(matvec, psi0, N_min, N_max, P_tol, min_gap, cutoff, E_
     return E0, psis, N
   
 
-def argsort(a, sort=None, **kwargs):
+def argsort(a, sort=None, refer=None, **kwargs):
     """wrapper around np.argsort to allow sorting ascending/descending and by magnitude.
 
     Parameters
@@ -1079,18 +1080,25 @@ def argsort(a, sort=None, **kwargs):
     """
     if sort is not None:
         if sort == 'm<' or sort == 'SM':
-            a = tc.abs(a)
+            b = tc.abs(a)
         elif sort == 'm>' or sort == 'LM':
-            a = -tc.abs(a)
+            b = -tc.abs(a)
         elif sort == '<' or sort == 'SR' or sort == 'SA':
-            a = tc.real(a)
+            b = tc.real(a)
         elif sort == '>' or sort == 'LR' or sort == 'LA':
-            a = -tc.real(a)
+            b = -tc.real(a)
         elif sort == 'SI':
-            a = tc.imag(a)
+            b = tc.imag(a)
         elif sort == 'LI':
-            a = -tc.imag(a)
+            b = -tc.imag(a)
         else:
             raise ValueError("unknown sort option " + repr(sort))
-    return tc.argsort(a, **kwargs)
+    arg = tc.argsort(b, **kwargs)
+    if refer is not None and (sort == 'LM' or sort == 'SM'):
+        # todo 如何更好的判断简并情况??
+        for i in range(1,len(a)):
+            if (abs(abs(a[arg[0]]) - abs(a[arg[i]])) < 0.001 * abs(a[arg[0]])
+                and abs(a[arg[0]] - refer) > abs(a[arg[i]] - refer)):
+                arg[0], arg[i] = arg[i], arg[0]
+    return arg
 

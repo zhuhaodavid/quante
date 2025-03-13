@@ -29,11 +29,11 @@ def promote_dtype(*datas):
 
 def real_if_close(a, tol=100):
     # 检查输入是否为复数类型
-    if not a.is_complex():
-        return a
-    etal = tol * tc.finfo(a.imag.dtype).eps
-    if all(tc.abs(a.imag) < etal):
-        return a.real
+    if a.is_complex():
+        etal = tol * tc.finfo(a.imag.dtype).eps
+        if all(tc.abs(a.imag) < etal):
+            return a.real
+    return a
  
 
 def open_grad(tensors: list | tc.Tensor) -> None:
