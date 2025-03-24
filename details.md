@@ -2,9 +2,7 @@
 
 ## Anaconda
 
-### Anaconda3/miniconda3:
-
-### Linux: 
+### Anaconda3/miniconda3 (Linux):
 
 - Download `wget https://repo.anaconda.com/archive/Anaconda-xxx.sh`
 
