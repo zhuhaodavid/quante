@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-20 19:25:00
+# @Last Modified time: 2025-03-24 09:36:22
 
 import numpy as np
 import torch as tc
@@ -138,7 +138,12 @@ class MPS(TensorTrain):
         else:
             assert len(bond_dim) == L + 1
             linkdims_ = bond_dim
-        ψ1 = [tc.randn(linkdims_[i],phys_dim,linkdims_[i+1], dtype=dtype, device=device) for i in range(L)]
+        if isinstance(phys_dim, int):
+            phys_dim_ = [phys_dim] * L
+        else:
+            assert len(phys_dim) == L
+            phys_dim_ = phys_dim
+        ψ1 = [tc.randn(linkdims_[i],phys_dim_[i],linkdims_[i+1], dtype=dtype, device=device) for i in range(L)]
         return cls(ψ1)
     
     @classmethod

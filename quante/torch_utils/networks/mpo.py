@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-24 15:00:44
+# @Last Modified time: 2025-03-24 09:40:58
 
 import numpy as np
 import torch as tc
@@ -412,6 +412,10 @@ class SumMPO:
     @property
     def device(self):
         return self.Hs[0].device
+    
+    @property
+    def phys_dim(self):
+        return self.Hs[0].phys_dim
     
     def __iter__(self):
         return iter(self.Hs)

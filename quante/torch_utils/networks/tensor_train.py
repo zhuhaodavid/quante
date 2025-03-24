@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 18:14:48
+# @Last Modified time: 2025-03-24 09:33:37
 
 import copy
 import warnings
@@ -55,6 +55,10 @@ class TensorTrain:
     
     def __getitem__(self, key):
         return self.data[key]
+    
+    @property
+    def phys_dim(self):
+        return [x.shape[-2] for x in self.data]
     
     def add_(self, anotherTT):
         """Tensor Train 的加法，MPO,MPS 都可用

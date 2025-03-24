@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-12 19:41:28
+# @Last Modified time: 2025-03-24 09:46:58
 
 # 定义了 ProjOper, ProjMPO, ProjMPS, ProjSumMPO, ProjMPOMPS 等类
 # 它们关系为：
@@ -334,7 +334,6 @@ class ProjMPS(ProjOper):
 
 
 class ProjSumMPO:
-    # !! 这部分没有测试 lognm 的正确性，应该是存在问题的！！！
     def __init__(self, Hs:list[MPO], ifnorm) -> None:
         """
         ProjMPO 计算并存储 MPO 在由 MPS 定义的基中投影，保留 MPO 的某些站点索引未投影。
@@ -376,6 +375,7 @@ class ProjSumMPO:
         # lognms = [tc.exp(H.mid.lognm).item() for H in self.Hs]
         # return lambda v: reduce(lambda x, pair: x + pair[0](v) * pair[1], zip(funcs, lognms), 0)
         def matmul(v):
+            #?? lognm? any better way?
             res = funcs[0](v) * tc.exp(self.Hs[0].mid.lognm)
             for i in range(1,len(funcs)):
                 res += funcs[i](v)  * tc.exp(self.Hs[i].mid.lognm)
@@ -395,6 +395,10 @@ class ProjSumMPO:
     @property
     def shape(self):
         return self.Hs[0].shape
+    
+    @property
+    def lrlognm(self):
+        return tc.tensor(0., dtype=tc.float64, device=self.Hs[0].mid.device)
 
 
 class ProjMPOMPS:

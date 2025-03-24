@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-09 18:07:00
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-13 16:06:21
+# @Last Modified time: 2025-03-24 09:21:28
 
 import torch as tc
 import numpy as np
@@ -999,7 +999,7 @@ def _arnoldi_ground_state(matvec, psi0, N_min, N_max, P_tol, min_gap, cutoff, E_
 
         if k + 1 < N_min:
             continue
-
+        
         Es_k = Es[k, :]  # current energies
         RitzRes = abs(eigenvector[k, 0]) * h[k + 1, k]
         gap = max(min([tc.min(tc.abs(Es_k[i+1:] - Es_k[i])) for i in range(num_ev)]), min_gap)
@@ -1009,6 +1009,7 @@ def _arnoldi_ground_state(matvec, psi0, N_min, N_max, P_tol, min_gap, cutoff, E_
         if tc.abs(P_err) < P_tol and tc.abs(Delta_E0) < E_tol:
             break
     
+    # print(eng[:10])
     N = k + 1
     E0 = Es[N - 1, :num_ev]
     if E_shift is not None:
@@ -1094,11 +1095,16 @@ def argsort(a, sort=None, refer=None, **kwargs):
         else:
             raise ValueError("unknown sort option " + repr(sort))
     arg = tc.argsort(b, **kwargs)
-    if refer is not None and (sort == 'LM' or sort == 'SM'):
+    if tc.is_complex(a) and refer is not None and (sort == 'LM' or sort == 'SM'):
         # todo 如何更好的判断简并情况??
-        for i in range(1,len(a)):
-            if (abs(abs(a[arg[0]]) - abs(a[arg[i]])) < 0.001 * abs(a[arg[0]])
-                and abs(a[arg[0]] - refer) > abs(a[arg[i]] - refer)):
+        #!! 这里只是 pMPSv_app 项目的选择
+        for i in range(len(a)):
+            if abs(a[arg[i]].imag) < 1. and a[arg[i]].real > 0:
                 arg[0], arg[i] = arg[i], arg[0]
+                diff = tc.abs(a - refer)
+                argdiff = tc.argsort(diff)
+                if diff[argdiff[0]] < 1e-2*abs(a[arg[0]] - refer):
+                    arg[0], argdiff[0] = argdiff[0], arg[0]
+                break
     return arg
 

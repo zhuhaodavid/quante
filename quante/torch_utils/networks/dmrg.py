@@ -2,11 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:45:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-13 16:47:21
+# @Last Modified time: 2025-03-24 09:45:46
 
 import time  # type: ignore
 import torch as tc
-import numpy as np
+from tqdm import tqdm
+import warnings
 
 from ...linalg.krylov import lanczos_arpack
 from ..linalg.krylov import argsort, arnoldi_ground_state, lanczos_ground_state
@@ -41,6 +42,7 @@ def solve_ground_state(oper:'ProjMPO', v, *,
                 mat = oper.to_matrix()
                 E, theta = tc.linalg.eig(mat)
                 sort = argsort(E, which, refer=refer)
+                # print(E[sort[:10]])
                 return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
             else:
                 method = 'arnoldi'
@@ -84,46 +86,71 @@ class DMRG:
         # 链长
         self.L = len(self.mpo)
         assert self.L != 1, "MPS 长度不能为 1"
+
+        # 记录已使用的初态
+        used_kwargs = set()
         
         # 初态
         self.psi = kwargs.get('psi', None)
+        used_kwargs.add('psi')
 
         if self.psi is None:
             # 如果没有指定初态，那就随机出来，数据类型与 self.mpo 相同
             dtype = kwargs.get('dtype', self.mpo.dtype)
-            self.psi = MPS.from_random(self.L, bond_dim=2, dtype=dtype, device=self.mpo.device)
-        # 正交中心移到最左侧
+            used_kwargs.add('dtype')
+            self.psi = MPS.from_random(self.L, bond_dim=2, phys_dim=self.mpo.phys_dim, dtype=dtype, device=self.mpo.device)
         self.psi.orthogonalize_(0)
-        # 检查 psi 与 mpo 的链长一致
         assert self.L == len(self.psi.data), 'MPS 和 MPO 的长度应该相等'
 
         # 要排除的子空间基矢
         self.Ms = kwargs.get('Ms', None)
+        used_kwargs.add('Ms')
         self.weight = kwargs.get('weight', None if self.Ms is None else [1.0]*len(self.Ms))
+        used_kwargs.add('weight')
         assert self.weight is None or isinstance(self.weight, list), "weight 必须为 list"
 
         # DMRG 参数
         self.nsweep = kwargs.get('nsweep', 5)  # 扫描次数
+        used_kwargs.add('nsweep')
         self.restol = kwargs.get('restol', 1.e-7)  # 能量收敛精度
-        self.outputlevel = kwargs.get('outputlevel', 1)  # 输出级别
+        used_kwargs.add('restol')
+        self.outputlevel = kwargs.get('outputlevel', 2)  # 输出级别
+        used_kwargs.add('outputlevel')
         self.which = kwargs.get('which', 'SA')  # 计算基态还是边界态
+        used_kwargs.add('which')
         self.isherm = kwargs.get('isherm', True)  # 是否厄密
+        used_kwargs.add('isherm')
         self.ifnorm = kwargs.get('normenv', False)  # 环境是否归一
+        used_kwargs.add('normenv')
 
         # lanczos 参数
         self.backend = kwargs.get('backend', 'default')  # lanczos 后端
+        used_kwargs.add('backend')
         # 'lanczos', 'arnoldi', 'larpack'
         self.max_trunc_err = kwargs.get('max_trunc_err', 1.e-14)  # lanczos 误差
+        used_kwargs.add('max_trunc_err')
         
         self.eigs_kwargs = kwargs.get('eigs_kwargs', {})
+        used_kwargs.add('eigs_kwargs')
 
         # mps 更新参数
         self.noise = kwargs.get('noise', None)  # 噪声
+        used_kwargs.add('noise')
         self.svd_alg = kwargs.get('svd_alg', 'eig')
+        used_kwargs.add('svd_alg')
         self.chi_max = kwargs.get('chi_max', [10, 20, 100, 100, 200])  # 奇异值分解的最大 bond dimension
+        used_kwargs.add('chi_max')
         self.cutoff = kwargs.get('cutoff', [1E-10])
+        used_kwargs.add('cutoff')
         self.svd_min = kwargs.get('svd_min', 1E-10)
+        used_kwargs.add('svd_min')
         self.normalize = kwargs.get('normalize', True)  # 是否归一化
+        used_kwargs.add('normalize')
+
+        # 检查是否有未使用的参数
+        unused_kwargs = set(kwargs.keys()) - used_kwargs
+        if unused_kwargs:
+            warnings.warn(f"未使用的参数: {unused_kwargs}")
 
         # 记录结果：
         self.energy = tc.inf
@@ -193,23 +220,26 @@ class DMRG:
     
 
     def run2(self):
+        self.convergent = False
         nsite = 2
         self.precheck()
         projH = self.build_projH(nsite)
         # save_hdf5("log.h5", f"init", {f"{i}": self.psi.data[i].reshape(-1) for i in range(self.psi.L)}, mode='w')
         energy = self.energy
         for sw in range(self.nsweep):
-            sw_time_start = time.time()
+            
+            # 仅当 self.outputlevel >= 1 时显示进度条
+            if self.outputlevel >= 2:
+                pbar = tqdm(total=2 * self.L - 2, desc=f"Sweep {sw+1}", dynamic_ncols=True, ascii=True)
+            else:
+                pbar = None
+
             for pos, drt in DMRG._sweep_schedule(self.L, nsite):
-                # print((pos, drt))
                 projH.set_position_(self.psi, pos)
                 
                 phi = tf._full_contract_two(self.psi.data[pos], self.psi.data[pos + 1])
                 phi /= tc.norm(phi)
-                # save_hdf5("log.h5", f"{(pos, drt)}/0Ws", {f"{i}": self.psi.data[i].reshape(-1) for i in range(self.psi.L)})
-                # save_hdf5("log.h5", f"{(pos, drt)}", {f"1phi": phi.reshape(-1)})
-                
-                # solve for the ground state of the effective Hamiltonian
+           
                 lanczos_tol=max(self.svd_min, 0.05*self.max_trunc_err) # todo `lanczos_tol` 有没有更好的选择？
                 energy, phi = solve_ground_state(projH, phi, 
                             method=self.backend,
@@ -218,29 +248,33 @@ class DMRG:
                             isherm=self.isherm,
                             refer=energy,
                             **self.eigs_kwargs)
-               
-                # print and delete
-                # print('\r', end='', flush=True)
-                # print(tc.exp(self.mpo.lognm + projH.lrlognm) * energy, end='', flush=True)
-                # print(f'{pos:3d}: {energy:+.4e}', end='', flush=True)
-                # jlphi2 = load_hdf5("D:\OneDrive\软件\Julia\jllog.h5", '/', f'/({pos}, {drt})/2phi')
-                # shape_phi1, shape_phi2, *_ = phi.shape
-                # phi = phi * (np.sign(jlphi2[*[0]*jlphi2.ndim]) * tc.sign(phi[*[0]*phi.ndim]))
-                # save_hdf5("log.h5", f"{(pos, drt)}", {f"2phi": phi.reshape(shape_phi1*shape_phi2, -1)})
-                # update the MPS
+            
                 drho = self.noise * projH.noiseterm(phi=phi, drt=drt) if self.noise is not None else None
 
                 trunc_para = (self.chi_max[sw], self.svd_min, self.cutoff[sw])
                 self.psi.update_two_site_(pos, phi, drt,
-                                          svd_alg=self.svd_alg, trunc_para=trunc_para, normalize=self.normalize,
-                                          eigdirection=drt, pertube=drho, updateS=True)
+                                        svd_alg=self.svd_alg, trunc_para=trunc_para, normalize=self.normalize,
+                                        eigdirection=drt, pertube=drho, updateS=True)
+                
+                if drt == 'left' and pos == self.L // 2:
+                    real_energy = energy * tc.exp(self.mpo.lognm + projH.lrlognm)
 
-            energy *= tc.exp(self.mpo.lognm + projH.lrlognm)
-            sw_time = time.time() - sw_time_start  # 记录每步的时间
-            # print()
-            self.logstate(sw, sw_time, energy)
-            if self.checkdone(energy):
+                if pbar is not None:
+                    pbar.set_postfix({"pE": f"{energy:.4e}", "chi": self.psi.maxbonddim()})
+                    # pE is the abbreviation of the pseudo energy
+                    pbar.update(1)
+
+            if pbar is not None:
+                pbar.close()
+
+            
+            if self.checkdone(real_energy):
+                if self.outputlevel >= 1:
+                    print(f"Energy converged to {real_energy:.10f} after {sw + 1} sweeps.")
+                self.convergent = True
                 break
+        if not self.convergent:
+            print(f"Energy did not converge after {self.nsweep} sweeps.")
         self.sw = sw
         self.psi.lognm *= 0. # 归一
         return self.energy, self.psi
@@ -251,16 +285,10 @@ class DMRG:
             yield (position, "right")
         for position in range(L - nsite, -1, -1):
             yield (position, "left") 
-        for position in range(L - nsite + 1):
-            yield (position, "right")
-        for position in range(L - nsite, -1, -1):
-            yield (position, "left") 
-
-    def logstate(self, sw, sw_time, energy):
-        # post process
-        if self.outputlevel >= 1:
-            print(f"After sweep {sw}: energy={(energy).item()} "
-                    f"maxchi={self.psi.maxbonddim()} time={sw_time:.3f}", flush=True)
+        # for position in range(L - nsite + 1):
+        #     yield (position, "right")
+        # for position in range(L - nsite, -1, -1):
+        #     yield (position, "left") 
     
     def checkdone(self, energy):
         isdone = tc.abs(self.energy - energy) < self.restol * tc.abs(energy)
