@@ -4,7 +4,7 @@
 
 ### Anaconda3/miniconda3:
 
-#### Linux: 
+### Linux: 
 
 - Download `wget https://repo.anaconda.com/archive/Anaconda-xxx.sh`
 
@@ -36,7 +36,53 @@
 
 - 移除 channel: conda config --remove channels channel_name
 
-## package dependence (python=3.11) new version
+## Git
+
+### Git 常用命令
+
+- 创建新分支 `git checkout -b branchname`
+
+- 查看某一分支 `git checkout branchname`
+
+- 创建分支 `git branch branchname`
+
+- 合并分支 `git merge branchname`
+
+- 上传到 github `git push origin branchname`
+
+- 从 github 上下载 `git pull origin branchname`
+
+- 查看历史记录：`git log`
+
+- 回到某个历史版本：`git reset --hard <commit_hash>`
+
+- 查看历史版本：`git checkout <commit_hash>`
+
+- 合并 commit, 首先通过 git log --oneline 查看 commit 的 hash 值，然后 `git rebase -i <commit_hash>` 进入交互模式，将需要合并的 commit 前面的 pick 改为 squash（保留提交的第一个pick不动），然后保存退出，运行 `git rebase --continue` 完成合并。
+
+### Merge Git 的流程
+
+- 首先确定自己分支的改动全部提交
+
+- 关闭 OneDrive 的同步
+
+- 切换到主分支 `git checkout master`
+
+- 从 github 上拉取最新代码 `git pull origin master`
+
+- merge 自己分支 `git merge branchname`
+
+- 解决冲突，解决完后提交 `git commit -m "merge branchname"` (没有冲突直接提交)
+
+- 上传到 github `git push origin master`
+
+- 同步到自己的分支上
+
+- 打开 OneDrive 的同步
+
+## 曾经的安装流程（最新的安装请参考 readme）
+
+### package dependence (python=3.11) new version
 
 （下一次更新提醒：numba 更新 0.61?，conda 更新 scipy 1.14？）
 
@@ -60,7 +106,7 @@
 
 - `conda install qutip` qutip
 
-## package dependence (python=3.12) for quspin new version
+### package dependence (python=3.12) for quspin new version
 
 quspin 1.0.0 要求 numpy>=2.0.0
 
@@ -79,48 +125,6 @@ quspin 1.0.0 要求 numpy>=2.0.0
 - `pip install -e .` 到此已经完成安装，可以 `import quante as qt`; 如果想要安装到本地，使用 `pip install .`; 如果卸载 使用 `pip uninstall quante`
 
 安装完 quspin 其他的包，如 torch, tenpy 都会安装失败
-
-## Git
-
-- 创建新分支 `git checkout -b branchname`
-
-- 查看某一分支 `git checkout branchname`
-
-- 创建分支 `git branch branchname`
-
-- 合并分支 `git merge branchname`
-
-- 上传到 github `git push origin branchname`
-
-- 从 github 上下载 `git pull origin branchname`
-
-- 查看历史记录：`git log`
-
-- 回到某个历史版本：`git reset --hard <commit_hash>`
-
-- 查看历史版本：`git checkout <commit_hash>`
-
-- 合并 commit, 首先通过 git log --oneline 查看 commit 的 hash 值，然后 `git rebase -i <commit_hash>` 进入交互模式，将需要合并的 commit 前面的 pick 改为 squash（保留提交的第一个pick不动），然后保存退出，运行 `git rebase --continue` 完成合并。
-
-## Merge Git 的流程
-
-- 首先确定自己分支的改动全部提交
-
-- 关闭 OneDrive 的同步
-
-- 切换到主分支 `git checkout master`
-
-- 从 github 上拉取最新代码 `git pull origin master`
-
-- merge 自己分支 `git merge branchname`
-
-- 解决冲突，解决完后提交 `git commit -m "merge branchname"` (没有冲突直接提交)
-
-- 上传到 github `git push origin master`
-
-- 同步到自己的分支上
-
-- 打开 OneDrive 的同步
 
 ## install slepc4py
 
