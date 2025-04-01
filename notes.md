@@ -1,5 +1,43 @@
 # quante
 
+## Git
+
+### GitHub 同步流程
+
+- 首先确定自己分支的改动全部提交，如果使用 OneDrive，最好关闭同步。
+
+- 切换到主分支，并拉取最新代码，merge 自己分支，如果有冲突，git 会提示解决冲突。
+    
+    `git checkout master && git pull origin master && git merge xxxx`
+
+- 上传到 github，并切换回最近的分支 
+    
+    `git push origin master && git checkout xxxx && git merge master`
+
+### Git 常用命令
+
+- 创建新分支 `git checkout -b branchname`
+
+- 查看某一分支 `git checkout branchname`
+
+- 创建分支 `git branch branchname`
+
+- 合并分支 `git merge branchname`
+
+- 上传到 github `git push origin branchname`
+
+- 从 github 上下载 `git pull origin branchname`
+
+- 查看历史记录：`git log`
+
+- 回到某个历史版本：`git reset --hard <commit_hash>`
+
+- 查看历史版本：`git checkout <commit_hash>`
+
+- 合并 commit, 首先通过 git log --oneline 查看 commit 的 hash 值，然后 `git rebase -i <commit_hash>` 进入交互模式，将需要合并的 commit 前面的 pick 改为 squash（保留提交的第一个pick不动），然后保存退出，运行 `git rebase --continue` 完成合并。
+
+- 修改刚才提交的 commit: `git commit --amend`
+
 ## Anaconda
 
 ### Anaconda3/miniconda3 (Linux):
@@ -33,98 +71,6 @@
 - 查看 channel: conda config --show channels
 
 - 移除 channel: conda config --remove channels channel_name
-
-## Git
-
-### Git 常用命令
-
-- 创建新分支 `git checkout -b branchname`
-
-- 查看某一分支 `git checkout branchname`
-
-- 创建分支 `git branch branchname`
-
-- 合并分支 `git merge branchname`
-
-- 上传到 github `git push origin branchname`
-
-- 从 github 上下载 `git pull origin branchname`
-
-- 查看历史记录：`git log`
-
-- 回到某个历史版本：`git reset --hard <commit_hash>`
-
-- 查看历史版本：`git checkout <commit_hash>`
-
-- 合并 commit, 首先通过 git log --oneline 查看 commit 的 hash 值，然后 `git rebase -i <commit_hash>` 进入交互模式，将需要合并的 commit 前面的 pick 改为 squash（保留提交的第一个pick不动），然后保存退出，运行 `git rebase --continue` 完成合并。
-
-- 修改刚才提交的 commit: `git commit --amend`
-
-### Merge Git 的流程
-
-- 首先确定自己分支的改动全部提交
-
-- 关闭 OneDrive 的同步
-
-- 切换到主分支 `git checkout master`
-
-- 从 github 上拉取最新代码 `git pull origin master`
-
-- merge 自己分支 `git merge branchname`
-
-- 解决冲突，解决完后提交 `git commit -m "merge branchname"` (没有冲突直接提交)
-
-- 上传到 github `git push origin master`
-
-- 同步到自己的分支上
-
-- 打开 OneDrive 的同步
-
-## 曾经的安装流程（最新的安装请参考 readme）
-
-### package dependence (python=3.11) new version
-
-（下一次更新提醒：numba 更新 0.61?，conda 更新 scipy 1.14？）
-
-- `conda create -n envname python=3.11`, create new virtual python envrionment.
-
-- `conda activate envname`, login that virtual environment.
-
-- `conda install numba=0.60 numpy=1 scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler` 
-
-- `cd xxx` 进入 setup.py 所在的文件夹
-
-- `pip install -e .` 到此已经完成安装，可以 `import quante as qt`; 如果想要安装到本地，使用 `pip install .`; 如果卸载 使用 `pip uninstall quante`
-
-接下来是 torch tenpy 的安装（不需要安装下面的包也能运行 quante）
-
-- `nvcc --version`, check version `release xxx`. https://pytorch.org/ `conda install pytorch ...`, according to CUDA version. For cpu,  `conda install pytorch torchvision torchaudio cpuonly -c pytorch`
-
-- `conda install -c conda-forge cupy` cupy
-
-- `conda install --channel=conda-forge physics-tenpy` tenpy
-
-- `conda install qutip` qutip
-
-### package dependence (python=3.12) for quspin new version
-
-quspin 1.0.0 要求 numpy>=2.0.0
-
-但 torch 要求 numpy <= 2.0.0，因此不能同时安装，下面时同时安装 quante 和 quspin 的方法。
-
-- `conda create -n envname python=3.12`, create new virtual python envrionment.
-
-- `conda activate envname`, login that virtual environment.
-
-- `conda install --channel=conda-forge numba=0.60 numpy=2 scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler` 支持 numpy=2.0 的 scipy=1.14 暂时只能通过 conda-forge 获取
-
-- `pip install quspin numpy==2.0.1` 在保持 numpy 版本的情况下安装 quspin， numpy=2.0.1 是因为 numba=0.60 最高支持到 2.0.1
-
-- `cd xxx` 进入 setup.py 所在的文件夹
-
-- `pip install -e .` 到此已经完成安装，可以 `import quante as qt`; 如果想要安装到本地，使用 `pip install .`; 如果卸载 使用 `pip uninstall quante`
-
-安装完 quspin 其他的包，如 torch, tenpy 都会安装失败
 
 ## install slepc4py
 
@@ -452,3 +398,50 @@ print(torch.cuda.is_available())  # 检查CUDA是否可用
 ```
 
 如果输出显示正确的CUDA版本，并且`torch.cuda.is_available()`返回`True`，那么你的NVIDIA CUDA编译器驱动程序升级成功。
+
+
+## 曾经的安装流程（最新的安装请参考 readme）
+
+### package dependence (python=3.11) new version
+
+（下一次更新提醒：numba 更新 0.61?，conda 更新 scipy 1.14？）
+
+- `conda create -n envname python=3.11`, create new virtual python envrionment.
+
+- `conda activate envname`, login that virtual environment.
+
+- `conda install numba=0.60 numpy=1 scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler` 
+
+- `cd xxx` 进入 setup.py 所在的文件夹
+
+- `pip install -e .` 到此已经完成安装，可以 `import quante as qt`; 如果想要安装到本地，使用 `pip install .`; 如果卸载 使用 `pip uninstall quante`
+
+接下来是 torch tenpy 的安装（不需要安装下面的包也能运行 quante）
+
+- `nvcc --version`, check version `release xxx`. https://pytorch.org/ `conda install pytorch ...`, according to CUDA version. For cpu,  `conda install pytorch torchvision torchaudio cpuonly -c pytorch`
+
+- `conda install -c conda-forge cupy` cupy
+
+- `conda install --channel=conda-forge physics-tenpy` tenpy
+
+- `conda install qutip` qutip
+
+### package dependence (python=3.12) for quspin new version
+
+quspin 1.0.0 要求 numpy>=2.0.0
+
+但 torch 要求 numpy <= 2.0.0，因此不能同时安装，下面时同时安装 quante 和 quspin 的方法。
+
+- `conda create -n envname python=3.12`, create new virtual python envrionment.
+
+- `conda activate envname`, login that virtual environment.
+
+- `conda install --channel=conda-forge numba=0.60 numpy=2 scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler` 支持 numpy=2.0 的 scipy=1.14 暂时只能通过 conda-forge 获取
+
+- `pip install quspin numpy==2.0.1` 在保持 numpy 版本的情况下安装 quspin， numpy=2.0.1 是因为 numba=0.60 最高支持到 2.0.1
+
+- `cd xxx` 进入 setup.py 所在的文件夹
+
+- `pip install -e .` 到此已经完成安装，可以 `import quante as qt`; 如果想要安装到本地，使用 `pip install .`; 如果卸载 使用 `pip uninstall quante`
+
+安装完 quspin 其他的包，如 torch, tenpy 都会安装失败

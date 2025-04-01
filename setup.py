@@ -2,22 +2,26 @@
 # @Author: hzhu
 # @Date:   2024-09-12 15:04:23
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-09 19:08:37
+# @Last Modified time: 2025-04-05 01:54:24
 # setup.py
 
 from setuptools import setup, find_packages
 
 setup(
     name='quante',
-    version='0.2.0',
+    version='0.3.0',
     packages=find_packages(),
     install_requires=[
-        "h5py",
         "numba",
         "numpy",
         "scipy",
+        "h5py",
         "cytoolz",
-        "psutil"
+        "psutil",
+        "objprint",
+        "quspin-extensions",
+        "tqdm",
+        "line_profiler"
     ],
     include_package_data=True,
 )

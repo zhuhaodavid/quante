@@ -2,22 +2,24 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-01-18 16:11:08
+# # @Last Modified time: 2025-04-07 09:32:07
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
+from scipy.special import jv
 import numpy as _np
 import warnings as _warnings
-from typing import Callable, Union
+from typing import Callable, Union, Literal
 from functools import lru_cache
 
 __all__ = [
+    "expm_multiply",
     "EvolveEngine",
     "get_time_evolution_states_ED",
-    "expm_multiply"
+    "chebyshev_evolve",
 ]
 
-def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], psi0:_np.ndarray, scale=1.0, *, start=None, stop=None, num=None, endpoint=None, traceA=None, herm=False, cudadevice=False) -> _np.ndarray:
+def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], psi0:_np.ndarray, scale=1.0, *, start=None, stop=None, num=None, endpoint=None, traceA=None, herm=False, device=None) -> _np.ndarray:
     """
     计算 `exp(matvec).dot(psi0)` 或 `exp(- 1j * matvec).dot(psi0)`
     
@@ -82,7 +84,7 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
     """
     assert scale == 1.0 or scale == - 1j, "only scale=1.0 or scale=-1j is supported for now"
     
-    if cudadevice:
+    if device is not None:
         assert isinstance(mat, (_np.ndarray, _sparse.spmatrix, _sparse.sparray)), "cuda only support numpy.ndarray or scipy.sparse matrix"
         
         try:
@@ -108,8 +110,8 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
         
         dtype = tc.complex128 if scale == -1j or _np.iscomplexobj(mat) or _np.iscomplexobj(psi0) else tc.float64
         
-        res = expm_multiply(tc.tensor(mat, device=cudadevice) if isinstance(mat, _np.ndarray) else to_csr(mat, device=cudadevice), 
-                            tc.tensor(psi0, device=cudadevice, dtype=dtype),
+        res = expm_multiply(tc.tensor(mat, device=device) if isinstance(mat, _np.ndarray) else to_csr(mat, device=device), 
+                            tc.tensor(psi0, device=device, dtype=dtype),
                             scale, start=start, stop=stop, num=num, endpoint=endpoint, 
                             traceA=traceA, herm=herm, norm1A=norm1A, hasshifted=hasshifted).cpu()
         
@@ -133,7 +135,7 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
         else:
             raise ValueError("herm should be 1 for hermitian or -1 for antihermitian or callable")
     else:
-        assert isinstance(mat, (_np.ndarray, _sparse.spmatrix, _sparse.sparray)), "cuda only support numpy.ndarray or scipy.sparse matrix"
+        assert isinstance(mat, (_np.ndarray, _sparse.spmatrix, _sparse.sparray)), "only support numpy.ndarray or scipy.sparse matrix"
         dtype = _np.complex128 if scale == -1j or _np.iscomplexobj(mat) or _np.iscomplexobj(psi0) else _np.float64
         psi0 = psi0.astype(dtype)
         lo = mat
@@ -329,3 +331,67 @@ def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.nd
             raise e
         time_states = _in_CPU(initial_state, eigenvalues, eigenstates, times)
     return time_states
+
+# =============================================
+# chebyshev
+# ==============================================
+
+def chebyshev_evolve(mat:_np.ndarray, initstate:_np.ndarray, t:float, max_eng:float, min_eng:float, N:int) -> _np.ndarray:
+    """ Chebyshev evolution of a state under a Hamiltonian, `exp( - 1j H t) |initstate>`.
+    This function uses Chebyshev polynomial expansion to evolve the state under the Hamiltonian mat.
+    
+    # (max_eng - min_eng) * t ~ O(1) works better
+
+    # todo: 自动计算误差，通过误差推出循环：
+
+    Parameters
+    ----------
+    mat : np.ndarray
+        the Hamiltonian matrix
+    initstate : np.ndarray
+        the initial state vector
+    t : float
+        the time parameter for evolution
+    max_eng : float
+        maximum energy eigenvalue of the Hamiltonian
+    min_eng : float
+        minimum energy eigenvalue of the Hamiltonian
+    N : int
+        the number of Chebyshev polynomials to use
+
+    Returns
+    -------
+    np.ndarray
+        the final state vector after evolution
+    
+    Notes
+    -----
+    这是一个 Chebyshev 的原理验证函数。
+    如果需要加速，可以考虑将 mat @ xxx 改为使用 gpu torch 来加速。
+    对于更大规模的计算，需要考虑使用 petsc，相关的 c++ 程序见 https://github.com/Phyzch/Chebyshev_method
+    参数选择时，需要让 (max_eng - min_eng) * t ~ O(1)
+    
+    Example
+    -------
+    >>> L, t, N = 5, 1., 10
+    >>> mat = qt.generate.matrix.heisenberg_matrix(L=L)
+    >>> initstate = np.random.randn(mat.shape[0])
+    >>> initstate /= np.linalg.norm(initstate)
+    >>> max_eng, min_eng = np.max(np.linalg.eigvalsh(mat)), np.min(np.linalg.eigvalsh(mat))
+    >>> finalstate = chebyshev_evolve(mat, initstate, t, max_eng, min_eng, N)
+    >>> np.linalg.norm(finalstate - qt.linalg.expm(mat, c=-t*1j) @ initstate)
+    np.float64(1.5768894460867202e-08)
+    """
+    a = (max_eng + min_eng) / 2
+    b = (max_eng - min_eng) / 2
+    tmp_state0 = initstate.copy()
+    tmp_state1 = (mat @ initstate - a * initstate)/b  #!! main time
+    finalstate_cheb = jv(0, b*t) * tmp_state0 * _np.exp(-1j*a*t)
+    finalstate_cheb += 2 * (-1j) * jv(1, b*t) * tmp_state1 * _np.exp(-1j*a*t)
+    for k in range(2,N):
+        tmp_state0 = (2/b) * (mat @ tmp_state1 - a * tmp_state1) - tmp_state0  #!! main time
+        tmp_state1, tmp_state0 = tmp_state0, tmp_state1
+        finalstate_cheb += 2 * (-1j)**k * jv(k, b*t) * tmp_state1 * _np.exp(-1j*a*t)
+    return finalstate_cheb
+
+
