@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-04 11:21:10
+# @Last Modified time: 2025-03-30 13:49:28
 
 import gc as _gc
 import os as _os
@@ -1196,7 +1196,7 @@ def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], li
 # 画图预设
 # =======
 
-def plt_style_use(stylename:str = "quante", svg: bool = True) -> None:
+def plt_style_use(stylename:str = "quante", svg: bool = True, svg_display_width=600) -> None:
     """设置 pyplot 风格样式。
     
     Parameters
@@ -1215,8 +1215,11 @@ def plt_style_use(stylename:str = "quante", svg: bool = True) -> None:
     
     try:
         if svg:
-            from IPython.display import set_matplotlib_formats
+            from IPython.display import set_matplotlib_formats, display
             set_matplotlib_formats("svg")
+            display({
+                'text/html': f'<style>svg {{width: {svg_display_width}px !important; height: auto;}}</style>'
+            }, raw=True)
         else:
             from IPython.display import set_matplotlib_formats
             set_matplotlib_formats("png")

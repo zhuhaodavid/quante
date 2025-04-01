@@ -8,7 +8,7 @@ quante 是处理一维自旋量子系统的 python 工具集合，包含了一�
 
 - 激活虚拟环境：`conda activate py312`.
 
-- 安装依赖：`conda install -c conda-forge numba numpy scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler`
+- 安装依赖：`conda install -c defaults numba numpy scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler`
 
 - 安装 torch: 确认 gpu 版本，`nvcc --version`, 通过 https://pytorch.org/ 说明安装对应版本 pytorch，cpu 安装命令为：`pip3 install torch torchvision torchaudio`
 
