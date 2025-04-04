@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-12 15:04:23
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-04 23:33:15
+# @Last Modified time: 2025-04-05 01:54:24
 # setup.py
 
 from setuptools import setup, find_packages
@@ -18,7 +18,10 @@ setup(
         "h5py",
         "cytoolz",
         "psutil",
-        "objprint"
+        "objprint",
+        "quspin-extensions",
+        "tqdm",
+        "line_profiler"
     ],
     include_package_data=True,
 )
