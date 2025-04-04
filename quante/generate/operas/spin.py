@@ -317,7 +317,7 @@ class Oper:
             lines.append(line)
         print('\n'.join(lines))
     
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         """
         返回算符的字符串形式
         """
