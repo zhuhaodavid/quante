@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-30 13:49:28
+# @Last Modified time: 2025-04-04 23:55:50
 
 import gc as _gc
 import os as _os
@@ -439,7 +439,127 @@ class COLOR:
     CYAN = '\033[36m'
     WHITE = '\033[37m'
     DEFAULT = '\033[39m'
+
+def set_color(s: str, color: str) -> str:
+    return f"{color}{s}{COLOR.DEFAULT}"
+
+def simple_get_args(callFrame):
+    """利用 inspect 和 ast 模块获取变量名称"""
+    # 获取调用函数的源代码
+    frame_info = _inspect.getframeinfo(callFrame)
+    if frame_info is None or frame_info.code_context is None:
+        return None
+    source_code = "".join(frame_info.code_context).strip()
+    # 解析为 AST 并查找函数调用的节点
+    try:
+        tree = _ast.parse(source_code)
+    except SyntaxError:
+        return None
+
+    for node in _ast.walk(tree):
+        if isinstance(node, _ast.Call):  # 查找函数调用节点 
+            arg_values = []
+            # 提取参数
+            for arg in node.args:
+                # 使用 ast.unparse 来获取参数的源代码表示
+                arg_values.append(_ast.unparse(arg))
+            return arg_values
+    return None
+
+def objstr(obj, color=True, compact=False, indent=0):
+    """如果是 ndarray，那么输出它的 __str__，否则用 pprint 得到字符串"""
+    import pprint
+    isobject = False
+    if type(obj) == _np.ndarray:
+        if compact:
+            s = _np.array2string(obj, formatter={'float_kind': lambda x: "%.2f" % x}, max_line_width=None, threshold=4)
+        else:
+            s = obj.__str__()
+    elif isinstance(obj, list):
+        s = pprint.pformat(obj, compact=True)
+    elif isinstance(obj, FunctionType):
+        return f"<function {obj.__name__}>", False
+    else:
+
+        # object
+        if (obj.__class__.__str__ is not object.__str__ or obj.__class__.__repr__ is not object.__repr__):
+            s = pprint.pformat(obj)
+        else:
+            isobject = True
+            # try:
+            #     from objprint import op
+            #     s = op.objstr(obj, color=color, )
+            # except ImportError:
+            s = _get_custom_object_str(obj, color)
+    s = s.replace("\\n", "\n")  # Preserve string newlines in output.
+    s = '\n'.join(v if i == 0 else " "*indent + v for i, v in enumerate(s.split('\n')))
+    return s, isobject
+
+def _get_custom_object_str(obj, color=True, ):
+    import inspect
+    # 首先拿到 header, footer
+    obj_type = type(obj)
+    header = f"<{obj_type.__name__} {hex(id(obj))}"
+    footer = ">"
+    if color:
+        header = set_color(header, COLOR.CYAN)
+        footer = set_color(footer, COLOR.CYAN)
     
+    # 拿到所有的属性
+    attrs = []
+    attr_pattern: str = r"(?!_).*"
+    import re
+    for attr in dir(obj):
+        if re.fullmatch(attr_pattern, attr):
+            try:
+                attr_val = getattr(obj, attr)
+            except AttributeError:
+                continue
+            if inspect.ismethod(attr_val) or inspect.isbuiltin(attr_val):
+                continue
+            else:
+                attrs.append(attr)
+    
+    # 将属性组装起来
+    elems = ""
+    for key in sorted(attrs):
+        val = getattr(obj, key)
+        indent = len(key) + 5
+        coloredkey = '.' + key
+        if color:
+            coloredkey = set_color(coloredkey, COLOR.GREEN)
+        elems += f" {coloredkey} = {objstr(val,compact=True, indent=indent, color=color)[0]}\n"
+    
+    return f"{header}\n{elems}{footer}"
+
+def _isLiteral(s):
+    if _isFormatStr(s): return True
+    try:
+        import ast as _ast
+        _ast.literal_eval(s)
+    except Exception:
+        return False
+    return True
+
+def _isFormatStr(s):
+    import re
+    # 检查是否是 f-string
+    pattern = r'^(f|rf|fr|Fr|fR|FR)([\'"])(.*?)\2'
+    match = re.fullmatch(pattern, s)
+    if bool(re.search(pattern, s)): return True
+    
+    # 检查是否是 % 格式化
+    pattern = r'^([\'"])(.*?)%[sdxf](.*?)\1\s*%'
+    if bool(re.search(pattern, s)): return True
+    
+    # 检查是否是 .format() 格式化
+    pattern = r'^([\'"])(.+?)\1.format\((.*?)\)\s*$'
+    match = re.fullmatch(pattern, s)
+    if bool(match): return True
+    
+    return False
+
+
 class PrintLn:
     """
     打印输入变量的名称和值到日志中。
@@ -447,6 +567,8 @@ class PrintLn:
     任何以 f" 或 rf" 开头的字符串会被识别为 f-string，而不会被解析为变量名称。
     
     可以通过在 builtins.pyi 中添加：
+
+    为了获得多行支持，使用了 objprint
 
     >>> def Timer(self, *str_or_funcs, output_unit: float|None = None, save=False) -> None: ...
     >>> def show(*values) -> None: ...
@@ -459,182 +581,66 @@ class PrintLn:
     >>> a = "this is a test"
     >>> show(a)
     a: this is a test
-    >>> a;-show
-    a: this is a test
-    >>> L, a = 1, 2 ;show>>1
-    L: 1; a: 2
-    >>> _= L, a ;show>>1
-    L: 1; a: 2
-    
-    Warning
-    -------
-    可能存在的问题：
-    - 只能在单行中使用，否则报 SyntaxError。
     """
     def __init__(self, use_color=True):
         self.use_color = use_color
-
-    def __rshift__(self, mode=1):
-        if not mode:
-            return None
         try:
-            cf = _inspect.currentframe()  # 获取调用函数的栈帧
-            if cf is None:
-                raise ValueError("Can't get the caller's frame")
-            paraname, values = PrintLn._get_paraname_value(cf.f_back)
-            if paraname == []:
-                return None
-            out: str = self._constructArgumentOutput(paraname,values)
-            if mode == 1:
-                logger.info(out)
-            elif mode == -1:
-                logger.debug(out)
-            elif mode == 2:
-                logger.warning(out)
-            elif mode == 3:
-                logger.error(out)
-            else:
-                logger.critical(out)
-        except SyntaxError as e:
-            logger.warning("SyntaxError")
-        
-        logger.handlers[0].flush()  # 立即刷新日志
-
-    @staticmethod
-    def _get_paraname_value(callFrame):
-        """利用 inspect 和 ast 模块获取变量名称"""
-        # 获取调用函数的源代码
-        frame_info = _inspect.getframeinfo(callFrame)
-        if frame_info is None or frame_info.code_context is None:
-            return [], []
-        source_code = "".join(frame_info.code_context).strip()
-
-        # 解析为 AST 并查找函数调用的节点
-        tree = _ast.parse(source_code)
-
-        node = next(_itertools.islice(_ast.walk(tree), 3, 4))
-
-        local_vars = callFrame.f_locals
-        global_vars = callFrame.f_globals
-
-        if _ast.unparse(node) == "_":
-            values = eval("_", global_vars, local_vars)
-            node = next(_itertools.islice(_ast.walk(tree), 4, 5))
-            if isinstance(node, _ast.Tuple):
-                paraname = PrintLn.split_expression(_ast.unparse(node)[1:-1])
-                return paraname, values
-            else:
-                paraname = PrintLn.split_expression(_ast.unparse(node))
-                return paraname, (values, )
-
-        if isinstance(node, _ast.Tuple):
-            paraname = PrintLn.split_expression(_ast.unparse(node)[1:-1])
-        else:
-            paraname = PrintLn.split_expression(_ast.unparse(node))
-        
-        return paraname, [eval(arg, global_vars, local_vars) for arg in paraname]
-
-    @staticmethod
-    def split_expression(expression):
-        # 初始化计数器和结果列表
-        brackets_counter = 0
-        quote_counter_1 = 0
-        quote_counter_2 = 0
-        
-        result = []
-        current_part = []
-        
-        # 从左向右循环处理字符串
-        for char in expression:
-            # 遇到逗号且所有计数器为零，将当前部分添加到结果列表
-            if char == ',' and brackets_counter == 0 and quote_counter_1 == 0 and quote_counter_2 == 0:
-                part = ''.join(current_part).strip()
-                if part:
-                    result.append(part)
-                current_part = []
-                continue
-            
-            current_part.append(char)
-            
-            # 更新计数器
-            if char in '([{':
-                brackets_counter += 1
-            elif char in ')]}':
-                brackets_counter -= 1
-            if char == '"':
-                quote_counter_1 = 1 - quote_counter_1
-            if char == "'":
-                quote_counter_2 = 1 - quote_counter_2
-        
-        # 添加最后一部分
-        part = ''.join(current_part).strip()
-        if part:
-            result.append(part)
-        
-        return result
-
+            from objprint.frame_analyzer import FrameAnalyzer
+            frame_analyzer = FrameAnalyzer()
+            self.get_args = frame_analyzer.get_args
+        except ImportError:
+            self.get_args = simple_get_args
     
     def __call__(self, *inputargs, level=1):
         if level == 0:
             return None
-        try:
-            cf = _inspect.currentframe()  # 获取调用函数的栈帧
-            if cf is None:
-                raise ValueError("Can't get the caller's frame")
-            paraname = PrintLn._get_paraname(cf.f_back)
-            out: str = self._constructArgumentOutput(paraname, inputargs)
-            if level == 1:
-                logger.info(out)
-            elif level == -1:
-                logger.debug(out)
-            elif level == 2:
-                logger.warning(out)
-            elif level == 3:
-                logger.error(out)
-            else:
-                logger.critical(out)
-        except SyntaxError as e:
-            logger.warning("SyntaxError")
-            logger.warning(inputargs)
+
+        call_frame = _inspect.currentframe()  # 获取调用函数的栈帧
+        if call_frame is not None:
+            call_frame = call_frame.f_back
         
+        if len(inputargs) == 0:
+            out = ""
+        else:
+            args = self.get_args(call_frame)
+            if args is None:
+                args = ["Unknown Arg" for _ in range(len(inputargs))]
+            out: str = self._constructArgumentOutput(args, inputargs)
+
+        if level == 1:
+            logger.info(out)
+        elif level == -1:
+            logger.debug(out)
+        elif level == 2:
+            logger.warning(out)
+        elif level == 3:
+            logger.error(out)
+        else:
+            logger.critical(out)
+       
         logger.handlers[0].flush()  # 立即刷新日志
 
-
-    @staticmethod
-    def _get_paraname(callFrame):
-        """利用 inspect 和 ast 模块获取变量名称"""
-        # 获取调用函数的源代码
-        frame_info = _inspect.getframeinfo(callFrame)
-        if frame_info is None or frame_info.code_context is None:
-            return []
-        source_code = "".join(frame_info.code_context).strip()
-        
-        # 解析为 AST 并查找函数调用的节点
-        tree = _ast.parse(source_code)
-        
-        for node in _ast.walk(tree):
-            
-            if isinstance(node, _ast.Call):  # 查找函数调用节点 
-                arg_values = []
-                # 提取参数
-                for arg in node.args:
-                    # 使用 ast.unparse 来获取参数的源代码表示
-                    arg_values.append(_ast.unparse(arg))
-                return arg_values
-        return []
-
     def _constructArgumentOutput(self, paraname, inputargs):
-        if len(paraname) == 0:
-            return ""
-        if len(paraname) == 1 and self._isLiteral(paraname[0]):
+        if len(paraname) == 1 and _isLiteral(paraname[0]):
             if isinstance(inputargs[0], str):
-                return inputargs[0]
-            return self._argumentToString(inputargs[0], use_color=self.use_color)[0]
+                return inputargs[0] # 这样不会显示引号
+            return objstr(inputargs[0], color=self.use_color)[0]
         
-        pairs = [(arg, *self._argumentToString(val, use_color=self.use_color)) for arg, val in zip(paraname, inputargs)]
+        pairs = [(arg, *objstr(val, color=self.use_color)) 
+                 for arg, val in zip(paraname, inputargs)]
         
-        pairStrs = [val if self._isLiteral(arg) else PrintLn.set_color(f"{arg}: ", COLOR.RED, self.use_color) + val for arg, val, _ in pairs]
-        allArgsOnOneLine = PrintLn.set_color(f"; ", COLOR.RED, self.use_color).join(pairStrs)
+        pairStrs = []
+        for arg, val, isobject in pairs:
+            if _isLiteral(arg):
+                pairStrs.append(val)
+            else:
+                coloredarg = f"{arg}: "
+                if self.use_color:
+                    coloredarg = set_color(coloredarg, COLOR.RED)
+                pairStrs.append(coloredarg + val)
+
+        seperator = set_color("; ", COLOR.RED) if self.use_color else "; "
+        allArgsOnOneLine = seperator.join(pairStrs)
         
         multilineArgs = len(allArgsOnOneLine.splitlines()) > 1
         firstLineTooLong = len(allArgsOnOneLine.splitlines()[0]) > 70
@@ -648,102 +654,6 @@ class PrintLn:
             lines = [allArgsOnOneLine]
         
         return "\n".join(lines)
-
-    @classmethod
-    def _argumentToString(cls, obj, compact=False, indent=0, use_color=True) -> tuple[str, bool]:
-        """如果是 ndarray，那么输出它的 __str__，否则用 pprint 得到字符串"""
-        import pprint
-        isobject = False
-        if type(obj) == _np.ndarray:
-            if compact:
-                s = _np.array2string(obj, formatter={'float_kind': lambda x: "%.2f" % x}, max_line_width=None, threshold=4)
-            else:
-                s = obj.__str__()
-        elif isinstance(obj, list):
-            s = pprint.pformat(obj, compact=True)
-        elif isinstance(obj, FunctionType):
-            return f"<function {obj.__name__}>", False
-        else:
-            # object
-            if (obj.__class__.__str__ is not object.__str__ or obj.__class__.__repr__ is not object.__repr__):
-                s = pprint.pformat(obj)
-            else:
-                s = cls._get_custom_object_str(obj, use_color)
-                isobject = True
-        s = s.replace("\\n", "\n")  # Preserve string newlines in output.
-        s = '\n'.join(v if i == 0 else " "*indent + v for i, v in enumerate(s.split('\n')))
-        return s, isobject
-
-    @staticmethod
-    def set_color(s: str, color: str, use_color: bool = True) -> str:
-        if use_color:
-            return f"{color}{s}{COLOR.DEFAULT}"
-        else:
-            return s
-
-    @classmethod
-    def _get_custom_object_str(cls, obj: Any, use_color=True):
-        import inspect
-        # 首先拿到 header, footer
-        obj_type = type(obj)
-        header = PrintLn.set_color(f"<{obj_type.__name__} {hex(id(obj))}", COLOR.CYAN, use_color=use_color)
-        footer = PrintLn.set_color(">", COLOR.CYAN, use_color=use_color)
-        
-        # 拿到所有的属性
-        attrs = []
-        attr_pattern: str = r"(?!_).*"
-        import re
-        for attr in dir(obj):
-            if re.fullmatch(attr_pattern, attr):
-                try:
-                    attr_val = getattr(obj, attr)
-                except AttributeError:
-                    continue
-                if inspect.ismethod(attr_val) or inspect.isbuiltin(attr_val):
-                    continue
-                else:
-                    attrs.append(attr)
-        
-        # 将属性组装起来
-        elems = ""
-        for key in sorted(attrs):
-            val = getattr(obj, key)
-            indent = len(key) + 5
-            elems += f" {PrintLn.set_color('.' + key, COLOR.GREEN, use_color=use_color)} = {cls._argumentToString(val,compact=True, indent=indent, use_color=use_color)[0]}\n"
-        
-        return f"{header}\n{elems}{footer}"
-    
-    @staticmethod
-    def add_object_print(othercls):
-        othercls.__str__ = lambda self: PrintLn._get_custom_object_str(self)
-        return othercls
-
-    def _isLiteral(self, s):
-        if self._isFormatStr(s): return True
-        try:
-            import ast as _ast
-            _ast.literal_eval(s)
-        except Exception:
-            return False
-        return True
-
-    def _isFormatStr(self, s):
-        import re
-        # 检查是否是 f-string
-        pattern = r'^(f|rf|fr|Fr|fR|FR)([\'"])(.*?)\2'
-        match = re.fullmatch(pattern, s)
-        if bool(re.search(pattern, s)): return True
-        
-        # 检查是否是 % 格式化
-        pattern = r'^([\'"])(.*?)%[sdxf](.*?)\1\s*%'
-        if bool(re.search(pattern, s)): return True
-        
-        # 检查是否是 .format() 格式化
-        pattern = r'^([\'"])(.+?)\1.format\((.*?)\)\s*$'
-        match = re.fullmatch(pattern, s)
-        if bool(match): return True
-        
-        return False
 
     def _format_pair(self, arg, value, prefixTooLong=False):
         arg_lines = self._indented_lines("", arg)
@@ -765,8 +675,8 @@ class PrintLn:
         lines = string.splitlines()
         prefixlen = len(prefix)
         
-        if bool(prefix.strip()):
-            prefix = PrintLn.set_color(prefix, COLOR.RED, self.use_color)
+        if bool(prefix.strip()) and self.use_color:
+            prefix = set_color(prefix, COLOR.RED)
             
         if prefixTooLong:
             lth = 3

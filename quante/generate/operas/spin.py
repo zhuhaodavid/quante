@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-18 12:20:06
+# @Last Modified time: 2025-04-05 01:48:11
 
 import warnings
 import numpy as np
@@ -249,36 +249,79 @@ class Oper:
     def _check_length(self, L:int) -> None:
         assert L >= self.L
 
-    def show_string_form(self) -> None:
+    def show_string_form(self, maxlen=80, form='v') -> None:
         """打印算符的字符串形式"""
-        operator_string = ""
-        for operator, (posn, coef) in self.data.items():
-            operator_string += operator + ": \n"
-            for i in range(len(coef)):
-                operator_string += "    " + posn[i].__str__() + " => " + coef[i].__str__() + "  \n"
-            operator_string += "\n"
-        print(operator_string)
+        if form == 'v':
+            print(self.table_form(maxlen=maxlen))
+        elif form == 'h':
+            print(self.table_form2(maxlen=maxlen))
     
-    def __repr__(self):
-        header = f"\033[36m<Oper {hex(id(self))}\033[39m"
-        footer = f"\033[36m>\033[39m"
+    def table_form(self, maxlen=80) -> str:
+        pages = []
+        first_line = "|"
+        second_line = "|"
+        data_list = []
+        last_len = 0
+        for operator, (posn, coef) in self.data.items():
+            
+            oper_len = len(operator)
+            
+            if len(first_line) + 6 * oper_len  > maxlen:
+                pages.append(first_line)
+                pages.append(second_line)
+                pages += data_list
+                pages.append("="*len(first_line))
+                first_line = "|"
+                second_line = "|"
+                data_list = []
+                last_len = 0
+            
+            for i in operator:
+                first_line += f"   {i:<3}"
+                second_line += "-"*6
+            first_line += "     coef. |"
+            second_line += "-"*11 + "|"
+            
+            for i in range(len(coef)):
+                if len(data_list) <= i:
+                    data_list.append("|")
+                
+                data_line = data_list[i]
+                if len(data_line) < last_len:
+                    data_line += " " * (last_len-2) + "|"
+                for j in range(oper_len):
+                    data_line += f"   {posn[i][j]:<3}"
+
+                if 0.1 <= abs(coef[i]) < 100:
+                    data_line += f"{coef[i]:.3f}".rjust(10) + " |"  # 普通浮点数格式
+                else:
+                    data_line += f"{coef[i]:.2e}".rjust(10) +" |"  # 科学计数法格式
+                data_list[i] = data_line
+            last_len = len(data_line)
         
-        # 将属性组装起来
-        operator_string = ""
-        if self.data == {}:
-            operator_string = "0"
-        else:
-            for j, (operator, (posn, coef)) in enumerate(sorted(self.data.items(), key=lambda item: (len(item[0]), item[0]))):
-                operator_string += operator + ": "
-                for i in range(len(coef)):
-                    operator_string += posn[i].__str__() + " => " + coef[i].__str__() + "  "
-                if j != len(self.data)-1:
-                    operator_string += "\n" + " " * 9
-        
-        elems = f" \033[32m{'.data'}\033[39m = {operator_string}\n"
-        elems += f" \033[32m{'.type'}\033[39m = {self.type}\n"
-        
-        return f"{header}\n{elems}{footer}"
+        pages.append(first_line)
+        pages.append(second_line)
+        pages += data_list
+    
+        return '\n'.join(pages)
+    
+    def table_form2(self, maxlen=80) -> str:
+        lines = []
+        for operator, (posn, coef) in self.data.items():
+            oper_len = len(operator)
+            line = f"{operator}: "
+            for i in range(len(coef)):
+                if i > 0:
+                    line += " + "
+                line += f"{coef[i]:.3f} * " + " * ".join([f"({posn[i][j]})" for j in range(oper_len)])
+            lines.append(line)
+        print('\n'.join(lines))
+    
+    def __str__(self) -> str:
+        """
+        返回算符的字符串形式
+        """
+        return self.table_form(maxlen=80)
     
     def each_term(self):
         """
