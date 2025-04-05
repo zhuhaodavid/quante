@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-05 13:47:12
+# @Last Modified time: 2025-04-05 14:00:47
 
 import gc as _gc
 import os as _os
@@ -740,7 +740,7 @@ class PrintLn:
                     args = ["Unknown Arg" for _ in range(len(ipt))]
                 out: str = self._constructArgumentOutput(args, ipt)
         else:
-            out = " ".join(map(str, ipt))
+            out = "\n".join(map(str, ipt))
 
         if level == 1:
             logger.info(out)
