@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-04 23:55:50
+# @Last Modified time: 2025-04-05 13:47:12
 
 import gc as _gc
 import os as _os
@@ -18,7 +18,6 @@ import inspect as _inspect
 import logging as _logging
 import platform as _platform
 import traceback as _traceback
-import itertools as _itertools
 import difflib
 import builtins
 
@@ -443,29 +442,6 @@ class COLOR:
 def set_color(s: str, color: str) -> str:
     return f"{color}{s}{COLOR.DEFAULT}"
 
-def simple_get_args(callFrame):
-    """利用 inspect 和 ast 模块获取变量名称"""
-    # 获取调用函数的源代码
-    frame_info = _inspect.getframeinfo(callFrame)
-    if frame_info is None or frame_info.code_context is None:
-        return None
-    source_code = "".join(frame_info.code_context).strip()
-    # 解析为 AST 并查找函数调用的节点
-    try:
-        tree = _ast.parse(source_code)
-    except SyntaxError:
-        return None
-
-    for node in _ast.walk(tree):
-        if isinstance(node, _ast.Call):  # 查找函数调用节点 
-            arg_values = []
-            # 提取参数
-            for arg in node.args:
-                # 使用 ast.unparse 来获取参数的源代码表示
-                arg_values.append(_ast.unparse(arg))
-            return arg_values
-    return None
-
 def objstr(obj, color=True, compact=False, indent=0):
     """如果是 ndarray，那么输出它的 __str__，否则用 pprint 得到字符串"""
     import pprint
@@ -480,16 +456,10 @@ def objstr(obj, color=True, compact=False, indent=0):
     elif isinstance(obj, FunctionType):
         return f"<function {obj.__name__}>", False
     else:
-
-        # object
         if (obj.__class__.__str__ is not object.__str__ or obj.__class__.__repr__ is not object.__repr__):
             s = pprint.pformat(obj)
         else:
             isobject = True
-            # try:
-            #     from objprint import op
-            #     s = op.objstr(obj, color=color, )
-            # except ImportError:
             s = _get_custom_object_str(obj, color)
     s = s.replace("\\n", "\n")  # Preserve string newlines in output.
     s = '\n'.join(v if i == 0 else " "*indent + v for i, v in enumerate(s.split('\n')))
@@ -559,6 +529,167 @@ def _isFormatStr(s):
     
     return False
 
+def unparse_tgs(node):
+    res = []
+    for elt in node.elts:
+        if isinstance(elt, _ast.Tuple):
+            res.append(unparse_tgs(elt))
+        elif isinstance(elt, _ast.Name):
+            res.append(elt.id)
+        else:
+            res.append(_ast.unparse(elt))
+    return tuple(res)
+
+def get_last_lv(call_frame) -> tuple | str | None:
+    from objprint.executing import Source
+    # check if call_frame is None
+    if call_frame is None:
+        return None
+
+    # get node
+    node = Source.executing(call_frame).node
+    if node is None:
+        return None
+    
+    # initialize stack of statements
+    last_stmt = None
+    lineno = _inspect.getlineno(call_frame)
+    statement_node = Source.for_frame(call_frame).statements_at_line(lineno)
+    if len(statement_node) > 1:
+        last_stmt = sorted(statement_node, key=lambda x: x.col_offset)[-2]
+    
+    if last_stmt is None:
+        # if no statement found, go back to the previous line
+        for _ in range(10):
+            lineno -= 1
+            statement_node = Source.for_frame(call_frame).statements_at_line(lineno)
+            if len(statement_node) > 0:
+                last_stmt = sorted(statement_node, key=lambda x: x.col_offset)[-1]
+                break
+
+    if last_stmt is None:
+        # return None if no statement found
+        return None
+    
+    # find left values
+    left_values = None
+    if isinstance(last_stmt, _ast.Assign):
+        tgs = last_stmt.targets[-1]
+        if isinstance(tgs, _ast.Name):
+            left_values = tgs.id
+        elif isinstance(tgs, _ast.Tuple):
+            left_values = unparse_tgs(tgs)
+        else:
+            left_values = _ast.unparse(tgs)
+
+    return left_values
+
+def get_lv(call_frame) -> tuple | str | None:
+    from objprint.executing import Source
+    # check if call_frame is None
+    if call_frame is None:
+        return None
+
+    # get node
+    node = Source.executing(call_frame).node
+    if node is None:
+        return None
+    
+    # initialize stack of statements
+    lineno = _inspect.getlineno(call_frame)
+    statement_node = Source.for_frame(call_frame).statements_at_line(lineno)
+    stmt = sorted(statement_node, key=lambda x: x.col_offset)[-1] # todo: 这里可能会有问题，可能不是最后一个
+    
+    # find left values
+    left_values = None
+    if isinstance(stmt, _ast.Assign):
+        tgs = stmt.targets[-1]
+        if isinstance(tgs, _ast.Name):
+            left_values = tgs.id
+        elif isinstance(tgs, _ast.Tuple):
+            left_values = unparse_tgs(tgs)
+        else:
+            left_values = _ast.unparse(tgs)
+
+    return left_values
+
+def get_vals(last_lv, call_frame) -> list:
+    """获取变量的值"""
+    local_vars = call_frame.f_locals
+    global_vars = call_frame.f_globals
+    vals = [eval(lv, global_vars, local_vars) for lv in last_lv]
+    return vals
+
+def flatten_tuple(t):
+    if isinstance(t, str):
+        return (t, )
+    result = []
+    for item in t:
+        result.extend(flatten_tuple(item))  # 递归处理嵌套元组
+    return tuple(result)
+
+def get_args(frame):
+    import tokenize
+    import io
+    if frame is None:
+        return None
+    func_call_str = get_executing_function_call_str(frame)
+    if func_call_str is None:
+        func_call_str = get_executing_function_call_str2(frame)
+    if func_call_str is None:
+        return None
+    func_call_io = io.StringIO(func_call_str)
+    depth = 0
+    args = []
+    curr_arg = ""
+    last_pos = (0, 0)
+    for token in tokenize.generate_tokens(func_call_io.readline):
+        if depth == 0 and token.string == "(":
+            depth = 1
+        elif depth == 1 and token.string == ")":
+            args.append(curr_arg.strip())
+            break
+        elif depth == 1 and token.string == ",":
+            args.append(curr_arg.strip())
+            curr_arg = ""
+        elif depth >= 1:
+            if token.string in "([{":
+                depth += 1
+            elif token.string in ")]}":
+                depth -= 1
+            if depth >= 1 and token.type != tokenize.NL:
+                if token.start[0] != last_pos[0] or token.start[1] - last_pos[1] > 0:
+                    curr_arg += f" {token.string}"
+                else:
+                    curr_arg += token.string
+        last_pos = token.end
+    return args
+
+def get_executing_function_call_str(frame):
+    from objprint.executing import Source
+    node = Source.executing(frame).node
+    if node is None:
+        return None
+
+    try:
+        module = _inspect.getmodule(frame)
+        if module is None:
+            return None
+        source = _inspect.getsource(module)
+    except (OSError, TypeError):
+        return None
+
+    return _ast.get_source_segment(source, node)
+
+def get_executing_function_call_str2(frame):
+    from objprint.executing import Source
+    node = Source.executing(frame).node
+    if node is None:
+        return None
+    lineno = _inspect.getlineno(frame)
+    statement_node = Source.for_frame(frame).statements_at_line(lineno)
+    stmt = sorted(statement_node, key=lambda x: x.col_offset)[-1]
+    return _ast.unparse(stmt)
 
 class PrintLn:
     """
@@ -567,8 +698,6 @@ class PrintLn:
     任何以 f" 或 rf" 开头的字符串会被识别为 f-string，而不会被解析为变量名称。
     
     可以通过在 builtins.pyi 中添加：
-
-    为了获得多行支持，使用了 objprint
 
     >>> def Timer(self, *str_or_funcs, output_unit: float|None = None, save=False) -> None: ...
     >>> def show(*values) -> None: ...
@@ -581,31 +710,37 @@ class PrintLn:
     >>> a = "this is a test"
     >>> show(a)
     a: this is a test
+    >>> a, (b, c) = 1, (2, 3)
+    >>> show()
+    a: 1; b: 2; c: 3
     """
     def __init__(self, use_color=True):
         self.use_color = use_color
-        try:
-            from objprint.frame_analyzer import FrameAnalyzer
-            frame_analyzer = FrameAnalyzer()
-            self.get_args = frame_analyzer.get_args
-        except ImportError:
-            self.get_args = simple_get_args
+        self.arg_name = True
     
-    def __call__(self, *inputargs, level=1):
+    def __call__(self, *ipt, level=1):
         if level == 0:
             return None
-
-        call_frame = _inspect.currentframe()  # 获取调用函数的栈帧
-        if call_frame is not None:
-            call_frame = call_frame.f_back
         
-        if len(inputargs) == 0:
-            out = ""
+        if self.arg_name:
+            call_frame = _inspect.currentframe()  # 获取调用函数的栈帧
+            if call_frame is not None:
+                call_frame = call_frame.f_back
+            
+            if len(ipt) == 0:
+                last_lv = get_last_lv(call_frame)
+                if last_lv is None:
+                    return ""
+                last_lv = flatten_tuple(last_lv)
+                vals = get_vals(last_lv, call_frame)
+                out: str = self._constructArgumentOutput(last_lv, vals)
+            else:
+                args = get_args(call_frame)
+                if args is None:
+                    args = ["Unknown Arg" for _ in range(len(ipt))]
+                out: str = self._constructArgumentOutput(args, ipt)
         else:
-            args = self.get_args(call_frame)
-            if args is None:
-                args = ["Unknown Arg" for _ in range(len(inputargs))]
-            out: str = self._constructArgumentOutput(args, inputargs)
+            out = " ".join(map(str, ipt))
 
         if level == 1:
             logger.info(out)
@@ -686,6 +821,13 @@ class PrintLn:
 
 println = PrintLn()  # 实例化 PrintLn 类
 builtins.show = println  # 给内置函数 println 赋值
+
+def set_show(use_color=None, arg_name=None) -> None:
+    if use_color is not None:
+        println.use_color = use_color
+    if arg_name is not None:
+        println.arg_name = arg_name
+
 
 # =================
 #    hdf5 工具
@@ -999,7 +1141,7 @@ def view_hdf5(filename:str, group:str='/', depth=1):
 # 下面两个是更高级的 save, load 用法
 # 功能实现起来比较复杂，图方便的时候可以用
 
-def _save_hdf5(filename:str, *data, group:Union[list[str],str, None] = None, mode:str='a') -> None:
+def isave(filename:str, *data, group:Union[list[str],str, None] = None, mode:str='a') -> None:
     """将数据保存为 .h5 文件
     
     Parameters
@@ -1025,31 +1167,44 @@ def _save_hdf5(filename:str, *data, group:Union[list[str],str, None] = None, mod
     >>> vec = np.random.randn(10)
     >>> bf.save_h5("data.h5", mat, vec)
     """
-    assert filename[-3:] == ".h5", "use h5 for consistance"
+    assert filename[-3:] == ".h5", "use .h5 file"
+
     if len(data) == 1 and isinstance(data[0], dict):
-        data_dic = data[0]
+        data_dic = data[0] 
     else:
-        current_frame = _inspect.currentframe()
-        assert current_frame is not None and current_frame.f_back is not None, "Can't get the caller's frame"
-        paraname = PrintLn._get_paraname(current_frame.f_back)
-        if paraname is None:
-            raise ValueError("Can't get the caller's parameter name")
+        call_frame = _inspect.currentframe()
+        if call_frame is not None:
+            call_frame = call_frame.f_back
+        
+        if len(data) == 0:
+            args = get_last_lv(call_frame)
+            args = flatten_tuple(args)
+            vals = get_vals(args, call_frame)
+        else:
+            args = get_args(call_frame)
+            if args is None:
+                args = [f"Unknown Arg {i}" for i in range(len(data)+1)]
+            args = args[1:]
+            vals = data
+        
         data_dic = dict()
-        for i, arg in enumerate(data):
-            if type(arg).__name__ == "type":
-                data_dic[paraname[i+1]] = arg()
+        for i, eachdata in enumerate(vals):
+            if type(eachdata).__name__ == "type":
+                data_dic[args[i]] = eachdata()
             else:
-                data_dic[paraname[i+1]] = arg
+                data_dic[args[i]] = eachdata
+        
     if group is None:
         group = []
     elif isinstance(group, str):
         group = [group]
+    
     assert isinstance(group, list) and "/" not in group
     group_name = "/".join(group)
     save_hdf5(filename, group_name, data_dic, mode=mode)
 
 
-def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], list[Any]]:
+def iload(filename:str, *datanames, group=None) -> Union[Dict[str, Any], list[Any]]:
     """从 .h5 文件中加载数据.
     
     Parameters
@@ -1065,14 +1220,16 @@ def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], li
     -------
     Union[Dict[str, Any], list[Any]]
         加载的数据。
+        如果 datanames 为空，那么根据调用时的变量名来加载数据。
+        如果返回为单个参数，则加载全部数据。
 
     Examples
     --------
     >>> import numpy as np
-    >>> import quante.basicfun as bf
+    >>> import quante as qt
     >>> mat = np.random.randn(10,10)
-    >>> bf.save_h5("data.h5", mat)
-    >>> mat, = bf.saveh5("data.h5", "mat")
+    >>> qt.basicfun.isave("data.h5")
+    >>> mat, = qt.basicfun.iload("data.h5")
     """
     check_file_exists(filename)
     logger.debug("Loading from " + _os.path.abspath(filename) + " ... ")
@@ -1087,20 +1244,34 @@ def _load_hdf5(filename:str, *datanames, group=None) -> Union[Dict[str, Any], li
         group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
         group_location = _get_data_location(f, group)
         if len(datanames) == 0:
-            data: Union[Dict[str, Any], list[Any]] = _load_dict(group_location)
+            call_frame = _inspect.currentframe()
+            if call_frame is not None:
+                call_frame = call_frame.f_back
+            lv = get_lv(call_frame)
+            if isinstance(lv, str) or lv is None:
+                lv = group
         else:
-            data = []
-            for dataname in datanames:
-                data_location = _get_data_location(group_location, dataname)
-                data_type_str = data_location.attrs.get("object_type", None)
-                if data_type_str is None and isinstance(data_location, _h5py.Group):
-                    data_type_str = 'dict'
-                load_func = _LOAD_FUNC.get(data_type_str, _default_load)
-                data.append(load_func(data_location))
-            if len(datanames) == 1:
-                data = data[0]
+            lv = datanames
+        data = _iload(group_location, lv)
     logger.debug("Load done")
     return data
+
+def _iload(group_location:_h5py.Group, lv: Union[str, list]) -> Any:
+    """加载数据"""
+
+    if isinstance(lv, str):
+        data_location = _get_data_location(group_location, lv)
+        data_type_str = data_location.attrs.get("object_type", None)
+        if data_type_str is None and isinstance(data_location, _h5py.Group):
+            data_type_str = 'dict'
+        load_func = _LOAD_FUNC.get(data_type_str, _default_load)
+        return load_func(data_location)
+    
+    res = []
+    for dataname in lv:
+        res.append(_iload(group_location, dataname))
+    return tuple(res)
+
 
 # =======
 # 画图预设
@@ -1180,7 +1351,7 @@ def plt_style_use(stylename:str = "quante", svg: bool = True, svg_display_width=
             "xtick.minor.size" : 1.5,
             "xtick.minor.width" : 0.5,
             "xtick.minor.visible" : True,
-            "xtick.top" : True,
+            "xtick.top" : False,
 
             # Set y axis
             "ytick.direction" : "in",
@@ -1189,7 +1360,7 @@ def plt_style_use(stylename:str = "quante", svg: bool = True, svg_display_width=
             "ytick.minor.size" : 1.5,
             "ytick.minor.width" : 0.5,
             "ytick.minor.visible" : True,
-            "ytick.right" : True,
+            "ytick.right" : False,
             
             # Set line widths
             "axes.linewidth" : 0.5,
