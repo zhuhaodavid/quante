@@ -2,15 +2,13 @@
 # @Author: hzhu
 # @Date:   2024-09-05 09:31:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-04 23:18:02
+# @Last Modified time: 2025-04-06 12:12:54
 
 from typing import Union
 import inspect
 import numpy as np
 import scipy.sparse as _sp
-from ....basicfun import PrintLn
 
-# @PrintLn.add_object_print
 class SpinBasis:
     """
     自旋基矢，目前包含：

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-06 11:57:14
+# @Last Modified time: 2025-04-06 12:12:23
 
 import gc as _gc
 import os as _os
@@ -691,7 +691,7 @@ def get_executing_function_call_str2(frame):
     stmt = sorted(statement_node, key=lambda x: x.col_offset)[-1]
     return _ast.unparse(stmt)
 
-class PrintLn:
+class Show:
     """
     打印输入变量的名称和值到日志中。
     
@@ -819,8 +819,7 @@ class PrintLn:
         else:
             return [prefix + lines[0]] + [" " * prefixlen + line for line in lines[1:]]
 
-println = PrintLn()  # 实例化 PrintLn 类
-builtins.show = println  # 给内置函数 println 赋值
+builtins.show = show = println = Show()  # 实例化 PrintLn 类
 
 def set_show(use_color=None, arg_name=None) -> None:
     if use_color is not None:
