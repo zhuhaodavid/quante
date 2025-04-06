@@ -10,11 +10,9 @@ quante 是处理一维自旋量子系统的 python 工具集合，包含了一�
 
 - 安装依赖：`conda install -c defaults numba numpy scipy matplotlib h5py cytoolz psutil tqdm ipykernel ipympl line_profiler`
 
-- 安装 torch: 确认 gpu 版本，`nvcc --version`, 通过 https://pytorch.org/ 说明安装对应版本 pytorch，cpu 安装命令为：`pip3 install torch torchvision torchaudio`
+- 安装 torch: cpu 安装命令为：`pip3 install torch torchvision torchaudio`；gpu 安装时先确认 cuda 版本，`nvcc --version`, 再通过 [torch 主页](https://pytorch.org/) 查看相应的按照命令。
 
-- 进入 setup.py 所在的文件夹：`cd path/to/setup.py`
-
-- 使用开发者模式安装：`pip install -e .`（如果需要安装到本地，可以使用`pip install .`）
+- 进入 setup.py 所在的文件夹 `cd path/to/setup.py` 后，使用开发者模式安装：`pip install -e .`（如果需要安装到本地，可以使用`pip install .`）
 
 ## Usage
 
