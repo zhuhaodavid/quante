@@ -225,15 +225,15 @@ class MPS(TensorTrain):
                 ldis += 1
                 rdis -= 1
                 if i < llim:
-                    out3 += "--▷---"
+                    out3 += "-|>---"
                     ldis = 1 if rdis <= 0 else ldis
                     rdis = (llim-i-1) if rdis <= 0 else rdis
                 elif i > rlim:
-                    out3 += "--◁---"
+                    out3 += "-<|---"
                     ldis = 1 if rdis <= 0 else ldis
                     rdis = (L-i-1) if rdis <= 0 else rdis
                 else:
-                    out3 += "--◻---"
+                    out3 += "--O---"
                     ldis = 1 if rdis <= 0 else ldis
                     rdis = (rlim-i) if rdis <= 0 else rdis
                 out2 += f"{b:>4}| "

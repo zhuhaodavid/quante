@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-24 09:40:58
+# @Last Modified time: 2025-04-06 12:53:33
 
 import numpy as np
 import torch as tc
@@ -174,15 +174,15 @@ class MPO(TensorTrain):
                 ldis += 1
                 rdis -= 1
                 if i < llim:
-                    out3 += "--▷---"
+                    out3 += "--|>--"
                     ldis = 1 if rdis <= 0 else ldis
                     rdis = (llim-i-1) if rdis <= 0 else rdis
                 elif i > rlim:
-                    out3 += "--◁---"
+                    out3 += "-<|---"
                     ldis = 1 if rdis <= 0 else ldis
                     rdis = (L-i-1) if rdis <= 0 else rdis
                 else:
-                    out3 += "--◻---"
+                    out3 += "--O---"
                     ldis = 1 if rdis <= 0 else ldis
                     rdis = (rlim-i-1) if rdis <= 0 else rdis
                 out2 += f"{b:>4}| "
