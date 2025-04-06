@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-06 11:40:17
+# @Last Modified time: 2025-04-06 11:57:14
 
 import gc as _gc
 import os as _os
@@ -954,6 +954,8 @@ if TYPE_CHECKING:  # 类型检查时，导入 torch
 def _save_torch(h5group:_h5py.Group, key:str, value:'_tc.Tensor') -> None:
     if value.grad is None:
         h5group.create_dataset(key, data=value.detach().cpu().numpy())
+        h5group[key].attrs["object_type"] = "Tensor"
+        h5group[key].attrs["device"] = f"{value.device}"
     else:
         subgroup = h5group.create_group(key)
         subgroup.attrs["dtype"] = f"{value.dtype}"
@@ -1036,6 +1038,12 @@ def _load_pylist(data_location: _h5py.Group) -> list:
     data = _default_load(data_location)  # 先加载数据
     return data.tolist() if isinstance(data, _np.ndarray) else list(data)  # 如果是 ndarray，转为 list
 
+def _load_tctensor(data_location: _h5py.Group) -> list:
+    data = _default_load(data_location)  # 先加载数据
+    import torch as _tc
+    device = data_location.attrs["device"]
+    return _tc.tensor(data, device=device)
+
 def _load_dict(h5group: _h5py.Group) -> Dict[str, Any]:
     dic = {}
     for key in h5group.keys():
@@ -1079,6 +1087,7 @@ _LOAD_FUNC: Dict[Union[str,None], Callable]  = {
     "pylist": _load_pylist,
     "dict": _load_dict,
     "csr": _load_csr,
+    "Tensor": _load_tctensor,
     "dataclass": _load_dataclass,
     "serialized_bytes": _load_serialized_bytes
 }
