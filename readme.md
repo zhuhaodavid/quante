@@ -79,7 +79,6 @@ a = qt.basicfun.iload("data.h5", group='/')
 自旋方法存放在 `quante.generate.operas` 中。
 
 ```python
-import quante as qt
 op = qt.generate.operas
 ```
 
