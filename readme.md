@@ -56,10 +56,10 @@ qt.basicfun.set_logging(savelog=False, logtime=True)
 
 ```python
 a, b = [1,2,3], 1
-qt.basicfun.isave("data.h5", a, b, group='/')
+qt.basicfun.isave("data.h5", a, b)
 ```
 
-将建立一个 `data.h5` 文件，包含一个 `/` 组，组中包含一个 `a` 数据集和一个 `b` 数据集。
+将建立一个 `data.h5` 文件，`/` 组中包含一个 `a` 数据集和一个 `b` 数据集。
 
 如果不填写数据，那么会自动寻找上一个赋值语句 (10 行以内) 的左值并保存，如：
 
@@ -72,20 +72,20 @@ qt.basicfun.isave("data.h5") # 与上面等价
 
 ```python
 a, b = [1,2,3], 1
-qt.basicfun.isave("data.h5", dataset={"data1": a, "data2": b})
+qt.basicfun.isave("data.h5", data={"data1": a, "data2": b})
 ```
 
 
 通过 `iload` 函数可以加载数据。
 
 ```python
-data = qt.basicfun.iload("data.h5", group='/')
+data = qt.basicfun.iload("data.h5")
 ```
 
 将会 load 数据为一个字典
 
 ```python
-b, = qt.basicfun.iload("data.h5", group='/')
+b, = qt.basicfun.iload("data.h5")
 ```
 
 则只会 load `b` 数据集。
@@ -93,7 +93,7 @@ b, = qt.basicfun.iload("data.h5", group='/')
 如果需要自定义数据集名称，可以提供字符串名称：
 
 ```python
-data1, data2 = qt.basicfun.iload("data.h5", dataset=['a', 'b'], group='/')
+data1, data2 = qt.basicfun.iload("data.h5", ('a', 'b'))
 ```
 
 ### Exact Diagonalization
