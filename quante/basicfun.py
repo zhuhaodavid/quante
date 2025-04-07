@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-06 12:12:23
+# @Last Modified time: 2025-04-07 10:59:25
 
 import gc as _gc
 import os as _os
@@ -972,7 +972,7 @@ _SAVE_FUNC: Dict[str, Callable[[_h5py.Group, str, Any], None]] = {
 
 # -> load
 
-def load_hdf5(filename:str, group:str, dataname:str) -> Any:
+def load_hdf5(filename:str, group:str, dataname:str|list[str]) -> Any:
     """从 HDF5 文件中加载数据。
     
     Parameters
@@ -981,7 +981,7 @@ def load_hdf5(filename:str, group:str, dataname:str) -> Any:
         HDF5 文件的路径。
     group : str
         HDF5 文件中的组路径，例如 "/mygroup"。
-    dataname : str
+    dataname : str | list[str]
         要加载的数据名称。
         
     Returns
@@ -998,16 +998,30 @@ def load_hdf5(filename:str, group:str, dataname:str) -> Any:
     >>> mat = load_hdf5("data.h5", "/", "mat")
     """
     check_file_exists(filename)
+    group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
+
+    logger.debug("Loading from " + _os.path.abspath(filename) + " ... ")
     with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
-        group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
         group_location = _get_data_location(f, group)
-        data_location = _get_data_location(group_location, dataname)
+        data = _load_main(group_location, dataname)
+    logger.debug("Load done")
+    return data
+
+def _load_main(group_location:_h5py.Group, lv: Union[str, list]) -> Any:
+    """加载数据"""
+
+    if isinstance(lv, str):
+        data_location = _get_data_location(group_location, lv)
         data_type_str = data_location.attrs.get("object_type", None)
         if data_type_str is None and isinstance(data_location, _h5py.Group):
             data_type_str = 'dict'
         load_func = _LOAD_FUNC.get(data_type_str, _default_load)
-        data = load_func(data_location)
-    return data
+        return load_func(data_location)
+    
+    res = []
+    for dataname in lv:
+        res.append(_load_main(group_location, dataname))
+    return tuple(res)
 
 def _get_data_location(f: _h5py.File | _h5py.Group, name: str) -> _h5py.Group:
     # 检查 f 中是否存在 name 的 group 或者 dataset
@@ -1153,8 +1167,6 @@ def view_hdf5(filename:str, group:str='/', depth=1):
             g = _get_data_location(f, group)
             print_tree(group, g)
 
-# 下面两个是更高级的 save, load 用法
-# 功能实现起来比较复杂，图方便的时候可以用
 
 def isave(filename:str, *data, dataset:dict = None, group:Union[str, None] = '/', mode:str='a') -> None:
     """将数据保存为 .h5 文件
@@ -1216,7 +1228,7 @@ def isave(filename:str, *data, dataset:dict = None, group:Union[str, None] = '/'
     save_hdf5(filename, group, data_dic, mode=mode)
 
 
-def iload(filename:str, dataset:list[str]|str|None = None, group=None) -> Union[Dict[str, Any], list[Any]]:
+def iload(filename:str, dataset:list[str]|str|None = None, group='/') -> Union[Dict[str, Any], list[Any]]:
     """从 .h5 文件中加载数据.
     
     Parameters
@@ -1243,49 +1255,22 @@ def iload(filename:str, dataset:list[str]|str|None = None, group=None) -> Union[
     >>> qt.basicfun.isave("data.h5")
     >>> mat, = qt.basicfun.iload("data.h5")
     """
-    check_file_exists(filename)
-    logger.debug("Loading from " + _os.path.abspath(filename) + " ... ")
-    if group is None:
-        group = []
-    elif isinstance(group, str):
-        group = [group]
-    assert isinstance(group, list) and "/" not in group
-    group = "/".join(group)
+    assert isinstance(group, str)
     
-    with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
-        group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
-        group_location = _get_data_location(f, group)
-        if dataset is None:
-            call_frame = _inspect.currentframe()
-            if call_frame is not None:
-                call_frame = call_frame.f_back
-            lv = get_lv(call_frame)
-            if isinstance(lv, str) or lv is None:
-                lv = group
-        else:
-            # dataset is list or tuple
-            assert isinstance(dataset, (list, tuple, str)), "dataset must be list or tuple."
-            lv = dataset
-        data = _iload(group_location, lv)
-    logger.debug("Load done")
-    return data
+    # obtain left value names
+    if dataset is None:
+        call_frame = _inspect.currentframe()
+        if call_frame is not None:
+            call_frame = call_frame.f_back
+        lv = get_lv(call_frame)
+        if isinstance(lv, str) or lv is None:
+            lv = group
+    else:
+        # dataset is list or tuple
+        assert isinstance(dataset, (list, tuple, str)), "dataset must be list or tuple."
+        lv = dataset
 
-def _iload(group_location:_h5py.Group, lv: Union[str, list]) -> Any:
-    """加载数据"""
-
-    if isinstance(lv, str):
-        data_location = _get_data_location(group_location, lv)
-        data_type_str = data_location.attrs.get("object_type", None)
-        if data_type_str is None and isinstance(data_location, _h5py.Group):
-            data_type_str = 'dict'
-        load_func = _LOAD_FUNC.get(data_type_str, _default_load)
-        return load_func(data_location)
-    
-    res = []
-    for dataname in lv:
-        res.append(_iload(group_location, dataname))
-    return tuple(res)
-
+    return load_hdf5(filename, group, lv)
 
 # =======
 # 画图预设
