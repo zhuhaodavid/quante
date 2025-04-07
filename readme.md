@@ -174,12 +174,12 @@ mat = ham.to_matrix(basis, sparse=True)
 
 state = qt.generate.state.random(basis.Ns, seed=42)
 
-qt.linalg.expm_multiply(mat, state, -1j, start=0, stop=10, num=100, usecuda=False, herm=True)
+qt.linalg.expm_multiply(mat, state, -1j, start=0, stop=10, num=100, herm=True, device=None)
 ```
 
 默认使用 `numpy` 演化。
-当使用 `usecuda='cpu'` 时，会转为 `torch` 的 cpu 计算。
-当使用 `usecuda=True` 时，会转为 `torch` 的 gpu 计算。
+当使用 `device='cpu'` 时，会转为 `torch` 的 cpu 计算。
+当使用 `device='cuda'` 时，会转为 `torch` 的 gpu 计算。
 
 ### Tensor Network
 

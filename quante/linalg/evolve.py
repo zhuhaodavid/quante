@@ -2,14 +2,14 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-04-04 21:20:36
+# # @Last Modified time: 2025-04-07 09:32:07
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
 from scipy.special import jv
 import numpy as _np
 import warnings as _warnings
-from typing import Callable, Union
+from typing import Callable, Union, Literal
 from functools import lru_cache
 
 __all__ = [
@@ -19,7 +19,7 @@ __all__ = [
     "chebyshev_evolve",
 ]
 
-def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], psi0:_np.ndarray, scale=1.0, *, start=None, stop=None, num=None, endpoint=None, traceA=None, herm=False, cudadevice=False) -> _np.ndarray:
+def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], psi0:_np.ndarray, scale=1.0, *, start=None, stop=None, num=None, endpoint=None, traceA=None, herm=False, device=None) -> _np.ndarray:
     """
     计算 `exp(matvec).dot(psi0)` 或 `exp(- 1j * matvec).dot(psi0)`
     
@@ -84,7 +84,7 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
     """
     assert scale == 1.0 or scale == - 1j, "only scale=1.0 or scale=-1j is supported for now"
     
-    if cudadevice:
+    if device is not None:
         assert isinstance(mat, (_np.ndarray, _sparse.spmatrix, _sparse.sparray)), "cuda only support numpy.ndarray or scipy.sparse matrix"
         
         try:
@@ -110,8 +110,8 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
         
         dtype = tc.complex128 if scale == -1j or _np.iscomplexobj(mat) or _np.iscomplexobj(psi0) else tc.float64
         
-        res = expm_multiply(tc.tensor(mat, device=cudadevice) if isinstance(mat, _np.ndarray) else to_csr(mat, device=cudadevice), 
-                            tc.tensor(psi0, device=cudadevice, dtype=dtype),
+        res = expm_multiply(tc.tensor(mat, device=device) if isinstance(mat, _np.ndarray) else to_csr(mat, device=device), 
+                            tc.tensor(psi0, device=device, dtype=dtype),
                             scale, start=start, stop=stop, num=num, endpoint=endpoint, 
                             traceA=traceA, herm=herm, norm1A=norm1A, hasshifted=hasshifted).cpu()
         
@@ -135,7 +135,7 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
         else:
             raise ValueError("herm should be 1 for hermitian or -1 for antihermitian or callable")
     else:
-        assert isinstance(mat, (_np.ndarray, _sparse.spmatrix, _sparse.sparray)), "cuda only support numpy.ndarray or scipy.sparse matrix"
+        assert isinstance(mat, (_np.ndarray, _sparse.spmatrix, _sparse.sparray)), "only support numpy.ndarray or scipy.sparse matrix"
         dtype = _np.complex128 if scale == -1j or _np.iscomplexobj(mat) or _np.iscomplexobj(psi0) else _np.float64
         psi0 = psi0.astype(dtype)
         lo = mat
