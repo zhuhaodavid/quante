@@ -6,11 +6,13 @@
 
 - 首先确定自己分支的改动全部提交，如果使用 OneDrive，最好关闭同步。
 
-- 切换到主分支，并拉取最新代码 `git checkout master && git pull origin master`
+- 切换到主分支，并拉取最新代码，merge 自己分支 
+    
+    `git checkout master && git pull origin master && git merge xxxx`，如果有冲突，git 会提示解决冲突。
 
-- merge 自己分支 `git merge xxxx`，如果有冲突，git 会提示解决冲突。
-
-- 上传到 github，并切换回最近的分支 `git push origin master && git checkout xxxx && git merge master`
+- 上传到 github，并切换回最近的分支 
+    
+    `git push origin master && git checkout xxxx && git merge master`
 
 ### Git 常用命令
 
