@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-07 10:59:25
+# @Last Modified time: 2025-04-07 11:13:10
 
 import gc as _gc
 import os as _os
@@ -1168,16 +1168,16 @@ def view_hdf5(filename:str, group:str='/', depth=1):
             print_tree(group, g)
 
 
-def isave(filename:str, *data, dataset:dict = None, group:Union[str, None] = '/', mode:str='a') -> None:
+def isave(filename:str, *dataargs, data:dict = None, group:Union[str, None] = '/', mode:str='a') -> None:
     """将数据保存为 .h5 文件
     
     Parameters
     ----------
     filename : str
         保存的文件名，必须以.h5 结尾。
-    *data : Any
+    *dataargs : Any
         要保存的数据，将自动提取变量名。
-    dataset : dict, optional
+    data : dict, optional
         要保存的数据集，字典形式。
     group : str, optional
         保存到 HDF5 文件中的组路径，可以是字符串，也可以是列表。如果为 None，则保存到根目录。
@@ -1198,25 +1198,25 @@ def isave(filename:str, *data, dataset:dict = None, group:Union[str, None] = '/'
     """
     assert filename[-3:] == ".h5", "use .h5 file"
 
-    if dataset is not None:
-        assert len(data) == 0, "data and datadic cannot be used at the same time."
-        save_hdf5(filename, group, dataset, mode=mode)
+    if data is not None:
+        assert len(dataargs) == 0, "data and datadic cannot be used at the same time."
+        save_hdf5(filename, group, data, mode=mode)
         return None
 
     call_frame = _inspect.currentframe()
     if call_frame is not None:
         call_frame = call_frame.f_back
     
-    if len(data) == 0:
+    if len(dataargs) == 0:
         args = get_last_lv(call_frame)
         args = flatten_tuple(args)
         vals = get_vals(args, call_frame)
     else:
         args = get_args(call_frame)
         if args is None:
-            args = [f"Unknown Arg {i}" for i in range(len(data)+1)]
+            args = [f"Unknown Arg {i}" for i in range(len(dataargs)+1)]
         args = args[1:]
-        vals = data
+        vals = dataargs
     
     data_dic = dict()
     for i, eachdata in enumerate(vals):
@@ -1228,21 +1228,21 @@ def isave(filename:str, *data, dataset:dict = None, group:Union[str, None] = '/'
     save_hdf5(filename, group, data_dic, mode=mode)
 
 
-def iload(filename:str, dataset:list[str]|str|None = None, group='/') -> Union[Dict[str, Any], list[Any]]:
+def iload(filename:str, dataname:list[str]|str|None = None, group='/') -> Any:
     """从 .h5 文件中加载数据.
     
     Parameters
     ----------
     filename : str
         保存的文件名，必须以.h5 结尾。
-    dataset : list[str] | str | None, optional
+    dataname : list[str] | str | None, optional
         要加载的数据名称，可以是多个。
     group : str, optional
         保存到 HDF5 文件中的组路径，可以是字符串。如果为 None，则从根目录开始查找。
     
     Returns
     -------
-    Union[Dict[str, Any], list[Any]]
+    Any:
         加载的数据。
         如果 datanames 为空，那么根据调用时的变量名来加载数据。
         如果返回为单个参数，则加载全部数据。
@@ -1258,7 +1258,7 @@ def iload(filename:str, dataset:list[str]|str|None = None, group='/') -> Union[D
     assert isinstance(group, str)
     
     # obtain left value names
-    if dataset is None:
+    if dataname is None:
         call_frame = _inspect.currentframe()
         if call_frame is not None:
             call_frame = call_frame.f_back
@@ -1267,8 +1267,8 @@ def iload(filename:str, dataset:list[str]|str|None = None, group='/') -> Union[D
             lv = group
     else:
         # dataset is list or tuple
-        assert isinstance(dataset, (list, tuple, str)), "dataset must be list or tuple."
-        lv = dataset
+        assert isinstance(dataname, (list, tuple, str)), "dataset must be list or tuple."
+        lv = dataname
 
     return load_hdf5(filename, group, lv)
 
