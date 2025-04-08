@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-08 12:24:32
+# @Last Modified time: 2025-04-08 22:45:09
 
 import gc as _gc
 import os as _os
@@ -1029,7 +1029,7 @@ def _get_data_location(f: _h5py.File | _h5py.Group, name: str) -> _h5py.Group:
         return f[name]
     except:
         res = []
-        names = name.split("/")
+        names = name.split("/")[1:]
         for eachname in names:
             try:
                 f = f[eachname]
