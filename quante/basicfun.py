@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-07 11:13:10
+# @Last Modified time: 2025-04-08 12:24:32
 
 import gc as _gc
 import os as _os
@@ -1341,24 +1341,25 @@ def plt_style_use(stylename:str = "quante", svg: bool = True, svg_display_width=
         # from https://github.com/garrettj403/SciencePlots/blob/master/scienceplots/styles/science.mplstyle
         scienceconfig = {
             # Set default figure size
-            "figure.figsize" : (3.5, 2.625),
+            # "figure.figsize" : (3.5, 2.625),
+            "figure.figsize" : (4, 2.9),
             
             # Set x axis
             "xtick.direction": "in",
-            "xtick.major.size" : 3,
-            "xtick.major.width" : 0.5,
-            "xtick.minor.size" : 1.5,
-            "xtick.minor.width" : 0.5,
-            "xtick.minor.visible" : True,
+            # "xtick.major.size" : 3,
+            # "xtick.major.width" : 0.5,
+            # "xtick.minor.size" : 1.5,
+            # "xtick.minor.width" : 0.5,
+            # "xtick.minor.visible" : True,
             "xtick.top" : False,
 
             # Set y axis
             "ytick.direction" : "in",
-            "ytick.major.size" : 3,
-            "ytick.major.width" : 0.5,
-            "ytick.minor.size" : 1.5,
-            "ytick.minor.width" : 0.5,
-            "ytick.minor.visible" : True,
+            # "ytick.major.size" : 3,
+            # "ytick.major.width" : 0.5,
+            # "ytick.minor.size" : 1.5,
+            # "ytick.minor.width" : 0.5,
+            # "ytick.minor.visible" : True,
             "ytick.right" : False,
             
             # Set line widths
