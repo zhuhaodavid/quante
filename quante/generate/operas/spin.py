@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-05 01:48:11
+# @Last Modified time: 2025-04-09 23:22:39
 
 import warnings
 import numpy as np
@@ -256,7 +256,7 @@ class Oper:
         elif form == 'h':
             print(self.table_form2(maxlen=maxlen))
     
-    def table_form(self, maxlen=80) -> str:
+    def table_form(self, maxlen=90) -> str:
         pages = []
         first_line = "|"
         second_line = "|"
@@ -276,12 +276,7 @@ class Oper:
                 data_list = []
                 last_len = 0
             
-            for i in operator:
-                first_line += f"   {i:<3}"
-                second_line += "-"*6
-            first_line += "     coef. |"
-            second_line += "-"*11 + "|"
-            
+            ml = 12 # max length
             for i in range(len(coef)):
                 if len(data_list) <= i:
                     data_list.append("|")
@@ -293,19 +288,30 @@ class Oper:
                     data_line += f"   {posn[i][j]:<3}"
 
                 if 0.1 <= abs(coef[i]) < 100:
-                    data_line += f"{coef[i]:.3f}".rjust(10) + " |"  # 普通浮点数格式
+                    tmp = f"{coef[i]:.3f}".rjust(10) + " |"  # 普通浮点数格式
                 else:
-                    data_line += f"{coef[i]:.2e}".rjust(10) +" |"  # 科学计数法格式
+                    tmp = f"{coef[i]:.2e}".rjust(10) +" |"  # 科学计数法格式
+                data_line += tmp
+                if len(tmp) > ml:
+                    ml = len(tmp)
                 data_list[i] = data_line
+            
             last_len = len(data_line)
         
+            for i in operator:
+                first_line += f"   {i:<3}"
+                second_line += "-"*6
+            makeup = ml - 12
+            first_line += "  " + " "*makeup + "   coef. |"
+            second_line += "-"*(11+makeup) + "|"
+            
         pages.append(first_line)
         pages.append(second_line)
         pages += data_list
     
         return '\n'.join(pages)
     
-    def table_form2(self, maxlen=80) -> str:
+    def table_form2(self, maxlen=90) -> str:
         lines = []
         for operator, (posn, coef) in self.data.items():
             oper_len = len(operator)
