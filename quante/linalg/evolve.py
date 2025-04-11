@@ -1,8 +1,8 @@
 # # -*- coding: utf-8 -*-
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
-# # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-01-18 16:11:08
+# # @Last Modified by:   dzwang
+# # @Last Modified time: 2025-03-19 15:36:38
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
@@ -294,7 +294,7 @@ def _in_GPU(initial_state: '_tc.Tensor', eigenvalues: '_tc.Tensor', eigenstates:
     time_states = _method(times, udagger_psi, eigenstates, eigenvalues)
     return time_states.cpu().numpy()
 
-def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.ndarray, eigenstates: _np.ndarray, times: _np.ndarray, *, failback_to_CPU: bool = False, device_name='cuda') -> _np.ndarray:
+def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.ndarray, eigenstates: _np.ndarray, times: _np.ndarray, *, failback_to_CPU: bool = False, device_name='cpu') -> _np.ndarray:
     """
     基于严格对角化的时间演化
     
