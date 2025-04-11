@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-08 22:45:09
+# @Last Modified time: 2025-04-11 15:55:53
 
 import gc as _gc
 import os as _os
@@ -738,7 +738,10 @@ class Show:
                 args = get_args(call_frame)
                 if args is None:
                     args = ["Unknown Arg" for _ in range(len(ipt))]
-                out: str = self._constructArgumentOutput(args, ipt)
+                if len(args) != len(ipt):
+                    out = "\n".join(map(str, ipt))
+                else:
+                    out: str = self._constructArgumentOutput(args, ipt)
         else:
             out = "\n".join(map(str, ipt))
 

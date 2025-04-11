@@ -19,7 +19,7 @@ from .sparse import trace, norm, eye
 from typing import Union
 from functools import lru_cache
 
-__all__ = ['expm_multiply', 'evolve_engine', 'expm']
+__all__ = ['expm_multiply', 'EvolveEngine', 'expm']
 
 def expm(A:tc.Tensor, c: Union[float, complex] = 1.0) -> tc.Tensor:
     """Exponential Matrix, Hermitian matrix can be accelerated

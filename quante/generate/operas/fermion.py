@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-18 15:24:34
+# @Last Modified time: 2025-04-10 22:23:15
 
 import numpy as np
 from .spin import Oper, _single_term, _merge_poscoef
@@ -43,6 +43,44 @@ class FermionOper(Oper):
                 posnlist.append(new_posn)
                 coeflist.append(new_coef)
         return FermionOper(data)
+    
+    def single_particle_ham(self):
+        """生成最简单的单粒子矩阵 PHYS. REV. X 13, 021007 (2023)"""
+        terms = {}
+        for oper, posn, coef in self.each_term():
+            assert len(oper) < 3, 'not free fermion'
+            if len(oper) == 1:
+                if oper == 'n':
+                    posnlist, coeflist = terms.setdefault('+-', [[], []])
+                    posn = [posn, posn]
+                else:
+                    posnlist, coeflist = terms.setdefault(oper, [[], []])
+                    posnlist.append(posn)
+                    coeflist.append(coef)
+            elif len(oper) == 2:
+                if oper == '-+':
+                    posnlist, coeflist = terms.setdefault('+-', [[], []])
+                    posnlist.append([posn[1], posn[0]])
+                    coeflist.append(coef)
+                    posnlist, coeflist = terms.setdefault("I", [[], []])
+                    if len(posnlist) == 0:
+                        posnlist.append([0])
+                        coeflist.append(coef)
+                    else:
+                        coeflist[0] += coef
+                elif oper == '+-':
+                    posnlist, coeflist = terms.setdefault('+-', [[], []])
+                    posnlist.append(posn)
+                    coeflist.append(coef)
+                else:
+                    raise ValueError(f"not free fermion due to: {oper}")
+        L = self.L
+        mat = np.zeros((L, L), dtype=self.dtype())
+        for name, (posnlist, coeflist) in terms.items():
+            if name == '+-':
+                for i in range(len(posnlist)):
+                    mat[posnlist[i][0], posnlist[i][1]] = coeflist[i]
+        return mat
     
     def dtype(self):
         for _, (_, coef) in self.data.items():
@@ -253,7 +291,7 @@ class SpinlessFermionOperBuilder:
     def __iadd__(self, term) -> 'SpinlessFermionOperBuilder':
         assert isinstance(term, tuple) and len(term) % 2 == 1, "term must be a tuple of odd length"
         for i in range(1, len(term), 2):
-            assert term[i] in ['I', '+', '-', 'n'], "term must be a tuple of I, p, m, n"
+            assert term[i] in ['I', '+', '-', 'n'], "term must be a tuple of I, +, -, n"
         
         opnm = "".join(term[1::2])
         posn = np.array(term[2::2])
@@ -262,8 +300,7 @@ class SpinlessFermionOperBuilder:
             posn_sorted = (opnm, posn, coef)
         else:
             posn_sorted = _sort_posn(opnm, posn, coef)
-        posn_sorteds = _sort_pm([posn_sorted])
-        for new_oper, new_posn, new_coef in posn_sorteds:
+        for new_oper, new_posn, new_coef in _sort_pm([posn_sorted]):
             posnlist, coeflist = self.terms.setdefault(new_oper, [[], []])
             posnlist.append(new_posn)
             coeflist.append(new_coef)
