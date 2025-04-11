@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-11 15:55:53
+# @Last Modified time: 2025-04-11 16:13:55
 
 import gc as _gc
 import os as _os
@@ -718,11 +718,11 @@ class Show:
         self.use_color = use_color
         self.arg_name = True
     
-    def __call__(self, *ipt, level=1):
+    def __call__(self, *ipt, level=1, end=None):
         if level == 0:
             return None
         
-        if self.arg_name:
+        if self.arg_name and end is None:
             call_frame = _inspect.currentframe()  # 获取调用函数的栈帧
             if call_frame is not None:
                 call_frame = call_frame.f_back
@@ -743,7 +743,9 @@ class Show:
                 else:
                     out: str = self._constructArgumentOutput(args, ipt)
         else:
-            out = "\n".join(map(str, ipt))
+            if end is None:
+                end = "\n"
+            out = end.join(map(str, ipt))
 
         if level == 1:
             logger.info(out)
