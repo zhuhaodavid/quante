@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-09 23:22:39
+# @Last Modified time: 2025-04-13 18:19:44
 
 import warnings
 import numpy as np
@@ -1068,7 +1068,7 @@ class SpinOper(Oper):
             else:
                 return sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=return_eigenvectors)
 
-    def evolve(self, inistate, tlist, obslist, L=None, pauli=False, basis=None):
+    def evolve(self, inistate:np.ndarray, tlist:np.ndarray, measure, basis=None, L=None, pauli=False):
         """计算观测量演化的示例
 
         Parameters
@@ -1077,29 +1077,39 @@ class SpinOper(Oper):
             初始态
         tlist : np.ndarray
             时间
-        obslist : list[SpinOper]
+        measure : list[SpinOper] | Callable[[np.ndarray], np.ndarray]
             观测量列表
+        basis : Basis, optional
+            基矢, by default None
+        L: int, optional
+            系统的长度, by default None
         pauli : bool, optional
             是否使用 pauli 矩阵表示, by default False
 
         Returns
         -------
-        list[np.ndarray]
+        np.ndarray
             对应观测量的演化
         
         Example
         -------
+        >>> import quante as qt
+        >>> import numpy as np
         >>> op = qt.generate.operas
+        >>> L = 10
+        >>> tlist = np.linspace(0, 10, 200)
+        >>> # Model
+        >>> J, γ = 1., 0.
         >>> builder = op.SpinOperBuilder()
-        >>> for i in range(L):
-        >>>     builder += (0. if i == L-1 else 1.), "z", i, "z", i+1
-        >>>     builder += -0.5, "x", i
-        >>>     builder += -0.5, "z", i
+        >>> for l in range(L-1):
+        >>>     builder += 1/2 * (J + γ), 'p', l+1, 'm',   l
+        >>>     builder += 1/2 * (J - γ), 'p',   l, 'm', l+1
         >>> ham = builder.build()
-        >>> sx = op.sum(op.x(i) for i in range(L))
-        >>> _, inistate = (-sx).gdenergy(pauli=True, return_eigenvectors=True)
-        >>> obslist = [sx] # + [op.x(i) for i in range(L)] + [op.z(i) for i in range(L)]
-        >>> sx_expect = ham.evolve(inistate, times, obslist, pauli=True)
+        >>> basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)
+        >>> obsoper = [op.z(i) for i in range(L)]
+        >>> init_state = qt.generate.state.neel(L=L, down_first=True, basis=basis)
+        >>> res = ham.evolve(init_state, tlist, obsoper, basis=basis)
+        >>> res
         """
         if L is None:
             L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
@@ -1107,16 +1117,20 @@ class SpinOper(Oper):
         if basis is None:
             from ..basis import spin_basis
             basis = spin_basis(L)
+        assert basis.Ns == len(inistate), "inistate should be the same length as basis"
 
         # Method to get evolve expectation values
-        if L < 12:  # 小尺寸的做法
+        if basis.Ns < 2**12:  # 小尺寸的做法
             ###################################################################################
             # 严格对角化的写法
             ###################################################################################
             from ...linalg import get_time_evolution_states_ED, observe_states
             engres = np.linalg.eigh(self.to_matrix(basis, pauli=pauli))
             evalstate = get_time_evolution_states_ED(inistate, *engres, tlist, failback_to_CPU=True)
-            return np.real_if_close([observe_states(evalstate, obs.to_matrix(basis, pauli=pauli)) for obs in obslist])
+            if isinstance(measure, list):
+                return np.real_if_close([observe_states(evalstate, obs.to_matrix(basis, pauli=pauli)) for obs in measure]).T
+            else:
+                return np.real_if_close([measure(evalstate[:, i]) for i in range(len(tlist))])
         else:
             hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
             try:
@@ -1133,14 +1147,16 @@ class SpinOper(Oper):
                 hammat0 = to_csr(hammat, device=device)
                 inistate = totc(inistate, device=device)
                 evolve_engine = EvolveEngine(hammat0, inistate, ts=tlist, device=device)
-                obsmatlist = [to_csr(obs.to_matrix(basis, pauli=pauli, sparse=True), device=device, dtype=tc.complex128) for obs in obslist]
-                res = [[]*len(obslist)]
+                if isinstance(measure, list):
+                    obsmatlist = [to_csr(o.to_matrix(basis, pauli=pauli, sparse=True), device=device, dtype=tc.complex128) for o in measure]
+                    obs = lambda state: [state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1) for obsmat in obsmatlist]
+                else:
+                    obs = measure
+                res = []
                 for _ in tqdm(tlist, ascii=True):
                     state = evolve_engine.run()
-                    for i in range(len(obslist)):
-                        value = state.conj().reshape(1,-1) @ (obsmatlist[i] @ state)
-                        res[i].append(value[0,0].item())
-                return [np.real_if_close(r) for r in res]
+                    res.append(obs(state))
+                return np.real_if_close(res)
             except:
             ###################################################################################
             # CPU parallel expm_multiply
@@ -1148,19 +1164,16 @@ class SpinOper(Oper):
                 from ...linalg import EvolveEngine
                 from tqdm import tqdm
                 evolve_engine = EvolveEngine(hammat, inistate, ts=tlist)
-                obsmatlist = [obs.to_matrix(basis, pauli=pauli, sparse=True) for obs in obslist]
-                res = [[]*len(obslist)]
+                if isinstance(measure, list):
+                    obsmatlist = [to_csr(o.to_matrix(basis, pauli=pauli, sparse=True), device=device, dtype=tc.complex128) for o in measure]
+                    obs = lambda state: [state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1) for obsmat in obsmatlist]
+                else:
+                    obs = measure
+                res = []
                 for _ in tqdm(tlist, ascii=True):
                     state = evolve_engine.run()
-                    for i in range(len(obslist)):
-                        value = state.conj().reshape(1,-1) @ (obsmatlist[i] @ state)
-                        res[i].append(value[0,0])
-                return [np.real_if_close(r) for r in res]    
-
-
-#  from numba import njit
-# @njit
-
+                    res.append(measure)
+                return np.real_if_close(res)    
 
 
 

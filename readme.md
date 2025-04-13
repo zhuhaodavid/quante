@@ -167,19 +167,36 @@ array([[ 0.25,  0.5 ,  0.  ,  0.  ,  0.  ,  0.  ],
 一个计算实例：
 
 ```python
-L = 12
-ham = op.heisenberg_operator(L)
-basis = qt.generate.basis.spin_basis(L)
-mat = ham.to_matrix(basis, sparse=True)
+L = 10
+tlist = np.linspace(0, 10, 200)
 
-state = qt.generate.state.random(basis.Ns, seed=42)
+# Model
+J, γ = 1., 0.
+builder = op.SpinOperBuilder()
+for l in range(L-1):
+    builder += 1/2 * (J + γ), 'p', l+1, 'm',   l
+    builder += 1/2 * (J - γ), 'p',   l, 'm', l+1
+ham = builder.build()
 
-qt.linalg.expm_multiply(mat, state, -1j, start=0, stop=10, num=100, herm=True, device=None)
+basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)
+obsoper = [op.z(i) for i in range(L)]
+init_state = qt.generate.state.neel(L=L, down_first=True, basis=basis)
+
+res = ham.evolve(init_state, tlist, obsoper, basis=basis)
+res
 ```
 
-默认使用 `numpy` 演化。
-当使用 `device='cpu'` 时，会转为 `torch` 的 cpu 计算。
-当使用 `device='cuda'` 时，会转为 `torch` 的 gpu 计算。
+```
+array([[-0.5       , -0.49936897, -0.49747906, ...,  0.14443265,  0.15040737,  0.15657966],
+       [ 0.5       ,  0.49873807,  0.49496024, ...,  0.07763028,  0.07828669,  0.07840081],
+       [-0.5       , -0.4987382 , -0.49496236, ...,  0.10006989,  0.09211759,  0.08461557],
+       ...,
+       [ 0.5       ,  0.4987382 ,  0.49496236, ..., -0.10006989, -0.09211759, -0.08461557],
+       [-0.5       , -0.49873807, -0.49496024, ..., -0.07763028, -0.07828669, -0.07840081],
+       [ 0.5       ,  0.49936897,  0.49747906, ..., -0.14443265, -0.15040737, -0.15657966]])
+```
+
+会根据尺寸自动选择合适的方法，如果需要手动调优，可以参考 `examples/evolve.ipynb` 中的例子。
 
 ### Tensor Network
 

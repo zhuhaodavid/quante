@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-06 12:41:42
+# @Last Modified time: 2025-04-13 18:09:28
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -153,6 +153,7 @@ def entanglement_entropy(state:_np.ndarray, L:int, left_number:int, basis=None) 
     0.6931471805599453
     """
     ee = entanglement_spectrum(state, L, left_number, basis)
+    ee = ee[ee > 0.0]
     return (-2) * sum(ee**2 * _np.log(ee))
 
 def entropy(a, rank=None, base=_np.e) -> _np.float64:

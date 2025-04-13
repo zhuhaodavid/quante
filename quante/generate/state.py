@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:25
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-17 16:54:29
+# @Last Modified time: 2025-04-13 17:44:45
 
 """
 生成一些常用的态（`np.ndarray`）
@@ -90,7 +90,7 @@ def product_state(updns:list[str], dtype=float):
     return result
 
 
-def neel(L:int, down_first=False, dtype=float):
+def neel(L:int, down_first=False, dtype=float, basis=None):
     """
     生成 Neel 态
     
@@ -107,8 +107,18 @@ def neel(L:int, down_first=False, dtype=float):
     updns = "01" * (L // 2) + (L % 2 == 1) * "0"
     if down_first:
         updns = "1" + updns[:-1]
-    result = _np.zeros((2**len(updns), 1), dtype=dtype)
-    result[int(updns, 2)] = 1.0
+    updnint = int(updns, 2)
+    if basis is None:
+        result = _np.zeros((2**len(updns), 1), dtype=dtype)
+        result[updnint] = 1.0
+    else:
+        from .basis.symmetry.spin_half.Nup.defclass import SpinHalfBasisNup
+        if isinstance(basis, SpinHalfBasisNup):
+            indices = _np.where(basis.s_list == updnint)[0]
+            result = _np.zeros((basis.Ns, 1), dtype=dtype)
+            result[indices] = 1.0
+        else:
+            raise ValueError(f"Invalid basis type {type(basis)}")
     return result
 
 def ghz(L):

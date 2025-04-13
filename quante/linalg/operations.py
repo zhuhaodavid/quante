@@ -125,7 +125,8 @@ def expm(A:_np.ndarray, c: float | complex | None = None, isherm: bool | None = 
     else:
         if c is not None:
             A = A * c
-        return _sla.expm(A)
+        val, vec = _np.linalg.eig(A)
+        return (vec * exp(val)) @ _np.linalg.inv(vec)
 
 
 def sqrtm(A:_np.ndarray, isherm: bool | None = None) -> _np.ndarray:
