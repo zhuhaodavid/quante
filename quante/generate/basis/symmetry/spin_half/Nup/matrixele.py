@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-03 14:19:42
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-15 18:27:45
+# @Last Modified time: 2025-04-16 18:57:29
 
 from ..bitsoperation import findstate, flip
 from ......linalg.usenumba.numba_settings import njit, config, numba_cache_dir, pnjit, prange
@@ -67,8 +67,11 @@ def diag_matrix_element(opnm, posn, coef, L, M, s_list, dtype):
     diag = np.empty(M, dtype=dtype)
     for a in prange(M):
         sa = s_list[a]
-        opco, _ = operateon(opnm, posn, sa, L)
-        diag[a] = opco * coef
+        opco, t = operateon(opnm, posn, sa, L)
+        if t < 0:
+            diag[a] = 0.0
+        else:
+            diag[a] = opco * coef
     return diag
 
 

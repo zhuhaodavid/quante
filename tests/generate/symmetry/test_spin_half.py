@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-08 17:12:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-02 15:21:00
+# @Last Modified time: 2025-04-16 18:57:35
 
 import unittest
 import numpy as np
@@ -13,10 +13,11 @@ import quante.generate.operas as op
 class TestSpinHalf(unittest.TestCase):
     
     def _generate_random_hamiltonian(self, L):
-        return op.sum(np.random.randn() * op.xx(i,(i+1)%L) + np.random.randn() * op.yy(i,(i+1)%L) + np.random.randn() * op.zz(i,(i+1)%L) for i in range(L)) + op.sum(np.random.randn() * op.x(i) + np.random.randn() * op.y(i) + np.random.randn() * op.z(i) for i in range(L))
+        return op.sum(np.random.randn() * op.xx(i,j) + np.random.randn() * op.yy(i,j) + np.random.randn() * op.zz(i,j) + np.random.randn() * op.pm(i,j) + np.random.randn() * op.mp(i,j) + np.random.randn() * op.m(i) * op.m(j) + np.random.randn() * op.p(i) * op.p(j) for i in range(L) for j in range(L))  + op.sum(np.random.randn() * op.x(i) + np.random.randn() * op.y(i) + np.random.randn() * op.z(i) + np.random.randn() * op.n(i) for i in range(L))
     
     def _generate_Nup_hamiltonian(self, L):
-        return op.sum(np.random.randn() * (op.xx(i,(i+1)%L) + op.yy(i,(i+1)%L)) + np.random.randn() * op.zz(i,(i+1)%L) for i in range(L)) + op.sum(np.random.randn() * op.z(i) for i in range(L))
+        # return op.sum(np.random.randn() * (op.xx(i,(i+1)%L) + op.yy(i,(i+1)%L)) + np.random.randn() * op.zz(i,(i+1)%L) for i in range(L)) + op.sum(np.random.randn() * op.z(i) + np.random.randn() * op.n(i) for i in range(L))
+        return op.sum(op.n(i) for i in range(L))
     
     def _generate_kblock_hamiltonian(self, L):
         jx = np.random.randn()
@@ -25,7 +26,8 @@ class TestSpinHalf(unittest.TestCase):
         hx = np.random.randn()
         hy = np.random.randn()
         hz = np.random.randn()
-        return op.sum(jx * op.xx(i,(i+1)%L) + jy * op.yy(i,(i+1)%L) + jz * op.zz(i,(i+1)%L) for i in range(L)) + op.sum(hx * op.x(i) + hy * op.y(i) + hz * op.z(i) for i in range(L))
+        hn = np.random.randn()
+        return op.sum(jx * op.xx(i,(i+1)%L) + jy * op.yy(i,(i+1)%L) + jz * op.zz(i,(i+1)%L) for i in range(L)) + op.sum(hx * op.x(i) + hy * op.y(i) + hz * op.z(i) + hn * op.n(i)  for i in range(L))
     
     def _generate_pblock_hamiltonian(self, L):
         import quante.generate.operas as op
@@ -41,7 +43,9 @@ class TestSpinHalf(unittest.TestCase):
         hy = hy + hy[::-1]
         hz = np.random.randn(L)
         hz = hz + hz[::-1]
-        return op.sum(jx[i] * op.xx(i,(i+1)%L) + jy[i] * op.yy(i,(i+1)%L) + jz[i] * op.zz(i,(i+1)%L) for i in range(L-1)) + op.sum(hx[i] * op.x(i) + hy[i] * op.y(i) + hz[i] * op.z(i) for i in range(L))
+        hn = np.random.randn(L)
+        hn = hn + hn[::-1]
+        return op.sum(jx[i] * op.xx(i,(i+1)%L) + jy[i] * op.yy(i,(i+1)%L) + jz[i] * op.zz(i,(i+1)%L) for i in range(L-1)) + op.sum(hx[i] * op.x(i) + hy[i] * op.y(i) + hz[i] * op.z(i) + hn[i] * op.n(i) for i in range(L))
     
     def _generate_zblock_hamiltonian(self, L):
         import quante.generate.operas as op
@@ -115,7 +119,7 @@ class TestSpinHalf(unittest.TestCase):
                 self.assertTrue(np.allclose(mat1, mat2))
 
         ham = self._generate_Nup_hamiltonian(L)
-        for Nup in range(L+1):
+        for Nup in range(1,L):
             quspin_basis = gen.basis.quspin_spin_basis(L=L, Nup=Nup, pauli=0)
             mat3 = ham.to_matrix(quspin_basis)
             basis = gen.spin_basis(L=L, Nup=Nup)

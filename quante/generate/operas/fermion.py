@@ -2,10 +2,116 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-10 22:23:15
+# @Last Modified time: 2025-04-16 23:34:14
 
 import numpy as np
+import traceback as tb
 from .spin import Oper, _single_term, _merge_poscoef
+
+
+def _sort_pm(data:list):
+    r"""
+    对给定的算符字符串、位置数组和系数进行排序和化简。
+
+    该函数用于对费米算符进行排序，处理相邻的 `-+` 和 `+-` 操作符对，并根据反对易关系调整符号或化简算符。
+
+    参数:
+    --------
+    oper : list[tuple[str, numpy.ndarray, float | complex]]
+        包含算符字符串、位置数组和系数的列表，例如 `[('-+', np.array([0, 1]), 1.0)]`。
+    posn : numpy.ndarray
+        表示算符作用位置的数组，例如 `[0, 1]`。
+    coef : float 或 complex
+        表示算符的系数。
+
+    返回:
+    --------
+    list
+        返回一个包含排序和化简后的算符、位置数组和系数的列表。
+
+    处理逻辑:
+    --------
+    1. 检查相邻的 `-+` 和 `+-` 操作符对。
+    2. 如果相邻操作符的作用位置相同，则根据反对易关系调整符号或化简算符。
+    3. 如果相邻操作符的作用位置不同，则交换它们的位置并调整符号。
+    4. 返回排序和化简后的算符、位置数组和系数的列表。
+    """
+    maxiter = 10000
+    iternum = 0
+    tobeordered = [i for i in data]
+    final_res = []
+    while iternum < maxiter and len(tobeordered) != 0:
+        oper, posn, coef = tobeordered.pop(0)
+        for i in range(1, len(oper)):
+            if oper[i-1:i+1] == '-+':
+                if posn[i-1] == posn[i]:
+                    if len(posn) == 2:
+                        tobeordered.append(('I', [0], coef))
+                    else:
+                        tobeordered.append(
+                            (
+                                oper[:i-1] + oper[i+1:],
+                                np.delete(posn, [i-1, i]),
+                                coef
+                            )
+                        )
+                tobeordered.append(
+                    (
+                        oper[:i-1] + '+-' + oper[i+1:],
+                        list(posn[:i-1]) + [posn[i], posn[i-1]] + list(posn[i+1:]),
+                        -coef
+                    )
+                )
+                break
+            elif (oper[i-1:i+1] == '--' or oper[i-1:i+1] == '++') and posn[i-1] == posn[i]:
+                iternum += 1
+                break
+        else:
+            final_res.append((oper, posn, coef))
+        iternum += 1
+    
+        if iternum == maxiter:
+            raise RuntimeError("Exceeded maximum iterations in _sort_pm. Possible infinite loop.")
+
+    return final_res
+
+
+def _sort_posn(ops, arr):
+    r"""
+    根据字符串和数组计算排序后的奇偶性。
+
+    参数:
+    ops (str): 包含操作符的字符串，如 "++++----"。
+    arr (list): 包含整数的数组，如 [2,1,3,4,6,3,5,7]。
+
+    返回:
+    tuple: 排序后的数组和总的奇偶性 (1 或 -1)。
+    """
+    # 将数组按照字符串中的符号分类
+    groups = {}
+    for op, val in zip(ops, arr):
+        if op not in groups:
+            groups[op] = []
+        groups[op].append(val)
+    
+    # 对每组进行排序并计算奇偶性
+    sorted_groups = []
+    parity = 0
+    for key in sorted(groups.keys()):
+        group = groups[key]
+        sorted_group = sorted(group)
+        sorted_groups.extend(sorted_group)
+        
+        # 计算排列的奇偶性
+        for i in range(len(group)):
+            for j in range(i + 1, len(group)):
+                if group[i] > group[j]:
+                    parity += 1
+    
+    # 计算总的奇偶性
+    total_parity = (-1) ** parity
+    return sorted_groups, total_parity
+
 
 class FermionOper(Oper):
     """
@@ -28,66 +134,49 @@ class FermionOper(Oper):
     def __init__(self, data:dict, type='f') -> None:
         assert type == 'f'
         super().__init__(data, stype='f')
-   
-    def sort(self):
-        """
-        对算符进行排序，使得所有的位置信息按照从小到大的顺序排列。
-        """
+    
+
+    def normal_ordering(self):
         data = {}
-        for oper, posn, coef in self.each_term():
-            posn_sorted = _sort_pm([
-                _sort_posn(oper, posn, coef)
-            ])
-            for new_oper, new_posn, new_coef in posn_sorted:
-                posnlist, coeflist = data.setdefault(new_oper, ([], []))
-                posnlist.append(new_posn)
-                coeflist.append(new_coef)
-        return FermionOper(data)
-    
-    def single_particle_ham(self):
-        """生成最简单的单粒子矩阵 PHYS. REV. X 13, 021007 (2023)"""
-        terms = {}
-        for oper, posn, coef in self.each_term():
-            assert len(oper) < 3, 'not free fermion'
-            if len(oper) == 1:
-                if oper == 'n':
-                    posnlist, coeflist = terms.setdefault('+-', [[], []])
-                    posn = [posn, posn]
-                else:
-                    posnlist, coeflist = terms.setdefault(oper, [[], []])
-                    posnlist.append(posn)
-                    coeflist.append(coef)
-            elif len(oper) == 2:
-                if oper == '-+':
-                    posnlist, coeflist = terms.setdefault('+-', [[], []])
-                    posnlist.append([posn[1], posn[0]])
-                    coeflist.append(coef)
-                    posnlist, coeflist = terms.setdefault("I", [[], []])
-                    if len(posnlist) == 0:
-                        posnlist.append([0])
-                        coeflist.append(coef)
-                    else:
-                        coeflist[0] += coef
-                elif oper == '+-':
-                    posnlist, coeflist = terms.setdefault('+-', [[], []])
-                    posnlist.append(posn)
-                    coeflist.append(coef)
-                else:
-                    raise ValueError(f"not free fermion due to: {oper}")
-        L = self.L
-        mat = np.zeros((L, L), dtype=self.dtype())
-        for name, (posnlist, coeflist) in terms.items():
+        for new_opnm, new_posn, new_coef in _sort_pm(list(self.each_term())):
+            new_posn, parity = _sort_posn(new_opnm, new_posn)
+            posnlist, coeflist = data.setdefault(new_opnm, [[], []])
+            posnlist.append(new_posn)
+            coeflist.append(parity * new_coef)
+        newdata = {}
+        for name, (posnlist, coeflist) in data.items():
+            newposn, newcoef = _merge_poscoef(posnlist, coeflist)
+            if len(newposn) > 0:
+                newdata[name] = (newposn, newcoef)
+        return FermionOper(newdata)
+
+
+    def single_particle_ham(self, L=None):
+        r"""生成最简单的单粒子矩阵
+        
+        .. math:
+            H = \sum_{i,j} h_{ij} c_i^\dagger c_j
+        
+        """
+        if L is None:
+            L = self.L
+        h = np.zeros((L, L), dtype=self.dtype())
+        for name, (posnlist, coeflist) in self.data.items():
             if name == '+-':
-                for i in range(len(posnlist)):
-                    mat[posnlist[i][0], posnlist[i][1]] = coeflist[i]
-        return mat
-    
+                for i, posn in enumerate(posnlist):
+                    h[*posn] = coeflist[i]
+            else:
+                raise ValueError(f"not free fermion due to: {name}")
+        return h
+
+
     def dtype(self):
         for _, (_, coef) in self.data.items():
             if np.iscomplexobj(coef):
                 return complex
         return float
-    
+
+
     def quspin_form(self):
         """
         返回 quspin 可以接受的格式
@@ -108,6 +197,7 @@ class FermionOper(Oper):
             static.append([opnm, static_bond])
         return static
 
+
     def to_matrix(self, basis, dtype=np.complex128, sparse=False):
         self._check_length(basis.L)
         from ..basis.quspin.quspin_basis.basis_1d.fermion import spinless_fermion_basis_1d
@@ -124,67 +214,26 @@ class FermionOper(Oper):
             raise NotImplementedError("不支持的基矢类型")
 
     @classmethod
-    def I(cls, i:int=0) -> "FermionOper":
-        return cls({'I': _single_term((0,), 1.)})
+    def f(cls, i:int=0) -> "FermionOper":
+        return FermionOper({'+': _single_term((i,), 1.)})
 
     @classmethod
-    def p(cls, i:int=0) -> "FermionOper":
-        return cls({'+': _single_term((i,), 1.)})
+    def fdag(cls, i:int=0) -> "FermionOper":
+        return FermionOper({'-': _single_term((i,), 1.)})
 
     @classmethod
-    def m(cls, i:int=0) -> "FermionOper":
-        return cls({'-': _single_term((i,), 1.)})
+    def _convert_from_spin(cls, opnm, i, coef):
+        if opnm == 'p':
+            return FermionOper({'+': _single_term((i,), coef)})
+        elif opnm == 'm':
+            return FermionOper({'-': _single_term((i,), coef)})
+        elif opnm == 'I':
+            return FermionOper({'I': _single_term((0,), coef)})
+        elif opnm == 'Z':
+            return FermionOper({'+-': _single_term((i,i,), 2.*coef), 'I': _single_term((0,), -coef)})
+        else:
+            raise ValueError(f"Invalid operator name {opnm}, should be in ['p', 'm', 'I', 'Z']")
 
-    @classmethod
-    def x(cls, i:int=0) -> "FermionOper":
-        return cls.p(i) + cls.m(i)
-
-    @classmethod
-    def y(cls, i:int=0) -> "FermionOper":
-        return (cls.p(i) - cls.m(i))*1j
-
-    @classmethod
-    def n(cls, i:int=0) -> "FermionOper":
-        return cls({'n': _single_term((i,), 1.)})
-
-    @classmethod
-    def nn(cls, i:int, j:int) -> "FermionOper":
-        return cls({'nn': _single_term((i, j), 1.)})
-
-    @classmethod
-    def mp(cls, i:int, j:int) -> "FermionOper":
-        if i==j:
-            return cls({'n': _single_term((i,), 1.)})
-        return cls({'-+': _single_term((i, j), 1.)})
-
-    @classmethod
-    def pm(cls, i:int, j:int) -> "FermionOper":
-        return cls({'+-': _single_term((i, j), 1.)})
-
-    @classmethod
-    def sum(cls, oper) -> "FermionOper":
-        data = {}
-        for opx in oper:
-            if isinstance(opx, (int,float,complex)):
-                iterterm = (('I', (np.array([[0]], dtype=int), np.array([opx]))),)
-            else:
-                assert isinstance(opx, FermionOper), "Operands must be instances of SpinfulFermionOper"
-                iterterm = opx.data.items()
-            for name, (posn, coef) in iterterm:
-                posnlist, coeflist = data.get(name, (None,None))
-                if posnlist is None and coeflist is None:
-                    data[name] = ([posn], [coef])
-                else:
-                    posnlist.append(posn)
-                    coeflist.append(coef)
-        # merge terms
-        newdata = {}
-        for name, (posnlist, coeflist) in data.items():
-            newposn, newcoef = _merge_poscoef(posnlist, coeflist)
-            if len(newposn) > 0:
-                newdata[name] = (newposn, newcoef)
-        return cls(newdata)
-    
     @classmethod
     def ssh_operator(cls, L, J=1.0, deltaJ=0.1, Delta=0.5, cyclic=False) -> "FermionOper":
         r"""Su-Schrieffer-Heeger Model
@@ -200,12 +249,6 @@ class FermionOper(Oper):
         >>> ham = op.ssh_operator(L=L, cyclic=True)
         >>> mat = ham.to_matrix(basis, dtype=float)
         >>> print(mat)
-        
-        等价于
-        >>> ham = (op.sum(
-                (-1) * (J + (-1)**j * DeltaJ) * (op.mp(j,j+1) - op.pm(j,j+1)) for j in range(L-1)) 
-            + 
-            op.sum(Delta * (-1)**j * op.n(j) for j in range(L)))
         """
         data = {}
         if cyclic:
@@ -223,96 +266,45 @@ class FermionOper(Oper):
         return cls(data)
 
 
-# from functools import lru_cache
-def is_even_permutation(arr):
-    """判断排列是否为偶排列。"""
-    n = len(arr)
-    cnt = 0
-    for i in range(n):
-        for j in range(i+1, n):
-            if arr[i] > arr[j]:
-                cnt += 1
-    return cnt % 2 == 0
-
-
-def _sort_pm(tmp_res):
-    res = []
-    for oper, posn, coef in tmp_res:
-        sorted_ones = [(oper, posn, coef)]
-        for i in range(1, len(posn)):
-            if posn[i-1] == posn[i]: 
-                if oper[i-1:i+1] == '-+':
-                    sorted_ones = [
-                        (oper[:i-1] + '+-' + oper[i+1:], posn, -coef),
-                    ]
-                    if len(posn) == 2:
-                        sorted_ones.append(('I', np.array([0]), coef))
-                    else:
-                        sorted_ones.append(
-                            (
-                                oper[:i-1] + oper[i+1:],
-                                np.delete(posn, [i-1, i]),
-                                coef
-                            )
-                        )
-                    sorted_ones = _sort_pm(sorted_ones)
-                elif oper[i-1:i+1] != '+-':
-                    sorted_ones = []
-        res += sorted_ones
-    return res
-
-
-def _sort_posn(oper, posn, coef):
-    inc_indx = np.argsort(posn, stable=True)
-    sign = 1 if is_even_permutation(inc_indx) else -1
-    new_oper = ''.join(oper[i] for i in inc_indx)
-    new_posn = np.array(posn)[inc_indx]
-    new_coef = sign * coef
-    return new_oper, new_posn, new_coef
-
-
-class SpinlessFermionOperBuilder:
+class FermionBuilder(FermionOper):
     def __init__(self):
-        """
-        可用的符号包括：I, p, m, x, y, z
-        
-        Example:
-        --------
-        >>> ham = SpinOperBuilder()
-        >>> for i in range(10):
-        >>>     ham += 1.0, 'x', i, 'x', i+1
-        >>>     ham += 1.0, 'y', i, 'y', i+1
-        >>>     ham += 1.0, 'z', i, 'z', i+1
-        >>>     ham += 1.0, 'x', i
-        >>> ham = ham.to_oper()
-        """
         self.terms = {}
 
-    def __iadd__(self, term) -> 'SpinlessFermionOperBuilder':
-        assert isinstance(term, tuple) and len(term) % 2 == 1, "term must be a tuple of odd length"
-        for i in range(1, len(term), 2):
-            assert term[i] in ['I', '+', '-', 'n'], "term must be a tuple of I, +, -, n"
-        
-        opnm = "".join(term[1::2])
-        posn = np.array(term[2::2])
-        coef = term[0]
-        if np.all(np.diff(posn) >= 0):
-            posn_sorted = (opnm, posn, coef)
+    def __iadd__(self, term) -> 'FermionBuilder':
+        if isinstance(term, tuple):
+            assert len(term) % 2 == 1, f"length wrong for term: {term}"
+            for i in range(1, len(term), 2):
+                assert term[i] in ['I', '+', '-'], "term must be a tuple of I, +, -"
+            
+            opnm = "".join(term[1::2])
+            posn = np.array(term[2::2])
+            coef = term[0]
+
+            posnlist, coeflist = self.terms.setdefault(opnm, [[], []])
+            posnlist.append(posn)
+            coeflist.append(coef)
+            return self
         else:
-            posn_sorted = _sort_posn(opnm, posn, coef)
-        for new_oper, new_posn, new_coef in _sort_pm([posn_sorted]):
-            posnlist, coeflist = self.terms.setdefault(new_oper, [[], []])
-            posnlist.append(new_posn)
-            coeflist.append(new_coef)
+            return super().__iadd__(term)
+
+    def __enter__(self):
         return self
-    
-    def to_oper(self):
+
+    def __exit__(self, exc_type, exc_value, traceback):
         data = {}
         for name, (posnlist, coeflist) in self.terms.items():
             data[name] = _merge_poscoef(posnlist, coeflist)
-        return FermionOper(data)
+        super().__init__(data, type='f')
+        
+        if exc_type is not None:  # 检查是否发生错误
+            tb.print_exc()  # 打印堆栈跟踪
     
-    build = to_oper
+    def build(self):
+        data = {}
+        for name, (posnlist, coeflist) in self.terms.items():
+            data[name] = _merge_poscoef(posnlist, coeflist)
+        return FermionOper(data, type='f')
+
 
 #####################################################################
 #####################################################################

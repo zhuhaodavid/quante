@@ -6,3 +6,4 @@
 
 
 from .free_fermion import *
+from .free_fermion_evolve import free_fermion_measure_n

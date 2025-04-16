@@ -129,18 +129,18 @@ ham
 #### 方法 2
 ```python
 L = 4
-ham = op.sum(op.xx(i,i+1) + op.yy(i,i+1) + op.zz(i,i+1) for i in range(L-1))
-```
-
-#### 方法 3
-```python
-L = 4
-builder = op.SpinOperBuilder()
+builder = op.SpinBuilder()
 for i in range(L-1):
     builder += 1., 'x', i, 'x', i+1
     builder += 1., 'y', i, 'y', i+1
     builder += 1., 'z', i, 'z', i+1
 ham = builder.build()
+```
+
+#### 方法 3
+```python
+L = 4
+ham = op.sum(op.xx(i,i+1) + op.yy(i,i+1) + op.zz(i,i+1) for i in range(L-1))
 ```
 
 通过 `basis` 获得基矢，进而获得哈密顿量的表示矩阵。
@@ -172,7 +172,7 @@ tlist = np.linspace(0, 10, 200)
 
 # Model
 J, γ = 1., 0.
-builder = op.SpinOperBuilder()
+builder = op.SpinBuilder()
 for l in range(L-1):
     builder += 1/2 * (J + γ), 'p', l+1, 'm',   l
     builder += 1/2 * (J - γ), 'p',   l, 'm', l+1

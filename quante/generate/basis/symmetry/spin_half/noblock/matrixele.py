@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-04 20:34:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-30 17:35:46
+# @Last Modified time: 2025-04-16 17:19:52
 
 from ..bitsoperation import operateon, flip
 from ......linalg.usenumba.numba_settings import config, numba_cache_dir, pnjit, prange
@@ -55,6 +55,9 @@ config.CACHE_DIR = numba_cache_dir
 def diag_matrix_element(opnm, posn, coef, L, M, dtype):
     diag = np.empty(M, dtype=dtype)
     for a in prange(M):
-        opco, _ = operateon(opnm, posn, a, L)
-        diag[a] = opco * coef
+        opco, t = operateon(opnm, posn, a, L)
+        if t < 0:
+            diag[a] = 0.0
+        else:
+            diag[a] = opco * coef
     return diag

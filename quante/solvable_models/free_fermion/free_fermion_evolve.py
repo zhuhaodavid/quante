@@ -2,11 +2,84 @@
 # @Author: hzhu
 # @Date:   2024-08-12 23:00:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-08-12 23:07:40
+# @Last Modified time: 2025-04-16 23:41:59
 
 import numpy as _np
 import scipy as _scipy
 import scipy.linalg as _sla
+from functools import lru_cache
+from ...linalg import expm
+
+def _sp_U(L, state:str):
+    r"""生成自由费米子态的 U 矩阵
+
+    对于自旋，直积态可能会相差一个负一，这里就不考虑了
+
+    .. math:
+    
+        |ψ(t)\rangle = \prod_{i=1}^N (\sum_{j=1}^L U_{ji} c_j^\dagger) |0\rangle
+
+    """
+    inds = []
+    for i, s in enumerate(state):
+        if s == '1':
+            inds.append(i)
+    N = len(inds)
+    U = _np.zeros((L, N), dtype=complex)
+    for i, n in enumerate(inds):
+        U[n,i] = 1.0
+    return U
+
+def _sp_evovle(h, U, t_list):
+    dtlist = [t_list[0]] + list(_np.diff(t_list))
+
+    isherm = _np.allclose(h, h.conj().T)
+    @lru_cache
+    def exph(dt):
+        if isherm:
+            return expm(h, -1j * dt)
+        import torch as tc
+        return tc.matrix_exp(-1j * tc.tensor(h) * dt).numpy()
+
+    for dt in dtlist:
+        if dt != 0:
+            U = exph(dt) @ U
+            if not isherm:
+                U, _ = _np.linalg.qr(U)
+        yield U
+
+
+def free_fermion_measure_n(model, init_state_str, tlist):
+    """计算自由费米子模型的测量
+
+    见 Hatano-Nelson model 的 note，以及 10.1103/PhysRevX.13.021007
+
+    Parameters
+    ----------
+    model : Oper
+        模型，可以是 SpinOper, FermionOper, 非自由的会报错
+    init_state_str : str
+        初始态的字符串表示，例如 '0000000000000000'，长度与模型一致
+    tlist : _type_
+        时间列表
+
+    Returns
+    -------
+    np.ndarray
+        测量结果，形状为 (len(tlist), len(init_state_str))，每一列是对应的测量值
+    """
+    L = len(init_state_str)
+    from ...generate.operas import SpinOper, FermionOper
+    if isinstance(model, SpinOper):
+        model = model.jw_transfer()
+    assert isinstance(model, FermionOper), "model must be a FermionOper"
+    h = model.single_particle_ham(L)
+    res = []
+    U = _sp_U(h.shape[0], init_state_str)
+    for Ut in _sp_evovle(h, U, tlist):
+        obst = _np.linalg.norm(Ut, axis=1)**2
+        res.append(obst)
+    return _np.real_if_close(res)
 
 
 #######################################

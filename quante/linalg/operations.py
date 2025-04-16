@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-15 14:19:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-21 23:15:35
+# @Last Modified time: 2025-04-15 17:04:43
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -125,8 +125,15 @@ def expm(A:_np.ndarray, c: float | complex | None = None, isherm: bool | None = 
     else:
         if c is not None:
             A = A * c
-        val, vec = _np.linalg.eig(A)
-        return (vec * exp(val)) @ _np.linalg.inv(vec)
+        # !! note: bug in scipt.expm in 1.15.2 on conda platform.
+        # !! singular matrix will lose accurate when cal inv in this eig method.
+        # import torch as tc
+        # return tc.linalg.matrix_exp(tc.tensor(A)).numpy()
+        eigenvalues, eigenstates = _np.linalg.eig(A)
+        exp_eigval = exp(eigenvalues, c)
+        if _np.iscomplexobj(eigenstates) and not _np.iscomplexobj(exp_eigval):
+            exp_eigval = exp_eigval.astype(complex)
+        return (eigenstates * exp_eigval) @ _np.linalg.inv(eigenstates)
 
 
 def sqrtm(A:_np.ndarray, isherm: bool | None = None) -> _np.ndarray:

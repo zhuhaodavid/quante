@@ -2,13 +2,18 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-13 18:19:44
+# @Last Modified time: 2025-04-16 23:29:20
 
 import warnings
+import traceback as tb
 import numpy as np
 import scipy.sparse as sp
 import copy 
+import typing
 
+
+if typing.TYPE_CHECKING:
+    from .fermion import FermionOper
 
 def _argsort_positions(pos_array):
     """
@@ -257,16 +262,19 @@ class Oper:
             print(self.table_form2(maxlen=maxlen))
     
     def table_form(self, maxlen=90) -> str:
+        if len(self.data) == 0:
+            return "0"
         pages = []
         first_line = "|"
         second_line = "|"
         data_list = []
         last_len = 0
-        for operator, (posn, coef) in self.data.items():
+        for i, (operator, (posn, coef)) in enumerate(self.data.items()):
             
             oper_len = len(operator)
             
-            if len(first_line) + 6 * oper_len  > maxlen:
+            if (len(first_line) + 6 * oper_len  > maxlen 
+                and i != 0):
                 pages.append(first_line)
                 pages.append(second_line)
                 pages += data_list
@@ -308,8 +316,10 @@ class Oper:
         pages.append(first_line)
         pages.append(second_line)
         pages += data_list
-    
-        return '\n'.join(pages)
+
+        # 增加 self 的名字和地址
+        prefix = f"{self.__class__.__name__} at {hex(id(self))}, \n"
+        return prefix + '\n'.join(pages) + '\n'
     
     def table_form2(self, maxlen=90) -> str:
         lines = []
@@ -481,7 +491,30 @@ class SpinOper(Oper):
             if opnm not in ['I', "p", "m", "Z"]:
                 return False
         return True
-    
+
+    def jw_transfer(self, pauli=False) -> 'FermionOper':
+        from .fermion import FermionOper
+        ham = self.expandxy(pauli=pauli)
+        res = FermionOper({})
+        for opnm, pos, coeff in ham.each_term():
+            # # 判断 opnm 中有多少个 p,m
+            if opnm == 'pm' and pos[0]+1 == pos[1]:
+                fham = FermionOper({"+-": ([pos], [- coeff])})
+                res += fham
+            elif opnm == 'mp' and pos[0]+1 == pos[1]:
+                fham = FermionOper({"+-": ([pos[::-1]], [-coeff])})
+                res += fham
+            else:
+                pm_num = opnm.count('p') + opnm.count('m')
+                if pm_num % 2 == 0:
+                    fham = FermionOper._convert_from_spin(opnm[0], pos[0], coeff)
+                    for i in range(1, len(opnm)):
+                        for cur_pos in range(pos[i-1], pos[i]):
+                            fham @= FermionOper._convert_from_spin('Z', cur_pos, 1.)
+                        fham @= FermionOper._convert_from_spin(opnm[i], pos[i], 1.)
+                res += fham.normal_ordering()
+        return res
+
     @property
     def dtype(self):
         for name, (_, coef) in self.data.items():
@@ -584,18 +617,18 @@ class SpinOper(Oper):
             else:
                 return mat.toarray()
         else:
-            try:
-                from ..basis.quspin.quspin_basis.basis_1d.spin import spin_basis_1d
-                if isinstance(basis, spin_basis_1d):
-                    op_list = []
-                    for opstr, posn, coef in self.each_term():
-                        op_list.append([opstr, posn, coef])
-                    mat = basis._make_matrix(op_list, dtype=np.complex128)
-                    if sparse:
-                        return mat
-                    else:
-                        return mat.toarray()
-            except:
+            from ..basis.quspin.quspin_basis.basis_1d.spin import spin_basis_1d
+            if isinstance(basis, spin_basis_1d):
+                qs_list = []
+                for opnm, posncoefs in self.quspin_form():
+                    for posn in posncoefs:
+                        qs_list.append((opnm, posn[1:], posn[0]))
+                mat = basis._make_matrix(qs_list, dtype=np.complex128)
+                if sparse:
+                    return mat
+                else:
+                    return mat.toarray()
+            else:
                 raise NotImplementedError(f"Spin Oper 不支持的 {type(basis).__name__} 作为基矢")
     
     def _convert_to_quick_form(self):
@@ -627,7 +660,6 @@ class SpinOper(Oper):
         self,
         L: int | None = None,
         pauli: bool = False,
-        d: int = 2,
         S: str = '1/2',
     ):
         """
@@ -1302,7 +1334,7 @@ def sum(oper) -> Oper:
     return SpinOper(newdata)
 
 
-class SpinOperBuilder:
+class SpinBuilder(SpinOper):
     def __init__(self):
         """
         可用的符号包括：I, p, m, x, y, z
@@ -1319,31 +1351,48 @@ class SpinOperBuilder:
         """
         self.terms = {}
 
-    def __iadd__(self, term) -> 'SpinOperBuilder':
-        assert isinstance(term, tuple) and len(term) % 2 == 1, "term must be a tuple of odd length"
-        for i in range(1, len(term), 2):
-            assert term[i] in ['I', 'p', 'm', 'x', 'y', 'z'], "term must be a tuple of I, p, m, x, y, or z"
+    def __iadd__(self, term) -> 'SpinBuilder':
+        if isinstance(term, tuple):
+            assert len(term) % 2 == 1, f"length wrong for term: {term}"
+            for i in range(1, len(term), 2):
+                assert term[i] in ['I', 'p', 'm', 'x', 'y', 'z', '+', '-'], "term must be a tuple of I, p, m, '+', '-', x, y, or z"
         
-        posn = np.array(term[2::2], dtype=int)
-        inc_indx = np.argsort(posn, kind='stable')
-        posn = posn[inc_indx]
+            posn = np.array(term[2::2], dtype=int)
+            inc_indx = np.argsort(posn, kind='stable')
+            posn = posn[inc_indx]
+            
+            opnm = "".join(term[2*i+1] for i in inc_indx)
+            # 把字符串中的 + 和 - 替换成 p 和 m
+            opnm = opnm.replace('+', 'p')
+            opnm = opnm.replace('-', 'm')
         
-        opnm = "".join(term[1::2])
-        opnm = "".join(opnm[i] for i in inc_indx)
-       
-        posnlist, coeflist = self.terms.setdefault(opnm, [[], []])
-        posnlist.append(posn)
-        coeflist.append(np.array([term[0]]))
+            posnlist, coeflist = self.terms.setdefault(opnm, [[], []])
+            posnlist.append(posn)
+            coeflist.append(np.array([term[0]]))
+            return self
+        else:
+            return super().__iadd__(term)
+    
+    def __enter__(self):
         return self
     
-    def to_oper(self):
+    def __exit__(self, exc_type, exc_value, traceback):
+        data = {}
+        for name, (posnlist, coeflist) in self.terms.items():
+            data[name] = (np.vstack(posnlist), np.hstack(coeflist))
+        super().__init__(data, type='s')
+
+        if exc_type is not None:  # 检查是否发生错误
+            tb.print_exc()  # 打印堆栈跟踪
+    
+    def build(self):
         data = {}
         for name, (posnlist, coeflist) in self.terms.items():
             data[name] = (np.vstack(posnlist), np.hstack(coeflist))
         return SpinOper(data, 's')
-    
-    build = to_oper
 
+
+SpinOperBuilder = SpinBuilder  # 兼容性
 
 class HeisenbergOper(SpinOper):
     def __init__(self, data, type='s'):

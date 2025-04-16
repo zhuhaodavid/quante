@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-06 10:23:56
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 19:20:49
+# @Last Modified time: 2025-04-16 19:18:11
 
 from typing import Union, Optional
 from ...basis_class import SpinHalfBasis
@@ -153,5 +153,5 @@ class SpinHalfBasisSU2(SpinHalfBasis):
             dim = math.comb(L, int(L/2-j)) - math.comb(L, int(L/2-j-1))
             out += " "*(5-len(J)) + J + f" |   " + f"{num}" + " "*(5-len(num)) + f"|  {dim}\n"
         out += "-----------------------\n"
-        out += "note: \sum num * dim = 2^L"
+        out += r"note: \sum num * dim = 2^L"
         print(out)
