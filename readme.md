@@ -131,9 +131,9 @@ ham
 L = 4
 builder = op.SpinBuilder()
 for i in range(L-1):
-    builder += 1., 'x', i, 'x', i+1
-    builder += 1., 'y', i, 'y', i+1
-    builder += 1., 'z', i, 'z', i+1
+    builder += 'xx', [i, i+1], 1.
+    builder += 'yy', [i, i+1], 1.
+    builder += 'zz', [i, i+1], 1.
 ham = builder.build()
 ```
 
@@ -174,8 +174,8 @@ tlist = np.linspace(0, 10, 200)
 J, γ = 1., 0.
 builder = op.SpinBuilder()
 for l in range(L-1):
-    builder += 1/2 * (J + γ), 'p', l+1, 'm',   l
-    builder += 1/2 * (J - γ), 'p',   l, 'm', l+1
+    builder += '+-', [l+1, l], 1/2 * (J + γ),
+    builder += '+-', [l, l+1], 1/2 * (J - γ),
 ham = builder.build()
 
 basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)

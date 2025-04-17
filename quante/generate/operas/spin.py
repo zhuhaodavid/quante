@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-17 11:32:43
+# @Last Modified time: 2025-04-17 19:18:48
 
 import warnings
 import traceback as tb
@@ -1300,7 +1300,7 @@ def sum(oper) -> Oper:
     return SpinOper(newdata)
 
 
-class SpinBuilder(SpinOper):
+class SpinOperBuilder:
     def __init__(self):
         """
         可用的符号包括：I, p, m, x, y, z
@@ -1316,25 +1316,71 @@ class SpinBuilder(SpinOper):
         >>> ham = ham.to_oper()
         """
         self.terms = {}
+        warnings.warn("SpinOperBuilder is deprecated, use SpinBuilder instead", DeprecationWarning)
+
+    def __iadd__(self, term) -> 'SpinOperBuilder':
+        assert isinstance(term, tuple) and len(term) % 2 == 1, "term must be a tuple of odd length"
+        for i in range(1, len(term), 2):
+            assert term[i] in ['I', 'p', 'm', 'x', 'y', 'z'], "term must be a tuple of I, p, m, x, y, or z"
+        
+        posn = np.array(term[2::2], dtype=int)
+        inc_indx = np.argsort(posn, kind='stable')
+        posn = posn[inc_indx]
+        
+        opnm = "".join(term[1::2])
+        opnm = "".join(opnm[i] for i in inc_indx)
+        opnm = opnm.replace('+', 'p')
+        opnm = opnm.replace('-', 'm')
+       
+        posnlist, coeflist = self.terms.setdefault(opnm, [[], []])
+        posnlist.append(posn)
+        coeflist.append(np.array([term[0]]))
+        return self
+    
+    def to_oper(self):
+        data = {}
+        for name, (posnlist, coeflist) in self.terms.items():
+            data[name] = (np.vstack(posnlist), np.hstack(coeflist))
+        return SpinOper(data, 's')
+    
+    build = to_oper
+
+
+class SpinBuilder(SpinOper):
+    def __init__(self):
+        """
+        可用的符号包括：I, p, m, x, y, z
+        
+        Example:
+        --------
+        >>> ham = SpinOperBuilder()
+        >>> for i in range(10):
+        >>>     ham += "xx", [i,i+1], 1.0,
+        >>>     ham += "yy", [i,i+1], 1.0,
+        >>>     ham += "zz", [i,i+1], 1.0,
+        >>>     ham +=  "x",     [i], 1.0,
+        >>> ham = ham.to_oper()
+        """
+        self.terms = {}
 
     def __iadd__(self, term) -> 'SpinBuilder':
         if isinstance(term, tuple):
-            assert len(term) % 2 == 1, f"length wrong for term: {term}"
-            for i in range(1, len(term), 2):
-                assert term[i] in ['I', 'p', 'm', 'x', 'y', 'z', '+', '-'], "term must be a tuple of I, p, m, '+', '-', x, y, or z"
+            assert len(term) == 3 and len(term[0]) == len(term[1]), f"length wrong for term: {term}"
+            for i in term[0]:
+                assert i in ['I', 'p', 'm', 'x', 'y', 'z', '+', '-'], "term must be a tuple of I, p, m, '+', '-', x, y, or z"
         
-            posn = np.array(term[2::2], dtype=int)
+            posn = np.array(term[1], dtype=int)
             inc_indx = np.argsort(posn, kind='stable')
             posn = posn[inc_indx]
             
-            opnm = "".join(term[2*i+1] for i in inc_indx)
             # 把字符串中的 + 和 - 替换成 p 和 m
+            opnm = opnm = "".join(term[0][i] for i in inc_indx)
             opnm = opnm.replace('+', 'p')
             opnm = opnm.replace('-', 'm')
         
             posnlist, coeflist = self.terms.setdefault(opnm, [[], []])
             posnlist.append(posn)
-            coeflist.append(np.array([term[0]]))
+            coeflist.append(np.array([term[2]]))
             return self
         else:
             return super().__iadd__(term)
@@ -1358,7 +1404,6 @@ class SpinBuilder(SpinOper):
         return SpinOper(data, 's')
 
 
-SpinOperBuilder = SpinBuilder  # 兼容性
 
 class HeisenbergOper(SpinOper):
     def __init__(self, data, type='s'):

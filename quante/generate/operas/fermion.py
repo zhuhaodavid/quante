@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-16 23:34:14
+# @Last Modified time: 2025-04-17 19:12:30
 
 import numpy as np
 import traceback as tb
@@ -272,17 +272,13 @@ class FermionBuilder(FermionOper):
 
     def __iadd__(self, term) -> 'FermionBuilder':
         if isinstance(term, tuple):
-            assert len(term) % 2 == 1, f"length wrong for term: {term}"
-            for i in range(1, len(term), 2):
-                assert term[i] in ['I', '+', '-'], "term must be a tuple of I, +, -"
+            assert len(term) == 3 and len(term[0]) == len(term[1]), f"length wrong for term: {term}"
+            for i in term[0]:
+                assert i in ['I', '+', '-'], "term must be a tuple of I, +, -"
             
-            opnm = "".join(term[1::2])
-            posn = np.array(term[2::2])
-            coef = term[0]
-
-            posnlist, coeflist = self.terms.setdefault(opnm, [[], []])
-            posnlist.append(posn)
-            coeflist.append(coef)
+            posnlist, coeflist = self.terms.setdefault(term[0], [[], []])
+            posnlist.append(term[1])
+            coeflist.append(term[2])
             return self
         else:
             return super().__iadd__(term)
