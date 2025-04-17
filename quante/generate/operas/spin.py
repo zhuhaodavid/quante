@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-16 23:29:20
+# @Last Modified time: 2025-04-17 11:32:43
 
 import warnings
 import traceback as tb
@@ -10,7 +10,6 @@ import numpy as np
 import scipy.sparse as sp
 import copy 
 import typing
-
 
 if typing.TYPE_CHECKING:
     from .fermion import FermionOper
@@ -38,46 +37,6 @@ def _argsort_positions(pos_array):
     return indices
 
 
-def _sort_positions(positions, coefficients):
-    """
-    对位置和系数数组进行排序，将相同位置的系数相加。
-
-    Parameters
-    ----------
-    positions : np.ndarray
-        位置数组。
-    coefficients : np.ndarray
-        系数数组。
-
-    Returns
-    -------
-    tuple[np.ndarray, np.ndarray]
-        排序后的位置和系数数组。
-    """
-    # Sort positions using custom argsort
-    sorted_indices = _argsort_positions(positions)
-    res_pos = positions[sorted_indices]
-    res_coef = coefficients[sorted_indices]
-    
-    cur_pos = 0
-    cur_coef = res_coef[0]
-    total_len = len(res_pos)
-    for i in range(1, total_len):
-        if np.all(res_pos[i] == res_pos[i-1]):
-            cur_coef += res_coef[i]
-        else:
-            res_pos[cur_pos] = res_pos[i-1]
-            res_coef[cur_pos] = cur_coef
-            cur_pos += 1
-            cur_coef = res_coef[i]
-    
-    res_pos[cur_pos] = res_pos[total_len-1]
-    res_coef[cur_pos] = cur_coef
-    
-    mask = res_coef[:cur_pos + 1] != 0  # Remove zero coefficients
-    return res_pos[:cur_pos+1][mask], res_coef[:cur_pos+1][mask]
-
-
 def _merge_poscoef(poss, coefs):
     """
     合并位置和系数数组，将相同位置的系数相加。
@@ -96,7 +55,14 @@ def _merge_poscoef(poss, coefs):
         合并后的位置和系数数组。
     """
     res_pos, res_coef = np.vstack(poss), np.hstack(coefs)
-    return _sort_positions(res_pos, res_coef)
+
+    # Sort positions using custom argsort
+    sorted_indices = _argsort_positions(res_pos)
+    res_pos = res_pos[sorted_indices]
+    res_coef = res_coef[sorted_indices]
+
+    from ...linalg.usenumba.operations_numba import _quick_merge
+    return _quick_merge(res_pos, res_coef)
 
 
 class Oper:
@@ -1067,9 +1033,9 @@ class SpinOper(Oper):
         else:
             raise ValueError("backend should be 'torch' or 'tensor'")
 
-    def energies(self, pauli=None, basis=None):
-        L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
-        assert L < 14, "L should be less than 21, otherwise the matrix size will be too large"
+    def energies(self, pauli=None, basis=None, L=None):
+        if L is None:
+            L = self.L
         if basis is None:
             from ..basis import spin_basis
             basis = spin_basis(L)
@@ -1078,15 +1044,15 @@ class SpinOper(Oper):
         return {True: np.linalg.eigvalsh,
                     False: np.linalg.eigvals}[isherm](mat)
 
-    def gdenergy(self, pauli=None, k=1, return_eigenvectors=False, basis=None):
-        L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
-        assert L < 21, "L should be less than 21, otherwise the matrix size will be too large"
+    def gdenergy(self, pauli=None, k=1, return_eigenvectors=False, basis=None, L=None):
+        if L is None:
+            L = self.L
         if basis is None:
             from ..basis import spin_basis
             basis = spin_basis(L)
         mat = self.to_matrix(basis, pauli=pauli, sparse=True)
         isherm = (mat != mat.T.conj()).nnz == 0
-        if mat.shape[0] < 1000:
+        if basis.Ns < 1000:
             if not return_eigenvectors:
                 return {True: np.linalg.eigvalsh,
                         False: np.linalg.eigvals}[isherm](mat.todense())[:k]
@@ -1144,7 +1110,7 @@ class SpinOper(Oper):
         >>> res
         """
         if L is None:
-            L = max([np.max(posn) for posn, _ in self.data.values()]) + 1
+            L = self.L
 
         if basis is None:
             from ..basis import spin_basis
