@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-11 16:13:55
+# @Last Modified time: 2025-04-17 19:51:30
 
 import gc as _gc
 import os as _os
@@ -1034,20 +1034,22 @@ def _get_data_location(f: _h5py.File | _h5py.Group, name: str) -> _h5py.Group:
         return f[name]
     except:
         res = []
-        names = name.split("/")[1:]
+        names = name.split("/")
+        eachname = name
         for eachname in names:
             try:
                 f = f[eachname]
                 res.append(eachname)
             except:
-                import textwrap
-                available_names = list(f.keys())
-                wrapped_names = textwrap.fill(str(available_names), width=80)
-                tmp = "/".join(res)
-                raise ValueError(
-                    f"Available names:\n{wrapped_names}.\n"
-                    f"Data '{eachname}' not found in '/{tmp}'."
-                )
+                break
+        import textwrap
+        available_names = list(f.keys())
+        wrapped_names = textwrap.fill(str(available_names), width=80)
+        tmp = "/".join(res)
+        raise ValueError(
+            f"Available names:\n{wrapped_names}.\n"
+            f"Data '{eachname}' not found in '/{tmp}'."
+        )
 
 def _default_load(data_location: _h5py.Group) -> Any:
     return data_location[()]
