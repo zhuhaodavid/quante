@@ -2,12 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-04-19 12:02:23
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-19 17:09:00
+# @Last Modified time: 2025-04-19 18:01:56
 
 import unittest
 import quante as qt
 op = qt.generate.operas
-from quante.solvable_models.free_fermion import SlaterState
+from quante.solvable_models.gaussian_state import SlaterState
 import numpy as np
 
 class TestSlaterState(unittest.TestCase):
@@ -85,8 +85,8 @@ class TestSlaterState(unittest.TestCase):
             result.append(s.particle_number())
         # result = np.abs(result)
 
-        psi1 = s._2fermionstate()
-        rho1 = s._2densirtmatrix()
+        psi1 = s._tovector()
+        rho1 = s._todensirtmatrix()
         rhoA1 = s.reduced_density_matrix(range(L//2))
 
         state = qt.generate.state.product_state(state_str)

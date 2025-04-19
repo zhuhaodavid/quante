@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-04-19 10:10:28
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-19 17:20:06
+# @Last Modified time: 2025-04-19 17:40:05
 
 import numpy as np
 from functools import lru_cache
@@ -222,7 +222,7 @@ class SlaterState:
         lambda_s = np.linalg.eigvalsh(CA)
         return entropy(lambda_s) + entropy(1 - lambda_s)
     
-    def _2fermionstate(self, cs:list[np.ndarray] = None):
+    def _tovector(self, cs:list[np.ndarray] = None):
         r"""验证程序，通过定义重构态向量，没有效率上的优势
 
         .. math:
@@ -243,7 +243,9 @@ class SlaterState:
         psi[-1] = 1.0 # vacuum state
 
         for n in range(M-1,-1,-1):
-            psi = sum(self.U[i,n] * (cs[i].conj().T @ psi) for i in range(L) if abs(self.U[i,n]) > 1e-12)
+            psi = sum(
+                self.U[i,n] * (cs[i].conj().T @ psi) 
+                for i in range(L) if abs(self.U[i,n]) > 1e-12)
    
         return psi
     
@@ -267,7 +269,7 @@ class SlaterState:
         epsilon_k = np.real_if_close(epsilon_k)
         return (vec * epsilon_k) @ vec.conj().T
         
-    def _2densirtmatrix(self, cs:list[np.ndarray] = None):
+    def _todensirtmatrix(self, cs:list[np.ndarray] = None):
         r"""验证程序，没有效率上的优势
 
         .. math::
@@ -297,7 +299,10 @@ class SlaterState:
                 }).to_matrix(basis,sparse=True) 
                   for i in range(L)]
         H = SlaterState.cor2cov(self.correlation_matrix())
-        Hmscr = sum(H[i,j] * (cs[i].conj().T @ cs[j]) for i in range(L) for j in range(L) if abs(H[i,j]) > 1e-12)
+        Hmscr = sum(
+            H[i,j] * (cs[i].conj().T @ cs[j]) 
+            for i in range(L) for j in range(L) 
+            if abs(H[i,j]) > 1e-12)
         rho = expm(-Hmscr.toarray())
         rho /= np.trace(rho)
         return rho
@@ -333,7 +338,9 @@ class SlaterState:
                   for i in range(Lsub)]
         CA = self._reducted_cormat(pos)
         H = SlaterState.cor2cov(CA)
-        Hmscr = sum(H[i,j] * (cs[i].conj().T @ cs[j]) for i in range(Lsub) for j in range(Lsub))
+        Hmscr = sum(
+            H[i,j] * (cs[i].conj().T @ cs[j]) 
+            for i in range(Lsub) for j in range(Lsub))
         rho = expm(-Hmscr.toarray())
         rho /= np.trace(rho)
         return rho
