@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-17 19:18:48
+# @Last Modified time: 2025-04-19 12:00:28
 
 import warnings
 import traceback as tb
@@ -100,7 +100,7 @@ class Oper:
         elif isinstance(oper, (int, float, complex)):  # 加单位阵
             old_pos, old_coef = self.data.get('I', (None,None))
             if old_coef is None and old_pos is None:
-                self.data['I'] = (np.array([[0]],dtype=int), np.array([1.], dtype=float))
+                self.data['I'] = (np.array([[0]],dtype=int), np.array([oper]))
             else:
                 old_coef[0] += add_or_minus*1.
             return self
@@ -458,26 +458,41 @@ class SpinOper(Oper):
                 return False
         return True
 
-    def jw_transfer(self, pauli=False) -> 'FermionOper':
+    def jw_transfer(self, pauli=False, force=False) -> 'FermionOper':
         from .fermion import FermionOper
         ham = self.expandxy(pauli=pauli)
         res = FermionOper({})
         for opnm, pos, coeff in ham.each_term():
-            # # 判断 opnm 中有多少个 p,m
+            # "mp, mp" 的特例单独处理加快速度
             if opnm == 'pm' and pos[0]+1 == pos[1]:
                 fham = FermionOper({"+-": ([pos], [- coeff])})
                 res += fham
             elif opnm == 'mp' and pos[0]+1 == pos[1]:
                 fham = FermionOper({"+-": ([pos[::-1]], [-coeff])})
                 res += fham
+                
             else:
                 pm_num = opnm.count('p') + opnm.count('m')
-                if pm_num % 2 == 0:
+                if pm_num % 2 == 1 or pos[0] != 0:
+                    if pos[0] > 5 and not force:
+                        raise ValueError(f"opnm {opnm} is not supported "
+                                         "or set force=True to force convert "
+                                         "the result may be too large")
+                    fham = FermionOper._convert_from_spin('Z', 0, coeff)
+                    for i in range(1, pos[0]):
+                        fham @= FermionOper._convert_from_spin('Z', cur_pos, 1.)
+                else:
                     fham = FermionOper._convert_from_spin(opnm[0], pos[0], coeff)
-                    for i in range(1, len(opnm)):
-                        for cur_pos in range(pos[i-1], pos[i]):
-                            fham @= FermionOper._convert_from_spin('Z', cur_pos, 1.)
-                        fham @= FermionOper._convert_from_spin(opnm[i], pos[i], 1.)
+                
+                for i in range(1, len(opnm)):
+                    if pos[i] - pos[i-1] > 5 and not force:
+                        raise ValueError(f"opnm {opnm} is not supported "
+                                            "or set force=True to force convert "
+                                            "the result may be too large")
+                    for cur_pos in range(pos[i-1], pos[i]):
+                        fham @= FermionOper._convert_from_spin('Z', cur_pos, 1.)
+                    fham @= FermionOper._convert_from_spin(opnm[i], pos[i], 1.)
+                    
                 res += fham.normal_ordering()
         return res
 
@@ -1452,7 +1467,7 @@ class HeisenbergOper(SpinOper):
         return HeisenbergOper(data)
 
     def energies(self, isinf=False, pauli=False):
-        from ...solvable_models.free_fermion import free_fermion as ff
+        from ...solvable_models.free_fermion import spectrum as ff
         L = self.L if not isinf else np.inf
         if self.jz == self.hx == self.hy == 0 and not self.cyclic:
             # xy model
@@ -1467,7 +1482,7 @@ class HeisenbergOper(SpinOper):
 
     def gdenergy(self, isinf=False, pauli=False, *, k=1, return_eigenvectors=False):
         if not return_eigenvectors:
-            from ...solvable_models.free_fermion import free_fermion as ff
+            from ...solvable_models.free_fermion import spectrum as ff
             L = self.L if not isinf else np.inf
             if self.hx == self.hy == self.hz == 0 and self.jx == self.jy == self.jz and not np.isinf(L) and self.cyclic and k == 1:
                 print("approximate: ", end='')

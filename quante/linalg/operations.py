@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-15 14:19:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-15 17:04:43
+# @Last Modified time: 2025-04-19 12:15:11
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -105,6 +105,15 @@ def exp(A:_np.ndarray, c: float | complex | int | None = None) -> _np.ndarray:
             return parallel_expmul_cc(A, c)
 
 
+old_scipy = False
+from scipy.linalg import expm as spexpm
+if _np.linalg.norm(spexpm([[0.0, 0.1j], [0.9j, 0.0]]) - 
+    _np.array([[0.95533649+0.j         ,0.        +0.09850674j], 
+    [0.        +0.88656062j ,0.95533649+0.j        ]])) > 1e-6:
+    old_scipy = True
+# !! note: bug in scipt.expm in 1.15.2 on conda platform.
+# !! singular matrix will lose accurate when cal inv in this eig method.
+
 def expm(A:_np.ndarray, c: float | complex | None = None, isherm: bool | None = None, isdiag: bool = False) -> _np.ndarray:
     """Exponential Matrix, Hermitian matrix can be accelerated
     """
@@ -125,15 +134,17 @@ def expm(A:_np.ndarray, c: float | complex | None = None, isherm: bool | None = 
     else:
         if c is not None:
             A = A * c
-        # !! note: bug in scipt.expm in 1.15.2 on conda platform.
-        # !! singular matrix will lose accurate when cal inv in this eig method.
-        # import torch as tc
-        # return tc.linalg.matrix_exp(tc.tensor(A)).numpy()
-        eigenvalues, eigenstates = _np.linalg.eig(A)
-        exp_eigval = exp(eigenvalues, c)
-        if _np.iscomplexobj(eigenstates) and not _np.iscomplexobj(exp_eigval):
-            exp_eigval = exp_eigval.astype(complex)
-        return (eigenstates * exp_eigval) @ _np.linalg.inv(eigenstates)
+        if old_scipy:
+            try:
+                import torch as tc
+                return tc.linalg.matrix_exp(tc.tensor(A)).numpy()
+            except ImportError:
+                eigenvalues, eigenstates = _np.linalg.eig(A)
+                exp_eigval = exp(eigenvalues, c)
+                if _np.iscomplexobj(eigenstates) and not _np.iscomplexobj(exp_eigval):
+                    exp_eigval = exp_eigval.astype(complex)
+                return (eigenstates * exp_eigval) @ _np.linalg.inv(eigenstates)
+        return spexpm(A)
 
 
 def sqrtm(A:_np.ndarray, isherm: bool | None = None) -> _np.ndarray:

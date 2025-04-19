@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:25
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-13 17:44:45
+# @Last Modified time: 2025-04-19 15:52:07
 
 """
 生成一些常用的态（`np.ndarray`）
@@ -79,9 +79,9 @@ def product_state(updns:list[str], dtype=float):
     """
     tmp = ""
     for b in updns:
-        if b == "up":
+        if b == "up" or b == "1":
             tmp += "0"
-        elif b == "dn":
+        elif b == "dn" or b == "0":
             tmp += "1"
         else:
             raise ValueError(f"Invalid value {b} in binary string.")
