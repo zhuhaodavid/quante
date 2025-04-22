@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-19 12:00:28
+# @Last Modified time: 2025-04-22 13:58:41
 
 import warnings
 import traceback as tb
@@ -257,7 +257,7 @@ class Oper:
                 
                 data_line = data_list[i]
                 if len(data_line) < last_len:
-                    data_line += " " * (last_len-2) + "|"
+                    data_line += " " * (last_len - len(data_line)-1) + "|"
                 for j in range(oper_len):
                     data_line += f"   {posn[i][j]:<3}"
 
@@ -473,14 +473,14 @@ class SpinOper(Oper):
                 
             else:
                 pm_num = opnm.count('p') + opnm.count('m')
-                if pm_num % 2 == 1 or pos[0] != 0:
+                if pm_num % 2 == 1 and pos[0] != 0:
                     if pos[0] > 5 and not force:
                         raise ValueError(f"opnm {opnm} is not supported "
                                          "or set force=True to force convert "
                                          "the result may be too large")
                     fham = FermionOper._convert_from_spin('Z', 0, coeff)
                     for i in range(1, pos[0]):
-                        fham @= FermionOper._convert_from_spin('Z', cur_pos, 1.)
+                        fham @= FermionOper._convert_from_spin('Z', i, 1.)
                 else:
                     fham = FermionOper._convert_from_spin(opnm[0], pos[0], coeff)
                 

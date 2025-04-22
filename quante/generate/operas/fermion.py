@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-17 19:12:30
+# @Last Modified time: 2025-04-22 14:10:11
 
 import numpy as np
 import traceback as tb
@@ -161,13 +161,68 @@ class FermionOper(Oper):
         if L is None:
             L = self.L
         h = np.zeros((L, L), dtype=self.dtype())
+        coef_I = 0.
         for name, (posnlist, coeflist) in self.data.items():
             if name == '+-':
                 for i, posn in enumerate(posnlist):
                     h[*posn] = coeflist[i]
+            elif name == 'I':
+                coef_I += coeflist[0]
             else:
                 raise ValueError(f"not free fermion due to: {name}")
-        return h
+        return h, coef_I
+    
+    def BdG_ham(self, L=None):
+        r"""
+        Nambu spin form
+        .. math:
+            \Psi_i = \begin{bmatrix} c_i \\ c_i^\dagger \end{bmatrix}
+        
+        BdG hamiltonian:
+        .. math:
+            H = \frac{1}{2} \sum_{ij} \Psi_i^\dagger \mathcal{H}_{ij} \Psi_j + \text{Const.},
+            = \frac{1}{2} \sum_{ij}^{} A_{ij} c_{i}^{\dagger} c_{j} + \frac{1}{2} \sum_{ij}^{} B_{ij} c_{i}^{\dagger} c_{j}^{\dagger} - \frac{1}{2} \sum_{ij}^{} B_{ij}^* c_{i} c_{j} - \frac{1}{2} \sum_{ij}^{} A_{ij}^* c_{i} c_{j}^{\dagger} + \text{Const.}
+        
+        where,
+        .. math:
+            \mathcal{H}_{ij} =  \begin{bmatrix}
+                                    A_{ij} & B_{ij} \\
+                                    -B_{ij}^* & -A_{ij}^*
+                                \end{bmatrix},
+        
+        """
+        if L is None:
+            L = self.L
+        H11 = np.zeros((L, L), dtype=self.dtype())
+        H12 = np.zeros((L, L), dtype=self.dtype())
+        H21 = np.zeros((L, L), dtype=self.dtype())
+        H22 = np.zeros((L, L), dtype=self.dtype())
+        coef_I = 0.
+        for name, (posnlist, coeflist) in self.data.items():
+            if name == '+-':
+                for i, posn in enumerate(posnlist):
+                    H11[*posn] = coeflist[i]
+                    if posn[0] == posn[1]:
+                        coef_I += coeflist[i]/2
+            elif name == '++':
+                for i, posn in enumerate(posnlist):
+                    H21[*posn] = coeflist[i]
+            elif name == '--':
+                for i, posn in enumerate(posnlist):
+                    H12[*posn] = coeflist[i]
+            elif name == 'I':
+                coef_I += coeflist[0]
+            elif name == '-+':
+                raise ValueError("Normal ordering not done")
+            else:
+                raise ValueError(f"not BdG fermion due to: {name}")
+        H12 = H12.T - H12
+        H21 = H21.T - H21
+        BdG = np.block([
+            [H11, H12], 
+            [H21, -H11.T]
+        ])
+        return BdG, coef_I
 
 
     def dtype(self):
@@ -275,6 +330,9 @@ class FermionBuilder(FermionOper):
             assert len(term) == 3 and len(term[0]) == len(term[1]), f"length wrong for term: {term}"
             for i in term[0]:
                 assert i in ['I', '+', '-'], "term must be a tuple of I, +, -"
+            
+            if abs(term[2]) < 1e-10:
+                return self
             
             posnlist, coeflist = self.terms.setdefault(term[0], [[], []])
             posnlist.append(term[1])

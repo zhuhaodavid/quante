@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:25
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-19 15:52:07
+# @Last Modified time: 2025-04-22 19:17:13
 
 """
 生成一些常用的态（`np.ndarray`）
@@ -108,7 +108,8 @@ def neel(L:int, down_first=False, dtype=float, basis=None):
     if down_first:
         updns = "1" + updns[:-1]
     updnint = int(updns, 2)
-    if basis is None:
+    from .basis.symmetry.spin_half.noblock.defclass import SpinHalfBasisNoBlock
+    if basis is None or isinstance(basis, SpinHalfBasisNoBlock):
         result = _np.zeros((2**len(updns), 1), dtype=dtype)
         result[updnint] = 1.0
     else:

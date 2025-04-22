@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-04-19 10:10:28
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-19 17:40:05
+# @Last Modified time: 2025-04-22 19:40:02
 
 import numpy as np
 from functools import lru_cache
@@ -16,7 +16,7 @@ def xx_evolve(L, model, init_state:str, tlist:np.ndarray):
     model : FermionOper, SpinOper
         the model to evolve, must be a fermion operator
     init_state : str
-        initial state string, e.g. '0000000000000000', 
+        initial state string, e.g. '0101010101010101', 
         length must match the model
     tlist : np.ndarray
         time list, e.g. np.linspace(0, 60, 500)
@@ -31,7 +31,7 @@ def xx_evolve(L, model, init_state:str, tlist:np.ndarray):
     Example
     -------
     >>> import quante as qt
-    >>> from quante.solvable_models import free_fermion
+    >>> from quante.solvable_models import gaussian_state
     >>> L = 100
     >>> J, γ = 1, 0.8
     >>> builder = qt.generate.operas.SpinBuilder()
@@ -39,7 +39,7 @@ def xx_evolve(L, model, init_state:str, tlist:np.ndarray):
     ...     builder += "+-", [i+1, i], (J+γ)/2
     ...     builder += "+-", [i, i+1], (J-γ)/2
     >>> ham = builder.build()
-    >>> result = free_fermion.xx_evolve(
+    >>> result = gaussian_state.xx_evolve(
     ...     L, ham, '01'*(L//2), np.linspace(0, 60, 100)
     ... )
     >>> import matplotlib.pyplot as plt
@@ -55,7 +55,7 @@ def xx_evolve(L, model, init_state:str, tlist:np.ndarray):
     assert isinstance(model, FermionOper), "model must be a fermion operator"
 
     # evolve the model
-    h = model.single_particle_ham(L)
+    h, coef_I = model.single_particle_ham(L)
     state = SlaterState.from_product_state(init_state)
     result = []
     for s in state.evolve(h, tlist):
@@ -100,10 +100,19 @@ class SlaterState:
     def evolve(self, h, tlist):
         dtlist = [tlist[0]] + list(np.diff(tlist))
 
+        if isinstance(h, tuple):
+            h, coef_I = h
+            # 如果 single_particle_ham() 返回的是一个 tuple,
+            # 说明包含一个常数项
+            # 那么严格来说，vector 将会相差一个相位因子 `exp(-i*coef_I*t)`
+            # 但是这个相位因子不会影响到物理量的计算
+            # 所以这里就不考虑了
+            # （也可以考虑给 SlaterState 添加一个 coef_I 属性，需要的时候再改吧）
+
         isherm = np.allclose(h, h.conj().T)
         @lru_cache
         def exph(dt):
-            return expm(h, -1j * dt)
+            return expm(h, -1j * dt, isherm=isherm)
         
         cur_state = SlaterState(self.U.copy())
         for dt in dtlist:
@@ -186,7 +195,7 @@ class SlaterState:
     def correlation_matrix(self):
         return self.U @ self.U.conj().T
     
-    def _reducted_cormat(self, pos:list[int]):
+    def _reduced_cormat(self, pos:list[int]):
         return self.U[pos, :] @ self.U[pos, :].conj().T
 
     def entanglement(self, pos:list=None):
@@ -227,6 +236,13 @@ class SlaterState:
 
         .. math:
             |ψ(t)\rangle = \prod_{i=1}^N (\sum_{j=1}^L U_{ji} c_j^\dagger) |0\rangle
+        
+        Notes
+        -----
+        如果 single_particle_ham() 返回的是一个 tuple,
+        说明包含一个常数项
+        那么严格来说，vector 将会相差一个相位因子 `exp(-i*coef_I*t)`
+        但是这个相位因子不会影响到物理量的计算
         
         """
         L, M = self.L, self.M
@@ -336,7 +352,7 @@ class SlaterState:
                 'Z'*i + 'm': ([list(range(i+1))], [1.])
                 }).to_matrix(basis,sparse=True) 
                   for i in range(Lsub)]
-        CA = self._reducted_cormat(pos)
+        CA = self._reduced_cormat(pos)
         H = SlaterState.cor2cov(CA)
         Hmscr = sum(
             H[i,j] * (cs[i].conj().T @ cs[j]) 
