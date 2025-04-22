@@ -1,0 +1,6 @@
+# 排除指定文件夹
+example/* linguist-vendored
+docs/* linguist-documentation
+
+# 排除指定文件
+*.md linguist-documentation
