@@ -2,7 +2,7 @@
 # @Author: dzwang
 # @Date:   2025-04-19 14:51:03
 # @Last Modified by:   dzwang
-# @Last Modified time: 2025-04-20 15:24:07
+# @Last Modified time: 2025-04-25 15:42:43
 import numpy as np
 from quante.tensor import TensorTrain 
 from quante.basicfun import println
@@ -65,8 +65,6 @@ class MPS(TensorTrain):
         ## right most tensor
         Wr[0, 1-index,0] = 1.
         Wr[1, index,  0] = 1.
-        ## renormalize
-        Wl *= 1/np.sqrt(N)
         # generate MPS
         println(N)
         if N == 2:
@@ -74,4 +72,23 @@ class MPS(TensorTrain):
         elif N > 2:
             Ws = [Wl] + [Wm]*(N-2) + [Wr]
         return cls(Ws, llim=0, rlim=N-1)
+    
+    @classmethod
+    def generate_FullUp_state(cls, N:int, dtype=np.float64) -> "MPS":
+        """ Generate MPS representing Full Up state.
+
+        Example
+        -------
+        """
+        # initial zero tensor
+        W = np.zeros((1, 2, 1), dtype=dtype)
+        # single tensor 
+        W[0, 0, 0] = 1.
+        # generate MPS
+        Ws = [W for _ in range(N)]
+        return cls(Ws, llim=0, rlim=N-1)
+        
+    @classmethod
+    def generate_SingleUp_state(cls, ):
+        ...
     
