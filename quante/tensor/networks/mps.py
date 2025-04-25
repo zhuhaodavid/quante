@@ -2,8 +2,9 @@
 # @Author: dzwang
 # @Date:   2025-04-19 14:51:03
 # @Last Modified by:   dzwang
-# @Last Modified time: 2025-04-25 15:42:43
+# @Last Modified time: 2025-04-25 16:24:30
 import numpy as np
+from copy import deepcopy
 from quante.tensor import TensorTrain 
 from quante.basicfun import println
 
@@ -38,8 +39,9 @@ class MPS(TensorTrain):
         Example
         -------
         >>> N = 4
-        >>> mps = qt.tensor.networks.MPS.generate_W_state(N, type="dual", dtype=dtype) 
+        >>> mps = qt.tensor.networks.MPS.generate_W_state(N, type="dual", dtype=dtype)
         >>> mps_vec = mps.to_vector()
+        >>> mps_vec /= np.linalg.norm(mps_vec)
         >>> dir_vec = qt.generate.state.w(L=N).astype(mps.dtype).squeeze() # one down spin
         >>> print(np.allclose(mps_vec, dir_vec))
         """
@@ -66,11 +68,10 @@ class MPS(TensorTrain):
         Wr[0, 1-index,0] = 1.
         Wr[1, index,  0] = 1.
         # generate MPS
-        println(N)
         if N == 2:
             Ws = [Wl, Wr]
         elif N > 2:
-            Ws = [Wl] + [Wm]*(N-2) + [Wr]
+            Ws = [deepcopy(Wl)] + [deepcopy(Wm) for _ in range(N-2)] + [deepcopy(Wr)]
         return cls(Ws, llim=0, rlim=N-1)
     
     @classmethod
@@ -79,16 +80,39 @@ class MPS(TensorTrain):
 
         Example
         -------
+        >>> N = 4
+        >>> mps = qt.tensor.networks.MPS.generate_FullUp_state(N, dtype=dtype)
+        >>> mps_vec = mps.to_vector()
+        >>> mps_vec /= np.linalg.norm(mps_vec)
+        >>> dir_vec = qt.generate.state.product_state(["up"]*N).astype(mps.dtype).squeeze() # one down spin
+        >>> print(np.allclose(mps_vec, dir_vec))
         """
         # initial zero tensor
         W = np.zeros((1, 2, 1), dtype=dtype)
         # single tensor 
         W[0, 0, 0] = 1.
         # generate MPS
-        Ws = [W for _ in range(N)]
+        Ws = [deepcopy(W) for _ in range(N)]
         return cls(Ws, llim=0, rlim=N-1)
         
     @classmethod
-    def generate_SingleUp_state(cls, ):
-        ...
+    def generate_SingleUp_state(cls, N:int, dtype=np.float64) -> "MPS":
+        """ Generate MPS representing Single Up state.
+
+        Example
+        -------
+        >>> N = 4
+        >>> mps = qt.tensor.networks.MPS.generate_SingleUp_state(N, dtype=dtype)
+        >>> mps_vec = mps.to_vector()
+        >>> mps_vec /= np.linalg.norm(mps_vec)
+        >>> dir_vec = qt.generate.state.product_state(["up", "dn", "dn", "dn"]).astype(mps.dtype).squeeze() # one down spin
+        >>> print(np.allclose(mps_vec, dir_vec))
+        """
+        Wup = np.zeros((1, 2, 1), dtype=dtype)
+        Wup[0, 0, 0] = 1.
+        Wdn = np.zeros((1, 2, 1), dtype=dtype)
+        Wdn[0, 1, 0] = 1.
+        # generate MPS
+        Ws = [deepcopy(Wup)] + [deepcopy(Wdn) for _ in range(N-1)]
+        return cls(Ws, llim=0, rlim=N-1)
     
