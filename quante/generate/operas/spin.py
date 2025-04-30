@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-30 14:50:21
+# @Last Modified time: 2025-04-30 15:10:17
 
 import warnings
 import traceback as tb
@@ -489,8 +489,9 @@ class SpinOper(Oper):
                         raise ValueError(f"opnm {opnm} is not supported "
                                             "or set force=True to force convert "
                                             "the result may be too large")
-                    for cur_pos in range(pos[i-1], pos[i]):
-                        fham @= FermionOper._convert_from_spin('Z', cur_pos, 1.)
+                    if opnm[i] in ['p', 'm']:
+                        for cur_pos in range(pos[i-1], pos[i]):
+                            fham @= FermionOper._convert_from_spin('Z', cur_pos, 1.)
                     fham @= FermionOper._convert_from_spin(opnm[i], pos[i], 1.)
                     
                 res += fham.normal_ordering()
