@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-22 13:58:41
+# @Last Modified time: 2025-04-30 14:50:21
 
 import warnings
 import traceback as tb
@@ -1135,20 +1135,23 @@ class SpinOper(Oper):
         # Method to get evolve expectation values
         if basis.Ns < 2**12:  # 小尺寸的做法
             ###################################################################################
-            # 严格对角化的写法
+            # Diagonalize
             ###################################################################################
             from ...linalg import get_time_evolution_states_ED, observe_states
+
+            # ----------- main ------------
             engres = np.linalg.eigh(self.to_matrix(basis, pauli=pauli))
             evalstate = get_time_evolution_states_ED(inistate, *engres, tlist, failback_to_CPU=True)
+            # ----------- end main ------------
+
             if isinstance(measure, list):
                 return np.real_if_close([observe_states(evalstate, obs.to_matrix(basis, pauli=pauli)) for obs in measure]).T
             else:
                 return np.real_if_close([measure(evalstate[:, i]) for i in range(len(tlist))])
         else:
-            hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
             try:
             ###################################################################################
-            # GPU expm_multiply
+            # GPU 
             ###################################################################################
                 from ...torch_utils.linalg.expm_multiply import EvolveEngine
                 from ...torch_utils.linalg.sparse import to_csr
@@ -1156,36 +1159,49 @@ class SpinOper(Oper):
                 from tqdm import tqdm
                 import torch as tc # type: ignore
                 assert tc.cuda.is_available(), "CUDA is not available"
-                device = tc.device('cuda')
-                hammat0 = to_csr(hammat, device=device)
-                inistate = totc(inistate, device=device)
-                evolve_engine = EvolveEngine(hammat0, inistate, ts=tlist, device=device)
+                device = tc.device('cuda:0')
+                # convert measure to function
                 if isinstance(measure, list):
                     obsmatlist = [to_csr(o.to_matrix(basis, pauli=pauli, sparse=True), device=device, dtype=tc.complex128) for o in measure]
                     obs = lambda state: [state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1) for obsmat in obsmatlist]
                 else:
                     obs = measure
+
+                # ----------- main ------------
+                hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
+                hammat0 = to_csr(hammat, device=device)
+                inistate = totc(inistate, device=device)
+                evolve_engine = EvolveEngine(hammat0, inistate, ts=tlist, device=device)
                 res = []
                 for _ in tqdm(tlist, ascii=True):
                     state = evolve_engine.run()
                     res.append(obs(state))
+                # ----------- end main ------------
+
                 return np.real_if_close(res)
             except:
+
             ###################################################################################
-            # CPU parallel expm_multiply
+            # CPU
             ###################################################################################
                 from ...linalg import EvolveEngine
                 from tqdm import tqdm
-                evolve_engine = EvolveEngine(hammat, inistate, ts=tlist)
+                # convert measure to function
                 if isinstance(measure, list):
                     obsmatlist = [to_csr(o.to_matrix(basis, pauli=pauli, sparse=True), device=device, dtype=tc.complex128) for o in measure]
                     obs = lambda state: [state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1) for obsmat in obsmatlist]
                 else:
                     obs = measure
+
+                # ----------- main ------------
+                hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
+                evolve_engine = EvolveEngine(hammat, inistate, ts=tlist)
                 res = []
                 for _ in tqdm(tlist, ascii=True):
                     state = evolve_engine.run()
-                    res.append(measure)
+                    res.append(obs(state))
+                # ----------- end main ------------
+
                 return np.real_if_close(res)    
 
 

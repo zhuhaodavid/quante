@@ -14,6 +14,29 @@
     
     `git push origin master && git checkout xxxx && git merge master`
 
+### git cmt 风格
+
+以下是一套推荐的 Git 提交信息风格指南：
+
+```
+<类型>:
+
+- <模块>: <详细描述>
+- <模块>: <详细描述>
+- <模块>: <详细描述>
+
+```
+
+- **feat**: 新功能
+- **fix**: 修复问题/BUG
+- **docs**: 文档更新
+- **perf**: 性能优化
+- **optm**: 性能优化
+- **test**: 增加测试
+- **exam**: 修改实例代码
+- **style**: 代码格式（不影响功能，例如空格、分号等格式修正）
+
+
 ### Git 常用命令
 
 - 创建新分支 `git checkout -b branchname`

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-17 19:51:30
+# @Last Modified time: 2025-04-27 15:53:04
 
 import gc as _gc
 import os as _os
@@ -1235,7 +1235,7 @@ def isave(filename:str, *dataargs, data:dict = None, group:Union[str, None] = '/
     save_hdf5(filename, group, data_dic, mode=mode)
 
 
-def iload(filename:str, dataname:list[str]|str|None = None, group='/') -> Any:
+def iload(filename:str, dataname:list[str]|str|None = None, *, group='/') -> Any:
     """从 .h5 文件中加载数据.
     
     Parameters
