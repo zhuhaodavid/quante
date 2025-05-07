@@ -2,11 +2,12 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-22 14:10:11
+# @Last Modified time: 2025-05-08 02:19:20
 
 import numpy as np
 import traceback as tb
-from .spin import Oper, _single_term, _merge_poscoef
+from .spin import Oper, _single_term, _merge_poscoef, SpinBuilder
+from typing import Literal
 
 
 def _sort_pm(data:list):
@@ -134,11 +135,25 @@ class FermionOper(Oper):
     def __init__(self, data:dict, type='f') -> None:
         assert type == 'f'
         super().__init__(data, stype='f')
-    
+
 
     def normal_ordering(self):
         data = {}
-        for new_opnm, new_posn, new_coef in _sort_pm(list(self.each_term())):
+        expandn = []
+        for oper, (posnlist, coeflist) in self.data.items():
+            coeflen = len(coeflist)
+            if 'n' in oper:
+                positions = [i for i, char in enumerate(oper) if char == 'n']
+                for pos in sorted(positions, reverse=True):  # 从后往前插入，避免索引偏移
+                    posnlist = np.insert(posnlist, pos + 1, posnlist[:, pos], axis=1)
+                    for i in range(coeflen):
+                        expandn.append(
+                            (oper[:pos] + '+-' + oper[pos+1:], posnlist[i], coeflist[i])
+                            )
+            else:
+                for i in range(coeflen):
+                    expandn.append((oper, posnlist[i], coeflist[i]))
+        for new_opnm, new_posn, new_coef in _sort_pm(expandn):
             new_posn, parity = _sort_posn(new_opnm, new_posn)
             posnlist, coeflist = data.setdefault(new_opnm, [[], []])
             posnlist.append(new_posn)
@@ -149,7 +164,6 @@ class FermionOper(Oper):
             if len(newposn) > 0:
                 newdata[name] = (newposn, newcoef)
         return FermionOper(newdata)
-
 
     def single_particle_ham(self, L=None):
         r"""生成最简单的单粒子矩阵
@@ -196,7 +210,7 @@ class FermionOper(Oper):
         H11 = np.zeros((L, L), dtype=self.dtype())
         H12 = np.zeros((L, L), dtype=self.dtype())
         H21 = np.zeros((L, L), dtype=self.dtype())
-        H22 = np.zeros((L, L), dtype=self.dtype())
+        # H22 = np.zeros((L, L), dtype=self.dtype())
         coef_I = 0.
         for name, (posnlist, coeflist) in self.data.items():
             if name == '+-':
@@ -268,6 +282,80 @@ class FermionOper(Oper):
         else:
             raise NotImplementedError("不支持的基矢类型")
 
+
+    def jw_transfer(self):
+        builder = SpinBuilder()
+        for opnm_, (poslist, coefflist) in self.data.items():
+            for (pos_, coeff) in zip(poslist, coefflist):
+                posn = list(pos_)
+                opnm = opnm_
+                newopnm = ''
+                newposn = []
+                newcoef = coeff
+                
+                next_pos = len(opnm)
+
+                while True:
+                    # 寻找下一个 +- 的位置
+                    cur_pos = -1
+                    for i in range(next_pos-1, -1, -1):
+                        if opnm[i] in ['+', '-']:
+                            cur_pos = i
+                            break
+                    if cur_pos == -1:
+                        # 偶数个，直接退出
+                        newopnm = opnm[:next_pos] + newopnm
+                        newposn = posn[:next_pos] + newposn
+                        break
+                    
+                    # 寻找下一个 +- 的位置，两个两个的处理可以避免出现太多的 Z
+                    next_pos = -1
+                    for i in range(cur_pos-1, -1, -1):
+                        if opnm[i] in ['+', '-']:
+                            next_pos = i
+                            break
+                    if next_pos == -1:
+                        # 奇数个，补Z
+                        newopnm = opnm[:cur_pos] + 'Z'*posn[cur_pos] + opnm[cur_pos] + newopnm
+                        newposn = posn[:cur_pos] + list(range(posn[cur_pos]+1)) + newposn
+                        break
+                        
+                    startindx = min(posn[next_pos:cur_pos+1])
+                    
+                    # 相邻的 +- 中间没有其他算符
+                    if next_pos + 1 == cur_pos:
+                        # 相同算符的简化
+                        if posn[next_pos] == posn[cur_pos]:
+                            newopnm = opnm[next_pos:cur_pos+1] + newopnm
+                            newposn = posn[next_pos:cur_pos+1] + newposn
+                        # 正序的
+                        elif posn[next_pos] == startindx:
+                            newopnm = opnm[next_pos:cur_pos] + 'Z'*(posn[cur_pos] - startindx - 1) + opnm[cur_pos] + newopnm
+                            newposn = posn[next_pos:cur_pos] + list(range(startindx+1, posn[cur_pos])) + [posn[cur_pos]] + newposn
+                            newcoef *= (-1 if opnm[next_pos] == '+' else 1)
+                        # 倒序的
+                        else:
+                            newopnm = 'Z'*(posn[next_pos] - startindx - 1) + opnm[next_pos:cur_pos] + opnm[cur_pos] + newopnm
+                            newposn = list(range(startindx+1, posn[next_pos])) + posn[next_pos:cur_pos] + [posn[cur_pos]] + newposn
+                            newcoef *= (-1 if opnm[cur_pos] == '-' else 1)
+                    else:
+                        # 最一般的情况
+                        newopnm = 'Z'*(posn[next_pos] - startindx) + opnm[next_pos:cur_pos] + 'Z'*(posn[cur_pos] - startindx) + opnm[cur_pos] + newopnm
+                        newposn = list(range(startindx, posn[next_pos])) + posn[next_pos:cur_pos] + list(range(startindx, posn[cur_pos])) + [posn[cur_pos]] + newposn
+                    
+                newposn = np.array(newposn)
+                builder += opnm, newposn, newcoef
+        return builder.build()
+    
+    def automata(self, L=None):
+        spinoper = self.jw_transfer()
+        return spinoper.automata(L=L)
+    
+    def to_mpo(self, *args, **kwargs):
+        spinoper = self.jw_transfer()
+        return spinoper.to_mpo(*args, **kwargs)
+
+
     @classmethod
     def f(cls, i:int=0) -> "FermionOper":
         return FermionOper({'+': _single_term((i,), 1.)})
@@ -329,7 +417,7 @@ class FermionBuilder(FermionOper):
         if isinstance(term, tuple):
             assert len(term) == 3 and len(term[0]) == len(term[1]), f"length wrong for term: {term}"
             for i in term[0]:
-                assert i in ['I', '+', '-'], "term must be a tuple of I, +, -"
+                assert i in ['I', '+', '-', 'n'], "term must be a tuple of I, +, -, n"
             
             if abs(term[2]) < 1e-10:
                 return self
@@ -367,6 +455,12 @@ class SpinfulFermionOper(Oper):
     
     def __init__(self, data, type = 'sf'):
         super().__init__(data, type)
+    
+    def _prefix(self) -> str:
+        return f"{self.__class__.__name__} (SpinUp | SpinDown) at {hex(id(self))}, \n"
+    
+    def _seperate_notion(self) -> str:
+        return "|" #⇅
     
     def quspin_form(self):
         static = []
@@ -510,13 +604,6 @@ class SpinfulFermionOper(Oper):
         >>> basis = qt.generate.basis.spinful_fermion_basis(L=L, Nf=(N_up, N_down))
         >>> ham = op.Fermi_Hubbard_operator(L=L, cyclic=False)
         >>> mat = ham.to_matrix(basis, dtype=float)
-
-        等价于：
-        >>> ham = (- J * op.sum(    
-            op.pm(i,sigma,i+1,sigma) + op.mp(i,sigma,i+1,sigma) 
-            for i in range(L-1) for sigma in [0,1]) 
-            +  
-            U * op.sum(op.nn(i,0,i,1) for i in range(L)))
         """
         data = {}
         posn1 = np.array([[i, i] for i in range(L)], dtype=np.int64)
@@ -534,3 +621,78 @@ class SpinfulFermionOper(Oper):
         data['|-+'] =  (posn2, J*coef2)
         data['n|n'] = (posn1, U*coef1)
         return cls(data)
+    
+    def to_spinless(self, mode:Literal['near', 'extend']='near'):
+        r"""将自旋算符转换为无自旋算符
+        
+        该方法将自旋算符转换为无自旋算符，返回一个新的 `FermionOper` 实例。
+
+        Parameters
+        ----------
+        mode : str, optional
+            转换模式，默认为 'near'。可选值为 'near' 或 'extend'。
+        
+        Returns
+        -------
+        FermionOper
+            转换后的无自旋算符。
+        """
+        L = self.L
+        data = {}
+        for name, (posnlist, coeflist) in self.data.items():
+            vbarpos = name.find('|')
+            newname = name[:vbarpos] + name[vbarpos+1:]
+            newposnlist = posnlist.copy()
+            if mode == 'near':
+                newposnlist[:, :vbarpos] = 2*posnlist[:, :vbarpos]
+                newposnlist[:, vbarpos:] = 2*posnlist[:, vbarpos:] + 1
+            else:
+                newposnlist[:, vbarpos:] = posnlist[:, vbarpos:] + L
+            newcoeflist = coeflist.copy()
+            oldpos, oldcoef = data.get(newname, (None, None))
+            if oldpos is None and oldcoef is None:
+                data[newname] = (newposnlist, newcoeflist)
+            else:
+                data[newname] = _merge_poscoef([oldpos, newposnlist], [oldcoef, newcoeflist])
+        return FermionOper(data)
+
+
+class SpinfulFermionBuilder(SpinfulFermionOper):
+    def __init__(self):
+        self.terms = {}
+
+    def __iadd__(self, term) -> 'FermionBuilder':
+        if isinstance(term, tuple):
+            assert len(term) == 3 and len(term[0]) == len(term[1]) + 1, f"length wrong for term: {term}"
+            for i in term[0]:
+                assert i in ['I', '+', '-', '|', 'n'], "term must be a tuple of I, +, -"
+            assert '|' in term[0], "term must contain |"
+            
+            if abs(term[2]) < 1e-10:
+                return self
+            
+            posnlist, coeflist = self.terms.setdefault(term[0], [[], []])
+            posnlist.append(term[1])
+            coeflist.append(term[2])
+            return self
+        else:
+            return super().__iadd__(term)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        data = {}
+        for name, (posnlist, coeflist) in self.terms.items():
+            data[name] = _merge_poscoef(posnlist, coeflist)
+        super().__init__(data, type='f')
+        
+        if exc_type is not None:  # 检查是否发生错误
+            tb.print_exc()  # 打印堆栈跟踪
+    
+    def build(self):
+        data = {}
+        for name, (posnlist, coeflist) in self.terms.items():
+            data[name] = _merge_poscoef(posnlist, coeflist)
+        return SpinfulFermionOper(data, type='f')
+

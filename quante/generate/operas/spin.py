@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-30 15:10:17
+# @Last Modified time: 2025-05-08 02:02:10
 
 import warnings
 import traceback as tb
@@ -219,7 +219,7 @@ class Oper:
     
     def _check_length(self, L:int) -> None:
         assert L >= self.L
-
+    
     def show_string_form(self, maxlen=80, form='v') -> None:
         """打印算符的字符串形式"""
         if form == 'v':
@@ -228,6 +228,7 @@ class Oper:
             print(self.table_form2(maxlen=maxlen))
     
     def table_form(self, maxlen=90) -> str:
+        _seperate_notion = self._seperate_notion()
         if len(self.data) == 0:
             return "0"
         pages = []
@@ -237,7 +238,7 @@ class Oper:
         last_len = 0
         for i, (operator, (posn, coef)) in enumerate(self.data.items()):
             
-            oper_len = len(operator)
+            oper_len = len(operator) - operator.count('|')
             
             if (len(first_line) + 6 * oper_len  > maxlen 
                 and i != 0):
@@ -272,11 +273,20 @@ class Oper:
             
             last_len = len(data_line)
         
+            hasvbar = False
             for i in operator:
-                first_line += f"   {i:<3}"
+                if i == '|':
+                    hasvbar = True
+                    continue
+                first_line += f" {_seperate_notion} {i:<3}" if hasvbar else f"   {i:<3}"
+                hasvbar = True
                 second_line += "-"*6
+                hasvbar = False
             makeup = ml - 12
-            first_line += "  " + " "*makeup + "   coef. |"
+            if hasvbar:
+                first_line += f" {_seperate_notion}" + " "*makeup + "   coef. |"
+            else:
+                first_line += "  " + " "*makeup + "   coef. |"
             second_line += "-"*(11+makeup) + "|"
             
         pages.append(first_line)
@@ -284,13 +294,19 @@ class Oper:
         pages += data_list
 
         # 增加 self 的名字和地址
-        prefix = f"{self.__class__.__name__} at {hex(id(self))}, \n"
+        prefix = self._prefix()
         return prefix + '\n'.join(pages) + '\n'
+    
+    def _prefix(self) -> str:
+        return f"{self.__class__.__name__} at {hex(id(self))}, \n"
+    
+    def _seperate_notion(self) -> str:
+        return "|"
     
     def table_form2(self, maxlen=90) -> str:
         lines = []
         for operator, (posn, coef) in self.data.items():
-            oper_len = len(operator)
+            oper_len = len(operator) - operator.count('|')
             line = f"{operator}: "
             for i in range(len(coef)):
                 if i > 0:
@@ -670,18 +686,21 @@ class SpinOper(Oper):
         else:
             assert L >= self.L
 
-        from ..matrix import pauli_matrix
-        local_matrix = lambda x: pauli_matrix(x.upper() if x in ['x', 'y', 'z'] else x, S=S) if pauli else pauli_matrix(x.upper() if x in ['X', 'Y', 'Z'] else x, S=S)
-
-        if L == 1:
-            tmp = np.sum(c*local_matrix(i) for i, _, c in self.each_term())
-            return [tmp.reshape(1,*tmp.shape,1)]
-
         from ..automata import automata_mpo
+        from ..matrix import pauli_matrix
+        from functools import partial
         expanded = self.expandxy(pauli=pauli)
-        return automata_mpo(expanded.each_term(), L, local_matrix, expanded.dtype)
+        local_matrix = partial(pauli_matrix, S=S)
+
+        path = self._preoperation4automata()
+        if L == 1:
+            tmp = np.sum(c*local_matrix(i) for i, _, c in path)
+            return [tmp.reshape(1,*tmp.shape,1)]
+        return automata_mpo(path, L, local_matrix, expanded.dtype)
 
         # 下面是使用 simple_automata_mpo 的调用方式
+        # from ..matrix import pauli_matrix
+        # local_matrix = lambda x: pauli_matrix(x.upper() if x in ['x', 'y', 'z'] else x, S=S) if pauli else pauli_matrix(x.upper() if x in ['X', 'Y', 'Z'] else x, S=S)
         # from ..automata import simple_automata_mpo
         # hlocals, positions, coefficients = self.expandxy(pauli=pauli).split_data()
         # coefficients = np.real_if_close(coefficients)
@@ -695,6 +714,30 @@ class SpinOper(Oper):
             positions.append(position)
             coefficients.append(coefficient)
         return operators, positions, coefficients
+    
+    def _preoperation4automata(self):
+        res = []
+        for opnm, posn, coef in self.each_term():
+            indx = np.argsort(posn)
+            newopnm = ''.join([opnm[i] for i in indx])
+            newposn = np.array([posn[i] for i in indx])
+            
+            newopnms = []
+            newposns = []
+
+            tmpopnm = ''
+            for i in range(0, len(newposn)-1):
+                tmpopnm += newopnm[i]
+                if newposn[i] != newposn[i+1]:
+                    newopnms.append('@'.join([j for j in tmpopnm]))
+                    newposns.append(newposn[i])
+                    tmpopnm = ''
+            
+            newopnms.append('@'.join([j for j in tmpopnm + newopnm[-1]]))
+            newposns.append(newposn[-1])
+
+            res.append((newopnms, newposns, coef))
+        return res
   
     def gate2_decomposition(self, L:int, tau:float, form="ladder", pauli:bool=True) -> tuple[list[int],list[np.ndarray]]:
         r"""
@@ -1381,7 +1424,7 @@ class SpinOperBuilder:
 class SpinBuilder(SpinOper):
     def __init__(self):
         """
-        可用的符号包括：I, p, m, x, y, z
+        可用的符号包括：I, p, m, x, y, z, n
         
         Example:
         --------
@@ -1399,8 +1442,8 @@ class SpinBuilder(SpinOper):
         if isinstance(term, tuple):
             assert len(term) == 3 and len(term[0]) == len(term[1]), f"length wrong for term: {term}"
             for i in term[0]:
-                assert i in ['I', 'p', 'm', 'x', 'y', 'z', '+', '-'], "term must be a tuple of I, p, m, '+', '-', x, y, or z"
-        
+                assert i in ['I', 'p', 'm', 'x', 'y', 'z', '+', '-', 'n', 'Z'], f"term {i} must be a tuple of I, p, m, '+', '-', x, y, z, n, 'Z"
+            
             posn = np.array(term[1], dtype=int)
             inc_indx = np.argsort(posn, kind='stable')
             posn = posn[inc_indx]
@@ -1409,7 +1452,22 @@ class SpinBuilder(SpinOper):
             opnm = opnm = "".join(term[0][i] for i in inc_indx)
             opnm = opnm.replace('+', 'p')
             opnm = opnm.replace('-', 'm')
-        
+
+            # 将 n 转换为 pm
+            if 'n' in opnm:
+                new_opnm = ''
+                new_posn = []
+                for opnm_i, posn_i in zip(opnm, posn):
+                    if opnm_i == 'n':
+                        new_opnm += 'pm'
+                        new_posn.append(posn_i)
+                        new_posn.append(posn_i)
+                    else:
+                        new_opnm += opnm_i
+                        new_posn.append(posn_i)
+                opnm = new_opnm
+                posn = np.array(new_posn, dtype=int)
+                        
             posnlist, coeflist = self.terms.setdefault(opnm, [[], []])
             posnlist.append(posn)
             coeflist.append(np.array([term[2]]))

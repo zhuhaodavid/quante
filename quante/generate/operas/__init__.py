@@ -6,5 +6,8 @@
 
 
 from .spin import *
-from .fermion import FermionOper, FermionBuilder, SpinfulFermionOper
+
+from .fermion import FermionOper, SpinfulFermionOper
+from .fermion import FermionBuilder, SpinfullFermionBuilder
+
 from .boson import BosonOper
