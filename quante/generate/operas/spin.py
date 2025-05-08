@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-08 02:02:10
+# @Last Modified time: 2025-05-08 15:30:57
 
 import warnings
 import traceback as tb
@@ -262,10 +262,17 @@ class Oper:
                 for j in range(oper_len):
                     data_line += f"   {posn[i][j]:<3}"
 
-                if 0.1 <= abs(coef[i]) < 100:
-                    tmp = f"{coef[i]:.3f}".rjust(10) + " |"  # 普通浮点数格式
+                if np.iscomplexobj(coef):
+                    if max(np.abs(coef)) < 1e3 and min(np.abs(coef)) > -1e3:
+                        tmp = f"{coef[i]:.3f}".rjust(16) + " |"  # 普通浮点数格式
+                    else:
+                        tmp = f"{coef[i]:.2e}".rjust(20) +" |"  # 科学计数法格式
                 else:
-                    tmp = f"{coef[i]:.2e}".rjust(10) +" |"  # 科学计数法格式
+                    if max(coef) < 1e3 and min(coef) > -1e3:
+                        tmp = f"{coef[i]:.3f}".rjust(10) + " |"
+                    else:
+                        tmp = f"{coef[i]:.2e}".rjust(12) +" |"  # 科学计数法格式
+                
                 data_line += tmp
                 if len(tmp) > ml:
                     ml = len(tmp)
@@ -1125,7 +1132,17 @@ class SpinOper(Oper):
             else:
                 return sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=return_eigenvectors)
 
-    def evolve(self, inistate:np.ndarray, tlist:np.ndarray, measure, basis=None, L=None, pauli=False):
+    def measure_at_different_time(
+        self,
+        inistate:np.ndarray,
+        tlist:np.ndarray,
+        measure,
+        basis=None,
+        L=None,
+        pauli=False,
+        method='auto',
+        normalize=False,
+    ):
         """计算观测量演化的示例
 
         Parameters
@@ -1165,7 +1182,7 @@ class SpinOper(Oper):
         >>> basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)
         >>> obsoper = [op.z(i) for i in range(L)]
         >>> init_state = qt.generate.state.neel(L=L, down_first=True, basis=basis)
-        >>> res = ham.evolve(init_state, tlist, obsoper, basis=basis)
+        >>> res = ham.measure_at_different_time(init_state, tlist, obsoper, basis=basis, method='cpu_mul')
         >>> res
         """
         if L is None:
@@ -1175,79 +1192,13 @@ class SpinOper(Oper):
             from ..basis import spin_basis
             basis = spin_basis(L)
         assert basis.Ns == len(inistate), "inistate should be the same length as basis"
-
-        # Method to get evolve expectation values
-        if basis.Ns < 2**12:  # 小尺寸的做法
-            ###################################################################################
-            # Diagonalize
-            ###################################################################################
-            from ...linalg import get_time_evolution_states_ED, observe_states
-
-            # ----------- main ------------
-            engres = np.linalg.eigh(self.to_matrix(basis, pauli=pauli))
-            evalstate = get_time_evolution_states_ED(inistate, *engres, tlist, failback_to_CPU=True)
-            # ----------- end main ------------
-
-            if isinstance(measure, list):
-                return np.real_if_close([observe_states(evalstate, obs.to_matrix(basis, pauli=pauli)) for obs in measure]).T
-            else:
-                return np.real_if_close([measure(evalstate[:, i]) for i in range(len(tlist))])
-        else:
-            try:
-            ###################################################################################
-            # GPU 
-            ###################################################################################
-                from ...torch_utils.linalg.expm_multiply import EvolveEngine
-                from ...torch_utils.linalg.sparse import to_csr
-                from ...torch_utils.utils import totc
-                from tqdm import tqdm
-                import torch as tc # type: ignore
-                assert tc.cuda.is_available(), "CUDA is not available"
-                device = tc.device('cuda:0')
-                # convert measure to function
-                if isinstance(measure, list):
-                    obsmatlist = [to_csr(o.to_matrix(basis, pauli=pauli, sparse=True), device=device, dtype=tc.complex128) for o in measure]
-                    obs = lambda state: [state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1) for obsmat in obsmatlist]
-                else:
-                    obs = measure
-
-                # ----------- main ------------
-                hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
-                hammat0 = to_csr(hammat, device=device)
-                inistate = totc(inistate, device=device)
-                evolve_engine = EvolveEngine(hammat0, inistate, ts=tlist, device=device)
-                res = []
-                for _ in tqdm(tlist, ascii=True):
-                    state = evolve_engine.run()
-                    res.append(obs(state))
-                # ----------- end main ------------
-
-                return np.real_if_close(res)
-            except:
-
-            ###################################################################################
-            # CPU
-            ###################################################################################
-                from ...linalg import EvolveEngine
-                from tqdm import tqdm
-                # convert measure to function
-                if isinstance(measure, list):
-                    obsmatlist = [to_csr(o.to_matrix(basis, pauli=pauli, sparse=True), device=device, dtype=tc.complex128) for o in measure]
-                    obs = lambda state: [state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1) for obsmat in obsmatlist]
-                else:
-                    obs = measure
-
-                # ----------- main ------------
-                hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
-                evolve_engine = EvolveEngine(hammat, inistate, ts=tlist)
-                res = []
-                for _ in tqdm(tlist, ascii=True):
-                    state = evolve_engine.run()
-                    res.append(obs(state))
-                # ----------- end main ------------
-
-                return np.real_if_close(res)    
-
+        hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
+        if isinstance(measure, list):
+            measure = [m.to_matrix(basis, pauli=pauli, sparse=True) for m in measure]
+        from ...linalg.evolve import measure_at_different_time
+        return measure_at_different_time(hammat, inistate, tlist, measure, method=method, normalize=normalize)
+    
+    evolve = measure_at_different_time
 
 
 def catposcoef(posn1, coef1, posn2, coef2):

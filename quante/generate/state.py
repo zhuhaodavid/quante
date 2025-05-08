@@ -64,6 +64,8 @@ def state_from_string(coef:list[float], basis:list[str]):
 def product_state(updns:list[str], dtype=float):
     """通过字符串生成态
     
+    如：'1010101'
+    
     Parameters
     ----------
     binary : sequence of 0s and 1s

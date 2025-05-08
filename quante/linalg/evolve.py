@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-04-07 09:32:07
+# # @Last Modified time: 2025-05-08 15:29:48
 
 import scipy.sparse.linalg as _spalg
 import scipy.sparse as _sparse
@@ -17,6 +17,7 @@ __all__ = [
     "EvolveEngine",
     "get_time_evolution_states_ED",
     "chebyshev_evolve",
+    "measure_at_different_time"
 ]
 
 def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], psi0:_np.ndarray, scale=1.0, *, start=None, stop=None, num=None, endpoint=None, traceA=None, herm=False, device=None) -> _np.ndarray:
@@ -159,7 +160,7 @@ class EvolveEngine:
     >>>         res[i].append(value[0,0])
     >>> return [np.real_if_close(r) for r in res]
     """
-    def __init__(self, ham, init_state, ts):
+    def __init__(self, ham, init_state, ts, normalize=False):
         if init_state.ndim == 1:
             self.psi = init_state.reshape(-1, 1).astype(_np.complex128)
         else:
@@ -172,6 +173,7 @@ class EvolveEngine:
         self.dts = _np.insert(self.dts, 0, ts[0])
         self.evolved_time = 0
         self.cur_step = 0
+        self.normalize = normalize
     
     @lru_cache(maxsize=None)
     def get_evolve_engine(self, dt):
@@ -190,6 +192,8 @@ class EvolveEngine:
         if dt != 0:
             ee = self.get_evolve_engine(round(dt,14))
             self.psi = ee(self.psi)
+            if self.normalize:
+                self.psi /= _np.linalg.norm(self.psi, ord=2)
             self.evolved_time += dt
         return self.psi
             
@@ -331,6 +335,97 @@ def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.nd
             raise e
         time_states = _in_CPU(initial_state, eigenvalues, eigenstates, times)
     return time_states
+
+# =============================================
+# measure
+# ==============================================
+def measure_at_different_time(
+    matrix:_sparse.csr_array,
+    inistate:_np.ndarray,
+    tlist:_np.ndarray,
+    measure:list[_sparse.csr_array] | Callable[[_np.ndarray], _np.ndarray],
+    normalize:bool = False,
+    method:Literal['auto', 'eig', 'gpu_mul', 'cpu_mul'] = 'auto',
+):
+    assert isinstance(matrix, _sparse.csr_array), f"matrix should be sparse array not {type(matrix)}"
+    Ns = matrix.shape[0]
+    if method == 'eig' or (method == 'auto' and Ns < 2**12):
+        ###################################################################################
+        # Diagonalize
+        ###################################################################################
+        mat = matrix.toarray()
+        if _np.allclose(mat, mat.T.conj()):
+            # ----------- main ------------
+            engres = _np.linalg.eigh(mat)
+            evalstate = get_time_evolution_states_ED(inistate, *engres, tlist, failback_to_CPU=True)
+            if normalize:
+                evalstate /= _np.linalg.norm(evalstate, ord=2, axis=0)
+            # ----------- end main ------------
+
+            from .operations import observe_states
+            if isinstance(measure, list):
+                return _np.real_if_close([observe_states(evalstate, obs.toarray()) for obs in measure]).T
+            else:
+                return _np.real_if_close([measure(evalstate[:, i]) for i in range(len(tlist))])
+        else:
+            if method == 'eig':
+                raise ValueError("matrix should be hermitian, try method = 'gpu_mul' or 'cpu_mul'")
+    try:
+        if method == ['gpu_mul', 'auto']:
+            ###################################################################################
+            # GPU 
+            ###################################################################################
+            from ..torch_utils.linalg.expm_multiply import EvolveEngine as tcEvolveEngine
+            from ..torch_utils.linalg.sparse import to_csr
+            from ..torch_utils.utils import totc
+            from tqdm import tqdm
+            import torch as tc # type: ignore
+            assert tc.cuda.is_available(), "CUDA is not available"
+            device = tc.device('cuda:0')
+            # convert measure to function
+            if isinstance(measure, list):
+                obsmatlist = [to_csr(o, device=device, dtype=tc.complex128) for o in measure]
+                obs = lambda state: [state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1) for obsmat in obsmatlist]
+            else:
+                obs = measure
+
+            # ----------- main ------------
+            hammat0 = to_csr(matrix, device=device)
+            inistate = totc(inistate, device=device)
+            evolve_engine = tcEvolveEngine(hammat0, inistate, ts=tlist, device=device, normalize=normalize)
+            res = []
+            for _ in tqdm(tlist, ascii=True):
+                state = evolve_engine.run()
+                res.append(obs(state))
+            # ----------- end main ------------
+
+            return _np.real_if_close(res)
+        else:
+            raise RuntimeError(f"use cpu")
+    except RuntimeError as e:
+        if method == 'gpu_mul':
+            raise RuntimeError("GPU is not available, please use CPU or set method='cpu_mul'")
+
+        ###################################################################################
+        # CPU
+        ###################################################################################
+        from tqdm import tqdm
+        # convert measure to function
+        if isinstance(measure, list):
+            obs = lambda state: [state.conj().reshape(-1) @ (obsmat @ state).reshape(-1) for obsmat in measure]
+        else:
+            obs = measure
+
+        # ----------- main ------------
+        evolve_engine = EvolveEngine(matrix, inistate, ts=tlist, normalize=normalize)
+        res = []
+        for _ in tqdm(tlist, ascii=True):
+            state = evolve_engine.run()
+            res.append(obs(state))
+        # ----------- end main ------------
+
+        return _np.real_if_close(res)    
+
 
 # =============================================
 # chebyshev

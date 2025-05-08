@@ -2,10 +2,11 @@
 # @Author: hzhu
 # @Date:   2025-04-19 10:10:28
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-22 19:40:02
+# @Last Modified time: 2025-05-08 13:57:27
 
 import numpy as np
 from functools import lru_cache
+from typing import Literal
 from ...linalg import expm
 
 def xx_evolve(L, model, init_state:str, tlist:np.ndarray):
@@ -88,6 +89,55 @@ class SlaterState:
         #      '0100' -> (-1) ** 1 = -1
         if spin:
             U[:, 0] *= (-1)**sum(inds)
+        return cls(U)
+    
+    @classmethod
+    def from_spinful_product_state(cls, state:str, mode:Literal['near','extend']='near'):
+        """生成自由费米子态的 U 矩阵
+
+        Parameters
+        ----------
+        state : str
+            需要生成的态，格式为 '0101|1010'，前半部分为上自旋，
+            后半部分为下自旋
+        mode : Literal[&#39;near&#39;,&#39;extend&#39;], optional
+            编号方案, by default 'near'
+
+        Returns
+        -------
+        SlaterState
+            SlaterState 对象
+
+        Raises
+        ------
+        ValueError
+            if mode is not 'near' or 'extend'
+        
+        Example
+        -------
+        >>> state = '10' * (L//2) + '|' + '01' * (L//2)
+        >>> state = np.real(slater.SlaterState.from_spinful_product_state(state))
+        >>> for i in range(state.shape[0]):
+        ...    print(i//2, ('up' if i%2==0 else 'dn'), state[i])
+        >>> state = np.real(slater.SlaterState.from_spinful_product_state(state, mode='extend'))
+        >>> for i in range(state.shape[0]):
+        ...    print(i%L, ('up' if i//L==0 else 'dn'), state[i])
+        """
+        spinup, spindown = state.split('|')
+        L = len(spinup)
+        assert len(spindown) == L, "spinup and spindown must have the same length"
+        inds1 = np.flatnonzero(np.array(list(spinup)) == '1') 
+        inds2 = np.flatnonzero(np.array(list(spindown)) == '1') 
+        M = len(inds1) + len(inds2)
+        U = np.zeros((2*L, M), dtype=complex)
+        if mode == 'near':
+            U[2*inds1, np.arange(0,M,2)] = 1.0    
+            U[2*inds2+1, np.arange(1,M,2)] = 1.0    
+        elif mode == 'extend':
+            U[inds1, np.arange(len(inds1))] = 1.0
+            U[L+inds2, np.arange(len(inds1),M)] = 1.0
+        else:
+            raise ValueError("mode must be 'near' or 'extend'")
         return cls(U)
 
     def orthogonalize(self):

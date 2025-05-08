@@ -2,9 +2,10 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-08 02:19:20
+# @Last Modified time: 2025-05-08 15:06:30
 
 import numpy as np
+from scipy.sparse import csr_array
 import traceback as tb
 from .spin import Oper, _single_term, _merge_poscoef, SpinBuilder
 from typing import Literal
@@ -480,7 +481,7 @@ class SpinfulFermionOper(Oper):
                 op_list.append([opstr, posn, coef])
             mat = basis._make_matrix(op_list, dtype=dtype)
             if sparse:
-                return mat
+                return csr_array(mat)
             else:
                 return mat.toarray()
         else:
@@ -627,6 +628,22 @@ class SpinfulFermionOper(Oper):
         
         该方法将自旋算符转换为无自旋算符，返回一个新的 `FermionOper` 实例。
 
+        `near` mode:
+
+        .. code-block:: text
+
+            sites:   0  |  1  |  2  |  3  |  4  |  5  |  6  |  7  ...
+            up:      0  |  2  |  4  |  6  |  8  | 10  | 12  | 14  ...
+            down:    1  |  3  |  5  |  7  |  9  | 11  | 13  | 15  ...
+        
+        `extend` mode:
+
+        .. code-block:: text
+        
+            sites:  0  |  1  |  2  |  3  |  4  |  5  |  6  |  7  ...
+            up:     0  |  1  |  2  |  3  |  4  |  5  |  6  |  7  ...
+            down:   8  |  9  | 10  | 11  | 12  | 13  | 14  | 15  ...
+
         Parameters
         ----------
         mode : str, optional
@@ -661,7 +678,7 @@ class SpinfulFermionBuilder(SpinfulFermionOper):
     def __init__(self):
         self.terms = {}
 
-    def __iadd__(self, term) -> 'FermionBuilder':
+    def __iadd__(self, term) -> 'SpinfulFermionBuilder':
         if isinstance(term, tuple):
             assert len(term) == 3 and len(term[0]) == len(term[1]) + 1, f"length wrong for term: {term}"
             for i in term[0]:
