@@ -2,12 +2,10 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-18 12:12:53
+# @Last Modified time: 2025-05-13 11:59:55
 import numpy as np
 from .spin import Oper, _merge_poscoef, _single_term
-
-# todo spinful boson
-# todo photon
+from .fermion import _sort_pm, _sort_posn
 
 
 class BosonOper(Oper):
@@ -33,7 +31,47 @@ class BosonOper(Oper):
     def __init__(self, data:dict, type='b') -> None:
         assert type == 'b'
         super().__init__(data, stype='b')
-   
+ 
+
+    def normal_ordering(self):
+        """通过对易关系将算符转换为正则序列。
+
+        .. math::
+            -+ -> i + +-
+
+        Returns
+        -------
+        FermionOper
+            具有正则序列的 FermionOper 对象。
+        """
+        data = {}
+        expandn = []
+        for oper, (posnlist, coeflist) in self.data.items():
+            coeflen = len(coeflist)
+            if 'n' in oper:
+                positions = [i for i, char in enumerate(oper) if char == 'n']
+                for pos in sorted(positions, reverse=True):  # 从后往前插入，避免索引偏移
+                    posnlist = np.insert(posnlist, pos + 1, posnlist[:, pos], axis=1)
+                    for i in range(coeflen):
+                        expandn.append(
+                            (oper[:pos] + '+-' + oper[pos+1:], posnlist[i], coeflist[i])
+                            )
+            else:
+                for i in range(coeflen):
+                    expandn.append((oper, posnlist[i], coeflist[i]))
+        for new_opnm, new_posn, new_coef in _sort_pm(expandn, 1.):
+            new_posn, parity = _sort_posn(new_opnm, new_posn)
+            posnlist, coeflist = data.setdefault(new_opnm, [[], []])
+            posnlist.append(new_posn)
+            coeflist.append(parity * new_coef)
+        newdata = {}
+        for name, (posnlist, coeflist) in data.items():
+            newposn, newcoef = _merge_poscoef(posnlist, coeflist)
+            if len(newposn) > 0:
+                newdata[name] = (newposn, newcoef)
+        return BosonOper(newdata)
+
+  
     def expandxy(self) -> 'BosonOper':
         """
         
@@ -255,6 +293,22 @@ class BosonOper(Oper):
         if hz != 0:
             data["z"] = (posn1, hz*coef1)
         return cls(data)
+    
+    @classmethod
+    def builder(cls) -> "BosonBuilder":
+        """
+        返回一个 BosonBuilder 对象
+        
+        该对象可以用于构建哈密顿量
+        
+        Examples
+        --------
+        >>> builder = qt.generate.operas.BosonBuilder()
+        >>> builder += '+-', [(0,1), (1,2)], -1.0
+        >>> builder += '+-', [(2,3), (3,4)], -1.0
+        >>> ham = builder.build()
+        """
+        return BosonBuilder()
 
 
 def _expand_term(name):
@@ -286,5 +340,45 @@ def _expand_term(name):
         expanded_names, expanded_coefs = new_names, new_coefs
 
     return expanded_names, expanded_coefs
+
+
+class BosonBuilder(BosonOper):
+    def __init__(self):
+        self.terms = {}
+
+    def __iadd__(self, term) -> 'BosonBuilder':
+        if isinstance(term, tuple):
+            assert len(term) == 3 and len(term[0]) == len(term[1]), f"length wrong for term: {term}"
+            for i in term[0]:
+                assert i in ['I', '+', '-', 'n'], "term must be a tuple of I, +, -, n"
+            
+            if abs(term[2]) < 1e-10:
+                return self
+            
+            posnlist, coeflist = self.terms.setdefault(term[0], [[], []])
+            posnlist.append(term[1])
+            coeflist.append(term[2])
+            return self
+        else:
+            return super().__iadd__(term)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        data = {}
+        for name, (posnlist, coeflist) in self.terms.items():
+            data[name] = _merge_poscoef(posnlist, coeflist)
+        super().__init__(data, type='f')
+        
+        if exc_type is not None:  # 检查是否发生错误
+            tb.print_exc()  # 打印堆栈跟踪
+    
+    def build(self):
+        data = {}
+        for name, (posnlist, coeflist) in self.terms.items():
+            data[name] = _merge_poscoef(posnlist, coeflist)
+        return BosonOper(data, type='b')
+
 
 

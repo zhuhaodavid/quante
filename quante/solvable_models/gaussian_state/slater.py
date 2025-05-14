@@ -2,12 +2,13 @@
 # @Author: hzhu
 # @Date:   2025-04-19 10:10:28
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-08 13:57:27
+# @Last Modified time: 2025-05-09 14:25:34
 
 import numpy as np
 from functools import lru_cache
 from typing import Literal
 from ...linalg import expm
+from tqdm import tqdm
 
 def xx_evolve(L, model, init_state:str, tlist:np.ndarray):
     """Example of free fermion evolution (measure particle number)
@@ -164,8 +165,18 @@ class SlaterState:
         def exph(dt):
             return expm(h, -1j * dt, isherm=isherm)
         
+        # add tqdm
+        if len(dtlist) > 1:
+            dtlist = tqdm(dtlist, desc="Evolving", unit="step", ascii=True)
+        else:
+            dtlist = tqdm(dtlist, desc="Evolving", unit="step", disable=True, ascii=True)
+        
         cur_state = SlaterState(self.U.copy())
         for dt in dtlist:
+            # update tqdm
+            dtlist.set_postfix_str(f"dt={dt:.2f}")
+            dtlist.refresh()
+            
             if dt != 0:
                 dtp = round(dt, 12)  # 增加缓存命中率
                 cur_state.U = exph(dtp) @ cur_state.U
@@ -233,12 +244,14 @@ class SlaterState:
         """
         if isinstance(pos1, int) and isinstance(pos2, int):
             return np.sum(self.U[pos1, :] * self.U[pos2, :].conj())
-        elif pos2 is None:
-            pos2 = self.L//2 - 1
+        elif isinstance(pos2, int) or pos2 is None:
+            if pos2 is None:
+                pos2 = self.L//2 - 1 
             if pos1 is None:
                 return np.sum(self.U * self.U[pos2,:].conj(), axis=1)
             else:
-                return np.sum(self.U[pos1, :] * self.U[pos2, :].conj())
+                pos1 = np.array(pos1, dtype=int)
+                return np.sum(self.U[pos1, :] * self.U[pos2, :].conj(), axis=1)
         else:
             raise TypeError("pos1 and pos2 must be int or None")
     
@@ -277,7 +290,7 @@ class SlaterState:
                 res[i-1] = entropy(lambda_s) + entropy(1 - lambda_s)
             return res
 
-        CA = self._reducted_cormat(pos)
+        CA = self._reduced_cormat(pos)
         lambda_s = np.linalg.eigvalsh(CA)
         return entropy(lambda_s) + entropy(1 - lambda_s)
     

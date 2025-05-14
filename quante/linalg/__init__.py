@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 18:27:12
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-28 16:46:25
+# @Last Modified time: 2025-05-14 22:24:45
 """
 linalg (:mod:`quante.linalg`)
 ==================================
@@ -70,4 +70,5 @@ from .operations import *
 from .evolve import *
 from .krylov import *
 from .perturbation import *
+from .super_operator import *
 

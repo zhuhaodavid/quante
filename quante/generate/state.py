@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:25
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-22 19:17:13
+# @Last Modified time: 2025-05-14 16:43:32
 
 """
 生成一些常用的态（`np.ndarray`）
@@ -61,7 +61,7 @@ def state_from_string(coef:list[float], basis:list[str]):
     return _sparse.coo_array((coef, (rows, cols))).tocsr()
 
 
-def product_state(updns:list[str], dtype=float):
+def product_state(updns:list[str], dtype=float, Nup=None):
     """通过字符串生成态
     
     如：'1010101'
@@ -87,12 +87,31 @@ def product_state(updns:list[str], dtype=float):
             tmp += "1"
         else:
             raise ValueError(f"Invalid value {b} in binary string.")
-    result = _np.zeros((2**len(updns), 1), dtype=dtype)
-    result[int(tmp, 2)] = 1.0
+    if Nup is None:
+        result = _np.zeros((2**len(updns), 1), dtype=dtype)
+        result[int(tmp, 2)] = 1.0
+    else:
+        from .basis import spin_basis
+        L = len(updns)
+        basis = spin_basis(L, Nup=Nup)
+        if basis.s_list.ndim == 1:
+            indices = _np.where(basis.s_list == int(tmp, 2))
+            assert len(indices) == 1, f"not found"
+            result = _np.zeros((basis.Ns, 1), dtype=dtype)
+            result[indices[0]] = 1.0
+        else:
+            tmp = _np.array([1 - int(i) for i in tmp])
+            for i,s in enumerate(basis.s_list):
+                if (s == tmp).all():
+                    break
+            else:
+                raise ValueError(f"not found {tmp} in {basis.s_list}")
+            result = _np.zeros((basis.Ns, 1), dtype=dtype)
+            result[i] = 1.0
     return result
+    
 
-
-def neel(L:int, down_first=False, dtype=float, basis=None):
+def neel(L:int, down_first=False, dtype=float, Nup=None):
     """
     生成 Neel 态
     
@@ -109,20 +128,8 @@ def neel(L:int, down_first=False, dtype=float, basis=None):
     updns = "01" * (L // 2) + (L % 2 == 1) * "0"
     if down_first:
         updns = "1" + updns[:-1]
-    updnint = int(updns, 2)
-    from .basis.symmetry.spin_half.noblock.defclass import SpinHalfBasisNoBlock
-    if basis is None or isinstance(basis, SpinHalfBasisNoBlock):
-        result = _np.zeros((2**len(updns), 1), dtype=dtype)
-        result[updnint] = 1.0
-    else:
-        from .basis.symmetry.spin_half.Nup.defclass import SpinHalfBasisNup
-        if isinstance(basis, SpinHalfBasisNup):
-            indices = _np.where(basis.s_list == updnint)[0]
-            result = _np.zeros((basis.Ns, 1), dtype=dtype)
-            result[indices] = 1.0
-        else:
-            raise ValueError(f"Invalid basis type {type(basis)}")
-    return result
+    return product_state(updns, dtype=dtype, Nup=Nup)
+    
 
 def ghz(L):
     """

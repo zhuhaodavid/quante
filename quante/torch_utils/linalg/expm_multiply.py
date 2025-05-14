@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-08 15:29:05
+# @Last Modified time: 2025-05-14 22:52:30
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -122,7 +122,7 @@ def evolve_engine(A:tc.Tensor, scale=1., n0=1, herm=False):
     
 
 class EvolveEngine:
-    def __init__(self, ham, init_state, ts, normalize=False):
+    def __init__(self, ham, init_state, ts, normalize=False, ttype='real-time'):
         if init_state.ndim == 1:
             self.psi = init_state.reshape(-1, 1).to(dtype=tc.complex128)
         else:
@@ -133,10 +133,11 @@ class EvolveEngine:
         self.evolved_time = 0
         self.cur_step = 0
         self.normalize = normalize
+        self.scale = -1j if ttype == 'real-time' else 1.0
     
     @lru_cache(maxsize=None)
     def get_evolve_engine(self, dt):
-        return evolve_engine(dt * self.csr_mt, scale=-1j)
+        return evolve_engine(dt * self.csr_mt, scale=self.scale)
 
     def run(self):
         try:

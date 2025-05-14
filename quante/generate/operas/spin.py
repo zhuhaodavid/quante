@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-08 15:30:57
+# @Last Modified time: 2025-05-14 22:16:05
 
 import warnings
 import traceback as tb
@@ -1132,7 +1132,7 @@ class SpinOper(Oper):
             else:
                 return sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=return_eigenvectors)
 
-    def measure_at_different_time(
+    def evolve_and_measure(
         self,
         inistate:np.ndarray,
         tlist:np.ndarray,
@@ -1194,12 +1194,10 @@ class SpinOper(Oper):
         assert basis.Ns == len(inistate), "inistate should be the same length as basis"
         hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
         if isinstance(measure, list):
-            measure = [m.to_matrix(basis, pauli=pauli, sparse=True) for m in measure]
-        from ...linalg.evolve import measure_at_different_time
-        return measure_at_different_time(hammat, inistate, tlist, measure, method=method, normalize=normalize)
+            measure = [m.to_matrix(basis, pauli=pauli, sparse=True).tocsr() for m in measure]
+        from ...linalg.evolve import evolve_and_measure
+        return evolve_and_measure(hammat, inistate, tlist, measure, method=method, normalize=normalize)
     
-    evolve = measure_at_different_time
-
 
 def catposcoef(posn1, coef1, posn2, coef2):
     len1, len2 = len(coef1), len(coef2)
@@ -1318,58 +1316,13 @@ def sum(oper) -> Oper:
     # merge terms
     newdata = {}
     for name, (posnlist, coeflist) in data.items():
-        newposn, newcoef = _merge_poscoef(posnlist, coeflist)
-        if len(newposn) > 0:
-            newdata[name] = (newposn, newcoef)
+        newpos, newcoef = np.vstack(posnlist), np.hstack(coeflist)
+        if len(newpos) > 0:
+            newdata[name] = (newpos, newcoef)
     if stype is None:
         stype = 's'
     return SpinOper(newdata)
 
-
-class SpinOperBuilder:
-    def __init__(self):
-        """
-        可用的符号包括：I, p, m, x, y, z
-        
-        Example:
-        --------
-        >>> ham = SpinOperBuilder()
-        >>> for i in range(10):
-        >>>     ham += 1.0, 'x', i, 'x', i+1
-        >>>     ham += 1.0, 'y', i, 'y', i+1
-        >>>     ham += 1.0, 'z', i, 'z', i+1
-        >>>     ham += 1.0, 'x', i
-        >>> ham = ham.to_oper()
-        """
-        self.terms = {}
-        warnings.warn("SpinOperBuilder is deprecated, use SpinBuilder instead", DeprecationWarning)
-
-    def __iadd__(self, term) -> 'SpinOperBuilder':
-        assert isinstance(term, tuple) and len(term) % 2 == 1, "term must be a tuple of odd length"
-        for i in range(1, len(term), 2):
-            assert term[i] in ['I', 'p', 'm', 'x', 'y', 'z'], "term must be a tuple of I, p, m, x, y, or z"
-        
-        posn = np.array(term[2::2], dtype=int)
-        inc_indx = np.argsort(posn, kind='stable')
-        posn = posn[inc_indx]
-        
-        opnm = "".join(term[1::2])
-        opnm = "".join(opnm[i] for i in inc_indx)
-        opnm = opnm.replace('+', 'p')
-        opnm = opnm.replace('-', 'm')
-       
-        posnlist, coeflist = self.terms.setdefault(opnm, [[], []])
-        posnlist.append(posn)
-        coeflist.append(np.array([term[0]]))
-        return self
-    
-    def to_oper(self):
-        data = {}
-        for name, (posnlist, coeflist) in self.terms.items():
-            data[name] = (np.vstack(posnlist), np.hstack(coeflist))
-        return SpinOper(data, 's')
-    
-    build = to_oper
 
 
 class SpinBuilder(SpinOper):

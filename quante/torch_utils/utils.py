@@ -2,13 +2,14 @@
 # @Author: hzhu
 # @Date:   2024-07-25 22:20:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 00:20:40
+# @Last Modified time: 2025-05-14 21:25:15
 
 # 梯度下降的工具
 
 __all__ = ['open_grad', 'close_grad', 'tonp', 'totc', 'clone', 'AdaptiveLRScheduler']
 
 import numpy as np
+from scipy.sparse import issparse
 import torch as tc
 
 
@@ -186,6 +187,9 @@ def totc(data: list | np.ndarray | tc.Tensor, dtype=None, device=None) -> list |
         return tc.from_numpy(data).to(dtype=dtype, device=device)
     elif isinstance(data, list):
         return [totc(x, dtype=dtype, device=device) for x in data]
+    elif issparse(data):
+        from .linalg.sparse import to_csr
+        return to_csr(data, device=device, dtype=dtype)
     else:
         raise TypeError(f"Unsupported input type: {type(data)}")
 

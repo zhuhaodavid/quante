@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-08 15:06:30
+# @Last Modified time: 2025-05-13 11:59:35
 
 import numpy as np
 from scipy.sparse import csr_array
@@ -11,7 +11,7 @@ from .spin import Oper, _single_term, _merge_poscoef, SpinBuilder
 from typing import Literal
 
 
-def _sort_pm(data:list):
+def _sort_pm(data:list, sign=-1.):
     r"""
     对给定的算符字符串、位置数组和系数进行排序和化简。
 
@@ -38,7 +38,7 @@ def _sort_pm(data:list):
     3. 如果相邻操作符的作用位置不同，则交换它们的位置并调整符号。
     4. 返回排序和化简后的算符、位置数组和系数的列表。
     """
-    maxiter = 10000
+    maxiter = 100000
     iternum = 0
     tobeordered = [i for i in data]
     final_res = []
@@ -61,7 +61,7 @@ def _sort_pm(data:list):
                     (
                         oper[:i-1] + '+-' + oper[i+1:],
                         list(posn[:i-1]) + [posn[i], posn[i-1]] + list(posn[i+1:]),
-                        -coef
+                        coef * sign
                     )
                 )
                 break
@@ -139,6 +139,16 @@ class FermionOper(Oper):
 
 
     def normal_ordering(self):
+        """通过对易关系将算符转换为正则序列。
+
+        .. math::
+            -+ -> i - +-
+
+        Returns
+        -------
+        FermionOper
+            具有正则序列的 FermionOper 对象。
+        """
         data = {}
         expandn = []
         for oper, (posnlist, coeflist) in self.data.items():
@@ -169,7 +179,8 @@ class FermionOper(Oper):
     def single_particle_ham(self, L=None):
         r"""生成最简单的单粒子矩阵
         
-        .. math:
+        .. math::
+
             H = \sum_{i,j} h_{ij} c_i^\dagger c_j
         
         """
@@ -408,6 +419,11 @@ class FermionOper(Oper):
         data['+-'] =  (posn1, -coef1)
         data['n'] = (posn2, coef2)
         return cls(data)
+    
+    @classmethod
+    def builder(cls) -> 'FermionBuilder':
+        """返回 FermionBuilder 对象"""
+        return FermionBuilder()
 
 
 class FermionBuilder(FermionOper):
@@ -672,10 +688,68 @@ class SpinfulFermionOper(Oper):
             else:
                 data[newname] = _merge_poscoef([oldpos, newposnlist], [oldcoef, newcoeflist])
         return FermionOper(data)
+    
+    @classmethod
+    def builder(cls) -> 'SpinfulFermionBuilder':
+        r"""返回一个 `SpinfulFermionBuilder` 实例
+        
+        该方法用于创建一个 `SpinfulFermionBuilder` 实例，方便构建自旋算符。
+        
+        Returns
+        -------
+        SpinfulFermionBuilder
+            一个新的 `SpinfulFermionBuilder` 实例。
+        """
+        return SpinfulFermionBuilder()
 
 
 class SpinfulFermionBuilder(SpinfulFermionOper):
     def __init__(self):
+        r"""初始化 SpinfulFermionBuilder 类
+
+        算符名称具有 'xxx|xxx' 的形式，前一半表示自旋上，后一半表示自旋下。
+        
+        如
+        .. math::
+            c^\dagger_{i,\uparrow} c_{i+1,\downarrow}
+        
+        表示为 `"+|-", [i, i+1], 1.`
+        
+        而
+        .. math::
+            c^\dagger_{i,\downarrow} c_{i+1,\uparrow}
+        
+        表示为 `"-|+", [i+1, i], -1.`
+
+        也是总要把自旋向上放在前面，向下放在后面。
+        
+        Examples
+        --------
+        >>> import quante as qt
+        >>> op = qt.generate.operas.fermion
+        >>> L = 8
+        >>> J = 1.0
+        >>> Δ = 0.5
+        >>> γ = 0.1
+        >>> builder = op.SpinfulFermionBuilder()
+        >>> for l in range(L-1):
+        ...     # hopping term
+        ...     builder += '+-|', [l+1, l], -J/2
+        ...     builder += '|+-', [l+1, l], -J/2
+        ...     builder += '+-|', [l, l+1], -J/2
+        ...     builder += '|+-', [l, l+1], -J/2
+        ...     # non-hermitian term
+        ...     builder += '+-|', [l+1, l], -γ/2
+        ...     builder += '|+-', [l+1, l],  γ/2
+        ...     builder += '+-|', [l, l+1],  γ/2
+        ...     builder += '|+-', [l, l+1], -γ/2
+        ...     # spin-orbit coupling term
+        ...     builder += '+|-', [l+1, l], 1j * Δ/2
+        ...     builder += '-|+', [l+1, l], 1j * Δ/2
+        ...     builder += '-|+', [l, l+1], - 1j * Δ/2
+        ...     builder += '+|-', [l, l+1], - 1j * Δ/2
+        >>> spinfulham = builder.build()
+        """
         self.terms = {}
 
     def __iadd__(self, term) -> 'SpinfulFermionBuilder':

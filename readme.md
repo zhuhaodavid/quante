@@ -182,7 +182,7 @@ tlist = np.linspace(0, 10, 200)
 obsoper = [op.z(i) for i in range(L)]
 basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)
 
-res = ham.measure_at_different_time(init_state, tlist, obsoper, basis=basis, method='cpu_mul')
+res = ham.evolve_and_measure(init_state, tlist, obsoper, basis=basis)
 res
 ```
 
@@ -197,7 +197,51 @@ array([[-0.5       ,  0.5       , -0.5       , ...,  0.5       , -0.5       ,  0
        [-0.00333199,  0.01823717, -0.0555555 , ...,  0.0555555 , -0.01823717,  0.00333199]])
 ```
 
-会根据尺寸自动选择合适的方法，如果需要手动调优，可以参考 `examples/evolve.ipynb` 中的例子。
+如果需要手动调优，可以参考 `examples/evolve.ipynb` 中的例子。
+
+主方程的演化：
+
+```python
+import quante as qt
+import numpy as np
+
+op = qt.generate.operas.boson.BosonOper
+
+L = 30
+J = 1.
+gamma_R = 1.0
+gamma_L = 0.5
+
+ham = op.builder()
+for i in range(L-1):
+    ham += "+-", [i+1, i], -J
+    ham += "+-", [i, i+1], -J
+ham = ham.build()
+
+basis = qt.generate.basis.quspin_boson_basis(L=L, Nb=1)
+hammat = ham.to_matrix(basis=basis, sparse=True)
+
+Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i).to_matrix(basis=basis, sparse=True) for i in range(L-1)]
+Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1).to_matrix(basis=basis, sparse=True) for i in range(L-1)]
+particle_number = [op.n(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
+
+lvn = qt.linalg.Liouvillian(hammat, Lindblad_R + Lindblad_L)
+state = qt.generate.state.product_state('1'+'0'*(L-1), Nup=1)
+rhoinit = np.outer(state, state)
+
+res = lvn.evolve_and_measure(
+    rhoinit, [10, 20, 30, 40, 50], 
+    measure=particle_number, 
+    method='cpu_mul'
+)
+res.shape
+```
+
+结果为：
+```
+100%|##########| 5/5 [00:00<00:00, 92.52it/s]
+(5, 30)
+```
 
 ### Tensor Network
 

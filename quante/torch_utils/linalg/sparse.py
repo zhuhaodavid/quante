@@ -18,6 +18,7 @@ def to_csr(tsr:scipy.sparse.csr_array, *, device=None, dtype=None) -> tc.Tensor:
     assert tsr.ndim == 2, "只能处理二维张量"
     if dtype is None:
         dtype = tc.complex128 if np.iscomplexobj(tsr) else tc.float64
+    tsr = tsr.tocsr()
     return tc.sparse_csr_tensor(tsr.indptr, tsr.indices, tsr.data, tsr.shape, dtype=dtype, device=device)
 
 def eye(n:int, *, device=None, dtype=None) -> tc.Tensor:
