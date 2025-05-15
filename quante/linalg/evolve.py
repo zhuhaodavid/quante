@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-14 22:54:08
+# # @Last Modified time: 2025-05-15 15:34:43
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -214,104 +214,97 @@ class EvolveEngine:
 # ======================
 
 # -> CPU
-import numpy as _np
-
-def _change_dtype_CPU(eigenstates: _np.ndarray, initial_state: _np.ndarray) -> tuple[_np.ndarray, _np.ndarray]:
-    """
-    确保 eigenstates 和 initial_state 的数据类型为 complex，如果其中之一是 complex128。
-    """
-    if _np.issubdtype(eigenstates.dtype, _np.complexfloating) or _np.issubdtype(initial_state.dtype, _np.complexfloating):
+def _in_CPU(
+    initial_state: _np.ndarray,
+    eigenvalues: _np.ndarray,
+    eigenstates: _np.ndarray,
+    times:_np.ndarray,
+    herm:bool=True,
+    scale=-1j
+) -> _np.ndarray:
+    # 确保 eigenstates 和 initial_state 的数据类型为 complex，如果其中之一是 complex128。
+    if _np.iscomplexobj(eigenstates) or _np.iscomplexobj(initial_state):
         eigenstates = eigenstates.astype(_np.complex128)
         initial_state = initial_state.astype(_np.complex128)
-    return eigenstates, initial_state
 
-def _cpu_complex_exp_method(times: _np.ndarray, udagger_psi: _np.ndarray, eigenstates: _np.ndarray, eigenvalues:_np.ndarray) -> _np.ndarray:
-    """
-    使用复指数计算时间演化态。
-    """
-    times_E = _np.broadcast_to(-1j*times, (len(eigenvalues), len(times))).T * eigenvalues
-    exptimes_E = _np.exp(times_E)
-    exptimeEpsi = exptimes_E * udagger_psi
-    res = eigenstates @ exptimeEpsi.T
-    return res
+    # U† |psi> 
+    if herm:
+        udagger_psi = (eigenstates.T.conj() @ initial_state).reshape(1, -1)
+    else:
+        udagger_psi = (_np.linalg.solve(eigenstates, initial_state)).reshape(1, -1)
 
-def _cpu_real_dtype_method(times: _np.ndarray, udagger_psi: _np.ndarray, eigenstates: _np.ndarray, eigenvalues:_np.ndarray) -> _np.ndarray:
-    """
-    使用实部和虚部计算时间演化态。
-    """
-    times_E = _np.broadcast_to(times, (len(eigenvalues), len(times))).T * eigenvalues
-    real_part = _np.cos(times_E) * udagger_psi
-    imag_part = _np.sin(times_E) * udagger_psi
-    return eigenstates @ real_part.T - 1j * (eigenstates @ imag_part.T)
-
-def _in_CPU(initial_state: _np.ndarray, eigenvalues: _np.ndarray, eigenstates: _np.ndarray, times: _np.ndarray) -> _np.ndarray:
-    eigenstates, initial_state = _change_dtype_CPU(eigenstates, initial_state)
-    udagger_psi = (eigenstates.T.conj() @ initial_state).reshape(1, -1)
-    _method = _cpu_complex_exp_method if _np.issubdtype(eigenstates.dtype, _np.complexfloating) else _cpu_real_dtype_method
-    time_evolution_states = _method(times, udagger_psi, eigenstates, eigenvalues)
-    return time_evolution_states
-
+    # U exp() |U†psi>
+    if not _np.iscomplexobj(eigenstates) and scale == -1j:
+        times_E = _np.broadcast_to(times, (len(eigenvalues), len(times))).T * eigenvalues
+        real_part = _np.cos(times_E) * udagger_psi
+        imag_part = _np.sin(times_E) * udagger_psi
+        return eigenstates @ real_part.T - 1j * (eigenstates @ imag_part.T)
+    else:
+        times_E = _np.broadcast_to(scale*times, (len(eigenvalues), len(times))).T * eigenvalues
+        exptimeEpsi = _np.exp(times_E) * udagger_psi
+        return eigenstates @ exptimeEpsi.T
 
 # -> GPU
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # 类型检查时，导入 torch
     import torch as _tc
 
-def _data_to_GPU(initial_state, eigenvalues, eigenstates, times, device) -> tuple['_tc.Tensor', '_tc.Tensor', '_tc.Tensor', '_tc.Tensor']:
-    """
-    将数据从 numpy 数组转换为 GPU 上的 torch.Tensor。
-    """
-    import torch as _tc
-    initial_state = _tc.from_numpy(initial_state).to(device)
-    eigenvalues = _tc.from_numpy(eigenvalues).to(device)
-    eigenstates = _tc.from_numpy(eigenstates).to(device)
-    times = _tc.from_numpy(times).to(device)
-    return initial_state, eigenvalues, eigenstates, times
-
-def _change_dtype_GPU(eigenstates: '_tc.Tensor', initial_state: '_tc.Tensor') -> tuple['_tc.Tensor', '_tc.Tensor']:
-    """
-    确保 eigenstates 和 initial_state 的数据类型为 complex，如果其中之一是 complex128。
-    """
-    import torch as _tc
-    if eigenstates.dtype == _tc.complex128 or initial_state.dtype == _tc.complex128:
-        eigenstates = eigenstates.to(_tc.complex128)
-        initial_state = initial_state.to(_tc.complex128)
-    return eigenstates, initial_state
-
-def _gpu_complex_exp_method(times: '_tc.Tensor', udagger_psi: '_tc.Tensor', eigenstates: '_tc.Tensor', eigenvalues: '_tc.Tensor') -> '_tc.Tensor':
-    """
-    使用复指数计算时间演化态
-    """
-    import torch as _tc
-    times_E = (-1j*times).unsqueeze(1) * eigenvalues
-    exp_timeE = _tc.exp(times_E)
-    exp_timeE_psi = exp_timeE * udagger_psi
-    time_evolution_states = eigenstates @ exp_timeE_psi.T
-    return time_evolution_states
-
-def _gpu_real_dtype_method(times: '_tc.Tensor', udagger_psi: '_tc.Tensor', eigenstates: '_tc.Tensor', eigenvalues: '_tc.Tensor') -> '_tc.Tensor':
-    """
-    使用实部和虚部计算时间演化态（方法2）。
-    """
-    import torch as _tc
-    times_E = times.unsqueeze(1) * eigenvalues
-    real_part = _tc.cos(times_E) * udagger_psi
-    imag_part = _tc.sin(times_E) * udagger_psi
-    return eigenstates @ real_part.T - 1j * (eigenstates @ imag_part.T)
-
-def _in_GPU(initial_state: '_tc.Tensor', eigenvalues: '_tc.Tensor', eigenstates: '_tc.Tensor', times: '_tc.Tensor', device) -> _np.ndarray:
+def _in_GPU(
+    initial_state: '_tc.Tensor',
+    eigenvalues: '_tc.Tensor',
+    eigenstates: '_tc.Tensor',
+    times: '_tc.Tensor',
+    device,
+    herm,
+    scale=-1j
+) -> _np.ndarray:
     """
     在 GPU 上计算初始态在不同时刻的时间演化态。
     """
     import torch as _tc
-    initial_state, eigenvalues, eigenstates, times = _data_to_GPU(initial_state, eigenvalues, eigenstates, times, device)
-    eigenstates, initial_state = _change_dtype_GPU(eigenstates, initial_state)
-    udagger_psi = eigenstates.T.conj() @ initial_state
-    _method = _gpu_complex_exp_method if udagger_psi.dtype == _tc.complex128 else _gpu_real_dtype_method
-    time_states = _method(times, udagger_psi, eigenstates, eigenvalues)
-    return time_states.cpu().numpy()
 
-def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.ndarray, eigenstates: _np.ndarray, times: _np.ndarray, *, failback_to_CPU: bool = False, device_name='cpu') -> _np.ndarray:
+    # 将数据从 numpy 数组转换为 GPU 上的 torch.Tensor。
+    initial_state = _tc.from_numpy(initial_state).to(device)
+    eigenvalues = _tc.from_numpy(eigenvalues).to(device)
+    eigenstates = _tc.from_numpy(eigenstates).to(device)
+    times = _tc.from_numpy(times).to(device)
+
+    # 确保 eigenstates 和 initial_state 的数据类型为 complex，如果其中之一是 complex128。
+    if eigenstates.dtype == _tc.complex128 or initial_state.dtype == _tc.complex128:
+        eigenstates = eigenstates.to(_tc.complex128)
+        initial_state = initial_state.to(_tc.complex128)
+ 
+    # U† |psi>
+    if herm:
+        udagger_psi = (eigenstates.T.conj() @ initial_state).reshape(1, -1)
+    else:
+        udagger_psi = (_tc.linalg.solve(eigenstates, initial_state)).reshape(1, -1)
+
+    # U exp() |U†psi>
+    if not _tc.is_complex(eigenstates) and scale == -1j:
+        times_E = times.unsqueeze(1) * eigenvalues
+        real_part = _tc.cos(times_E) * udagger_psi
+        imag_part = _tc.sin(times_E) * udagger_psi
+        res = eigenstates @ real_part.T - 1j * (eigenstates @ imag_part.T)
+    else:
+        times_E = (scale*times).unsqueeze(1) * eigenvalues
+        exp_timeE_psi = _tc.exp(times_E) * udagger_psi
+        time_evolution_states = eigenstates @ exp_timeE_psi.T
+        res = time_evolution_states
+    
+    return res.cpu().numpy()
+
+def get_time_evolution_states_ED(
+    initial_state: _np.ndarray,
+    eigenvalues: _np.ndarray,
+    eigenstates: _np.ndarray,
+    times: _np.ndarray, 
+    *, 
+    failback_to_CPU: bool = False, 
+    device_name='cpu',
+    herm=True,
+    ttype='real-time'
+) -> _np.ndarray:
     """
     基于严格对角化的时间演化
     
@@ -323,32 +316,21 @@ def get_time_evolution_states_ED(initial_state: _np.ndarray, eigenvalues: _np.nd
     
     Returns:
         _np.ndarray: 时间演化量子态矩阵
-        
-    Examples
-    --------
-    >>> import quante as qt
-    >>> L = 10
-    >>> mat = qt.generate.matrix.heisenberg_matrix(L)
-    >>> state = qt.generate.state.random(mat.shape[0], seed=42)
-    >>> eigresult = qt.linalg.eigh(mat)
-    >>> times = np.linspace(0,10,100)
-    >>> res = qt.linalg.get_time_evolution_states_ED(state,*eigresult,times)
-    >>> res.shape
-    (1024, 100)
     """
     initial_state = _np.squeeze(initial_state)
+    scale = -1j if ttype=='real-time' else 1.
     try:
         import torch as tc
         device = tc.device(device_name)
-        time_states = _in_GPU(initial_state, eigenvalues, eigenstates, times, device)
+        time_states = _in_GPU(initial_state, eigenvalues, eigenstates, times, device, herm, scale)
     except Exception as e:
         if not failback_to_CPU:
             raise e
-        time_states = _in_CPU(initial_state, eigenvalues, eigenstates, times)
+        time_states = _in_CPU(initial_state, eigenvalues, eigenstates, times, herm, scale)
     return time_states
 
 # =============================================
-# measure
+# evolve and measure
 # ==============================================
 def evolve_and_measure(
     matrix:sps.csr_array,
@@ -397,23 +379,28 @@ def evolve_and_measure(
         ###################################################################################
         # Diagonalize
         ###################################################################################
-        assert ttype == 'real-time', "only real-time is supported for eig method"
         mat = matrix.toarray()
+        # ----------- main ------------
         if _np.allclose(mat, mat.T.conj()):
-            # ----------- main ------------
             engres = _np.linalg.eigh(mat)
-            evalstate = get_time_evolution_states_ED(inistate, *engres, tlist, failback_to_CPU=True)
-            if normalize:
-                evalstate /= _np.linalg.norm(evalstate, ord=2, axis=0)
-            # ----------- end main ------------
-
-            from .operations import observe_states
-            if isinstance(measure, list):
-                return _np.real_if_close([observe_states(evalstate, obs.toarray()) for obs in measure]).T
-            else:
-                return _np.real_if_close([measure(evalstate[:, i]) for i in range(len(tlist))])
+            evalstate = get_time_evolution_states_ED(
+                inistate, *engres, tlist, failback_to_CPU=True, herm=True, ttype=ttype
+            )
         else:
-            raise ValueError("matrix should be hermitian, try method = 'gpu_mul' or 'cpu_mul'")
+            engres = _np.linalg.eig(mat)
+            evalstate = get_time_evolution_states_ED(
+                inistate, *engres, tlist, failback_to_CPU=True, herm=False, ttype=ttype
+            )
+        if normalize:
+            evalstate /= _np.linalg.norm(evalstate, ord=2, axis=0)
+        # ----------- end main ------------
+        
+        from .operations import observe_states
+        if isinstance(measure, list):
+            return _np.real_if_close([observe_states(evalstate, obs.toarray()) for obs in measure]).T
+        else:
+            return _np.real_if_close([measure(evalstate[:, i]) for i in range(len(tlist))])
+
     try:
         if method in ['gpu_mul', 'auto']:
             ###################################################################################
@@ -538,7 +525,7 @@ def chebyshev_evolve(mat:_np.ndarray, initstate:_np.ndarray, t:float, max_eng:fl
 # ==============================================
 
 class Liouvillian(LinearOperator):
-    def __init__(self, ham:sps.csr_array, lindblad_ops:list[sps.csr_array]):
+    def __init__(self, ham:sps.csr_array|None, lindblad_ops:list[sps.csr_array]|None):
         r"""
         The Liouvillian is given by the following equation:
         
@@ -549,38 +536,82 @@ class Liouvillian(LinearOperator):
         
         Parameters
         ----------
-        ham : sps.csr_array
+        ham : sps.csr_array | None
             The Hamiltonian of the system.
-        lindblad_ops : list[sps.csr_array]
+        lindblad_ops : list[sps.csr_array] | None
             The Lindblad operators of the system.
         """
-        assert sps.issparse(ham), "ham must be sparse matrix"
-        for lo in lindblad_ops:
-            assert sps.issparse(lo), "lindblad_ops must be sparse matrix"
+        if ham is not None:
+            assert sps.issparse(ham), "ham must be sparse matrix"
+        elif lindblad_ops is not None:
+            for lo in lindblad_ops:
+                assert sps.issparse(lo), "lindblad_ops must be sparse matrix"
+        else:
+            raise ValueError("ham and lindblad_ops cannot be both None")
+        
+        self.ham = ham
         self.lindblad_ops = lindblad_ops
-        self.ham_eff = ham - 1j * sum(lo.conj().T @ lo for lo in lindblad_ops)/2
-        self.Ns = ham.shape[0]
+        self._ham_eff = None
+        self._sum_jump = None  # use lazy loading to speed up the initialization
+        self.Ns = ham.shape[0] if ham is not None else lindblad_ops[0].shape[0]
         self.dtype = _np.dtype(_np.complex128)
         self.shape = (self.Ns**2, self.Ns**2)
     
     @property
+    def ham_eff(self):
+        if self._ham_eff is None:
+            if self.ham is None:
+                self._ham_eff = - 1j * sum(lo.conj().T @ lo for lo in self.lindblad_ops)/2
+            elif self.lindblad_ops is None:
+                self._ham_eff = self.ham
+            else:
+                self._ham_eff = self.ham - 1j * sum(lo.conj().T @ lo for lo in self.lindblad_ops)/2
+        return self._ham_eff
+
+    @property
+    def sum_jump(self):
+        """将所有的 jump operator 进行求和，得到一个稀疏矩阵"""
+        if self._sum_jump is None:
+            if self.lindblad_ops is None:
+                return None
+            # self._sum_jump = sum(sps.kron(lo, lo.conj()) for lo in self.lindblad_ops)
+            # 如果 lo 比较多且简单，那么下面的方法会更高效（占用内存会更多）
+            from ..generate.basis.symmetry.basis_class_nb import coodiaglists2csr
+            row_result = []
+            col_result = []
+            ele_result = [] 
+            for lo in self.lindblad_ops:
+                tmp = sps.kron(lo, lo.conj())
+                row_result.append(tmp.row)
+                col_result.append(tmp.col)
+                ele_result.append(tmp.data)
+            self._sum_jump = coodiaglists2csr(row_result=row_result, col_result=col_result, ele_result=ele_result, diag=None, n_row=self.Ns**2, index_type=_np.int32, dtype=_np.complex128)
+        return self._sum_jump
+
+    @property
     def trace(self):
         a = 2 * self.Ns * self.ham_eff.trace().imag
+        if self.lindblad_ops is None:
+            return a
         b = sum(abs(lo.trace())**2 for lo in self.lindblad_ops)
         return a + b
 
     def __call__(self, rho):
         drho_dt = -1j * (self.ham_eff @ rho - rho @ self.ham_eff.conj().T) 
+        if self.lindblad_ops is None:
+            return drho_dt
         for lo in self.lindblad_ops:
             drho_dt += lo @ rho @ lo.conj().T 
         return drho_dt
-    
+
     def _matvec(self, rho):
         return self(rho.reshape(self.Ns, self.Ns)).flatten()
 
     def _rmatvec(self, rho):
         rho = rho.reshape(self.Ns, self.Ns)
         drho_dt = -1j * (self.ham_eff.T @ rho - rho @ self.ham_eff.conj()) 
+        if self.lindblad_ops is None:
+            return drho_dt.flatten()
         for lo in self.lindblad_ops:
             drho_dt += lo.T @ rho @ lo.conj()
         return drho_dt.flatten()
@@ -607,18 +638,17 @@ class Liouvillian(LinearOperator):
         >>> plt.plot(res.T, 'o-')
         """
         eye = sps.eye(self.Ns)
-        # non-hermitian part
         nonherm = -1j * (sps.kron(self.ham_eff, eye) - sps.kron(eye, self.ham_eff.conj()))
-        # stochastic part
-        stochastic = sum(sps.kron(lo, lo.conj()) for lo in self.lindblad_ops)
-        return nonherm + stochastic
+        if self.lindblad_ops is None:
+            return nonherm
+        return nonherm + self.sum_jump
 
     def evolve_and_measure(
             self,
             inistate:_np.ndarray,
             tlist:list|_np.ndarray,
             measure:Callable|_np.ndarray,
-            method:Literal['cpu_mul', 'gpu_mul', 'linear_operator',
+            method:Literal['eig', 'cpu_mul', 'gpu_mul', 'linear_operator',
                         'RK45', 'RK23', 'DOP853', 'Radau', 'BDF', 'LSODA']='cpu_mul',
             **kwargs
         ):
@@ -651,16 +681,17 @@ class Liouvillian(LinearOperator):
             the measurement results at different time points
         """
         d = self.Ns
-        if method in ['cpu_mul', 'gpu_mul']:
+        tlist = _np.asarray(tlist)
+        if method in ['eig', 'cpu_mul', 'gpu_mul']:
             if isinstance(measure, list):
-                if method == 'cpu_mul':
+                if method == 'gpu_mul':
                     # convert measure to function
-                    obs = lambda state: [_np.trace(obsmat @ state.reshape(d,d)) for obsmat in measure]
-                else:
                     from ..torch_utils.utils import totc
                     import torch as tc
                     measure = totc(measure, device='cuda')
                     obs = lambda rho: _np.real_if_close([tc.trace(rho.reshape(d,d) @ n).item() for n in measure])
+                else:
+                    obs = lambda state: [_np.trace(obsmat @ state.reshape(d,d)) for obsmat in measure]
             else:
                 obs = measure
             return evolve_and_measure(
