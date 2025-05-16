@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-16 13:07:09
+# # @Last Modified time: 2025-05-16 14:02:07
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -380,7 +380,7 @@ def evolve_and_measure(
     measure:list[sps.csr_array] | Callable[[float, _np.ndarray], _np.ndarray],
     normalize:bool = False,
     ttype:Literal['real-time', 'imag-time'] = 'real-time',
-    method:Literal['auto', 'eig', 'gpu_mul', 'cpu_mul'] = 'auto',
+    method:Literal['eig', 'gpu_mul', 'cpu_mul'] = 'cpu_mul',
 ):
     """calculate the measurement values at different time points
 
@@ -407,7 +407,6 @@ def evolve_and_measure(
         - `method='eig'`: use the exact diagonalization method to calculate the time evolution
         - `method='gpu_mul'`: use the GPU method to calculate the time evolution
         - `method='cpu_mul'`: use the CPU method to calculate the time evolution
-        - `method='auto'`: automatically select the calculation method, first try to call the GPU method, if it fails, use the CPU method
 
     Returns
     -------
@@ -415,7 +414,6 @@ def evolve_and_measure(
         return a multi-dimensional array, the first dimension is the time point, and the subsequent dimensions are determined by `measure`
     """
     assert sps.issparse(matrix), f"matrix should be sparse array not {type(matrix)}"
-    assert method in ['auto', 'eig', 'gpu_mul', 'cpu_mul'], f"method should be one of ['auto', 'eig', 'gpu_mul', 'cpu_mul'] not {method}"
     if method == 'eig':
         ###################################################################################
         # Diagonalize
@@ -440,48 +438,49 @@ def evolve_and_measure(
         if isinstance(measure, list):
             return _np.real_if_close([observe_states(evalstate, obs.toarray()) for obs in measure]).T
         else:
-            return _np.real_if_close([measure(t, evalstate[:, i]) for i,t in enumerate(tlist)])
+            res = [measure(t, evalstate[:, i]) for i,t in enumerate(tlist)]
+            try:
+                return _np.real_if_close(res)    
+            except:
+                return res
 
-    try:
-        if method in ['gpu_mul', 'auto']:
-            ###################################################################################
-            # GPU 
-            ###################################################################################
-            from ..torch_utils.linalg.expm_multiply import EvolveEngine as tcEvolveEngine
-            from ..torch_utils.linalg.sparse import to_csr
-            from ..torch_utils.utils import totc
-            from tqdm import tqdm
-            import torch as tc # type: ignore
-            assert tc.cuda.is_available(), "CUDA is not available"
-            device = tc.device('cuda:0')
-            # convert measure to function
-            if isinstance(measure, list):
-                obsmatlist = [to_csr(o, device=device, dtype=tc.complex128) for o in measure]
-                obs = lambda t, state: [(state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1)).item() for obsmat in obsmatlist]
-            else:
-                obs = measure
 
-            # ----------- main ------------
-            hammat0 = to_csr(matrix, device=device)
-            inistate = totc(inistate, device=device)
-            evolve_engine = tcEvolveEngine(hammat0, inistate, ts=tlist, normalize=normalize, ttype=ttype)
-            res = []
-            for t in tqdm(tlist, ascii=True):
-                state = evolve_engine.run()
-                res.append(obs(t, state))
-            # ----------- end main ------------
-
-            return _np.real_if_close(res)
+    elif method == 'gpu_mul':
+        ###################################################################################
+        # GPU 
+        ###################################################################################
+        from ..torch_utils.linalg.expm_multiply import EvolveEngine as tcEvolveEngine
+        from ..torch_utils.linalg.sparse import to_csr
+        from ..torch_utils.utils import totc
+        import torch as tc # type: ignore
+        assert tc.cuda.is_available(), "CUDA is not available"
+        device = tc.device('cuda:0')
+        # convert measure to function
+        if isinstance(measure, list):
+            obsmatlist = [to_csr(o, device=device, dtype=tc.complex128) for o in measure]
+            obs = lambda t, state: [(state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1)).item() for obsmat in obsmatlist]
         else:
-            raise RuntimeError(f"use cpu")
-    except RuntimeError as e:
-        if method == 'gpu_mul':
-            raise RuntimeError(f"GPU is not available due to {e}, please use CPU or set method='cpu_mul'")
+            obs = measure
 
+        # ----------- main ------------
+        hammat0 = to_csr(matrix, device=device)
+        inistate = totc(inistate, device=device)
+        evolve_engine = tcEvolveEngine(hammat0, inistate, ts=tlist, normalize=normalize, ttype=ttype)
+        res = []
+        for t in tqdm(tlist, ascii=True):
+            state = evolve_engine.run()
+            res.append(obs(t, state))
+        # ----------- end main ------------
+        try:
+            return _np.real_if_close(res)    
+        except:
+            return res
+    
+    
+    elif method == 'cpu_mul':
         ###################################################################################
         # CPU
         ###################################################################################
-        from tqdm import tqdm
         # convert measure to function
         if isinstance(measure, list):
             obs = lambda t, state: [state.conj().reshape(-1) @ (obsmat @ state).reshape(-1) for obsmat in measure]
@@ -495,8 +494,13 @@ def evolve_and_measure(
             state = evolve_engine.run()
             res.append(obs(t, state))
         # ----------- end main ------------
-
-        return _np.real_if_close(res)    
+        try:
+            return _np.real_if_close(res)    
+        except:
+            return res
+    
+    else:
+        raise ValueError(f"method should be 'eig' or 'gpu_mul' or 'cpu_mul', not {method}")
 
 
 # =============================================
@@ -755,7 +759,10 @@ class Liouvillian(LinearOperator):
                 state = evolve_engine.run()
                 res.append(obs(t, state.reshape(d,d)))
             # ----------- end main ------------
-            return _np.real_if_close(res)    
+            try:
+                return _np.real_if_close(res)    
+            except:
+                return res
         else:
             if isinstance(measure, list):
                 obs = lambda t, state: [_np.trace(obsmat @ state) for obsmat in measure]
@@ -774,7 +781,10 @@ class Liouvillian(LinearOperator):
                 t_cur = t
                 state_cur = sol.y.flatten()
                 res.append(obs(t, state_cur.reshape(d,d)))
-            return _np.real_if_close(res)
+            try:
+                return _np.real_if_close(res)
+            except:
+                return res
 
     def steady_state(self, method:Literal['direct'] = 'direct'):
         if method == 'direct':
@@ -825,4 +835,30 @@ class Liouvillian(LinearOperator):
                     'RK45', 'RK23', 'DOP853', 'Radau', 'BDF', 'LSODA']='cpu_mul',
         **kwargs
     ):
+        # todo
+        # it should look like,
+        
+        # def integrate(self, t, copy=False):
+        #     t_old, y_old = self._integrator.get_state(copy=False)
+        #     norm_old = self._prob_func(y_old)
+        #     while t_old < t:
+        #         t_step, state = self._integrator.mcstep(t, copy=False)
+        #         norm = self._prob_func(state)
+        #         if norm <= self.target_norm:
+        #             t_col, state = self._find_collapse_time(norm_old, norm,
+        #                                                     t_old, t_step)
+        #             self._do_collapse(t_col, state)
+        #             t_old, y_old = self._integrator.get_state(copy=False)
+        #             norm_old = 1.
+        #         else:
+        #             t_old, y_old = t_step, state
+        #             norm_old = norm
+
+        #     return t_old, _data.mul(y_old, 1 / self._norm_func(y_old))
+
+        # def run(self, tlist):
+        #     for t in tlist[1:]:
+        #         yield self.integrate(t, False)
+    
+        # reference https://qutip.org/docs/4.7/guide/dynamics/dynamics-monte.html
         pass

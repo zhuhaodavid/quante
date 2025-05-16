@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-14 22:16:05
+# @Last Modified time: 2025-05-16 13:59:05
 
 import warnings
 import traceback as tb
@@ -1140,7 +1140,7 @@ class SpinOper(Oper):
         basis=None,
         L=None,
         pauli=False,
-        method='auto',
+        method='cpu_mul',
         normalize=False,
     ):
         """计算观测量演化的示例
