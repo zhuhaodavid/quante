@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-16 23:04:56
+# # @Last Modified time: 2025-05-16 23:08:22
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -256,7 +256,7 @@ class EvolveEngine:
             - if matrix is a matrix, this parameter is optional. `herm=True` will accelerate a little bit
         method : str, optional
             All these methods are available when `matrix` is a sparse matrix. All these 
-            methods except `gpu_mul-cuda:0` is avidable when `matrix` is 
+            methods except `gpu_mul-cuda:0` are avidable when `matrix` is 
             a LinearOperator.
             - `method='cpu_mul'`: use the CPU method to calculate the time evolution. (when matrix is
             a LinearOperator, the traceA should be passed in)
@@ -629,7 +629,7 @@ def evolve_and_measure(
         - `type='imag-time'`: imaginary-time evolution using `exp(H * t)`
     method : str, optional, by default 'auto'
         All these methods are available when `matrix` is a sparse matrix. All these methods  
-        except `eig` and `gpu_mul-cuda:0` is avidable when `matrix` is a LinearOperator.
+        except `eig` and `gpu_mul-cuda:0` are avidable when `matrix` is a LinearOperator.
         - `method='eig'`: use the exact diagonalization method to calculate the time evolution
         - `method='cpu_mul'`: use the CPU method to calculate the time evolution. (when matrix is
         a LinearOperator, the traceA should be passed in)
