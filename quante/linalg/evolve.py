@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-16 12:55:52
+# # @Last Modified time: 2025-05-16 13:07:09
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -440,7 +440,7 @@ def evolve_and_measure(
         if isinstance(measure, list):
             return _np.real_if_close([observe_states(evalstate, obs.toarray()) for obs in measure]).T
         else:
-            return _np.real_if_close([measure(evalstate[:, i]) for i in range(len(tlist))])
+            return _np.real_if_close([measure(t, evalstate[:, i]) for i,t in enumerate(tlist)])
 
     try:
         if method in ['gpu_mul', 'auto']:
@@ -728,12 +728,12 @@ class Liouvillian(LinearOperator):
             if isinstance(measure, list):
                 if method == 'gpu_mul':
                     # convert measure to function
-                    obs = lambda t, state: [_np.trace(obsmat @ state.reshape(d,d)) for obsmat in measure]
-                else:
                     from ..torch_utils.utils import totc
                     import torch as tc
-                    measure = totc(measure, device='cuda')
+                    measure = totc(measure, device='cuda:0')
                     obs = lambda t, rho: _np.real_if_close([tc.trace(rho.reshape(d,d) @ n).item() for n in measure])
+                else:
+                    obs = lambda t, state: [_np.trace(obsmat @ state.reshape(d,d)) for obsmat in measure]
             else:
                 obs = measure
             return evolve_and_measure(
