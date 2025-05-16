@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-16 13:59:05
+# @Last Modified time: 2025-05-16 21:40:19
 
 import warnings
 import traceback as tb
@@ -1069,7 +1069,6 @@ class SpinOper(Oper):
         # else
         raise ValueError("Unknown order {0!r} for Suzuki Trotter decomposition".format(order))
     
-    
     def to_mpo(self, L=None, pauli=False, backend='torch', device=None):
         if L is None:
             L = max([np.max(posn) for posn, _ in self.data.values()]) + 1 
@@ -1131,73 +1130,7 @@ class SpinOper(Oper):
                 return sp.linalg.eigsh(mat, k=k, which='SA', return_eigenvectors=return_eigenvectors)
             else:
                 return sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=return_eigenvectors)
-
-    def evolve_and_measure(
-        self,
-        inistate:np.ndarray,
-        tlist:np.ndarray,
-        measure,
-        basis=None,
-        L=None,
-        pauli=False,
-        method='cpu_mul',
-        normalize=False,
-    ):
-        """计算观测量演化的示例
-
-        Parameters
-        ----------
-        inistate : np.ndarray
-            初始态
-        tlist : np.ndarray
-            时间
-        measure : list[SpinOper] | Callable[[np.ndarray], np.ndarray]
-            观测量列表
-        basis : Basis, optional
-            基矢, by default None
-        L: int, optional
-            系统的长度, by default None
-        pauli : bool, optional
-            是否使用 pauli 矩阵表示, by default False
-
-        Returns
-        -------
-        np.ndarray
-            对应观测量的演化
-        
-        Example
-        -------
-        >>> import quante as qt
-        >>> import numpy as np
-        >>> op = qt.generate.operas
-        >>> L = 10
-        >>> tlist = np.linspace(0, 10, 200)
-        >>> # Model
-        >>> J, γ = 1., 0.
-        >>> builder = op.SpinOperBuilder()
-        >>> for l in range(L-1):
-        >>>     builder += 1/2 * (J + γ), 'p', l+1, 'm',   l
-        >>>     builder += 1/2 * (J - γ), 'p',   l, 'm', l+1
-        >>> ham = builder.build()
-        >>> basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)
-        >>> obsoper = [op.z(i) for i in range(L)]
-        >>> init_state = qt.generate.state.neel(L=L, down_first=True, basis=basis)
-        >>> res = ham.measure_at_different_time(init_state, tlist, obsoper, basis=basis, method='cpu_mul')
-        >>> res
-        """
-        if L is None:
-            L = self.L
-
-        if basis is None:
-            from ..basis import spin_basis
-            basis = spin_basis(L)
-        assert basis.Ns == len(inistate), "inistate should be the same length as basis"
-        hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
-        if isinstance(measure, list):
-            measure = [m.to_matrix(basis, pauli=pauli, sparse=True).tocsr() for m in measure]
-        from ...linalg.evolve import evolve_and_measure
-        return evolve_and_measure(hammat, inistate, tlist, measure, method=method, normalize=normalize)
-    
+   
 
 def catposcoef(posn1, coef1, posn2, coef2):
     len1, len2 = len(coef1), len(coef2)

@@ -2,26 +2,30 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-16 14:02:07
+# # @Last Modified time: 2025-05-16 22:42:06
 
 from scipy import sparse as sps
 from scipy.special import jv
 from scipy.sparse.linalg import LinearOperator, expm_multiply, spsolve, eigsh, svds
+from scipy.integrate import solve_ivp
 
 import numpy as _np
 import warnings as _warnings
-from typing import Callable, Union, Literal
+from typing import Callable, Union, Literal, TYPE_CHECKING
 from functools import lru_cache
 from typing import Literal
 from tqdm import tqdm
 
+if TYPE_CHECKING:  # 类型检查时，导入 torch
+    import torch as _tc
+
 __all__ = [
-    "expm_multiply",
-    "EvolveEngine",
-    "get_time_evolution_states_ED",
-    "chebyshev_evolve",
     "evolve_and_measure",
     "Liouvillian"
+    "EvolveEngine",
+    "expm_multiply",
+    "get_time_evolution_states_ED",
+    "chebyshev_evolve",
 ]
  
 def expm_multiply(
@@ -201,39 +205,117 @@ def expm_multiply(
     # 主要的工作:
     from .usenumba.expm_multiply_numba import _expm_multiply_numba
     return _expm_multiply_numba(lo, psi0, scale=scale, start=start, stop=stop, num=num, endpoint=endpoint, traceA=traceA)
-    
+
+
 class EvolveEngine:
     """            
     This class make use of the `expm_multiply` function to evolve the state vector.
     The precalculation will be done in the constructor here, which will speed up the
     calculation of the time evolution.
     """
-    def __init__(self, ham, init_state, ts, normalize=False, ttype='real-time', traceA=None):
-        if init_state.ndim == 1:
-            self.psi = init_state.reshape(-1, 1).astype(_np.complex128)
+    def __init__(
+        self,
+        ham:sps.csr_array|LinearOperator,
+        init_state:_np.ndarray,
+        ts:_np.ndarray,
+        *,
+        normalize:bool=False,
+        ttype:Literal['real-time', 'imag-time']='real-time',
+        traceA:float|None=None,
+        dtype:_np.dtype|None=None,
+        herm:bool|Callable=False,
+        method:Literal['cpu_mul', 'gpu_mul-cuda:0', 
+                    'linear_operator','RK45', 'RK23', 'DOP853', 'Radau', 
+                    'BDF', 'LSODA']='cpu_mul',
+        ivp_kwargs:dict={}
+    ):
+        """calculate the time evolution of the state vector
+
+        Parameters
+        ----------
+        ham : sps.csr_array | LinearOperator
+            the Hamiltonian matrix
+        init_state : _np.ndarray
+            the initial state vector
+        ts : _np.ndarray
+            the time list
+        normalize : bool, optional
+            if True, normalize the state after each evolution, by default False
+        ttype : str, optional
+            - `ttype='real-time'`: real-time evolution using `exp(-1j * H * t)`
+            - `ttype='imag-time'`: imaginary-time evolution using `exp(H * t)`
+        traceA : float | None, optional
+            the trace of the matrix, by default None
+            if matrix is a LinearOperator and the method is `cpu_mul`, this parameter is required
+        dtype : _np.dtype | None, optional
+            the data type of the matrix, by default None
+            only need to be set when only float is involved
+        herm : bool | Callable, optional
+            whether the matrix is hermitian, by default False
+            - if matrix is a LinearOperator, this parameter is required
+            - if matrix is a matrix, this parameter is optional. `herm=True` will accelerate a little bit
+        method : str, optional
+            - `method='cpu_mul'`: use the CPU method to calculate the time evolution. (when matrix is
+            a LinearOperator, the traceA should be passed in)
+            - `method='gpu_mul-cuda:0'`: use the GPU method to calculate the time evolution. (LinearOperator
+            is not supported in this case)
+            - `method='RK45'` ...: use the RK45 ... method to calculate the time evolution, for more
+            information, please refer to the `scipy.integrate.solve_ivp` documentation. check,
+            https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html#scipy.integrate.solve_ivp
+        ivp_kwargs : dict, optional
+            the parameters for the `scipy.integrate.solve_ivp` function, by default {}
+        """
+        device = method[8:] if method[:3] == 'gpu' else 'cpu'
+        if device == 'cpu':
+            # for cpu, the hamiltonian can be a LinearOperator or a csr sparse matrix
+            if isinstance(ham, LinearOperator):
+                self.csr_mt = ham
+            else:
+                try:
+                    self.csr_mt = ham.tocsr()
+                except:
+                    self.csr_mt = sps.csr_array(ham)
+        
+            # the initial state should be a column vector
+            dtype = _np.complex128 if dtype is None else dtype
+            self.psi = init_state.reshape(-1, 1).astype(dtype)
+
         else:
-            self.psi = init_state.astype(_np.complex128)
-        if isinstance(ham, LinearOperator):
-            self.csr_mt = ham
-        else:
-            try:
-                self.csr_mt = ham.tocsr()
-            except:
-                self.csr_mt = sps.csr_array(ham)
-        self.dts = _np.diff(ts)
-        self.dts = _np.insert(self.dts, 0, ts[0])
+            # first move the data to the device
+            assert sps.issparse(ham), "ham should be sparse array"
+            from ..torch_utils.linalg.sparse import to_csr
+            from ..torch_utils.utils import totc
+            import torch as tc
+            dtype = tc.complex128 if dtype is None else dtype
+            self.csr_mt = to_csr(ham.tocsr(), device=device)
+            self.psi = totc(init_state, device=device, dtype=dtype).reshape(-1, 1)
+            self.tc = tc
+
+        self.tlist = ts
+        self.dts = _np.insert(_np.diff(ts), 0, ts[0])
         self.evolved_time = 0
         self.cur_step = 0
         self.normalize = normalize
         self.scale = -1j if ttype == 'real-time' else 1.0
         self.traceA = traceA
+        self.device = device
+        self.herm = herm
+        self.method = method
+        self.ivp_kwargs = ivp_kwargs
     
     @lru_cache(maxsize=None)
     def get_evolve_engine(self, dt):
-        from .usenumba.expm_multiply_numba import _evolve_engine
-        return _evolve_engine(self.csr_mt, scale=self.scale, t=dt, traceA=self.traceA)
+        if self.device == 'cpu':
+            from .usenumba.expm_multiply_numba import _evolve_engine
+            return _evolve_engine(self.csr_mt, scale=self.scale, t=dt, traceA=self.traceA, herm=self.herm)
+        else:
+            from ..torch_utils.linalg.expm_multiply import evolve_engine
+            return evolve_engine(dt * self.csr_mt, scale=self.scale, herm=self.herm)
 
     def run(self):
+        """
+        calculate the time evolution of the state vector
+        """
         try:
             dt = self.dts[self.cur_step]
         except:
@@ -243,12 +325,142 @@ class EvolveEngine:
             dt = self.dts[-1]
         self.cur_step += 1
         if dt != 0:
-            ee = self.get_evolve_engine(round(dt,14))
-            self.psi = ee(self.psi)
+            # ============= main =============
+            if self.method[4:7] == 'mul':
+                ee = self.get_evolve_engine(round(dt,14))
+                self.psi = ee(self.psi)
+            else:
+                if self.scale == 1.:
+                    matmul = lambda t, state: self.csr_mt @ state
+                else:
+                    matmul = lambda t, state: -1j * (self.csr_mt @ state)
+                sol = solve_ivp(
+                    matmul, (0, dt), self.psi.flatten(), t_eval=[dt],
+                    method=self.method, rtol=1e-9, atol=1e-12, **self.ivp_kwargs
+                )
+                self.psi = sol.y
+            # ============= end =============
             if self.normalize:
-                self.psi /= _np.linalg.norm(self.psi, ord=2)
+                if self.device == 'cpu':
+                    self.psi /= _np.linalg.norm(self.psi, ord=2)
+                else:
+                    self.psi /= self.tc.linalg.norm(self.psi, ord=2)
             self.evolved_time += dt
         return self.psi
+    
+    def pre_obs(self, obs):
+        if obs is None:
+            return lambda t, state: state
+        elif isinstance(obs, list):
+            if self.device == 'cpu':
+                _obs = lambda t, state: _np.real_if_close([state.conj().reshape(-1) @ (obsmat @ state).reshape(-1) for obsmat in obs])
+            else:
+                from ..torch_utils.linalg.sparse import to_csr
+                import torch as _tc
+                obsmatlist = [to_csr(o, device=self.device, dtype=_tc.complex128) for o in obs]
+                _obs = lambda t, state: [(state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1)).item() 
+                                         for obsmat in obsmatlist]
+            return _obs
+        elif callable(obs):
+            return obs
+        else:
+            raise ValueError("obs should be a list of sparse matrices or a function")
+        
+    def measure(self, obs:list[sps.csr_array]|Callable[[float, _np.ndarray], _np.ndarray]):
+        """calculate the expectation value of the observable
+        
+        Parameters
+        ----------
+        obs : list[sps.csr_array] | Callable[[float, _np.ndarray], _np.ndarray]
+            the observable matrix or a function that takes the time and state as input
+
+        Returns
+        -------
+        _np.ndarray
+            the expectation value of the observable
+        """
+        obs = self.pre_obs(obs)
+        res = []
+        for t in tqdm(self.tlist, ascii=True):
+            state = self.run()
+            res.append(obs(t, state))
+        try:
+            return _np.real_if_close(res)    
+        except:
+            return res
+
+    def plot_measure(self, obs:list[sps.csr_array]|Callable[[float, _np.ndarray], _np.ndarray], ax=None, **kwargs):
+        """dynamic plot the expectation value of the observable
+
+        Parameters
+        ----------
+        obs : list[sps.csr_array] | Callable[[float, _np.ndarray], _np.ndarray]
+            the observable matrix or a function that takes the time and state as input
+        ax : matplotlib.axes.Axes, optional
+            the axes to plot on, by default None
+
+        Returns
+        -------
+        _np.ndarray
+            the expectation value of the observable
+        """
+        import matplotlib.pyplot as plt
+        obs = self.pre_obs(obs)
+        res = None
+
+        # 判断是否在 IPython 环境
+        in_ipython = False
+        try:
+            from IPython import get_ipython
+            in_ipython = get_ipython() is not None
+        except ImportError:
+            in_ipython = False
+
+        if in_ipython:
+            from IPython.display import clear_output, display
+        
+        if ax is None:
+            fig, ax = plt.subplots()
+        
+        for i, t in enumerate(self.tlist):
+            state = self.run()
+            res_t = _np.real_if_close(obs(t, state))
+            if res is None:
+                n = len(res_t)
+                res = _np.full((n, len(self.tlist)), _np.nan, dtype=_np.float64)
+                if n == 1:
+                    line, = ax.plot(self.tlist, res.reshape(-1), **kwargs)
+                    ax.set_xlim(self.tlist[0], self.tlist[-1])
+                else:
+                    img = ax.imshow(res.T, aspect='auto', origin='lower', **kwargs, extent=(0, n, self.tlist[0], self.tlist[-1]))
+                    plt.colorbar(img, ax=ax)
+            res[:, i] = res_t
+            if n == 1:
+                line.set_ydata(res.reshape(-1))
+                # 自动调整 y 轴范围
+                valid = res[0, :i+1]
+                if valid.size > 0:
+                    ymin, ymax = _np.nanmin(valid), _np.nanmax(valid)
+                    if ymin != ymax:
+                        ax.set_ylim(ymin, ymax)
+            else:
+                img.set_data(res.T)
+                # 自动调整色标范围
+                valid = res[:, :i+1]
+                vmin, vmax = _np.nanmin(valid), _np.nanmax(valid)
+                if vmin != vmax:
+                    img.set_clim(vmin, vmax)
+            if in_ipython:
+                clear_output(wait=True)
+                display(plt.gcf())
+            else:
+                plt.pause(0.1)
+        if in_ipython:
+            clear_output(wait=True)
+        else:
+            plt.show()
+        return res
+
 
 # ====================
 #   ED Time Evolution 
@@ -286,10 +498,6 @@ def _in_CPU(
         return eigenstates @ exptimeEpsi.T
 
 # -> GPU
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:  # 类型检查时，导入 torch
-    import torch as _tc
-
 def _in_GPU(
     initial_state: '_tc.Tensor',
     eigenvalues: '_tc.Tensor',
@@ -333,7 +541,7 @@ def _in_GPU(
         time_evolution_states = eigenstates @ exp_timeE_psi.T
         res = time_evolution_states
     
-    return res.cpu().numpy()
+    return res.cpu().numpy()  # 将结果从 GPU 转回 CPU，并转换为 numpy 数组
 
 def get_time_evolution_states_ED(
     initial_state: _np.ndarray,
@@ -370,6 +578,7 @@ def get_time_evolution_states_ED(
         time_states = _in_CPU(initial_state, eigenvalues, eigenstates, times, herm, scale)
     return time_states
 
+
 # =============================================
 # evolve and measure
 # ==============================================
@@ -377,65 +586,85 @@ def evolve_and_measure(
     matrix:sps.csr_array,
     inistate:_np.ndarray,
     tlist:_np.ndarray,
-    measure:list[sps.csr_array] | Callable[[float, _np.ndarray], _np.ndarray],
+    *,
+    measure:list[sps.csr_array] | Callable[[float, _np.ndarray], _np.ndarray] | None = None,
     normalize:bool = False,
     ttype:Literal['real-time', 'imag-time'] = 'real-time',
-    method:Literal['eig', 'gpu_mul', 'cpu_mul'] = 'cpu_mul',
+    method:Literal['eig', 'cpu_mul', 'gpu_mul-cuda:0', 
+                    'linear_operator','RK45', 'RK23', 'DOP853', 'Radau', 
+                    'BDF', 'LSODA']='cpu_mul',
+    traceA = None,
+    dtype = None,
+    herm = False,
+    ivp_kwargs = {}
 ):
     """calculate the measurement values at different time points
 
+    This function is a wrapper for the `EvolveEngine().measure()` but also 
+    integrate the `eig` method.
+    
     Parameters
     ----------
-    matrix : sps.csr_array
+    matrix : sps.csr_array | sps.LinearOperator
         the Hamiltonian matrix
-    inistate : _np.ndarray
+    inistate : numpy.ndarray
         the initial state vector
-    tlist : _np.ndarray
+    tlist : numpy.ndarray
         the time list
-    measure : list[sps.csr_array] | Callable[[_np.ndarray], _np.ndarray]
-        - `measure` is a list of sparse matrices: calculate the measurement values of each
+    measure : list[sps.csr_array] | Callable[[numpy.ndarray], numpy.ndarray] | None, optional
+        which observable to measure, by default None
+        - `list of sparse matrices`: calculate the measurement values of each
             measurement operator at different time points
-        - `measure` is a function: calculate the measurement values of the function at
+        - `function`: calculate the measurement values of the function at
             different time points, reflected in the second and subsequent indices of the
             return value
+        - `None`: return the time evolution state at different time points
     normalize : bool, optional
         if True, normalize the state after each evolution, by default False
-    type : str, optional, by default 'real-time'
+    ttype : str, optional, by default 'real-time'
         - `type='real-time'`: real-time evolution using `exp(-1j * H * t)`
         - `type='imag-time'`: imaginary-time evolution using `exp(H * t)`
     method : str, optional, by default 'auto'
         - `method='eig'`: use the exact diagonalization method to calculate the time evolution
-        - `method='gpu_mul'`: use the GPU method to calculate the time evolution
-        - `method='cpu_mul'`: use the CPU method to calculate the time evolution
+        - `method='cpu_mul'`: use the CPU method to calculate the time evolution. (when matrix is
+        a LinearOperator, the traceA should be passed in)
+        - `method='gpu_mul-cuda:0'`: use the GPU method to calculate the time evolution. (LinearOperator
+        is not supported in this case)
+        - `method='RK45'` ...: use the RK45 ... method to calculate the time evolution, for more
+        information, please refer to the `scipy.integrate.solve_ivp` documentation. check,
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html#scipy.integrate.solve_ivp
+    traceA : float, optional
+        the trace of the matrix, by default None
+        if matrix is a LinearOperator and the method is `cpu_mul`, this parameter is required
+    dtype : numpy.dtype, optional
+        the data type of the matrix, by default None
+        only need to be set when only float is involved
+    herm : bool, optional
+        whether the matrix is hermitian, by default False
+        - if matrix is a LinearOperator, this parameter is required
+        - if matrix is a matrix, this parameter is optional. `herm=True` will accelerate a little bit
+    ivp_kwargs : dict, optional
+        the parameters for the `scipy.integrate.solve_ivp` function, by default {}
 
     Returns
     -------
-    _np.ndarray
+    numpy.ndarray
         return a multi-dimensional array, the first dimension is the time point, and the subsequent dimensions are determined by `measure`
     """
-    assert sps.issparse(matrix), f"matrix should be sparse array not {type(matrix)}"
     if method == 'eig':
-        ###################################################################################
-        # Diagonalize
-        ###################################################################################
+        assert sps.issparse(matrix), f"matrix should be sparse array not {type(matrix)}"
         mat = matrix.toarray()
-        # ----------- main ------------
-        if _np.allclose(mat, mat.T.conj()):
-            engres = _np.linalg.eigh(mat)
-            evalstate = get_time_evolution_states_ED(
-                inistate, *engres, tlist, failback_to_CPU=True, herm=True, ttype=ttype
-            )
-        else:
-            engres = _np.linalg.eig(mat)
-            evalstate = get_time_evolution_states_ED(
-                inistate, *engres, tlist, failback_to_CPU=True, herm=False, ttype=ttype
-            )
+        herm = _np.allclose(mat, mat.T.conj())
+        eigfuc = _np.linalg.eigh if herm else _np.linalg.eig
+        evalstate = get_time_evolution_states_ED(
+                inistate, *eigfuc(mat), tlist, device_name='cpu', herm=herm, ttype=ttype
+        )
         if normalize:
             evalstate /= _np.linalg.norm(evalstate, ord=2, axis=0)
-        # ----------- end main ------------
-        
         from .operations import observe_states
-        if isinstance(measure, list):
+        if measure is None:
+            return evalstate
+        elif isinstance(measure, list):
             return _np.real_if_close([observe_states(evalstate, obs.toarray()) for obs in measure]).T
         else:
             res = [measure(t, evalstate[:, i]) for i,t in enumerate(tlist)]
@@ -444,64 +673,11 @@ def evolve_and_measure(
             except:
                 return res
 
-
-    elif method == 'gpu_mul':
-        ###################################################################################
-        # GPU 
-        ###################################################################################
-        from ..torch_utils.linalg.expm_multiply import EvolveEngine as tcEvolveEngine
-        from ..torch_utils.linalg.sparse import to_csr
-        from ..torch_utils.utils import totc
-        import torch as tc # type: ignore
-        assert tc.cuda.is_available(), "CUDA is not available"
-        device = tc.device('cuda:0')
-        # convert measure to function
-        if isinstance(measure, list):
-            obsmatlist = [to_csr(o, device=device, dtype=tc.complex128) for o in measure]
-            obs = lambda t, state: [(state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1)).item() for obsmat in obsmatlist]
-        else:
-            obs = measure
-
-        # ----------- main ------------
-        hammat0 = to_csr(matrix, device=device)
-        inistate = totc(inistate, device=device)
-        evolve_engine = tcEvolveEngine(hammat0, inistate, ts=tlist, normalize=normalize, ttype=ttype)
-        res = []
-        for t in tqdm(tlist, ascii=True):
-            state = evolve_engine.run()
-            res.append(obs(t, state))
-        # ----------- end main ------------
-        try:
-            return _np.real_if_close(res)    
-        except:
-            return res
-    
-    
-    elif method == 'cpu_mul':
-        ###################################################################################
-        # CPU
-        ###################################################################################
-        # convert measure to function
-        if isinstance(measure, list):
-            obs = lambda t, state: [state.conj().reshape(-1) @ (obsmat @ state).reshape(-1) for obsmat in measure]
-        else:
-            obs = measure
-
-        # ----------- main ------------
-        evolve_engine = EvolveEngine(matrix, inistate, ts=tlist, normalize=normalize, ttype=ttype)
-        res = []
-        for t in tqdm(tlist, ascii=True):
-            state = evolve_engine.run()
-            res.append(obs(t, state))
-        # ----------- end main ------------
-        try:
-            return _np.real_if_close(res)    
-        except:
-            return res
-    
-    else:
-        raise ValueError(f"method should be 'eig' or 'gpu_mul' or 'cpu_mul', not {method}")
-
+    assert sps.issparse(matrix) or isinstance(matrix, LinearOperator), f"matrix should be sparse array not {type(matrix)}"
+    return EvolveEngine(
+        matrix, inistate, ts=tlist, normalize=normalize, ttype=ttype, 
+        traceA=traceA, dtype=dtype, herm=herm, method=method, ivp_kwargs=ivp_kwargs
+    ).measure(measure)
 
 # =============================================
 # chebyshev
@@ -566,6 +742,7 @@ def chebyshev_evolve(mat:_np.ndarray, initstate:_np.ndarray, t:float, max_eng:fl
         finalstate_cheb += 2 * (-1j)**k * jv(k, b*t) * tmp_state1 * _np.exp(-1j*a*t)
     return finalstate_cheb
 
+
 # =============================================
 # Quantum Master Equation
 # ==============================================
@@ -579,6 +756,12 @@ class Liouvillian(LinearOperator):
             \mathcal{L}(\rho) = -i [H, \rho] + \sum_{l} L_l \rho L_l^{\dagger} - \frac{1}{2} \sum_{l} (L_l^{\dagger} L_l \rho + \rho L_l^{\dagger} L_l)
         
         where :math:`H` is the Hamiltonian, :math:`L_l` are the Lindblad operators, and :math:`\rho` is the density matrix.
+
+        Notes
+        -----
+        - The Liouvillian is a linear operator that acts on the density matrix.
+        - The Hamiltonian and Lindblad operators should be given in the sparse matrix format.
+        - The Lindbladian can be sparse or dense, but it is recommended to use sparse matrices for large systems and dense matrices for small systems.
         
         Parameters
         ----------
@@ -589,10 +772,7 @@ class Liouvillian(LinearOperator):
         """
         if ham is not None:
             assert sps.issparse(ham), "ham must be sparse matrix"
-        elif lindblad_ops is not None:
-            for lo in lindblad_ops:
-                assert sps.issparse(lo), "lindblad_ops must be sparse matrix"
-        else:
+        if ham is None and lindblad_ops is None:
             raise ValueError("ham and lindblad_ops cannot be both None")
         
         self.ham = ham
@@ -640,7 +820,11 @@ class Liouvillian(LinearOperator):
         if self.lindblad_ops is None:
             return a
         b = sum(abs(lo.trace())**2 for lo in self.lindblad_ops)
-        return a + b
+        res = a + b
+        if isinstance(res, _np.ndarray):
+            return res.item()
+        else:
+            return res
 
     def __call__(self, rho):
         drho_dt = -1j * (self.ham_eff @ rho - rho @ self.ham_eff.conj().T) 
@@ -692,11 +876,12 @@ class Liouvillian(LinearOperator):
     def evolve_and_measure(
             self,
             inistate:_np.ndarray,
-            tlist:list|_np.ndarray,
+            tlist:list|_np.ndarray|None,
             measure:Callable|_np.ndarray,
-            method:Literal['eig', 'cpu_mul', 'gpu_mul', 'linear_operator',
-                        'RK45', 'RK23', 'DOP853', 'Radau', 'BDF', 'LSODA']='cpu_mul',
-            **kwargs
+            method:Literal['eig', 'cpu_mul', 'gpu_mul-cuda:0', 
+                        'linear_operator','RK45', 'RK23', 'DOP853', 'Radau', 
+                        'BDF', 'LSODA']='cpu_mul',
+            **ivp_kwargs
         ):
         r"""evolve the state and measure the observables
 
@@ -709,15 +894,21 @@ class Liouvillian(LinearOperator):
             initial state
         tlist : list | _np.ndarray
             time list
-        measure : Callable | _np.ndarray
-            - `measure` is a list of sparse matrices: measure the expectation value of each operator at different time points
-            - `measure` is a function: measure the expectation value of the function at different time points, reflected in the second and subsequent indices of the return value
-        method : ['cpu_mul', 'gpu_mul', 'linear_operator', 'RK45', 'RK23', 'DOP853', 'Radau', 'BDF', 'LSODA'], optional
-            the method to use for time evolution
-            - `cpu_mul`, `gpu_mul`: use the matrix multiplication method, fast but memory consuming
+        measure : Callable | _np.ndarray | None
+            - `list of sparse matrices`: calculate the measurement values of each
+            measurement operator at different time points
+            - `function`: calculate the measurement values of the function at
+                different time points, reflected in the second and subsequent indices of the
+                return value
+            - `None`: return the time evolution state at different time points
+        method : str, optional 
+            the method to use for time evolution, by default 'cpu_mul'
+            - `eig` : use the exact diagonalization method
+            - `cpu_mul`, `gpu_mul-cuda:0`: use the matrix multiplication method
             - `linear_operator`: use the linear operator method, slow but memory efficient
             - `RK45`, `RK23`, `DOP853`, `Radau`, `BDF`, `LSODA`: use the scipy ODE solver
-            by default 'cpu_mul'
+            for more information, please refer to the `scipy.integrate.solve_ivp` documentation.
+            https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html#scipy.integrate.solve_ivp
         **kwargs : dict
             additional arguments for the scipy ODE solver
 
@@ -728,65 +919,37 @@ class Liouvillian(LinearOperator):
         """
         d = self.Ns
         tlist = _np.asarray(tlist)
-        if method in ['eig', 'cpu_mul', 'gpu_mul']:
-            if isinstance(measure, list):
-                if method == 'gpu_mul':
-                    # convert measure to function
-                    from ..torch_utils.utils import totc
-                    import torch as tc
-                    measure = totc(measure, device='cuda:0')
-                    obs = lambda t, rho: _np.real_if_close([tc.trace(rho.reshape(d,d) @ n).item() for n in measure])
-                else:
-                    obs = lambda t, state: [_np.trace(obsmat @ state.reshape(d,d)) for obsmat in measure]
-            else:
-                obs = measure
-            return evolve_and_measure(
-                self.to_matrix(), inistate.flatten(), tlist, measure=obs, 
-                method=method, ttype='imag-time', normalize=False
-            )
-        elif method == 'linear_operator':  # linear operator support only cpu
-            # convert measure to function
-            if isinstance(measure, list):
-                obs = lambda t, state: [_np.trace(obsmat @ state) for obsmat in measure]
-            else:
-                obs = measure
-            # ----------- main ------------
-            evolve_engine = EvolveEngine(
-                self, inistate.flatten(), ts=tlist, normalize=False, ttype='imag-time', traceA=self.trace 
-            )
-            res = []
-            for t in tqdm(tlist, ascii=True):
-                state = evolve_engine.run()
-                res.append(obs(t, state.reshape(d,d)))
-            # ----------- end main ------------
-            try:
-                return _np.real_if_close(res)    
-            except:
-                return res
-        else:
-            if isinstance(measure, list):
-                obs = lambda t, state: [_np.trace(obsmat @ state) for obsmat in measure]
-            else:
-                obs = measure
-            from scipy.integrate import solve_ivp
-            t_cur = 0
-            state_cur = inistate.flatten().astype(_np.complex128)
-            res = []
-            for t in tqdm(tlist, ascii=True):
-                sol = solve_ivp(
-                    lambda t, rho: self @ rho, 
-                    (0, t - t_cur), state_cur, t_eval=[t - t_cur],
-                    method=method, rtol=1e-9, atol=1e-12, **kwargs
-                )
-                t_cur = t
-                state_cur = sol.y.flatten()
-                res.append(obs(t, state_cur.reshape(d,d)))
-            try:
-                return _np.real_if_close(res)
-            except:
-                return res
 
-    def steady_state(self, method:Literal['direct'] = 'direct'):
+        if measure is None:
+            measure = lambda t, rho: rho.reshape(d,d)
+        elif isinstance(measure, list):
+            if method[:7] == 'gpu_mul':
+                # convert measure to function
+                from ..torch_utils.utils import totc
+                import torch as tc
+                measure = totc(measure, device=method[8:])
+                obs = lambda t, rho: _np.real_if_close([tc.trace(rho.reshape(d,d) @ n).item() for n in measure])
+            else:
+                obs = lambda t, state: [_np.trace(obsmat @ state.reshape(d,d)) for obsmat in measure]
+        else:
+            obs = measure
+        
+        matmul = self.to_matrix() if method[:7] in ['eig', 'cpu_mul', 'gpu_mul'] else self
+
+        if method == 'linear_operator':
+            traceA = self.trace
+            method = 'cpu_mul'
+        else:
+            traceA = None
+
+        return evolve_and_measure(
+            matmul, inistate.flatten(), tlist, measure=obs, 
+            normalize=False, ttype='imag-time', method=method, 
+            traceA=traceA, herm=False, ivp_kwargs=ivp_kwargs
+        )
+        
+
+    def steady_state(self, method:Literal['direct', 'eig', 'svd'] = 'direct'):
         if method == 'direct':
             # Find the weight, to stable the iteration
             L_mat = self.to_matrix()
@@ -825,6 +988,8 @@ class Liouvillian(LinearOperator):
             u, s, v = svds(L_mat, k=1, which='SM')
             rho = v.reshape(n, n)
             return rho / rho.trace()
+        else:
+            raise ValueError("method should be 'direct' or 'eig' or 'svd'")
 
     def trajectory_measure(
         self, 
@@ -835,7 +1000,9 @@ class Liouvillian(LinearOperator):
                     'RK45', 'RK23', 'DOP853', 'Radau', 'BDF', 'LSODA']='cpu_mul',
         **kwargs
     ):
-        # todo
+        for t in tqdm(tlist, ascii=True):
+
+            pass
         # it should look like,
         
         # def integrate(self, t, copy=False):
@@ -861,4 +1028,3 @@ class Liouvillian(LinearOperator):
         #         yield self.integrate(t, False)
     
         # reference https://qutip.org/docs/4.7/guide/dynamics/dynamics-monte.html
-        pass

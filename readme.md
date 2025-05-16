@@ -167,34 +167,37 @@ array([[ 0.25,  0.5 ,  0.  ,  0.  ,  0.  ,  0.  ],
 一个计算实例(薛定谔方程演化)：
 
 ```python
-L = 10
+import quante as qt
+import numpy as np
+op = qt.generate.operas
 
-# Model
+L = 10
+basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)
+
 J, γ = 1., 0.
 builder = op.SpinBuilder()
 for l in range(L-1):
     builder += '+-', [l+1, l], 1/2 * (J + γ),
     builder += '+-', [l, l+1], 1/2 * (J - γ),
 ham = builder.build()
+hammat = ham.to_matrix(basis=basis, sparse=True)
 
-init_state = qt.generate.state.neel(L=L, down_first=True, basis=basis)
 tlist = np.linspace(0, 10, 200)
-obsoper = [op.z(i) for i in range(L)]
-basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)
+init_state = qt.generate.state.neel(L=L, down_first=True, Nup=L//2)
+obsoper = [op.z(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
 
-res = ham.evolve_and_measure(init_state, tlist, obsoper, basis=basis)
-res
+res = qt.linalg.evolve_and_measure(hammat, init_state, tlist, obsoper)
 ```
 
 ```
-100%|##########| 200/200 [00:00<00:00, 920.82it/s]
+100%|##########| 200/200 [00:00<00:00, 672.05it/s]
 array([[-0.5       ,  0.5       , -0.5       , ...,  0.5       , -0.5       ,  0.5       ],
        [-0.49936897,  0.49873807, -0.4987382 , ...,  0.4987382 , -0.49873807,  0.49936897],
        [-0.49747906,  0.49496024, -0.49496236, ...,  0.49496236, -0.49496024,  0.49747906],
        ...,
-       [-0.00164115,  0.01196164, -0.04432084, ...,  0.04432084, -0.01196164,  0.00164115],
-       [-0.00250574,  0.01519794, -0.05022599, ...,  0.05022599, -0.01519794,  0.00250574],
-       [-0.00333199,  0.01823717, -0.0555555 , ...,  0.0555555 , -0.01823717,  0.00333199]])
+       [ 0.14443265,  0.07763028,  0.10006989, ..., -0.10006989, -0.07763028, -0.14443265],
+       [ 0.15040737,  0.07828669,  0.09211759, ..., -0.09211759, -0.07828669, -0.15040737],
+       [ 0.15657966,  0.07840081,  0.08461557, ..., -0.08461557, -0.07840081, -0.15657966]])
 ```
 
 如果需要手动调优，可以参考 `examples/evolve.ipynb` 中的例子。

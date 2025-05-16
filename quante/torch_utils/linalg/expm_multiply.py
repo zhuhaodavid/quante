@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-14 22:52:30
+# @Last Modified time: 2025-05-16 19:14:40
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -19,7 +19,7 @@ from .sparse import trace, norm, eye
 from typing import Union
 from functools import lru_cache
 
-__all__ = ['expm_multiply', 'EvolveEngine', 'expm']
+__all__ = ['expm_multiply', 'expm']
 
 def expm(A:tc.Tensor, c: Union[float, complex] = 1.0) -> tc.Tensor:
     """Exponential Matrix, Hermitian matrix can be accelerated
@@ -121,40 +121,40 @@ def evolve_engine(A:tc.Tensor, scale=1., n0=1, herm=False):
     return _engine
     
 
-class EvolveEngine:
-    def __init__(self, ham, init_state, ts, normalize=False, ttype='real-time'):
-        if init_state.ndim == 1:
-            self.psi = init_state.reshape(-1, 1).to(dtype=tc.complex128)
-        else:
-            self.psi = init_state.to(dtype=tc.complex128)
-        self.csr_mt = ham
-        self.dts = np.diff(ts)
-        self.dts = np.insert(self.dts, 0, ts[0])
-        self.evolved_time = 0
-        self.cur_step = 0
-        self.normalize = normalize
-        self.scale = -1j if ttype == 'real-time' else 1.0
+# class EvolveEngine:
+#     def __init__(self, ham, init_state, ts, normalize=False, ttype='real-time'):
+#         if init_state.ndim == 1:
+#             self.psi = init_state.reshape(-1, 1).to(dtype=tc.complex128)
+#         else:
+#             self.psi = init_state.to(dtype=tc.complex128)
+#         self.csr_mt = ham
+#         self.dts = np.diff(ts)
+#         self.dts = np.insert(self.dts, 0, ts[0])
+#         self.evolved_time = 0
+#         self.cur_step = 0
+#         self.normalize = normalize
+#         self.scale = -1j if ttype == 'real-time' else 1.0
     
-    @lru_cache(maxsize=None)
-    def get_evolve_engine(self, dt):
-        return evolve_engine(dt * self.csr_mt, scale=self.scale)
+#     @lru_cache(maxsize=None)
+#     def get_evolve_engine(self, dt):
+#         return evolve_engine(dt * self.csr_mt, scale=self.scale)
 
-    def run(self):
-        try:
-            dt = self.dts[self.cur_step]
-        except:
-            warn(
-                f"t {self.evolved_time} has been reached, dt = {self.dts[-1]} will be used"
-            )
-            dt = self.dts[-1]
-        self.cur_step += 1
-        if dt != 0:
-            ee = self.get_evolve_engine(round(dt,14))
-            self.psi = ee(self.psi)
-            if self.normalize:
-                self.psi /= tc.norm(self.psi, dim=0, keepdim=True)
-            self.evolved_time += dt
-        return self.psi
+#     def run(self):
+#         try:
+#             dt = self.dts[self.cur_step]
+#         except:
+#             warn(
+#                 f"t {self.evolved_time} has been reached, dt = {self.dts[-1]} will be used"
+#             )
+#             dt = self.dts[-1]
+#         self.cur_step += 1
+#         if dt != 0:
+#             ee = self.get_evolve_engine(round(dt,14))
+#             self.psi = ee(self.psi)
+#             if self.normalize:
+#                 self.psi /= tc.norm(self.psi, dim=0, keepdim=True)
+#             self.evolved_time += dt
+#         return self.psi
             
 
 
