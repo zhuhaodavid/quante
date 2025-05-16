@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-16 22:46:07
+# # @Last Modified time: 2025-05-16 23:04:56
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -255,6 +255,9 @@ class EvolveEngine:
             - if matrix is a LinearOperator, this parameter is required
             - if matrix is a matrix, this parameter is optional. `herm=True` will accelerate a little bit
         method : str, optional
+            All these methods are available when `matrix` is a sparse matrix. All these 
+            methods except `gpu_mul-cuda:0` is avidable when `matrix` is 
+            a LinearOperator.
             - `method='cpu_mul'`: use the CPU method to calculate the time evolution. (when matrix is
             a LinearOperator, the traceA should be passed in)
             - `method='gpu_mul-cuda:0'`: use the GPU method to calculate the time evolution. (LinearOperator
@@ -583,7 +586,7 @@ def get_time_evolution_states_ED(
 # evolve and measure
 # ==============================================
 def evolve_and_measure(
-    matrix:sps.csr_array,
+    matrix:sps.csr_array | LinearOperator,
     inistate:_np.ndarray,
     tlist:_np.ndarray,
     *,
@@ -591,7 +594,7 @@ def evolve_and_measure(
     normalize:bool = False,
     ttype:Literal['real-time', 'imag-time'] = 'real-time',
     method:Literal['eig', 'cpu_mul', 'gpu_mul-cuda:0', 
-                    'linear_operator','RK45', 'RK23', 'DOP853', 'Radau', 
+                    'RK45', 'RK23', 'DOP853', 'Radau', 
                     'BDF', 'LSODA']='cpu_mul',
     traceA = None,
     dtype = None,
@@ -625,6 +628,8 @@ def evolve_and_measure(
         - `type='real-time'`: real-time evolution using `exp(-1j * H * t)`
         - `type='imag-time'`: imaginary-time evolution using `exp(H * t)`
     method : str, optional, by default 'auto'
+        All these methods are available when `matrix` is a sparse matrix. All these methods  
+        except `eig` and `gpu_mul-cuda:0` is avidable when `matrix` is a LinearOperator.
         - `method='eig'`: use the exact diagonalization method to calculate the time evolution
         - `method='cpu_mul'`: use the CPU method to calculate the time evolution. (when matrix is
         a LinearOperator, the traceA should be passed in)
