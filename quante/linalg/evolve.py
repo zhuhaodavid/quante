@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-16 23:08:22
+# # @Last Modified time: 2025-05-16 23:15:13
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -429,7 +429,10 @@ class EvolveEngine:
             state = self.run()
             res_t = _np.real_if_close(obs(t, state))
             if res is None:
-                n = len(res_t)
+                try:
+                    n = len(res_t)
+                except TypeError:
+                    n = 1
                 res = _np.full((n, len(self.tlist)), _np.nan, dtype=_np.float64)
                 if n == 1:
                     line, = ax.plot(self.tlist, res.reshape(-1), **kwargs)
