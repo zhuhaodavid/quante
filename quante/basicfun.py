@@ -1033,6 +1033,7 @@ def _get_data_location(f: _h5py.File | _h5py.Group, name: str) -> _h5py.Group:
     try:
         return f[name]
     except:
+        print(f, name)
         res = []
         names = name.split("/")
         eachname = name

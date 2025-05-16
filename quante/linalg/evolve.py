@@ -2,11 +2,11 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-14 22:54:08
+# # @Last Modified time: 2025-05-16 12:48:45
 
 from scipy import sparse as sps
 from scipy.special import jv
-from scipy.sparse.linalg import LinearOperator, expm_multiply
+from scipy.sparse.linalg import LinearOperator, expm_multiply, spsolve, eigsh, svds
 
 import numpy as _np
 import warnings as _warnings
@@ -14,8 +14,6 @@ from typing import Callable, Union, Literal
 from functools import lru_cache
 from typing import Literal
 from tqdm import tqdm
-
-
 
 __all__ = [
     "expm_multiply",
@@ -25,41 +23,88 @@ __all__ = [
     "evolve_and_measure",
     "Liouvillian"
 ]
+ 
+def expm_multiply(
+    mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]],
+    psi0:_np.ndarray,
+    *, 
+    ttype:Literal['real-time', 'imag-time']='imag-time', 
+    start:None|float=None, 
+    stop:None|float=None, 
+    num:None|int=None, 
+    endpoint:None|bool=None, 
+    traceA:None|float=None, 
+    herm:bool=False, 
+    device:str|None=None
+) -> _np.ndarray:
+    """calculate `exp(mat) @ psi0` or `exp(- 1j * mat) @ psi0`
 
-def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], psi0:_np.ndarray, scale=1.0, *, start=None, stop=None, num=None, endpoint=None, traceA=None, herm=False, device=None) -> _np.ndarray:
-    """
-    计算 `exp(matvec).dot(psi0)` 或 `exp(- 1j * matvec).dot(psi0)`
-    
-    (分别通过 `scale=1.` 和 `scale=-1.j` 来实现。)
-    
-    matvec 可以是：
-    
-    - 函数：
-        此时需要给定 `herm` 参数，`herm=True`，表示 `matvec` 是厄密算符，那么 `rmatvec = matvec`
-        如果不是厄密算符，那么就需要用 `herm` 传入伴随算符，`rmatvec = herm`
-        同时需要传入 `traceA`（`matvec` 的迹），否则内部会估计，影响结果精确度。
-        
-    - 矩阵（ `numpy` 或 `scipy.sparse` 格式，不能是 `torch` 格式）：
-        支持稀疏矩阵和密集矩阵，此时通过 `scale=-1.j` 可以在 `matvec` 是实矩阵的时候节约内存，同时加快计算。
-        此时如果指定 `herm=True`，可以稍微加快计算。
-    
-    `usecuda=True` 表示使用 torch GPU 加速计算，否则使用 CPU numpy 并行计算。或者使用 `torch_utils.linalg.expm_multiply` 函数。
-    
-    `start` `stop` `endpoint` 与 numpy.linspace 的参数兼容
-    
+    Parameters
+    ----------
+    mat : Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]]
+        can be a matrix or a function
+        - if mat is a matrix, it should be a numpy.ndarray or scipy.sparse matrix. By 
+        setting ttype='real-time', and `herm=True`, the efficiency can be improved.
+        - if mat is a function, it should be a function that takes a numpy.ndarray 
+        as input and returns a numpy.ndarray. In this case, the right multiplication
+        should be provided by the `herm` parameter. If `herm=True`, it means that the
+        function is hermitian, then `rmatvec = matvec`. If it is not hermitian, then
+        the adjoint operator should be passed in with `herm`, `rmatvec = herm`. In this
+        case, the traceA (the trace of matvec) should be passed in, otherwise it will
+        be estimated internally, which will affect the accuracy of the result.
+    psi0 : _np.ndarray
+        the initial state vector
+    ttype : Literal['real-time', 'imag-time'], optional
+        evolve type, by default 'real-time'
+        - `ttype='real-time'`: real-time evolution using `exp(- 1j * H * t)`
+        - `ttype='imag-time'`: imaginary-time evolution using `exp(H * t)`
+    start : None | float, optional
+        the start time, by default None
+    stop : None | float, optional
+        the stop time, by default None
+    num : None | int, optional
+        the number of time points, by default None
+    endpoint : None | bool, optional
+        whether to include the stop time, by default None
+    traceA : None | float, optional
+        the trace of matvec, by default None
+        if mat is a function, this parameter is required
+        if mat is a matrix, this parameter is optional
+    herm : bool, optional
+        whether mat is hermitian, by default False
+        - if mat is a function, this parameter is required. If `herm=True`,
+        it means that the function is hermitian, then `rmatvec = matvec`.
+        If it is not hermitian, then the adjoint operator should be passed in
+        with `herm`, `rmatvec = herm`.
+        - if mat is a matrix, this parameter is optional
+    device : str | None, optional
+        the device to use, by default None
+        - if device is None, use numpy-CPU
+        - if device is 'cuda', use torch-GPU
+        - if device is 'cpu', use torch-CPU
+
+    Returns
+    -------
+    _np.ndarray
+        the final state vector after evolution
+        the shape of the output array can be 1, 2 or 3.
+        - if calculating the action of expm on a single vector at a single time point,
+          `ndim` will be 1.
+        - if calculating the action of expm on a vector at multiple time points, or
+          calculating the action of expm on a matrix at a single time point, `ndim` will be 2.
+        - if calculating the action of expm on a matrix with multiple columns at multiple
+          time points, `ndim` will be 3.
+
     Notes
     ------
-    `num` 在比较小的时候，与逐步迭代的效果相同
-    `num` 在比较大的时候，会使用不同的算符，当 `num` 取某些特定值 `n*s+1`（`n`是整数，`s` 是取决于矩阵模的整数的时候），效率会有一些降低，此时会给出警告，不影响结果。可以通过稍微改变 `num` 提高效率
-    
-    输出 ndarray `expm_A_B` 的形状可以是 1、2 或 3。
+    When `num` is small, the effect is similar to stepwise iteration.
+    When `num` is large, different operators will be used. When `num` takes certain
+    specific values `n*s+1` (where `n` is an integer and `s` is an integer depending
+    on the matrix modulus), the efficiency will be slightly reduced, and a warning
+    will be given, but it will not affect the result. The efficiency can be improved
+    by slightly changing `num`.
 
-    - 如果在单个时间点上计算 expm 对单个向量的作用，`ndim` 将是 `1`。
-    - 如果在多个时间点上计算 expm 对向量的作用，或者在单个时间点上计算 expm 对矩阵的作用，`ndim` 将是 `2`。
-    - 如果在多个时间点上对具有多列的矩阵进行作用，`ndim` 将是 `3`。
-    
-    如果计算多个时间点，expm_A_B[0] 将始终是 expm 在第一个时间点上的作用，无论作用是对向量还是矩阵。
-        
+       
     References
     ----------
     - scipy https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.expm_multiply.html
@@ -83,13 +128,19 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
     >>> L = 10
     >>> mat = qt.generate.matrix.heisenberg_matrix(L)
     >>> state = qt.generate.state.random(mat.shape[0], seed=42)
-    >>> res = qt.linalg.expm_multiply(mat, state, -1.j, start=0, stop=10, num=100)
+    >>> res = qt.linalg.expm_multiply(mat, state)
     >>> res.shape
     (100, 1024, 1)
     
-    更详细的Example，可以参考 example 文件夹下的 `evolve.ipynb` 文件。
+    For more detailed examples, please refer to the `evolve.ipynb` file in the example folder.
     """
-    assert scale == 1.0 or scale == - 1j, "only scale=1.0 or scale=-1j is supported for now"
+   
+    if ttype == 'real-time':
+        scale = -1j
+    elif ttype == 'imag-time':
+        scale = 1.0
+    else:
+        raise ValueError("ttype should be 'real-time' or 'imag-time'")
     
     if device is not None:
         assert isinstance(mat, (_np.ndarray, sps.spmatrix, sps.sparray)), "cuda only support numpy.ndarray or scipy.sparse matrix"
@@ -151,20 +202,11 @@ def expm_multiply(mat:Union[_np.ndarray, Callable[[_np.ndarray], _np.ndarray]], 
     from .usenumba.expm_multiply_numba import _expm_multiply_numba
     return _expm_multiply_numba(lo, psi0, scale=scale, start=start, stop=stop, num=num, endpoint=endpoint, traceA=traceA)
     
-
 class EvolveEngine:
     """            
-    >>> hammat = self.to_matrix(basis, pauli=pauli, sparse=True)
-    >>> evolve_engine = EvolveEngine(hammat, inistate, ts=tlist)
-    >>> obsmatlist = [obs.to_matrix(basis, pauli=pauli, sparse=True) for obs in obslist]
-    >>> res = [[]*len(obslist)]
-    >>> for _ in tlist:
-    >>>     evolve_engine.run()
-    >>>     state = evolve_engine.psi
-    >>>     for i in range(len(obslist)):
-    >>>         value = state.conj().reshape(1,-1) @ (obsmatlist[i] @ state)
-    >>>         res[i].append(value[0,0])
-    >>> return [np.real_if_close(r) for r in res]
+    This class make use of the `expm_multiply` function to evolve the state vector.
+    The precalculation will be done in the constructor here, which will speed up the
+    calculation of the time evolution.
     """
     def __init__(self, ham, init_state, ts, normalize=False, ttype='real-time', traceA=None):
         if init_state.ndim == 1:
@@ -207,8 +249,7 @@ class EvolveEngine:
                 self.psi /= _np.linalg.norm(self.psi, ord=2)
             self.evolved_time += dt
         return self.psi
-            
-            
+
 # ====================
 #   ED Time Evolution 
 # ======================
@@ -354,42 +395,42 @@ def evolve_and_measure(
     matrix:sps.csr_array,
     inistate:_np.ndarray,
     tlist:_np.ndarray,
-    measure:list[sps.csr_array] | Callable[[_np.ndarray], _np.ndarray],
+    measure:list[sps.csr_array] | Callable[[float, _np.ndarray], _np.ndarray],
     normalize:bool = False,
     ttype:Literal['real-time', 'imag-time'] = 'real-time',
     method:Literal['auto', 'eig', 'gpu_mul', 'cpu_mul'] = 'auto',
 ):
-    """计算在不同时间点的测量值
+    """calculate the measurement values at different time points
 
     Parameters
     ----------
     matrix : sps.csr_array
-        要求解的哈密顿量矩阵
+        the Hamiltonian matrix
     inistate : _np.ndarray
-        初始量子态（向量）
+        the initial state vector
     tlist : _np.ndarray
-        时间列表
+        the time list
     measure : list[sps.csr_array] | Callable[[_np.ndarray], _np.ndarray]
-        - `measure` 是稀疏矩阵列表：计算每个测量算符在不同时间点的测量值
-        - `measure` 是函数：计算函数在不同时间点的测量值，体现在返回值的第二及之后的指标上
+        - `measure` is a list of sparse matrices: calculate the measurement values of each
+            measurement operator at different time points
+        - `measure` is a function: calculate the measurement values of the function at
+            different time points, reflected in the second and subsequent indices of the
+            return value
     normalize : bool, optional
-        是否在每次演化之后进行归一化, by default False
-    type : str, optional
-        根据 `type` 选择实时间演化和虚时间演化：
-        - `type='real-time'`: 实时间演化使用 `exp(-1j * H * t)`
-        - `type='imag-time'`: 虚时间演化使用 `exp(H * t)`
-        by default 'real-time'
-    method : str, optional
-        - `method='auto'`: 自动选择计算方法，首先尝试调用 GPU 方法，如果失败则使用 CPU 方法
-        - `method='eig'`: 使用严格对角化方法计算时间演化，只能处理厄密矩阵、时间演化
-        - `method='gpu_mul'`: 使用 GPU 方法计算时间演化
-        - `method='cpu_mul'`: 使用 CPU 方法计算时间演化
-        by default 'auto'
+        if True, normalize the state after each evolution, by default False
+    type : str, optional, by default 'real-time'
+        - `type='real-time'`: real-time evolution using `exp(-1j * H * t)`
+        - `type='imag-time'`: imaginary-time evolution using `exp(H * t)`
+    method : str, optional, by default 'auto'
+        - `method='eig'`: use the exact diagonalization method to calculate the time evolution
+        - `method='gpu_mul'`: use the GPU method to calculate the time evolution
+        - `method='cpu_mul'`: use the CPU method to calculate the time evolution
+        - `method='auto'`: automatically select the calculation method, first try to call the GPU method, if it fails, use the CPU method
 
     Returns
     -------
     _np.ndarray
-        返回一个多维数组，第一维是时间点，之后的维数含义由 `measure` 决定
+        return a multi-dimensional array, the first dimension is the time point, and the subsequent dimensions are determined by `measure`
     """
     assert sps.issparse(matrix), f"matrix should be sparse array not {type(matrix)}"
     assert method in ['auto', 'eig', 'gpu_mul', 'cpu_mul'], f"method should be one of ['auto', 'eig', 'gpu_mul', 'cpu_mul'] not {method}"
@@ -411,7 +452,7 @@ def evolve_and_measure(
             if isinstance(measure, list):
                 return _np.real_if_close([observe_states(evalstate, obs.toarray()) for obs in measure]).T
             else:
-                return _np.real_if_close([measure(evalstate[:, i]) for i in range(len(tlist))])
+                return _np.real_if_close([measure(t, evalstate[:, i]) for i, t in enumerate(tlist)])
         else:
             raise ValueError("matrix should be hermitian, try method = 'gpu_mul' or 'cpu_mul'")
     try:
@@ -429,7 +470,7 @@ def evolve_and_measure(
             # convert measure to function
             if isinstance(measure, list):
                 obsmatlist = [to_csr(o, device=device, dtype=tc.complex128) for o in measure]
-                obs = lambda state: [(state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1)).item() for obsmat in obsmatlist]
+                obs = lambda t, state: [(state.conj().reshape(1,-1) @ (obsmat @ state).reshape(-1,1)).item() for obsmat in obsmatlist]
             else:
                 obs = measure
 
@@ -438,9 +479,9 @@ def evolve_and_measure(
             inistate = totc(inistate, device=device)
             evolve_engine = tcEvolveEngine(hammat0, inistate, ts=tlist, normalize=normalize, ttype=ttype)
             res = []
-            for _ in tqdm(tlist, ascii=True):
+            for t in tqdm(tlist, ascii=True):
                 state = evolve_engine.run()
-                res.append(obs(state))
+                res.append(obs(t, state))
             # ----------- end main ------------
 
             return _np.real_if_close(res)
@@ -456,16 +497,16 @@ def evolve_and_measure(
         from tqdm import tqdm
         # convert measure to function
         if isinstance(measure, list):
-            obs = lambda state: [state.conj().reshape(-1) @ (obsmat @ state).reshape(-1) for obsmat in measure]
+            obs = lambda t, state: [state.conj().reshape(-1) @ (obsmat @ state).reshape(-1) for obsmat in measure]
         else:
             obs = measure
 
         # ----------- main ------------
         evolve_engine = EvolveEngine(matrix, inistate, ts=tlist, normalize=normalize, ttype=ttype)
         res = []
-        for _ in tqdm(tlist, ascii=True):
+        for t in tqdm(tlist, ascii=True):
             state = evolve_engine.run()
-            res.append(obs(state))
+            res.append(obs(t, state))
         # ----------- end main ------------
 
         return _np.real_if_close(res)    
@@ -505,11 +546,12 @@ def chebyshev_evolve(mat:_np.ndarray, initstate:_np.ndarray, t:float, max_eng:fl
     
     Notes
     -----
-    这是一个 Chebyshev 的原理验证函数。
-    如果需要加速，可以考虑将 mat @ xxx 改为使用 gpu torch 来加速。
-    对于更大规模的计算，需要考虑使用 petsc，相关的 c++ 程序见 https://github.com/Phyzch/Chebyshev_method
-    参数选择时，需要让 (max_eng - min_eng) * t ~ O(1)
-    
+    This is a Chebyshev polynomial expansion method for time evolution.
+    If you need to speed up, consider using gpu torch for mat @ xxx.
+    For larger scale calculations, consider using petsc, related c++ program see
+    https://github.com/Phyzch/Chebyshev_method
+    When choosing parameters, let (max_eng - min_eng) * t ~ O(1)
+      
     Example
     -------
     >>> L, t, N = 5, 1., 10
@@ -655,12 +697,12 @@ class Liouvillian(LinearOperator):
             if isinstance(measure, list):
                 if method == 'cpu_mul':
                     # convert measure to function
-                    obs = lambda state: [_np.trace(obsmat @ state.reshape(d,d)) for obsmat in measure]
+                    obs = lambda t, state: [_np.trace(obsmat @ state.reshape(d,d)) for obsmat in measure]
                 else:
                     from ..torch_utils.utils import totc
                     import torch as tc
                     measure = totc(measure, device='cuda')
-                    obs = lambda rho: _np.real_if_close([tc.trace(rho.reshape(d,d) @ n).item() for n in measure])
+                    obs = lambda t, rho: _np.real_if_close([tc.trace(rho.reshape(d,d) @ n).item() for n in measure])
             else:
                 obs = measure
             return evolve_and_measure(
@@ -670,7 +712,7 @@ class Liouvillian(LinearOperator):
         elif method == 'linear_operator':  # linear operator support only cpu
             # convert measure to function
             if isinstance(measure, list):
-                obs = lambda state: [_np.trace(obsmat @ state) for obsmat in measure]
+                obs = lambda t, state: [_np.trace(obsmat @ state) for obsmat in measure]
             else:
                 obs = measure
             # ----------- main ------------
@@ -678,14 +720,14 @@ class Liouvillian(LinearOperator):
                 self, inistate.flatten(), ts=tlist, normalize=False, ttype='imag-time', traceA=self.trace 
             )
             res = []
-            for _ in tqdm(tlist, ascii=True):
+            for t in tqdm(tlist, ascii=True):
                 state = evolve_engine.run()
-                res.append(obs(state.reshape(d,d)))
+                res.append(obs(t, state.reshape(d,d)))
             # ----------- end main ------------
             return _np.real_if_close(res)    
         else:
             if isinstance(measure, list):
-                obs = lambda state: [_np.trace(obsmat @ state) for obsmat in measure]
+                obs = lambda t, state: [_np.trace(obsmat @ state) for obsmat in measure]
             else:
                 obs = measure
             from scipy.integrate import solve_ivp
@@ -700,9 +742,56 @@ class Liouvillian(LinearOperator):
                 )
                 t_cur = t
                 state_cur = sol.y.flatten()
-                res.append(obs(state_cur.reshape(d,d)))
+                res.append(obs(t, state_cur.reshape(d,d)))
             return _np.real_if_close(res)
 
+    def steady_state(self, method:Literal['direct'] = 'direct'):
+        if method == 'direct':
+            # Find the weight, to stable the iteration
+            L_mat = self.to_matrix()
+            weight = _np.mean(abs(L_mat.data))
 
+            # add normalization constraint by adding a row of vec(weight*I)
+            n = self.Ns
+            N = n * n
+            # Create an n x n sparse matrix with the first row as (weight * I).reshape(1, -1), others are zeros
+            eye_row = sps.lil_array((N, N))
+            eye_row[0, :] = (sps.eye(n, format='lil') * weight).reshape(1, -1)
+            L_mat_aug = L_mat + eye_row.tocsr()
 
+            # initial guess
+            x0 = _np.zeros((N, 1), dtype=_np.complex128)
+            x0[0, 0] = weight
 
+            out = spsolve(L_mat_aug, x0)
+            return out.reshape(n, n)
+        elif method == 'eig':
+            L = self.to_matrix()
+            n = self.Ns
+            N = n * n
+            # from .usenumba.operations_numba import dot_parallel
+            def LdagL_matvec(x):
+                # return dot_parallel(L.conj().T, dot_parallel(L, x))
+                return L.conj().T @ (L @ x)
+            linop = LinearOperator((N, N), matvec=LdagL_matvec, dtype=_np.complex128)
+            val, vec = eigsh(linop, k=1, which='SM')
+            rho = vec.reshape(self.Ns, self.Ns)
+            return rho / _np.trace(rho)
+        elif method == 'svd':
+            n = self.Ns
+            N = n * n
+            L_mat = self.to_matrix()
+            u, s, v = svds(L_mat, k=1, which='SM')
+            rho = v.reshape(n, n)
+            return rho / rho.trace()
+
+    def trajectory_measure(
+        self, 
+        inistate:_np.ndarray, 
+        tlist:list|_np.ndarray, 
+        measure:Callable|_np.ndarray,
+        method:Literal['cpu_mul', 'gpu_mul', 'linear_operator',
+                    'RK45', 'RK23', 'DOP853', 'Radau', 'BDF', 'LSODA']='cpu_mul',
+        **kwargs
+    ):
+        pass
