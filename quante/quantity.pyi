@@ -1,10 +1,16 @@
 import numpy as _np
 import scipy.sparse as sps
 from _typeshed import Incomplete
+from typing import TYPE_CHECKING, overload
+if TYPE_CHECKING:
+    import torch
 
 __all__ = ['entanglement_spectrum', 'entropy', 'entropy_page', 'cg_coef', 'mean_level_spacing', 'plot_energy_density', 'plot_energy_hist', 'plot_level_spacing_distribution']
 
+@overload
 def expect(mat:_np.ndarray|sps.sparray, state:_np.ndarray, isdm=False) -> _np.ndarray: ...
+@overload
+def expect(mat:'torch.Tensor', state:'torch.Tensor', isdm=False) -> _np.ndarray: ...
 def entanglement_spectrum(state:_np.ndarray, L:int, left_number:int, basis=None) -> _np.ndarray: ...
 def entanglement_entropy(state:_np.ndarray, L:int, left_number:int, basis=None) -> float: ...
 def entropy(a, rank: Incomplete | None = None, base=...) -> _np.float64: ...

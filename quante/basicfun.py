@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-27 15:53:04
+# @Last Modified time: 2025-05-17 13:29:30
 
 import gc as _gc
 import os as _os
@@ -1467,3 +1467,112 @@ def send_email(subject: str, body: str, to_email: str, from_email: str, smtp_ser
     except Exception as e:
         print("发送邮件时发生错误：")
         traceback.print_exc()
+
+
+class DynamicPlot:
+    def __init__(self, tlist, *args, ax=None, **kwargs):
+        """dynamic plot class
+
+        Parameters
+        ----------
+        tlist : list
+            the list of time
+        ax : matplotlib.axes.Axes | None, optional
+            the axes to plot on, by default None
+        kwargs : dict, optional
+            additional keyword arguments for plotting, by default {}
+
+        Example
+        -------
+        >>> try:
+        >>>     with DynamicPlot(engine.tlist, ax=ax) as dp:
+        >>>         for i, t in enumerate(engine.tlist):
+        >>>             state = engine.run()
+        >>>             res_t = _np.real_if_close(obs(t, state))
+        >>>             res = dp.update(res, res_t, i)
+        >>> except Exception as e:
+        >>>     _warnings.warn(f"DynamicPlot error: {e}")
+        """
+        import matplotlib.pyplot as plt
+        if ax is not None and not isinstance(ax, plt.Axes):
+            raise TypeError("The 'ax' parameter must be a matplotlib Axes object or None.")
+        import matplotlib.pyplot as plt
+        self.pkg = plt
+
+        self.tlist = tlist
+        if ax is None:
+            fig, ax = plt.subplots()
+        self.ax = ax
+
+        in_ipython = False
+        try:
+            from IPython import get_ipython
+            in_ipython = get_ipython() is not None
+        except ImportError:
+            in_ipython = False
+        if in_ipython:
+            from IPython.display import clear_output, display
+            self.clear_output = clear_output
+            self.display = display
+        self.in_ipython = in_ipython
+
+        self.args = args
+        self.kwargs = kwargs
+        
+    def __enter__(self):
+        return self
+
+    def update(self, res, res_t, i):
+        ax = self.ax
+        plt = self.pkg
+
+        if res is None:
+            try:
+                n = len(res_t)
+            except TypeError:
+                n = 1
+            res = _np.full((n, len(self.tlist)), _np.nan, dtype=_np.float64)
+            if n == 1:
+                line, = ax.plot(self.tlist, res.reshape(-1), *self.args, **self.kwargs)
+                ax.set_xlim(self.tlist[0], self.tlist[-1])
+            else:
+                img = ax.imshow(res.T, *self.args, aspect='auto', origin='lower', **self.kwargs, extent=(0, n, self.tlist[0], self.tlist[-1]))
+                plt.colorbar(img, ax=ax)
+        else:
+            n = res.shape[0]
+            if n == 1:
+                line = ax.lines[0]
+            else:
+                img = ax.images[0]
+        res[:, i] = res_t
+        if n == 1:
+            line.set_ydata(res.reshape(-1))
+            # 自动调整 y 轴范围
+            valid = res[0, :i+1]
+            if valid.size > 0:
+                ymin, ymax = _np.nanmin(valid), _np.nanmax(valid)
+                if ymin != ymax:
+                    ax.set_ylim(ymin, ymax)
+        else:
+            img.set_data(res.T)
+            # 自动调整色标范围
+            valid = res[:, :i+1]
+            vmin, vmax = _np.nanmin(valid), _np.nanmax(valid)
+            if vmin != vmax:
+                img.set_clim(vmin, vmax)
+        if self.in_ipython:
+            self.clear_output(wait=True)
+            self.display(plt.gcf())
+        else:
+            plt.pause(0.1)
+        return res
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.in_ipython:
+            self.clear_output(wait=True)
+        else:
+            self.pkg.show()
+        
+        if exc_type is not None:  # 检查是否发生错误
+            _traceback.print_exc()  # 打印堆栈跟踪
+

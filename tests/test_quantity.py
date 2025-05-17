@@ -2,19 +2,33 @@
 # @Author: hzhu
 # @Date:   2025-05-16 23:25:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-16 23:51:24
+# @Last Modified time: 2025-05-17 12:42:45
 
 import quante as qt
 import numpy as np
 import scipy.sparse as sps
 import unittest
+import torch as tc
+import quante.torch_utils as qtc
 
 class TestQuantity(unittest.TestCase):
     def test_expect(self):
         # Test the expect function with different types of inputs
         d = 100
         mat = np.random.randn(d,d) + 1j * np.random.randn(d,d)
+        mat += mat.conj().T
         state = np.random.randn(d) + 1j * np.random.randn(d)
+        res = qt.quantity.expect(mat, state)
+        res1 = state.conj() @ (mat @ state)
+        self.assertAlmostEqual(res, res1)
+
+        mat = tc.tensor(mat, device='cuda')
+        state = tc.tensor(state, device='cuda')
+        res = qt.quantity.expect(mat, state)
+        res1 = (state.conj() @ (mat @ state)).cpu().numpy()
+        self.assertAlmostEqual(res, res1)
+
+        mat = qtc.totc(mat)
         res = qt.quantity.expect(mat, state)
         res1 = state.conj() @ (mat @ state)
         self.assertAlmostEqual(res, res1)
@@ -32,14 +46,26 @@ class TestQuantity(unittest.TestCase):
         res = qt.quantity.expect(mat, state)
         res1 = state.conj() @ (mat.toarray() @ state)
         self.assertAlmostEqual(res, res1)
+
         
-        # Test with non-Hermitian matrices
+        # # Test with non-Hermitian matrices
         d = 100
         n = 101
         mat = np.random.randn(d,d) + 1j * np.random.randn(d,d)
         states = np.random.randn(d,n) + 1j * np.random.randn(d,n)
         res = qt.quantity.expect(mat, states)
         res1 = (states.conj().T @ mat @ states).diagonal()
+        self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
+
+        mat = tc.tensor(mat, device='cuda')
+        states = tc.tensor(states, device='cuda')
+        res = qt.quantity.expect(mat, states)
+        res1 = (states.conj().T @ mat @ states).diagonal().cpu().numpy()
+        self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
+
+        mat = qtc.totc(mat)
+        res = qt.quantity.expect(mat, states)
+        res1 = (states.conj().T @ (mat @ states)).diagonal().cpu().numpy()
         self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
 
         d = 100
@@ -116,6 +142,12 @@ class TestQuantity(unittest.TestCase):
         states = np.random.randn(d,n) + 1j * np.random.randn(d,n)
         res = qt.quantity.expect(mat, states, isdm=True)
         res1 = (mat @ states).trace()
+        self.assertAlmostEqual(res, res1)
+
+        mat = tc.tensor(mat, device='cuda')
+        states = tc.tensor(states, device='cuda')
+        res = qt.quantity.expect(mat, states, isdm=True)
+        res1 = (mat @ states).trace().cpu().numpy()
         self.assertAlmostEqual(res, res1)
 
         d = 100
