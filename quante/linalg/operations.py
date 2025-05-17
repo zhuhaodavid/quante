@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-15 14:19:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-19 12:15:11
+# @Last Modified time: 2025-05-17 17:59:57
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -27,6 +27,7 @@ __all__ = [
 ]
 
 __all__ += [
+    "expect",
     "uptrig",
     "uptrig_inv",
     "uptrigindex",
@@ -225,7 +226,98 @@ def observe_states(vecs:_np.ndarray, O:_np.ndarray) -> _np.ndarray:
     else:
         from .usenumba.operations_numba import observe_states_complex
         return observe_states_complex(vecs.astype(complex), O.astype(complex))
-    
+
+def real_if_close(val):
+    if hasattr(val, "cpu") and hasattr(val, "numpy"):
+        # val is a torch tensor
+        return _np.real_if_close(val.cpu().numpy())
+    else:
+        try:
+            return _np.real_if_close(val)
+        except AttributeError:
+            return val
+
+def _matmat(mat, state):
+    try:
+        return mat @ state
+    except RuntimeError:
+        if mat.is_complex():
+            return mat.real @ state + 1j * (mat.imag @ state)
+        elif state.is_complex():
+            return mat @ state.real + 1j * (mat @ state.imag)
+        else:
+            raise ValueError("mat and state must be the same type")
+
+from typing import overload, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import torch
+
+@overload
+def expect(mat:_np.ndarray|_sparse.sparray, state:_np.ndarray, isdm=False) -> _np.ndarray: ...
+
+@overload
+def expect(mat:'torch.Tensor', state:'torch.Tensor', isdm=False) -> _np.ndarray: ...
+
+def expect(mat, state, isdm=False) -> _np.ndarray:
+    """计算期望值.
+
+    mat 与 state 需要同为 Tensor 或者同不为 Tensor
+    这个函数可以解决 Tensor 的 real @ complex 的报错
+    对于对角矩阵，这个函数进行了优化
+    对于多个态的期望，这个函数也进行了优化
+
+    Parameters
+    ----------
+    mat : _np.ndarray | tc.Tensor | sps.sparray
+        观测量
+    state : _np.ndarray | tc.Tensor
+        态矢量
+    isdm : bool, optional
+        是否是密度矩阵, by default False
+
+    Returns
+    -------
+    _np.ndarray | tc.Tensor
+        期望值
+    """
+    if isinstance(mat, list):
+        return real_if_close([
+            expect(m, state, isdm=isdm) for m in mat
+        ])
+    if not isdm:
+        if state.ndim == 1 or (
+            state.shape[1] == 1 or state.shape[0] == 1
+        ):
+            state = state.reshape(-1)
+            if isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)):
+                matdiag = mat.diagonal()
+                res = state.conj() @ (matdiag * state)
+            else:
+                res = state.conj() @ (mat @ state)
+            return real_if_close(res).item()
+        else:
+            if isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)):
+                matdiag = mat.diagonal()
+                res = _np.sum(state.conj() * (matdiag.reshape(-1, 1) * state), 
+                              axis=0)
+            elif mat.ndim == 1:
+                res = (state.conj() * (mat * state)).sum(0)
+            elif isinstance(mat, _np.ndarray):
+                res = observe_states(state, mat)
+            else:
+                res = (state.conj() * _matmat(mat, state)).sum(0)
+            return real_if_close(res)
+    else:
+        if state.ndim == 2:
+            if isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)):
+                res = (mat.diagonal() * state.diagonal()).sum()
+            else:
+                res = _matmat(mat, state).trace()
+            return real_if_close(res).item()
+        else:
+            raise ValueError("state must be a 2D array for density matrix")
+
 
 #####################################
 # kron

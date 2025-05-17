@@ -20,7 +20,7 @@
 # 关于 python 的效率问题，参考 https://www.cnblogs.com/traditional/tag/Cython/ 中的解释
 
 from . import basicfun   # 提供关于日志和储存的一些基本功能
-from . import quantity
+from . import linalg
 from . import linalg
 from . import solvable_models
 from . import generate

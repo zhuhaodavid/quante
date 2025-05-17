@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:25
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-16 21:59:33
+# @Last Modified time: 2025-05-17 16:50:07
 
 """
 生成一些常用的态（`np.ndarray`）
@@ -128,6 +128,8 @@ def neel(L:int, down_first=False, dtype=float, Nup=None):
     updns = "10" * (L // 2) + (L % 2 == 1) * "1"
     if down_first:
         updns = "0" + updns[:-1]
+    if Nup is not None:
+        assert updns.count("1") == Nup, f"not {Nup} up in {updns}"
     return product_state(updns, dtype=dtype, Nup=Nup)
     
 

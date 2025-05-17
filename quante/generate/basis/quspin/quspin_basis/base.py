@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 18:07:49
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-12-15 19:33:09
+# @Last Modified time: 2025-05-17 18:04:27
 from __future__ import print_function
 import numpy as _np
 import scipy.sparse as _sp
@@ -269,9 +269,14 @@ class basis(object):
 
     def _make_matrix(self, op_list, dtype):
         """takes list of operator strings and couplings to create matrix."""
-        off_diag = None
+        from ...symmetry.basis_class_nb import coodiaglists2csr
+        # off_diag = None
         diag = None
         index_type = _get_index_type(self.Ns)
+
+        row_result = []
+        col_result = []
+        ele_result = []
 
         for opstr, indx, J in op_list:
             ME, row, col = self.Op(opstr, indx, J, dtype)
@@ -284,29 +289,40 @@ class basis(object):
                         diag = _np.zeros(self.Ns, dtype=dtype)
                     _update_diag(diag, row, ME)
                 else:
-                    if off_diag is None:
-                        off_diag = _sp.csr_matrix(
-                            (ME, (row, col)), shape=(self.Ns, self.Ns), dtype=dtype
-                        )
-                    else:
-                        off_diag = off_diag + _sp.csr_matrix(
-                            (ME, (row, col)), shape=(self.Ns, self.Ns), dtype=dtype
-                        )
+                    ele_result.append(ME)
+                    row_result.append(row)
+                    col_result.append(col)
 
-        if diag is not None and off_diag is not None:
-            indptr = _np.arange(self.Ns + 1)
-            return off_diag + _sp.csr_matrix(
-                (diag, indptr[: self.Ns], indptr), shape=(self.Ns, self.Ns), dtype=dtype
-            )
-
-        elif off_diag is not None:
-            return off_diag
-        elif diag is not None:
-            return _sp.dia_matrix(
-                (_np.atleast_2d(diag), [0]), shape=(self.Ns, self.Ns), dtype=dtype
-            )
+                    # if off_diag is None:
+                    #     off_diag = _sp.csr_matrix(
+                    #         (ME, (row, col)), shape=(self.Ns, self.Ns), dtype=dtype
+                    #     )
+                    # else:
+                    #     off_diag = off_diag + _sp.csr_matrix(
+                    #         (ME, (row, col)), shape=(self.Ns, self.Ns), dtype=dtype
+                    #     )
+        if len(ele_result) > 0:
+            return coodiaglists2csr(row_result, col_result, ele_result, diag, self.Ns, index_type, dtype)
+        
+        if diag is not None:
+            return _sp.dia_array((_np.atleast_2d(diag),[0]),shape=(self.Ns,self.Ns),dtype=dtype)
         else:
-            return _sp.dia_matrix((self.Ns, self.Ns), dtype=dtype)
+            return _sp.dia_array((self.Ns,self.Ns),dtype=dtype)
+
+        # if diag is not None and off_diag is not None:
+        #     indptr = _np.arange(self.Ns + 1)
+        #     return off_diag + _sp.csr_matrix(
+        #         (diag, indptr[: self.Ns], indptr), shape=(self.Ns, self.Ns), dtype=dtype
+        #     )
+
+        # elif off_diag is not None:
+        #     return off_diag
+        # elif diag is not None:
+        #     return _sp.dia_matrix(
+        #         (_np.atleast_2d(diag), [0]), shape=(self.Ns, self.Ns), dtype=dtype
+        #     )
+        # else:
+        #     return _sp.dia_matrix((self.Ns, self.Ns), dtype=dtype)
 
     def partial_trace(
         self,

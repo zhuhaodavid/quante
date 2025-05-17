@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:40:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-12 00:11:56
+# @Last Modified time: 2025-05-17 17:55:51
 
 
 import numpy as np
@@ -48,7 +48,7 @@ def trace(tsr:tc.Tensor) -> tc.Tensor:
             cp.get_default_memory_pool().free_all_blocks()
             return res
         except ImportError:
-            warn("最好安装 cupy，避免 GPU, CPU 之间的数据传输")
+            warn("cupy is not avilable, use scipy")
             spres = scipy.sparse.csr_array((tsr.values().cpu().numpy(), tsr.col_indices().cpu().numpy(), tsr.crow_indices().cpu().numpy())).trace()
             return tc.tensor(spres, device=tsr.device)
     else:
@@ -140,7 +140,7 @@ def norm(tsr:tc.Tensor, ord=None) -> tc.Tensor:
             cp.get_default_memory_pool().free_all_blocks()
             return res
         except ImportError as e:
-            warn(str(e) + "，改为 scipy")
+            warn(str(e) + ", use scipy")
             spmat = scipy.sparse.csr_matrix((tsr.values().cpu().numpy(), tsr.col_indices().cpu().numpy(), tsr.crow_indices().cpu().numpy()))
             spnorm = scipy.sparse.linalg.norm(spmat, ord)
             return tc.tensor(spnorm, device=tsr.device)

@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-17 13:56:08
+# # @Last Modified time: 2025-05-17 18:02:54
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -16,7 +16,7 @@ from functools import lru_cache
 from typing import Literal
 from tqdm import tqdm
 
-from ..quantity import expect
+from .operations import expect
 
 if TYPE_CHECKING:  # 类型检查时，导入 torch
     import torch as _tc
@@ -280,12 +280,13 @@ def _in_GPU(
     在 GPU 上计算初始态在不同时刻的时间演化态。
     """
     import torch as _tc
+    from ..torch_utils import totc
 
     # 将数据从 numpy 数组转换为 GPU 上的 torch.Tensor。
-    initial_state = _tc.from_numpy(initial_state).to(device)
-    eigenvalues = _tc.from_numpy(eigenvalues).to(device)
-    eigenstates = _tc.from_numpy(eigenstates).to(device)
-    times = _tc.from_numpy(times).to(device)
+    initial_state = totc(initial_state, device=device)
+    eigenvalues = totc(eigenvalues, device=device)
+    eigenstates = totc(eigenstates, device=device)
+    times = totc(times, device=device)
 
     # 确保 eigenstates 和 initial_state 的数据类型为 complex，如果其中之一是 complex128。
     if eigenstates.dtype == _tc.complex128 or initial_state.dtype == _tc.complex128:
@@ -293,7 +294,7 @@ def _in_GPU(
         initial_state = initial_state.to(_tc.complex128)
  
     udagger_psi = Uinvpsi(_tc, eigenstates, initial_state, herm)  # U† |psi>
-    return Uexp(_tc, eigenvalues, eigenstates, times, udagger_psi, scale).cpu().numpy()  
+    return Uexp(_tc, eigenvalues, eigenstates, times, udagger_psi, scale) 
     # 将结果从 GPU 转回 CPU，并转换为 numpy 数组
 
 def get_time_evolution_states_ED(
@@ -324,7 +325,7 @@ def get_time_evolution_states_ED(
     try:
         import torch as tc
         device = tc.device(device_name)
-        time_states = _in_GPU(initial_state, eigenvalues, eigenstates, times, device, herm, scale)
+        time_states = _in_GPU(initial_state, eigenvalues, eigenstates, times, device, herm, scale).cpu().numpy()
     except Exception as e:
         if not failback_to_CPU:
             raise e
@@ -345,7 +346,7 @@ class EvolveEngine:
     """
     def __init__(
         self,
-        ham:sps.csr_array|LinearOperator,
+        ham:_np.ndarray|sps.csr_array|LinearOperator,
         init_state:_np.ndarray,
         ts:_np.ndarray,
         *,
@@ -363,7 +364,7 @@ class EvolveEngine:
 
         Parameters
         ----------
-        ham : sps.csr_array | LinearOperator
+        ham : _np.ndarray | sps.csr_array | LinearOperator
             the Hamiltonian matrix
         init_state : _np.ndarray
             the initial state vector
@@ -420,12 +421,11 @@ class EvolveEngine:
 
         else:
             # first move the data to the device
-            assert sps.issparse(ham), "ham should be sparse array"
-            from ..torch_utils.linalg.sparse import to_csr
+            # assert sps.issparse(ham), "ham should be sparse array"
             from ..torch_utils.utils import totc
             import torch as tc
             dtype = tc.complex128 if dtype is None else dtype
-            self.csr_mt = to_csr(ham.tocsr(), device=device)
+            self.csr_mt = totc(ham, device=device)
             self.psi = totc(init_state, device=device, dtype=dtype).reshape(-1, 1)
             self.pkg = tc
 
@@ -440,7 +440,7 @@ class EvolveEngine:
         self.herm = herm
         self.method = method
         self.ivp_kwargs = ivp_kwargs
-        self._eigen = self._UinvPsi = None
+        self._eigen = self._UinvPsi = self._all_states = None
     
     @property
     def eigen(self):
@@ -481,6 +481,8 @@ class EvolveEngine:
         if dt != 0:
             self.evolved_time += dt
             # ============= main =============
+            # we can choose to use 'eig', 'mul' or 'ivp' method
+            # it depends on the string in method
             if self.method[:3] == 'mul':
                 ee = self.get_evolve_engine(round(dt,14))
                 self.psi = ee(self.psi)
@@ -506,25 +508,24 @@ class EvolveEngine:
     
     def pre_obs(self, obs):
         if obs is None:
-            return lambda t, state: state
-        elif isinstance(obs, list):
+            return lambda t, state: state.reshape(-1)
+        elif isinstance(obs, (sps.sparray, sps.spmatrix, list)):
             if self.device != 'cpu':
-                from ..torch_utils.linalg.sparse import to_csr
-                import torch as _tc
-                obs = [to_csr(o, device=self.device, dtype=_tc.complex128) for o in obs]
-            _obs = lambda t, state: [expect(obsmat, state, isdm=False) for obsmat in obs]
-            return _obs
+                from ..torch_utils import totc
+                obs = totc(obs, device=self.device)
+            return lambda t, state: expect(obs, state, isdm=False)
         elif callable(obs):
             return obs
         else:
             raise ValueError("obs should be a list of sparse matrices or a function")
         
-    def measure(self, obs:list[sps.csr_array]|Callable[[float, _np.ndarray], _np.ndarray]| None=None):
+        
+    def measure(self, obs:sps.csr_array|list[sps.csr_array]|Callable[[float, _np.ndarray], _np.ndarray]| None=None):
         """calculate the expectation value of the observable
         
         Parameters
         ----------
-        obs : list[sps.csr_array] | Callable[[float, _np.ndarray], _np.ndarray]
+        obs : sps.csr_array|list[sps.csr_array] | Callable[[float, _np.ndarray], _np.ndarray]
             the observable matrix or a function that takes the time and state as input
 
         Returns
@@ -532,15 +533,29 @@ class EvolveEngine:
         _np.ndarray
             the expectation value of the observable
         """
-        obs = self.pre_obs(obs)
-        res = []
-        for t in tqdm(self.tlist, ascii=True):
-            state = self.run()
-            res.append(obs(t, state))
-        try:
-            return _np.real_if_close(res)    
-        except:
-            return res
+        if self.method[:3] == 'eig':
+            # it would be faster if all states are calculated at once
+            # we should move the cur_step and psi so that it is 
+            # consistent with the run() method used in other methods
+            self.cur_step = len(self.tlist)
+            self.psi = self.all_states[:,-1]
+            return self._eigen_measure(obs)
+        else:
+            obs = self.pre_obs(obs)
+            res = []
+            for t in tqdm(self.tlist, ascii=True):
+                state = self.run()
+                try:
+                    res.append(obs(t, state))
+                except Exception as e:
+                    raise MeasureError(f"Error in measure: {e}. \n"
+                            "Please check the measure function so that it can deal with the"
+                            f"states with \ntype:{type(state)}, shape:{state.shape}, "
+                            f"dtype:{state.dtype}") from e
+            try:
+                return _np.real_if_close(res)    
+            except:
+                return res
 
     def plot_measure(
         self,
@@ -604,14 +619,59 @@ class EvolveEngine:
         except Exception as e:
             _warnings.warn(f"DynamicPlot error: {e}")
         return res
+    
+    @property
+    def all_states(self):
+        if self._all_states is None:
+            if self.device == 'cpu':
+                self._all_states = _in_CPU(
+                    self.psi, *self.eigen, self.tlist, herm=self.herm, scale=self.scale
+                )
+            else:
+                self._all_states = _in_GPU(
+                    self.psi, *self.eigen, self.tlist, self.device, herm=self.herm, scale=self.scale
+                )
+        return self._all_states
+    
+    def _eigen_measure(self, measure):
+        states = self.all_states
+        if measure is None:
+            return states
+        from ..linalg import expect
+        try:
+            if self.device == 'cpu':
+                if isinstance(measure, list):
+                    return _np.array([expect(m, states) for m in measure]).T
+                else:
+                    return _np.array([
+                        measure(t, states[:, i]) for i, t in enumerate(self.tlist)
+                    ])
+            else:
+                if isinstance(measure, list):
+                    from ..torch_utils import totc
+                    import torch as _tc
+                    measure = totc(measure, device=self.device, dtype=_tc.complex128)
+                    return _np.array([expect(m, states) for m in measure]).T
+                else:
+                    return _np.array([
+                        measure(t, states[:, i]) for i, t in enumerate(self.tlist)
+                    ])
+        except Exception as e:
+            raise MeasureError(f"Error in measure: {e}. \n"
+                            "Please check the measure function so that it can deal with the"
+                            f"states with \ntype:{type(states)}, shape:{states.shape}, "
+                            f"dtype:{states.dtype}") from e
 
+class MeasureError(Exception):
+    """Custom exception for measurement errors."""
+    pass
 
 def evolve_and_measure(
-    matrix:sps.csr_array | LinearOperator,
+    matrix:_np.ndarray | sps.csr_array | LinearOperator,
     inistate:_np.ndarray,
     tlist:_np.ndarray,
     *,
-    measure:list[sps.csr_array] | Callable[[float, _np.ndarray], _np.ndarray] | None = None,
+    measure:_np.ndarray|sps.csr_array|list[sps.csr_array]|Callable[[float, _np.ndarray], _np.ndarray] | None = None,
     normalize:bool = False,
     ttype:Literal['real-time', 'imag-time'] = 'real-time',
     method:Literal['eig-cpu', 'eig-cuda:0', 'mul-cpu', 'mul-cuda:0', 
@@ -628,15 +688,16 @@ def evolve_and_measure(
     
     Parameters
     ----------
-    matrix : sps.csr_array | sps.LinearOperator
+    matrix : _np.ndarray | sps.csr_array | sps.LinearOperator
         the Hamiltonian matrix
     inistate : numpy.ndarray
         the initial state vector
     tlist : numpy.ndarray
         the time list
-    measure : list[sps.csr_array] | Callable[[numpy.ndarray], numpy.ndarray] | None, optional
+    measure : numpy.ndarray | sps.csr_array | list[sps.csr_array] | Callable[[numpy.ndarray], numpy.ndarray] | None, optional
         which observable to measure, by default None
-        - `list of sparse matrices`: calculate the measurement values of each
+        - `sparse/dense matrix`: calculate the measurement values of the observable
+        - `list of sparse/dense matrices`: calculate the measurement values of each
             measurement operator at different time points
         - `function`: calculate the measurement values of the function at
             different time points, reflected in the second and subsequent indices of the
@@ -885,7 +946,7 @@ class Liouvillian(LinearOperator):
             self,
             inistate:_np.ndarray,
             tlist:list|_np.ndarray|None,
-            measure:Callable|_np.ndarray,
+            measure:sps.csr_array|list[sps.csr_array]|Callable[[float, _np.ndarray], _np.ndarray],
             method:Literal['sp-eig-cpu', 'sp-eig-cuda:0', 'sp-mul-cpu', 'sp-mul-cuda:0', 
                         'lo-mul-cpu','lo-RK45', 'lo-RK23', 'lo-DOP853', 'lo-Radau', 
                         'lo-BDF', 'lo-LSODA', 'sp-mul-cpu','sp-RK45', 'sp-RK23', 
@@ -903,7 +964,8 @@ class Liouvillian(LinearOperator):
             initial state
         tlist : list | _np.ndarray
             time list
-        measure : Callable | _np.ndarray | None
+        measure : _np.ndarray | sps.csr_array | list[sps.csr_array] | Callable[[float, _np.ndarray], _np.ndarray]
+            - `sparse matrix`: calculate the measurement values of the observable
             - `list of sparse matrices`: calculate the measurement values of each
             measurement operator at different time points
             - `function`: calculate the measurement values of the function at
@@ -931,13 +993,13 @@ class Liouvillian(LinearOperator):
 
         if measure is None:
             measure = lambda t, rho: rho.reshape(d,d)
-        elif isinstance(measure, list):
+        elif isinstance(measure, (sps.sparray, sps.spmatrix, list)):
             device = method[7:] if method[3:6] in ['mul', 'eig'] else 'cpu'
             if device != 'cpu':
                 # convert measure to function
                 from ..torch_utils.utils import totc
                 measure = totc(measure, device=device)
-            obs = lambda t, state: [expect(obsmat, state.reshape(d,d), isdm=True) for obsmat in measure]
+            obs = lambda t, state: expect(measure, state.reshape(d,d), isdm=True)
         else:
             obs = measure
         

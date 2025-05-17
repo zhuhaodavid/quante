@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 13:15:27
+# @Last Modified time: 2025-05-17 17:44:52
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -10,9 +10,7 @@ import numpy as _np
 import warnings as _warnings
 from scipy.sparse import issparse, dia_array, dia_matrix
 
-
 __all__ = [
-    "expect",
     "entanglement_spectrum",
     "entanglement_entropy",
     "entropy",
@@ -26,52 +24,6 @@ __all__ += [
     "plot_energy_hist", 
     "plot_level_spacing_distribution", 
 ]
-
-def real_if_close(val):
-    if hasattr(val, "cpu") and hasattr(val, "numpy"):
-        # val is a torch tensor
-        return _np.real_if_close(val.cpu().numpy())
-    else:
-        try:
-            return _np.real_if_close(val)
-        except AttributeError:
-            return val
-
-def expect(mat, state, isdm=False):
-    if not isdm:
-        if state.ndim == 1 or (
-            state.shape[1] == 1 or state.shape[0] == 1
-        ):
-            state = state.reshape(-1)
-            if isinstance(mat, (dia_array, dia_matrix)):
-                matdiag = mat.diagonal()
-                res = state.conj() @ (matdiag * state)
-            else:
-                res = state.conj() @ (mat @ state)
-            return real_if_close(res).item()
-        else:
-            if isinstance(mat, (dia_array, dia_matrix)):
-                matdiag = mat.diagonal()
-                res = _np.sum(state.conj() * (matdiag.reshape(-1, 1) * state), 
-                              axis=0)
-            elif mat.ndim == 1:
-                res = (state.conj() * (mat * state)).sum(0)
-            elif isinstance(mat, _np.ndarray):
-                from .linalg.operations import observe_states
-                res = observe_states(state, mat)
-            else:
-                res = (state.conj() * (mat @ state)).sum(0)
-            return real_if_close(res)
-    else:
-        if state.ndim == 2:
-            if isinstance(mat, (dia_array, dia_matrix)):
-                res = (mat.diagonal() * state.diagonal()).sum()
-            else:
-                res = (mat @ state).trace()
-            return real_if_close(res).item()
-        else:
-            raise ValueError("state must be a 2D array for density matrix")
-
 
 def spectral_form_factor(engs:_np.ndarray, times:_np.ndarray | float):
     """谱形因子.
