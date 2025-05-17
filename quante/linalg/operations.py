@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-15 14:19:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 17:59:57
+# @Last Modified time: 2025-05-17 21:25:49
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -238,15 +238,22 @@ def real_if_close(val):
             return val
 
 def _matmat(mat, state):
-    try:
-        return mat @ state
-    except RuntimeError:
+    if hasattr(mat, 'is_complex'):
+        matcomplex, statecomplex = mat.is_complex(), state.is_complex()
+        if (matcomplex and statecomplex) or (not matcomplex and not statecomplex):
+            return mat @ state
         if mat.is_complex():
+            if mat.is_sparse:
+                return mat @ state.to(mat.dtype)
             return mat.real @ state + 1j * (mat.imag @ state)
         elif state.is_complex():
+            if mat.is_sparse:
+                return mat.to(mat.dtype) @ state
             return mat @ state.real + 1j * (mat @ state.imag)
         else:
             raise ValueError("mat and state must be the same type")
+    else:
+        return mat @ state
 
 from typing import overload, TYPE_CHECKING
 
@@ -296,7 +303,7 @@ def expect(mat, state, isdm=False) -> _np.ndarray:
             else:
                 res = state.conj() @ (mat @ state)
             return real_if_close(res).item()
-        else:
+        elif state.ndim == 2:
             if isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)):
                 matdiag = mat.diagonal()
                 res = _np.sum(state.conj() * (matdiag.reshape(-1, 1) * state), 
@@ -308,6 +315,8 @@ def expect(mat, state, isdm=False) -> _np.ndarray:
             else:
                 res = (state.conj() * _matmat(mat, state)).sum(0)
             return real_if_close(res)
+        else:
+            raise ValueError("state must be a 1D or 2D array for state vector")
     else:
         if state.ndim == 2:
             if isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)):
@@ -315,6 +324,21 @@ def expect(mat, state, isdm=False) -> _np.ndarray:
             else:
                 res = _matmat(mat, state).trace()
             return real_if_close(res).item()
+        elif state.ndim == 3:
+            if isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)):
+                res = (mat.diagonal().reshape(-1,1,1) * state).trace(axis1=0, axis2=1)
+            else:
+                try:
+                    res = _matmat(mat, state.swapaxes(0, 1))
+                    if hasattr(res, 'is_complex'):
+                        res = res.diagonal(offset=0, dim1=0, dim2=1).sum(-1)
+                    else:
+                        res = res.trace(axis1=0, axis2=1)
+                except:
+                    res = [
+                        _matmat(mat, state[:,:,i]).trace().item() for i in range(state.shape[2])
+                    ]
+            return real_if_close(res)
         else:
             raise ValueError("state must be a 2D array for density matrix")
 

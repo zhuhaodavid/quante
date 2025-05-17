@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 17:47:03
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 18:00:30
+# @Last Modified time: 2025-05-17 21:29:20
 
 import quante as qt
 import numpy as np
@@ -209,11 +209,82 @@ class TestQuantity(unittest.TestCase):
         res1 = (states.conj().T @ mat.to(dtype=tc.complex128) @ states).diagonal().cpu().numpy()
         self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
 
+        d = 10
+        n = 7
+        mat = np.random.randn(d,d) + 1j * np.random.randn(d,d)
+        states = np.random.randn(d,d,n) + 1j * np.random.randn(d,d,n)
+        res = qt.linalg.expect(mat, states, isdm=True)
+        res1 = np.real_if_close([np.trace(states[:,:,i] @ mat) for i in range(n)])
+        self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
+
+        d = 10
+        n = 7
+        mat = sps.rand(d,d) + 1j * sps.rand(d,d)
+        states = np.random.randn(d,d,n) + 1j * np.random.randn(d,d,n)
+        res = qt.linalg.expect(mat, states, isdm=True)
+        res1 = np.real_if_close([(mat @ states[:,:,i]).trace() for i in range(n)])
+        self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
+
+        d = 10
+        n = 7
+        mat = sps.dia_array(((np.random.randn(d) + 1j * np.random.randn(d), ), (0,)), shape=(d,d))
+        states = np.random.randn(d,d,n) + 1j * np.random.randn(d,d,n)
+        res = qt.linalg.expect(mat, states, isdm=True)
+        res1 = np.real_if_close([(mat @ states[:,:,i]).trace() for i in range(n)])
+        self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
+
+        d = 10
+        n = 7
+        mat = np.random.randn(d,d) + 1j * np.random.randn(d,d)
+        mat = qtc.totc(mat, device='cuda')
+        states = np.random.randn(d,d,n) + 1j * np.random.randn(d,d,n)
+        states = qtc.totc(states, device='cuda')
+        res = qt.linalg.expect(mat, states, isdm=True)
+        res1 = np.real_if_close([np.trace(states[:,:,i].cpu().numpy() @ mat.cpu().numpy()) for i in range(n)])
+        self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
+
+        d = 10
+        n = 7
+        mat = np.random.randn(d,d) 
+        mat = qtc.totc(mat, device='cuda')
+        states = np.random.randn(d,d,n) + 1j * np.random.randn(d,d,n)
+        states = qtc.totc(states, device='cuda')
+        res = qt.linalg.expect(mat, states, isdm=True)
+        res1 = np.real_if_close([np.trace(states[:,:,i].cpu().numpy() @ mat.cpu().numpy()) for i in range(n)])
+        self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
+
+        d = 10
+        n = 7
+        mat = np.random.randn(d,d) + 1j * np.random.randn(d,d)
+        mat = qtc.totc(mat, device='cuda')
+        states = np.random.randn(d,d,n)
+        states = qtc.totc(states, device='cuda')
+        res = qt.linalg.expect(mat, states, isdm=True)
+        res1 = np.real_if_close([np.trace(states[:,:,i].cpu().numpy() @ mat.cpu().numpy()) for i in range(n)])
+        self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
+
+        d = 10
+        n = 7
+        mat = sps.rand(d,d) + 1j * sps.rand(d,d)
+        mat = qtc.totc(mat, device='cuda')
+        states = np.random.randn(d,d,n) + 1j * np.random.randn(d,d,n)
+        states = qtc.totc(states, device='cuda')
+        res = qt.linalg.expect(mat, states, isdm=True)
+        res1 = np.real_if_close([(mat @ states[:,:,i]).trace().item() for i in range(n)])
+        self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
+
+        d = 10
+        n = 7
+        mat = sps.rand(d,d)
+        mat = qtc.totc(mat, device='cuda')
+        states = np.random.randn(d,d,n) + 1j * np.random.randn(d,d,n)
+        states = qtc.totc(states, device='cuda')
+        res = qt.linalg.expect(mat, states, isdm=True)
+        res1 = np.real_if_close([(mat.to(tc.complex128) @ states[:,:,i]).trace().item() for i in range(n)])
+        self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
-    # mat = np.random.randn(100,100)
-    # print(np.iscomplexobj(mat))
-    # # mat = tc.rand(100,100)
-    # print(dir(mat.dtype))
-    # print(issubclass(mat.dtype, float))

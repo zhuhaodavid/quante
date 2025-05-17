@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-14 22:22:42
+# @Last Modified time: 2025-05-17 19:48:45
 
 import unittest
 import quante as qt
@@ -28,10 +28,10 @@ class TestLiouvillian(unittest.TestCase):
         state = qt.generate.state.product_state('1'+'0'*(L-1), Nup=1)
         rhoinit = np.outer(state, state)
 
-        res1 = lvn.evolve_and_measure(
-            rhoinit, [10, 20, 30, 40, 50], 
+        res1 = qt.linalg.evolve_and_measure(
+            lvn, rhoinit, [10, 20, 30, 40, 50], 
             measure=particle_number, 
-            method='cpu_mul'
+            method='eig-cpu'
         )
         self.lvn = lvn
         self.rhoinit = rhoinit
@@ -41,27 +41,47 @@ class TestLiouvillian(unittest.TestCase):
     def test_time_measurements(self):
         import torch as tc
         if tc.cuda.is_available():
-            res2 = self.lvn.evolve_and_measure(
-                self.rhoinit, [10, 20, 30, 40, 50], 
+            res2 = qt.linalg.evolve_and_measure(
+                self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
                 measure=self.particle_number, 
-                method='cpu_mul'
+                method='eig-cuda:0'
             )
+            self.assertTrue(np.allclose(self.res1, res2))
 
+            res2 = qt.linalg.evolve_and_measure(
+                self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
+                measure=self.particle_number, 
+                method='mul-cuda:0'
+            )
             self.assertTrue(np.allclose(self.res1, res2))
         
-        res3 = self.lvn.evolve_and_measure(
-            self.rhoinit, [10, 20, 30, 40, 50], 
+        res2 = qt.linalg.evolve_and_measure(
+            self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
             measure=self.particle_number, 
-            method='linear_operator'
+            method='mul-cpu'
         )
-        self.assertTrue(np.allclose(self.res1, res3))
+        self.assertTrue(np.allclose(self.res1, res2))
         
-        res4 = self.lvn.evolve_and_measure(
-            self.rhoinit, [10, 20, 30, 40, 50], 
+        res2 = qt.linalg.evolve_and_measure(
+            self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
             measure=self.particle_number, 
             method='RK45'
         )
-        self.assertTrue(np.allclose(self.res1, res4))
+        self.assertTrue(np.allclose(self.res1, res2))
+
+        self.lvn.default_mul = 'lo'
+        res2 = qt.linalg.evolve_and_measure(
+            self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
+            measure=self.particle_number, 
+            method='mul-cpu'
+        )
+        self.assertTrue(np.allclose(self.res1, res2))
+
+        res2 = qt.linalg.evolve_and_measure(
+            self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
+            measure=self.particle_number, 
+            method='RK45'
+        )
 
 
 if __name__ == "__main__":
