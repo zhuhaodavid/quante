@@ -186,7 +186,10 @@ tlist = np.linspace(0, 10, 200)
 init_state = qt.generate.state.neel(L=L, down_first=True, Nup=L//2)
 obsoper = [op.z(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
 
-res = qt.linalg.evolve_and_measure(hammat, init_state, tlist, obsoper)
+qt.linalg.evolve_and_measure(
+    hammat, init_state, tlist,
+    measure=obsoper
+)
 ```
 
 ```
@@ -232,17 +235,16 @@ lvn = qt.linalg.Liouvillian(hammat, Lindblad_R + Lindblad_L)
 state = qt.generate.state.product_state('1'+'0'*(L-1), Nup=1)
 rhoinit = np.outer(state, state)
 
-res = lvn.evolve_and_measure(
-    rhoinit, [10, 20, 30, 40, 50], 
+res = qt.linalg.evolve_and_measure(
+    lvn, rhoinit, [10, 20, 30, 40, 50], 
     measure=particle_number, 
-    method='cpu_mul'
 )
 res.shape
 ```
 
 结果为：
 ```
-100%|##########| 5/5 [00:00<00:00, 92.52it/s]
+100%|##########| 5/5 [00:00<00:00, 79.36it/s]
 (5, 30)
 ```
 

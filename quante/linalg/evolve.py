@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-17 21:16:57
+# # @Last Modified time: 2025-05-17 21:44:59
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -750,15 +750,17 @@ def evolve_and_measure(
         return a multi-dimensional array, the first dimension is the time point, and the subsequent dimensions are determined by `measure`
     """
     tlist = _np.asarray(tlist)
-    if isinstance(matrix, Liouvillian):
-        return EvolveEngine(
-            matrix, inistate.flatten(), tlist, ttype='imag-time',
-            normalize=normalize, method=method, 
-            herm=herm, ivp_kwargs=ivp_kwargs
-        ).measure(measure)
+    ttype = 'imag-time' if isinstance(matrix, Liouvillian) else 'real-time'
+
+    # if isinstance(matrix, Liouvillian):
+    # return EvolveEngine(
+    #         matrix, inistate.flatten(), tlist, ttype='imag-time',
+    #         normalize=normalize, method=method, 
+    #         herm=herm, ivp_kwargs=ivp_kwargs
+    #     ).measure(measure)
 
     return EvolveEngine(
-        matrix, inistate, tlist, ttype='real-time',
+        matrix, inistate, tlist, ttype=ttype,
         normalize=normalize, method=method, 
         herm=herm, ivp_kwargs=ivp_kwargs
     ).measure(measure)
