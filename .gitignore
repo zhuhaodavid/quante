@@ -8,6 +8,7 @@ git_note.md
 # C extensions
 *.so
 
+
 # Distribution / packaging
 .Python
 build/

@@ -2,11 +2,10 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-13 11:59:55
+# @Last Modified time: 2025-05-17 22:22:23
 import numpy as np
-from .spin import Oper, _merge_poscoef, _single_term
+from .general import Oper, _merge_poscoef, _single_term
 from .fermion import _sort_pm, _sort_posn
-
 
 class BosonOper(Oper):
     """
@@ -32,7 +31,6 @@ class BosonOper(Oper):
         assert type == 'b'
         super().__init__(data, stype='b')
  
-
     def normal_ordering(self):
         """通过对易关系将算符转换为正则序列。
 
@@ -149,167 +147,133 @@ class BosonOper(Oper):
         else:
             raise NotImplementedError("不支持的基矢类型")
 
-    @classmethod
-    def I(cls, i:int=0) -> "BosonOper":
-        return cls({'I': _single_term((0,), 1.)})
+def I(i:int=0) -> BosonOper:
+    return BosonOper({'I': _single_term((0,), 1.)})
 
-    @classmethod
-    def p(cls, i:int=0) -> "BosonOper":
-        return cls({'+': _single_term((i,), 1.)})
+def p(i:int=0) -> BosonOper:
+    return BosonOper({'+': _single_term((i,), 1.)})
 
-    @classmethod
-    def m(cls, i:int=0) -> "BosonOper":
-        return cls({'-': _single_term((i,), 1.)})
+def m(i:int=0) -> BosonOper:
+    return BosonOper({'-': _single_term((i,), 1.)})
 
-    @classmethod
-    def x(cls, i:int=0) -> "BosonOper":
-        return cls({'x': _single_term((i,), 1.)})
+def x(i:int=0) -> BosonOper:
+    return BosonOper({'x': _single_term((i,), 1.)})
 
-    @classmethod
-    def y(cls, i:int=0) -> "BosonOper":
-        return cls({'y': _single_term((i,), 1.)})
+def y(i:int=0) -> BosonOper:
+    return BosonOper({'y': _single_term((i,), 1.)})
 
-    @classmethod
-    def z(cls, i:int=0) -> "BosonOper":
-        return cls({'z': _single_term((i,), 1.)})
+def z(i:int=0) -> BosonOper:
+    return BosonOper({'z': _single_term((i,), 1.)})
 
-    @classmethod
-    def n(cls, i:int=0) -> "BosonOper":
-        return cls({'n': _single_term((i,), 1.)})
+def n(i:int=0) -> BosonOper:
+    return BosonOper({'n': _single_term((i,), 1.)})
 
-    @classmethod
-    def nn(cls, i:int, j:int) -> "BosonOper":
-        return cls({'nn': _single_term((i, j), 1.)})
+def nn(i:int, j:int) -> BosonOper:
+    return BosonOper({'nn': _single_term((i, j), 1.)})
 
-    @classmethod
-    def zz(cls, i:int, j:int) -> "BosonOper":
-        return cls({'zz': _single_term((i, j), 1.)})
+def zz(i:int, j:int) -> BosonOper:
+    return BosonOper({'zz': _single_term((i, j), 1.)})
 
-    @classmethod
-    def mp(cls, i:int, j:int) -> "BosonOper":
-        if i==j:
-            return cls({'n': _single_term((i,), 1.)})
-        return cls({'-+': _single_term((i, j), 1.)})
+def mp(i:int, j:int) -> BosonOper:
+    if i==j:
+        return BosonOper({'n': _single_term((i,), 1.)})
+    return BosonOper({'-+': _single_term((i, j), 1.)})
 
-    @classmethod
-    def pm(cls, i:int, j:int) -> "BosonOper":
-        return cls({'+-': _single_term((i, j), 1.)})
+def pm(i:int, j:int) -> BosonOper:
+    return BosonOper({'+-': _single_term((i, j), 1.)})
 
-    @classmethod
-    def xx(cls, i:int, j:int) -> "BosonOper":
-        return cls({'xx': _single_term((i, j), 1.)})
+def xx(i:int, j:int) -> BosonOper:
+    return BosonOper({'xx': _single_term((i, j), 1.)})
 
-    @classmethod
-    def yy(cls, i:int, j:int) -> "BosonOper":
-        return cls({'yy': _single_term((i, j), 1.)})
+def yy(i:int, j:int) -> BosonOper:
+    return BosonOper({'yy': _single_term((i, j), 1.)})
 
-    @classmethod
-    def xy(cls, i:int, j:int) -> "BosonOper":
-        return cls({'xy': _single_term((i, j), 1.)})
+def xy(i:int, j:int) -> BosonOper:
+    return BosonOper({'xy': _single_term((i, j), 1.)})
 
-    @classmethod
-    def yx(cls, i:int, j:int) -> "BosonOper":
-        return cls({'yx': _single_term((i, j), 1.)})
-    
-    @classmethod
-    def sum(cls, oper) -> "BosonOper":
-        data = {}
-        for opx in oper:
-            if isinstance(opx, (int,float,complex)):
-                iterterm = (('I', (np.array([[0]], dtype=int), np.array([opx]))),)
-            else:
-                assert isinstance(opx, BosonOper), "Operands must be instances of SpinfulFermionOper"
-                iterterm = opx.data.items()
-            for name, (posn, coef) in iterterm:
-                posnlist, coeflist = data.get(name, (None,None))
-                if posnlist is None and coeflist is None:
-                    data[name] = ([posn], [coef])
-                else:
-                    posnlist.append(posn)
-                    coeflist.append(coef)
-        # merge terms
-        newdata = {}
-        for name, (posnlist, coeflist) in data.items():
-            newposn, newcoef = merge_poscoef(posnlist, coeflist)
-            if len(newposn) > 0:
-                newdata[name] = (newposn, newcoef)
-        return cls(newdata)
+def yx(i:int, j:int) -> BosonOper:
+    return BosonOper({'yx': _single_term((i, j), 1.)})
 
-    @classmethod
-    def heisenberg_operator(cls, L, j=1.0, h=0.0, cyclic=False) -> "BosonOper":
-        r"""
-        生成 heisenberg 模型的哈密顿量，返回一个 'Oper' 的实例
-        
-        这个实例可以 automata, local_matrix, to_matrix 等方法
-
-        .. math::
-            \sum_{i=1}^{N-1} j * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1} + s^z_i s^z_{i+1}) + \sum_i^N h * s^z_i
-        
-        Parameters
-        ----------
-        L : int
-            系统的长度
-        j : float or tuple of float
-            相互作用强度，可以是单个值，也可以是三个值表示 x, y, z 方向的相互作用强度
-        h : float or tuple of float
-            自旋场强度，可以是单个值，也可以是三个值表示 x, y, z 方向的自旋场强度
-        cyclic : bool
-            是否是周期性模型，默认是 False
-        
-        Examples
-        --------
-        >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=1.0, h=0.0) # heisenberg model
-        >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(1.0, 1.0, 0.0), h=0.0)  # xy model
-        >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(0.0, 0.0, 1.0), h=(1.0, 0.0, 0.0))  # ising model
-        """
-        try:
-            jx, jy, jz = j # type: ignore
-        except TypeError:
-            jx = jy = jz = j
-        try:
-            hx, hy, hz = h # type: ignore
-        except TypeError:
-            hz = h
-            hx = hy = 0.0
-        data = {}
-        posn1 = np.arange(0,L, dtype=np.int32).reshape(L,1)
-        coef1 = np.ones(L, dtype=np.float64)
-        if cyclic:
-            posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=np.int32)
-            coef2 = np.ones(L, dtype=np.float64)
+def sum(oper) -> BosonOper:
+    data = {}
+    for opx in oper:
+        if isinstance(opx, (int,float,complex)):
+            iterterm = (('I', (np.array([[0]], dtype=int), np.array([opx]))),)
         else:
-            posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
-            coef2 = np.ones(L-1, dtype=np.float64)
-        if jx != 0:
-            data["xx"] = (posn2, jx*coef2)
-        if jy != 0:
-            data["yy"] = (posn2, jy*coef2)
-        if jz != 0:
-            data["zz"] = (posn2, jz*coef2)
-        if hx != 0:
-            data["x"] = (posn1, hx*coef1)
-        if hy != 0:
-            data["y"] = (posn1, hy*coef1)
-        if hz != 0:
-            data["z"] = (posn1, hz*coef1)
-        return cls(data)
-    
-    @classmethod
-    def builder(cls) -> "BosonBuilder":
-        """
-        返回一个 BosonBuilder 对象
-        
-        该对象可以用于构建哈密顿量
-        
-        Examples
-        --------
-        >>> builder = qt.generate.operas.BosonBuilder()
-        >>> builder += '+-', [(0,1), (1,2)], -1.0
-        >>> builder += '+-', [(2,3), (3,4)], -1.0
-        >>> ham = builder.build()
-        """
-        return BosonBuilder()
+            assert isinstance(opx, BosonOper), "Operands must be instances of SpinfulFermionOper"
+            iterterm = opx.data.items()
+        for name, (posn, coef) in iterterm:
+            posnlist, coeflist = data.get(name, (None,None))
+            if posnlist is None and coeflist is None:
+                data[name] = ([posn], [coef])
+            else:
+                posnlist.append(posn)
+                coeflist.append(coef)
+    # merge terms
+    newdata = {}
+    for name, (posnlist, coeflist) in data.items():
+        newposn, newcoef = merge_poscoef(posnlist, coeflist)
+        if len(newposn) > 0:
+            newdata[name] = (newposn, newcoef)
+    return BosonOper(newdata)
 
+def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> BosonOper:
+    r"""
+    生成 heisenberg 模型的哈密顿量，返回一个 'Oper' 的实例
+    
+    这个实例可以 automata, local_matrix, to_matrix 等方法
+
+    .. math::
+        \sum_{i=1}^{N-1} j * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1} + s^z_i s^z_{i+1}) + \sum_i^N h * s^z_i
+    
+    Parameters
+    ----------
+    L : int
+        系统的长度
+    j : float or tuple of float
+        相互作用强度，可以是单个值，也可以是三个值表示 x, y, z 方向的相互作用强度
+    h : float or tuple of float
+        自旋场强度，可以是单个值，也可以是三个值表示 x, y, z 方向的自旋场强度
+    cyclic : bool
+        是否是周期性模型，默认是 False
+    
+    Examples
+    --------
+    >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=1.0, h=0.0) # heisenberg model
+    >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(1.0, 1.0, 0.0), h=0.0)  # xy model
+    >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(0.0, 0.0, 1.0), h=(1.0, 0.0, 0.0))  # ising model
+    """
+    try:
+        jx, jy, jz = j # type: ignore
+    except TypeError:
+        jx = jy = jz = j
+    try:
+        hx, hy, hz = h # type: ignore
+    except TypeError:
+        hz = h
+        hx = hy = 0.0
+    data = {}
+    posn1 = np.arange(0,L, dtype=np.int32).reshape(L,1)
+    coef1 = np.ones(L, dtype=np.float64)
+    if cyclic:
+        posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=np.int32)
+        coef2 = np.ones(L, dtype=np.float64)
+    else:
+        posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
+        coef2 = np.ones(L-1, dtype=np.float64)
+    if jx != 0:
+        data["xx"] = (posn2, jx*coef2)
+    if jy != 0:
+        data["yy"] = (posn2, jy*coef2)
+    if jz != 0:
+        data["zz"] = (posn2, jz*coef2)
+    if hx != 0:
+        data["x"] = (posn1, hx*coef1)
+    if hy != 0:
+        data["y"] = (posn1, hy*coef1)
+    if hz != 0:
+        data["z"] = (posn1, hz*coef1)
+    return cls(data)
 
 def _expand_term(name):
     """Expand the term based on the given name and coefficient."""
@@ -380,5 +344,20 @@ class BosonBuilder(BosonOper):
             data[name] = _merge_poscoef(posnlist, coeflist)
         return BosonOper(data, type='b')
 
+
+def builder() -> BosonBuilder:
+    """
+    返回一个 BosonBuilder 对象
+    
+    该对象可以用于构建哈密顿量
+    
+    Examples
+    --------
+    >>> builder = qt.generate.operas.BosonBuilder()
+    >>> builder += '+-', [(0,1), (1,2)], -1.0
+    >>> builder += '+-', [(2,3), (3,4)], -1.0
+    >>> ham = builder.build()
+    """
+    return BosonBuilder()
 
 

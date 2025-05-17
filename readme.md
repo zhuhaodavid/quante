@@ -105,7 +105,7 @@ data1, data2 = qt.basicfun.iload("data.h5", ('a', 'b'))
 自旋方法存放在 `quante.generate.operas` 中。
 
 ```python
-op = qt.generate.operas
+op = qt.generate.operas.spin
 ```
 
 以 Heisenberg 模型为例：
@@ -129,7 +129,7 @@ ham
 #### 方法 2
 ```python
 L = 4
-builder = op.SpinBuilder()
+builder = op.builder()
 for i in range(L-1):
     builder += 'xx', [i, i+1], 1.
     builder += 'yy', [i, i+1], 1.
@@ -169,13 +169,13 @@ array([[ 0.25,  0.5 ,  0.  ,  0.  ,  0.  ,  0.  ],
 ```python
 import quante as qt
 import numpy as np
-op = qt.generate.operas
+op = qt.generate.operas.spin
 
 L = 10
 basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)
 
 J, γ = 1., 0.
-builder = op.SpinBuilder()
+builder = op.builder()
 for l in range(L-1):
     builder += '+-', [l+1, l], 1/2 * (J + γ),
     builder += '+-', [l, l+1], 1/2 * (J - γ),
@@ -211,7 +211,7 @@ array([[-0.5       ,  0.5       , -0.5       , ...,  0.5       , -0.5       ,  0
 import quante as qt
 import numpy as np
 
-op = qt.generate.operas.boson.BosonOper
+op = qt.generate.operas.boson
 
 L = 30
 J = 1.

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-23 20:17:57
+# @Last Modified time: 2025-05-17 22:38:04
 """
 生成矩阵：(`np.ndarray`)
 - `pauli_matrix`
@@ -753,10 +753,8 @@ def local_sparse_contract_left2right(Ws0, Ws1):
 
 def get_sparse_matrix(
     L: int,
-    hlocals: list[str],
-    positions: list[tuple[int, ...]],
-    coefficients: list[float],
-    pauli: int = True,
+    oper,
+    pauli: bool = False,
     usecuda: bool = False,
 ) -> _sparse.csr_matrix:
     """
@@ -789,7 +787,7 @@ def get_sparse_matrix(
 
     """
     from .automata import automata_mpo
-    Ws = automata_mpo(L, hlocals, positions, coefficients, pauli=pauli)
+    Ws = oper.automata(L, pauli=pauli)
     assert L % 2 == 0, "L must be even"
     mid = len(Ws) // 2
 

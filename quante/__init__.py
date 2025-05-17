@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: dzwang
 # @Date:   2023-09-15 13:40:25
-# @Last Modified by:   dzwang
-# @Last Modified time: 2024-12-30 17:09:26
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-05-17 22:33:53
 """Quante - 一个用于量子物理的Python库
 
 用于处理张量网络、精确对角化、保存工具、日志工具等的工具库。
@@ -21,7 +21,7 @@
 
 from . import basicfun   # 提供关于日志和储存的一些基本功能
 from . import linalg
-from . import linalg
+from . import quantity
 from . import solvable_models
 from . import generate
 from . import tensor

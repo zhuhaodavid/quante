@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-04-19 10:10:28
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-09 14:25:34
+# @Last Modified time: 2025-05-17 22:45:48
 
 import numpy as np
 from functools import lru_cache
@@ -51,10 +51,10 @@ def xx_evolve(L, model, init_state:str, tlist:np.ndarray):
     >>> plt.show()
     """
     # convert to fermion operator
-    from ...generate.operas import SpinOper, FermionOper
-    if isinstance(model, SpinOper):
+    from ...generate.operas import spin, fermion
+    if isinstance(model, spin.SpinOper):
         model = model.jw_transfer()
-    assert isinstance(model, FermionOper), "model must be a fermion operator"
+    assert isinstance(model, fermion.FermionOper), "model must be a fermion operator"
 
     # evolve the model
     h, coef_I = model.single_particle_ham(L)
