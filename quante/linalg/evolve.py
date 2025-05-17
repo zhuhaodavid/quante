@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-17 18:02:54
+# # @Last Modified time: 2025-05-17 18:16:02
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -637,7 +637,6 @@ class EvolveEngine:
         states = self.all_states
         if measure is None:
             return states
-        from ..linalg import expect
         try:
             if self.device == 'cpu':
                 if isinstance(measure, list):
@@ -708,7 +707,7 @@ def evolve_and_measure(
     ttype : str, optional, by default 'real-time'
         - `type='real-time'`: real-time evolution using `exp(-1j * H * t)`
         - `type='imag-time'`: imaginary-time evolution using `exp(H * t)`
-    method : str, optional, by default 'auto'
+    method : str, optional, by default `mul-cpu`
         All these methods are available when `matrix` is a sparse matrix. All these methods  
         except `eig-xxx` and `gpu_mul-cuda:0` are avidable when `matrix` is a LinearOperator.
         - `method='eig-cpu'`: use the exact diagonalization method to calculate the time evolution (will
@@ -722,6 +721,7 @@ def evolve_and_measure(
         - `method='RK45'` ...: use the RK45 ... method to calculate the time evolution, for more
         information, please refer to the `scipy.integrate.solve_ivp` documentation. check,
         https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html#scipy.integrate.solve_ivp
+        notes: # todo support torch ode by `torchdiffeq`
     traceA : float, optional
         the trace of the matrix, by default None
         if matrix is a LinearOperator and the method is `mul-cpu`, this parameter is required
