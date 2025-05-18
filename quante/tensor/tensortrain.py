@@ -2,7 +2,7 @@
 # @Author: dzwang
 # @Date:   2025-02-19 14:51:17
 # @Last Modified by:   dzwang
-# @Last Modified time: 2025-02-26 16:13:12
+# @Last Modified time: 2025-04-19 17:17:51
 import numpy as np
 from quante.basicfun import println
 from .linalg import left2right_QR_step, right2left_QR_step, tensor2matrix
@@ -30,22 +30,20 @@ class TensorTrain:
                     ↑                               ↑
                 llim = 1                         rlim = 5 
     """
-    def __init__(self, Ws:list[np.ndarray], llim:int, rlim:int, bc="finite") -> None:
+    def __init__(self, Ws:list[np.ndarray], llim:int, rlim:int) -> None:
         self.Ws = Ws
         self.llim = llim
         self.rlim = rlim
-
-    @property
-    def L(self) -> int:
-        """Number of physical sites."""
-        return len(self.Ws)
+        # properties
+        self.N = len(Ws)
+        self.dtype = Ws[0].dtype
 
     @property
     def chi(self) -> list[int]:
         """List of bond dimensions."""
-        return [self.Ws[i].shape[-1] for i in range(self.L-1)]
+        return [self.Ws[i].shape[-1] for i in range(self.N-1)]
     
-    def to_matrix(self) -> np.array:
+    def to_matrix(self) -> np.ndarray:
         """
         .. code-block:: text
             .
@@ -58,18 +56,19 @@ class TensorTrain:
                     |         |                         |
         Examples
         --------
-        >>> L = 2
+        >>> N = 2
         >>> Ws = []
-        >>> for l in range(L):
+        >>> for i in range(N):
         >>>     Ws.append(np.random.rand(2, 3, 2).astype(dtype))
         >>>     Ws.append(np.random.rand(2, 4, 5, 2).astype(dtype))
-        >>> tt = qt.tensor.TensorTrain(Ws, llim=0, rlim=2*L-1)
+        >>> tt = qt.tensor.TensorTrain(Ws, llim=0, rlim=2*N-1)
         >>> matrix = tt.to_matrix()
-        >>> matrix_ = np.einsum("abc,cdef,fgh,hijk->abdgiejk", Ws[0], Ws[1], Ws[2], Ws[3])
+        >>> shape = matrix.shape
+        >>> matrix_ = np.einsum("abc,cdef,fgh,hijk->abdgiejk", Ws[0], Ws[1], Ws[2], Ws[3]).reshape(shape)
         >>> println(np.allclose(matrix, matrix_))
         """
         result = self.Ws[0]
-        for i in range(1, self.L):
+        for i in range(1, self.N):
             # reshape tensor to matrx
             a, *bc, d = result.shape
             d, *ef, g = self.Ws[i].shape
@@ -118,7 +117,7 @@ class TensorTrain:
             dim = self.Ws[i].shape[-1]
             tmp = self.Ws[i].reshape(-1, dim)
             assert np.allclose(tmp.T.conj()@tmp, np.eye(dim, dtype=dtype)), f"{i}-th tensor is not orthogonal."
-        for i in range(self.rlim+1, self.L):
+        for i in range(self.rlim+1, self.N):
             dim = self.Ws[i].shape[0]
             tmp = self.Ws[i].reshape(dim, -1)
             assert np.allclose(tmp@tmp.conj().T, np.eye(dim, dtype=dtype)), f"{i}-th tensor is not orthogonal."
