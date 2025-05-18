@@ -1,8 +1,8 @@
 # # -*- coding: utf-8 -*-
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
-# # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-17 21:44:59
+# # @Last Modified by:   dzwang
+# # @Last Modified time: 2025-05-18 22:33:18
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -264,6 +264,7 @@ def _in_CPU(
         eigenstates = eigenstates.astype(_np.complex128)
         initial_state = initial_state.astype(_np.complex128)
     udagger_psi = Uinvpsi(_np, eigenstates, initial_state, herm)  # U† |psi>
+    # U exp(-iEt) U† |psi>
     return Uexp(_np, eigenvalues, eigenstates, times, udagger_psi, scale)
 
 # -> GPU
@@ -525,7 +526,7 @@ class EvolveEngine:
     def pre_obs(self, obs):
         if obs is None:
             return lambda t, state: state.reshape(self.state_shape)
-        elif isinstance(obs, (sps.sparray, sps.spmatrix, list)):
+        elif isinstance(obs, (sps.sparray, sps.spmatrix, list, _np.ndarray)):
             if self.device != 'cpu':
                 from ..torch_utils import totc
                 obs = totc(obs, device=self.device)
@@ -653,7 +654,7 @@ class EvolveEngine:
         if measure is None:
             return states
         try:
-            if isinstance(measure, (sps.sparray, sps.spmatrix, list)):
+            if isinstance(measure, (sps.sparray, sps.spmatrix, list, _np.ndarray)):
                 if self.device != 'cpu':
                     from ..torch_utils import totc
                     measure = totc(measure, device=self.device)
@@ -751,13 +752,6 @@ def evolve_and_measure(
     """
     tlist = _np.asarray(tlist)
     ttype = 'imag-time' if isinstance(matrix, Liouvillian) else 'real-time'
-
-    # if isinstance(matrix, Liouvillian):
-    # return EvolveEngine(
-    #         matrix, inistate.flatten(), tlist, ttype='imag-time',
-    #         normalize=normalize, method=method, 
-    #         herm=herm, ivp_kwargs=ivp_kwargs
-    #     ).measure(measure)
 
     return EvolveEngine(
         matrix, inistate, tlist, ttype=ttype,
