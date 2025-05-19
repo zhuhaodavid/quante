@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:08:45
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 22:20:46
+# @Last Modified time: 2025-05-19 11:02:53
 
 import numpy as np
 from scipy.sparse import csr_array
@@ -225,7 +225,7 @@ def Fermi_Hubbard_operator(L, J=1.0, U=5.0, cyclic=False) -> SpinfulFermionOper:
     return SpinfulFermionOper(data)
 
 
-class SpinfulFermionBuilder(SpinfulFermionOper):
+class SpinfulFermionBuilder:
     def __init__(self):
         r"""初始化 SpinfulFermionBuilder 类
 
@@ -290,19 +290,7 @@ class SpinfulFermionBuilder(SpinfulFermionOper):
             return self
         else:
             return super().__iadd__(term)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        data = {}
-        for name, (posnlist, coeflist) in self.terms.items():
-            data[name] = _merge_poscoef(posnlist, coeflist)
-        super().__init__(data, type='f')
-        
-        if exc_type is not None:  # 检查是否发生错误
-            tb.print_exc()  # 打印堆栈跟踪
-    
+  
     def build(self):
         data = {}
         for name, (posnlist, coeflist) in self.terms.items():

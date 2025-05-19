@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 22:49:37
+# @Last Modified time: 2025-05-19 10:58:46
 
 import warnings
 import traceback as tb
@@ -441,4 +441,24 @@ class Oper:
     
     def trotter_gates(self) -> None:
         raise NotImplementedError("Subclasses should implement this.")
-
+    
+    def expandn(self):
+        res = {}
+        for oper, (posnlist, coeflist) in self.data.items():
+            if 'n' in oper:
+                positions = []
+                newoper = ''
+                for i, char in enumerate(oper):
+                    if char == 'n':
+                        newoper += '+-'
+                        positions.append(i)
+                    else:
+                        newoper += char
+                for pos in sorted(positions, reverse=True):  # 从后往前插入，避免索引偏移
+                    posnlist = np.insert(posnlist, pos + 1, posnlist[:, pos], axis=1)
+                posnlist_ = posnlist
+            else:
+                newoper = oper
+                posnlist_ = posnlist.copy()
+            res[newoper] = (posnlist_, coeflist.copy())
+        return type(self)(res)
