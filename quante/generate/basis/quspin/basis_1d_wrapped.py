@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2024-12-15 18:08:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-16 18:12:28
+# @Last Modified time: 2025-05-20 12:10:55
 
 # quspin_basis 是 quspin 库中的源码，这里提供一个简单的封装，使得用户可以更方便地使用 quspin_basis 中的 basis 类。
 
-def quspin_spinless_fermion_basis(L:int, Nf:int|list|None = None, nf:float|None = None, a:int|None = None, kblock:int|None=None, pblock:int|None=None):
+def quspin_fermion_basis(L:int, Nf:int|list|None = None, nf:float|None = None, a:int|None = None, kblock:int|None=None, pblock:int|None=None):
     """使用 quspin 生成无自旋费米子基组。
 
     Parameters

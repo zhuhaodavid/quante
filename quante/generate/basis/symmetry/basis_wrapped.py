@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-02 15:25:55
+# @Last Modified time: 2025-05-20 11:48:12
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -268,26 +268,11 @@ def _process_spin_high_full_basis(L:int, S:Union[int, float], block_dic:dict) ->
     return SpinHighBasisNoBlock(L, S)
 
 def _process_spin_high_Nup_block(L:int, S:Union[int, float], block_dic:dict) -> SpinBasis:
+    if S == 0.5 and block_dic['Nup'] == 1:
+        # For this single excitation, we can accelerate the calculation
+        # by using the SpinHalfSingleExcitation basis
+        from .spin_half.single_excitation.defclass import SpinHalfSingleExcitation
+        return SpinHalfSingleExcitation(L)
     from .spin_high.Nup.defclass import SpinHighBasisNup
     return SpinHighBasisNup(L, S, block_dic['Nup'])
-
-def show_spin_basis(vector:_np.ndarray) -> None:
-    """向量转换为spin-1/2直积态求和形式 
-    
-    0 -> ↑ = (1, 0), 1 -> ↓ = (0, 1)
-    
-    [a, b, c, d] = a|00> + .. + d|11>
-
-    Args: quantum state
-    Returns: coefficients, basiss
-    """
-    size = vector.size
-    assert (size & (size - 1))==0, "Only can calculate spin-1/2 state: (2^N,)"
-    element_index = _np.nonzero(vector)[0]  # elemenet is the non-zero element
-    coefficients = [vector[i] for i in element_index]
-    basiss = [_np.binary_repr(i, int(_np.log2(size))) for i in element_index]
-    for basis, coef in zip(basiss, coefficients):
-        if _np.abs(coef) > 1.e-12:
-            b = basis.replace('0', '↑').replace('1', '↓') + ":"
-            print(b, coef)
 

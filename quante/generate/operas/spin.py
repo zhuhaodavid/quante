@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-19 11:02:21
+# @Last Modified time: 2025-05-20 11:48:46
 
 import warnings
 import traceback as tb
@@ -181,8 +181,8 @@ class SpinOper(Oper):
                 return np.zeros((basis.Ns, basis.Ns), dtype=float)
             return sp.csr_matrix((basis.Ns, basis.Ns), dtype=float)
         self._check_length(basis.L)
-        from ..basis.symmetry.basis_class import SpinHalfBasis, SpinHighBasis
-        if isinstance(basis, (SpinHalfBasis, SpinHighBasis)):
+        from ..basis.symmetry.basis_class import SpinBasis
+        if isinstance(basis, SpinBasis):
             if basis.S != 0.5 and pauli is True:
                 raise KeyError("自旋不是 1/2，不能使用 Pauli 矩阵")
             if self._has_expanded():

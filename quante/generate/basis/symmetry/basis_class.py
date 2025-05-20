@@ -2,12 +2,33 @@
 # @Author: hzhu
 # @Date:   2024-09-05 09:31:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-06 12:12:54
+# @Last Modified time: 2025-05-20 12:12:39
 
 from typing import Union
 import inspect
 import numpy as np
 import scipy.sparse as _sp
+
+# def show_spin_basis(vector:_np.ndarray) -> None:
+#     """向量转换为spin-1/2直积态求和形式 
+    
+#     0 -> ↑ = (1, 0), 1 -> ↓ = (0, 1)
+    
+#     [a, b, c, d] = a|00> + .. + d|11>
+
+#     Args: quantum state
+#     Returns: coefficients, basiss
+#     """
+#     size = vector.size
+#     assert (size & (size - 1))==0, "Only can calculate spin-1/2 state: (2^N,)"
+#     element_index = _np.nonzero(vector)[0]  # elemenet is the non-zero element
+#     coefficients = [vector[i] for i in element_index]
+#     basiss = [_np.binary_repr(i, int(_np.log2(size))) for i in element_index]
+#     for basis, coef in zip(basiss, coefficients):
+#         if _np.abs(coef) > 1.e-12:
+#             b = basis.replace('0', '↑').replace('1', '↓') + ":"
+#             print(b, coef)
+
 
 class SpinBasis:
     """
