@@ -2,7 +2,7 @@
 # @Author: dzwang
 # @Date:   2025-04-19 14:51:03
 # @Last Modified by:   dzwang
-# @Last Modified time: 2025-04-25 16:24:30
+# @Last Modified time: 2025-05-20 13:35:50
 import numpy as np
 from copy import deepcopy
 from quante.tensor import TensorTrain 
@@ -83,7 +83,6 @@ class MPS(TensorTrain):
         >>> N = 4
         >>> mps = qt.tensor.networks.MPS.generate_FullUp_state(N, dtype=dtype)
         >>> mps_vec = mps.to_vector()
-        >>> mps_vec /= np.linalg.norm(mps_vec)
         >>> dir_vec = qt.generate.state.product_state(["up"]*N).astype(mps.dtype).squeeze() # one down spin
         >>> print(np.allclose(mps_vec, dir_vec))
         """
