@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-02 15:56:22
+# @Last Modified time: 2025-05-20 17:56:56
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -89,6 +89,8 @@ def _evolve_engine(A, scale, t=1.0, n0=1, traceA=None, balance=False, herm=False
     -----
     This is algorithm (3.2) in Al-Mohy and Higham (2011).
     """
+    if herm is None:
+        herm = False
     if balance:
         raise NotImplementedError
     if len(A.shape) != 2 or A.shape[0] != A.shape[1]:

@@ -2,20 +2,23 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 17:44:52
+# @Last Modified time: 2025-05-22 18:25:41
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
 import numpy as _np
+import math
 import warnings as _warnings
 from scipy.sparse import issparse, dia_array, dia_matrix
 
 __all__ = [
+    "spectral_form_factor",
     "entanglement_spectrum",
     "entanglement_entropy",
     "entropy",
     "entropy_page",
     "cg_coef",
+    "unfolding",
     "mean_level_spacing",
 ]
 
@@ -23,6 +26,12 @@ __all__ += [
     "plot_energy_density", 
     "plot_energy_hist", 
     "plot_level_spacing_distribution", 
+]
+
+__all__ += [
+    "Ginibre_distribution",
+    "Poisson_distribution",
+    "WignerDyson_distribution",
 ]
 
 def spectral_form_factor(engs:_np.ndarray, times:_np.ndarray | float):
@@ -75,31 +84,31 @@ def spectral_form_factor(engs:_np.ndarray, times:_np.ndarray | float):
     return _spectral_form_factor(engs, times)
 
 
-def entanglement_spectrum(state:_np.ndarray, L:int, left_number:int, basis=None) -> _np.ndarray:
-    """纯态纠缠谱.
-    
-    `state` 处于 `basis` 空间，`1/2` 自旋个数为 `L`，计算左边有 `left_number` 个自旋这种二分的纠缠谱。
+def entanglement_spectrum(
+    state: _np.ndarray, 
+    left_number: int, 
+    basis = None
+) -> _np.ndarray:
+    """The entanglement spectrum of a pure state.
     
     Parameters
     ----------
-    state : _np.ndarray
-        纯态
-    L : int
-        自旋个数
+    state : ndarray
+        The pure state, can be 1D or 2D array.
+        - 1D array: the single state
+        - 2D array: the multiple states with shape `(dim, num_states)`
     left_number : int
-        二分左侧自旋个数
-    basis : _type_, optional
-        基矢, by default None
+        The number of spins on the left side of the bipartition.
+    basis : SpinBasis, optional
+        The basis of the state, by default None.
 
     Returns
     -------
-    float
-        纠缠谱
+    ndarray | float
+        The entanglement spectrum of the state.
         
     Examples
     --------
-    计算海森堡链的二分纠缠谱
-    
     >>> L = 10
     >>> ham = qt.generate.operas.heisenberg_operator(L=10)
     >>> basis = qt.generate.basis.spin_basis(L=L, Nup=5, kblock=1)
@@ -108,41 +117,45 @@ def entanglement_spectrum(state:_np.ndarray, L:int, left_number:int, basis=None)
     >>> print(qt.quantity.entanglement_spectrum(vec, L=L, left_number=L//2, basis=basis))
     [0.70710678 0.70710678 0.         0.         0.         0.         0.         0.        ]
     """
-    assert state.ndim == 1 or state.shape[1] == 1, "state must be a vector"
     if basis is not None:
-        fullstate = basis.recover(state.reshape(-1,1))
+        if state.ndim == 1:
+            state = state.reshape(-1,1)
+        state = basis.recover(state)
+        L = basis.L
     else:
-        fullstate = state.reshape(-1,1)
-    assert fullstate.shape[0] == 1<<L
-    matrix = fullstate.reshape(1<<left_number, -1)
-    from .linalg.svd_robust import svd
-    return svd(matrix, compute_uv=False) # type: ignore
+        D = state.shape[0] if state.ndim == 1 else state.shape[1]
+        L = int(math.log2(D))
+        assert D == 1 << L, "The dimension of the state is not 2^L"
+    matrix = state.T.reshape(-1,1<<left_number,1<<L-left_number)
+    return _np.linalg.svd(matrix, compute_uv=False) # type: ignore
 
-def entanglement_entropy(state:_np.ndarray, L:int, left_number:int, basis=None) -> float:
-    """纯态纠缠熵.
-    
-    `state` 处于 `basis` 空间，`1/2` 自旋个数为 `L`，计算左边有 `left_number` 个自旋这种二分的纠缠熵。
+def entanglement_entropy(
+    states: _np.ndarray, 
+    left_number: int, 
+    basis = None
+) -> _np.ndarray | float:
+    """The entanglement entropy of pure states.
     
     Parameters
     ----------
-    state : _np.ndarray
-        纯态
+    states : ndarray
+        The pure states, can be 1D or 2D array.
+        - 1D array: the single state
+        - 2D array: the multiple states with shape `(dim, num_states)`
     L : int
-        自旋个数
+        The number of spins.
     left_number : int
-        二分左侧自旋个数
+        The number of spins on the left side of the bipartition.
     basis : SpinBasis, optional
-        基矢, by default None
+        The basis of the state, by default None.
 
     Returns
     -------
-    float
-        纠缠熵
+    ndarray | float
+        The entanglement entropy of the states.
         
     Examples
     --------
-    计算海森堡链的二分纠缠熵
-    
     >>> L = 10
     >>> ham = qt.generate.operas.heisenberg_operator(L=10)
     >>> basis = qt.generate.basis.spin_basis(L=L, Nup=5, kblock=1)
@@ -151,9 +164,13 @@ def entanglement_entropy(state:_np.ndarray, L:int, left_number:int, basis=None) 
     >>> print(qt.quantity.entanglement_entropy(vec, L=L, left_number=L//2, basis=basis))
     0.6931471805599453
     """
-    ee = entanglement_spectrum(state, L, left_number, basis)
-    ee = ee[ee > 0.0]
-    return (-2) * sum(ee**2 * _np.log(ee))
+    ee = entanglement_spectrum(states, left_number, basis)
+    # ee.shape = (items, spectrum)
+    ee = _np.where(ee > 0, ee, 1)  # Replace zeros with 1 to make log(1)=0
+    res = (-2) * _np.sum(ee**2 * _np.log(ee), axis=1)
+    if res.size == 1:
+        return res[0]
+    return res
 
 def entropy(a, rank=None, base=_np.e) -> _np.float64:
     """计算 von Neumann 熵.
@@ -297,12 +314,13 @@ def mean_level_spacing(E,verbose=True):
     """Clebsch-Gordon coefficient 系数.
     
     三种系综的值如下：
-    
-    +----------+-------------+-------------+-------------+
-    |  Possion |     GOE     |     GUE     |     GSE     |
-    +----------+-------------+-------------+-------------+
-    |  0.38629 |  0.5307(1)  |  0.5996(1)  |  0.6744(1)  |
-    +----------+-------------+-------------+-------------+
+
+    .. code-block:: text
+        +----------+-------------+-------------+-------------+
+        |  Possion |     GOE     |     GUE     |     GSE     |
+        +----------+-------------+-------------+-------------+
+        |  0.38629 |  0.5307(1)  |  0.5996(1)  |  0.6744(1)  |
+        +----------+-------------+-------------+-------------+
     
     Parameters
     ----------
@@ -356,11 +374,159 @@ def mean_level_spacing(E,verbose=True):
 
         return _np.mean(_np.divide( aux.min(1), aux.max(1) )[0:-1] )
 
+def unfolding(eng, discard=0.2, polynomial_of_degree=15, n=30):
+    """unfolding energy spectrum.
 
-#############################
-# 下面是换能级分布的函数
-# todo: 格式整理
-#############################
+    Parameters
+    ----------
+    val : ndarray
+        the energy spectrum
+    discard : float, optional
+        percentage of the spectrum to discard from both ends, by default 0.2
+    polynomial_of_degree : int, optional
+        (for real spectrum) degree of the polynomial for unfolding, by default 15
+    n : int, optional
+        (for complex spectrum) number of neighbors to consider, by default 30
+
+    Returns
+    -------
+    ndarray
+        unfolded energy spectrum
+    """
+    if _np.iscomplexobj(eng):
+        # this is a complex spectrum
+        # the algorithm is based on the paper: 
+        # https://journals.aps.org/pra/pdf/10.1103/PhysRevA.108.043301
+        from scipy.spatial import cKDTree
+        eigval_2d = _np.column_stack((eng.real, eng.imag))
+        tree = cKDTree(eigval_2d)
+        dists, _ = tree.query(eigval_2d, k=31)  # k=31 to include the point itself as the 0th neighbor
+        rhobar = n/(_np.pi*dists[:, n]**2)
+        return dists[:, 1] * rhobar**0.5
+    else:
+        # cdf
+        E_list, NE_list = [], []  # unit step function Theta: less or equal
+        for i in range(len(eng)-1):
+            E_list.append(eng[i])
+            NE_list.append(i)
+            E_list.append(eng[i])
+            NE_list.append(i+1)
+        # unfolding
+        Fit = _np.polynomial.Polynomial.fit(
+            E_list, NE_list, polynomial_of_degree)  # polynomial fitting - degree 15
+        # discard the spectrum located at the edges
+        val_discard = eng[int(len(eng)*discard):-int(len(eng)*discard)]
+        eps = Fit(_np.array(val_discard))  # unfolded energy
+        # mean level density = mean level spacing = 1
+        assert (eps[-1]-eps[0])/(len(eps)-1)-1. < 1.e-2
+        return eps
+
+def plot_level_spacing_distribution(unfolded_eng, ax, bins=None):
+    """ 能级间距分布 """
+    eps_spc = _np.array(unfolded_eng)/_np.mean(unfolded_eng)
+    # stats
+    if bins is None:
+        # 这是对高斯分布最优的选择，其它分布也应当保证 N**(-1/5)
+        h = 1.05*_np.std(eps_spc) * eps_spc.size**(-1/5)
+        bins = _np.arange(eps_spc.min(), eps_spc.max()+h, h)
+    else:
+        bins = _np.linspace(0, 4+0.1, bins)
+    ax.hist(eps_spc, bins=bins, density=True, color='lightgray', ec="gray") # type: ignore
+    return ax
+
+def Poisson_distribution(s, complex_plane=False):
+    """
+    Poisson distribution for real eigenvalues.
+    Vectorized for numpy arrays.
+    """
+    if complex_plane:
+        return _np.pi * s / 2 * _np.exp(-_np.pi * s**2 / 4)
+    else:
+        # 1D Poisson distribution
+        return _np.exp(-s)
+
+def WignerDyson_distribution(s, beta=1):
+    """
+    Wigner-Dyson distribution for real eigenvalues.
+    Vectorized for numpy arrays.
+    """
+    if beta == 1:
+        return _np.pi * s / 2 * _np.exp(-_np.pi * s**2 / 4)
+    elif beta == 2:
+        return 32 / _np.pi**2 * s**2 * _np.exp(-4 * s**2 / _np.pi)
+    elif beta == 4:
+        return 2**18 / _np.pi**3/3**6 * s**4 * _np.exp(-64 * s**2 / _np.pi/9)
+    else:
+        raise NotImplementedError
+
+def _e(m, s):
+    # s: array or scalar
+    s = _np.asarray(s)
+    res = _np.zeros_like(s, dtype=float)
+    for l in range(m+1):
+        res += s**(2*l) / math.factorial(l)
+    return res
+
+def _p(s, M):
+    # s: array or scalar
+    s = _np.asarray(s)
+    term1 = _np.ones_like(s, dtype=float)
+    for m in range(1, M):
+        term1 *= _e(m, s) * _np.exp(-s**2)
+    term2 = _np.zeros_like(s, dtype=float)
+    for m in range(1, M):
+        term2 += (2 * s**(2*m+1)) / (math.factorial(m) * _e(m, s))
+    return term1 * term2
+
+def Ginibre_distribution(s, M=100):
+    """
+    Ginibre distribution for complex eigenvalues.
+    Vectorized for numpy arrays.
+    """
+    c = 1.1429
+    return c * _p(c * s, M)
+
+def plot_energy_density(vals, ax, bandwidth=1.):
+    """利用 KDE 方法快速画出连续的能级密度分布曲线，调节 bandwidth 会改变结果
+    """
+    import matplotlib.pyplot as _plt
+    from scipy.stats import norm
+    color1 = "C0"  # 统计图的颜色
+    color2 = "|C3"  # 能级的线和颜色
+    x_d = _np.linspace(vals.min(), vals.max(), 500)
+    density = sum(norm(xi, bandwidth).pdf(x_d) for xi in vals) / len(vals) # type: ignore
+    ax.fill_between(x_d, density, color=color1, alpha=0.8)
+    ax.plot(vals, _np.full_like(vals, -0.003), color2, markeredgewidth=0.1, markersize=10)
+    return ax
+
+def plot_energy_hist(vals, ax, bins=None):
+    import matplotlib.pyplot as _plt
+    color2 = "|C5"  # 能级的线和颜色
+    if bins is None:
+        # 这是对高斯分布最优的选择，其它分布也应当保证 N**(-1/5)
+        h = 1.05*_np.std(vals) * vals.size**(-1/5)
+        bins = _np.arange(vals.min(), vals.max()+h, h)
+    ax.hist(vals, bins=bins, density=True, color="0.7")
+    ax.plot(vals, _np.full_like(vals, -0.0035), color2, markeredgewidth=0.1, markersize=10)
+    from scipy.stats import norm
+    x_d = _np.linspace(vals.min(), vals.max(), 100)
+    y_norm = [norm(_np.mean(vals), _np.std(vals)).pdf(xi) for xi in x_d] # type: ignore
+    ax.plot(x_d, y_norm, "k--")
+    return ax
+
+
+
+
+
+
+
+
+
+
+
+#####################################
+# Not frequently used indicators
+#####################################
 
 def discard_len(val, discard):
     assert _np.linalg.norm(val - _np.sort(val)) < 1.0e-10
@@ -422,122 +588,6 @@ def indicator_eta(eps, bin):
     eta = (integral_Ps - integral_PWD_s) / (integral_Pp_s - integral_PWD_s)
     return eta
 
-
-def plot_energy_density(vals, ax=None, bandwidth=1.):
-    """利用 KDE 方法快速画出连续的能级密度分布曲线，调节 bandwidth 会改变结果
-    """
-    import matplotlib.pyplot as _plt
-    try:
-        vals = vals.cpu().real
-    except:
-        pass
-    from scipy.stats import norm
-    tag = False
-    color1 = "C0"  # 统计图的颜色
-    color2 = "|C3"  # 能级的线和颜色
-    if ax is None:
-        ax = _plt.subplot(111)
-        tag = True
-    x_d = _np.linspace(vals.min(), vals.max(), 500)
-    density = sum(norm(xi, bandwidth).pdf(x_d) for xi in vals) / len(vals) # type: ignore
-    ax.fill_between(x_d, density, color=color1, alpha=0.8)
-    ax.plot(vals, _np.full_like(vals, -0.003), color2, markeredgewidth=0.1, markersize=10)
-    
-    if tag:
-        _plt.show()
-    return ax
-
-
-def plot_energy_hist(vals, ax=None, bins=None):
-    import matplotlib.pyplot as _plt
-    try:
-        vals = (vals.to("cpu")).numpy().real
-    except:
-        pass
-    tag = False
-    color1 = "C0"  # 统计图的颜色
-    color2 = "|C5"  # 能级的线和颜色
-    if ax is None:
-        ax = _plt.subplot(111)
-        tag = True
-    if bins is None:
-        # 这是对高斯分布最优的选择，其它分布也应当保证 N**(-1/5)
-        h = 1.05*_np.std(vals) * vals.size**(-1/5)
-        bins = _np.arange(vals.min(), vals.max()+h, h)
-    ax.hist(vals, bins=bins, density=True, color="0.7")
-    ax.plot(vals, _np.full_like(vals, -0.0035), color2, markeredgewidth=0.1, markersize=10)
-    
-    from scipy.stats import norm
-    x_d = _np.linspace(vals.min(), vals.max(), 100)
-    y_norm = [norm(_np.mean(vals), _np.std(vals)).pdf(xi) for xi in x_d] # type: ignore
-    ax.plot(x_d, y_norm, "k--")
-    if tag:
-        _plt.show()
-    return ax
-
- 
-def unfolding(val, discard=0.2, polynomial_of_degree=15):
-    # cdf
-    E_list, NE_list = [], []  # unit step function Theta: less or equal
-    for i in range(len(val)-1):
-        E_list.append(val[i])
-        NE_list.append(i)
-        E_list.append(val[i])
-        NE_list.append(i+1)
-    # unfolding
-    Fit = _np.polynomial.Polynomial.fit(
-        E_list, NE_list, polynomial_of_degree)  # polynomial fitting - degree 15
-    # discard the spectrum located at the edges
-    val_discard = val[int(len(val)*discard):-int(len(val)*discard)]
-    eps = Fit(_np.array(val_discard))  # unfolded energy
-    # mean level density = mean level spacing = 1
-    assert (eps[-1]-eps[0])/(len(eps)-1)-1. < 1.e-2
-    return eps
-
-
-def plot_level_spacing_distribution(eps, ax=None, bins=None, beta=1):
-    """ 能级间距分布 """
-    eps = unfolding(eps)
-    spacing = _np.diff(eps)
-    _plot_level_spacing_distribution(spacing, ax=ax, bins=bins, beta=beta)
-
-def _plot_level_spacing_distribution(spacing, ax=None, bins=None, beta=1):
-    """ 能级间距分布 """
-    import matplotlib.pyplot as _plt
-    tag = False
-    if ax is None:
-        ax = _plt.subplot(111)
-        tag = True
-    eps_spc = _np.array(spacing)/_np.mean(spacing)
-    # stats
-    if bins is None:
-        # 这是对高斯分布最优的选择，其它分布也应当保证 N**(-1/5)
-        h = 1.05*_np.std(eps_spc) * eps_spc.size**(-1/5)
-        bins = _np.arange(eps_spc.min(), eps_spc.max()+h, h)
-    else:
-        bins = _np.linspace(0, 4+0.1, bins)
-    ax.hist(eps_spc, bins=bins, density=True, color='lightgray', ec="gray") # type: ignore
-    ax.set_xlim(0, 4)
-    ax.set_ylim(0, 1)
-    # comparing
-    sn = _np.linspace(0, 4, 100)
-    Ps_poisson = _np.exp(-sn)
-    if beta==1:
-        Ps_WD = _np.pi * sn / 2 * _np.exp(-_np.pi * sn ** 2 / 4)
-    elif beta==2:
-        Ps_WD = 32 / _np.pi**2 * sn**2 * _np.exp(- 4 * sn ** 2 / _np.pi)
-    elif beta==4:
-        Ps_WD = 2**18 / _np.pi**3/3**6 * sn**4 * _np.exp(- 64 * sn ** 2 / _np.pi/9)
-    else:
-        raise NotImplementedError
-    ax.plot(sn, Ps_poisson, color="red", label='poisson')
-    ax.plot(sn, Ps_WD, color="blue", label='WD')
-    ax.set_xlabel(r"$s$")
-    ax.set_ylabel(r"$P$")
-    ax.legend()
-    if tag:
-        _plt.show()
-    return ax
 
 def level_spacing_indicator_eta(eps):  # ? # todo
     """ eta 指数 可积：1 不可积：0 """
