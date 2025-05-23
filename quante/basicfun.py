@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-22 20:51:21
+# @Last Modified time: 2025-05-23 11:11:11
 
 import gc as _gc
 import os as _os
@@ -1497,7 +1497,7 @@ class DynamicPlot:
         
         # save data
         self.tlist = tlist
-        self.res = None
+        self.data = None
 
         # save plot parameters
         self.ptype = None
@@ -1510,7 +1510,12 @@ class DynamicPlot:
         self.ylim = None
         self.clim = None
         self.legend = None
-
+    
+    def __str__(self):
+        return self.data.__str__()
+    
+    def __repr__(self):
+        return self.data.__repr__()
         
     def set(self, xlim=None, ylim=None, clim=None, legend=None, ptype=None):
         self.xlim = xlim
@@ -1520,36 +1525,36 @@ class DynamicPlot:
         self.ptype = ptype
         return self
 
-    def update(self, res_t):
+    def append(self, res_t):
         ax = self.ax
         plt = self.pkg
         i = self.i
 
-        if self.res is None:
+        if self.data is None:
             res_t = self._init_plot(res_t)
             
         if self.ptype == "line":
-            self.res[i] = res_t    
+            self.data[i] = res_t    
             self.plot.set_xdata(self.tlist[:i+1])
-            self.plot.set_ydata(self.res[:i+1])
+            self.plot.set_ydata(self.data[:i+1])
             if self.xlim is None:
                 ax.set_xlim(min(self.tlist[:i+1]), max(self.tlist[:i+1]))
             if self.ylim is None:
-                ax.set_ylim(min(self.res[:i+1]), max(self.res[:i+1]))
+                ax.set_ylim(min(self.data[:i+1]), max(self.data[:i+1]))
         elif self.ptype == "para":
-            self.res[0, i] = res_t[0]
-            self.res[1, i] = res_t[1]
-            self.plot.set_xdata(self.res[0,:i+1])
-            self.plot.set_ydata(self.res[1,:i+1])
+            self.data[0, i] = res_t[0]
+            self.data[1, i] = res_t[1]
+            self.plot.set_xdata(self.data[0,:i+1])
+            self.plot.set_ydata(self.data[1,:i+1])
             if self.xlim is None:
-                ax.set_xlim(min(self.res[0,:i+1]), max(self.res[0,:i+1]))
+                ax.set_xlim(min(self.data[0,:i+1]), max(self.data[0,:i+1]))
             if self.ylim is None:
-                ax.set_ylim(min(self.res[1,:i+1]), max(self.res[1,:i+1]))
+                ax.set_ylim(min(self.data[1,:i+1]), max(self.data[1,:i+1]))
         elif self.ptype == "dens":
-            self.res[:, i] = _np.asarray(res_t)
-            self.plot.set_data(self.res.T)
+            self.data[:, i] = _np.asarray(res_t)
+            self.plot.set_data(self.data.T)
             if self.clim is None:
-                valid = self.res[:, :i+1]
+                valid = self.data[:, :i+1]
                 vmin, vmax = _np.nanmin(valid), _np.nanmax(valid)
                 if vmin != vmax:
                     self.plot.set_clim(vmin, vmax)           
@@ -1566,7 +1571,7 @@ class DynamicPlot:
                 self.clear_output(wait=True)
             else:
                 self.pkg.show()
-        return self.res
+        return self.data
 
 
     def _init_plot(self, res_t):
@@ -1587,25 +1592,25 @@ class DynamicPlot:
         if self.ptype == "line":
             if self.xlim is None:
                 self.xlim = (self.tlist[0], self.tlist[-1])
-            self.res = _np.full(len(self.tlist), _np.nan, dtype=_np.float64)
-            self.plot, = ax.plot(self.tlist, self.res, *self.args, **self.kwargs)
+            self.data = _np.full(len(self.tlist), _np.nan, dtype=_np.float64)
+            self.plot, = ax.plot(self.tlist, self.data, *self.args, **self.kwargs)
             if self.legend:
                 ax.legend()
         elif self.ptype == "para":
-            self.res = _np.full((2, len(self.tlist)), _np.nan, dtype=_np.float64)
-            self.plot, = ax.plot(self.res[0,:], self.res[1,:], *self.args, **self.kwargs)
+            self.data = _np.full((2, len(self.tlist)), _np.nan, dtype=_np.float64)
+            self.plot, = ax.plot(self.data[0,:], self.data[1,:], *self.args, **self.kwargs)
             if self.legend:
                 ax.legend()
         elif self.ptype == "dens":
             n = len(res_t)
-            self.res = _np.full((n, len(self.tlist)), _np.nan, dtype=_np.float64)
-            self.plot = ax.imshow(self.res.T, *self.args, aspect='auto', origin='lower', **self.kwargs, extent=(0, n, self.tlist[0], self.tlist[-1]))
+            self.data = _np.full((n, len(self.tlist)), _np.nan, dtype=_np.float64)
+            self.plot = ax.imshow(self.data.T, *self.args, aspect='auto', origin='lower', **self.kwargs, extent=(0, n, self.tlist[0], self.tlist[-1]))
             if self.legend:
                 plt.colorbar(self.plot, ax=ax)
             if self.clim is not None:
                 self.plot.set_clim(*self.clim)           
         else:
-            raise ValueError("Unsupported data type for res_t. Please provide a float, list, or numpy array.")
+            raise ValueError("Unknown plot type.")
         
         if self.xlim is not None:
             ax.set_xlim(*self.xlim)

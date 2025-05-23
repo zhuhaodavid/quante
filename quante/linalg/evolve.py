@@ -2,7 +2,7 @@
 # # @Author: hzhu
 # # @Date:   2023-10-22 17:13:49
 # # @Last Modified by:   hzhu
-# # @Last Modified time: 2025-05-22 20:46:18
+# # @Last Modified time: 2025-05-23 11:04:45
 
 from scipy import sparse as sps
 from scipy.special import jv
@@ -671,8 +671,8 @@ class EvolveEngine:
             for t in self.tlist:
                 state = self.run()
                 res_t = _np.real_if_close(obs(t, state))
-                dp.update(res_t)
-            res = dp.res
+                dp.append(res_t)
+            res = dp.data
         except Exception as e:
             # raise MeasureError(f"Error in measure: {e}")
             _warnings.warn(f"DynamicPlot error: {e}, with result res: {res}")
