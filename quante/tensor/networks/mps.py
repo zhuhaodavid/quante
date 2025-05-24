@@ -2,7 +2,7 @@
 # @Author: dzwang
 # @Date:   2025-04-19 14:51:03
 # @Last Modified by:   dzwang
-# @Last Modified time: 2025-05-20 13:35:50
+# @Last Modified time: 2025-05-24 12:51:43
 import numpy as np
 from copy import deepcopy
 from quante.tensor import TensorTrain 
@@ -115,3 +115,28 @@ class MPS(TensorTrain):
         Ws = [deepcopy(Wup)] + [deepcopy(Wdn) for _ in range(N-1)]
         return cls(Ws, llim=0, rlim=N-1)
     
+    @classmethod
+    def generate_Neel_state(cls, N:int, dtype=np.float64, *, first_site="up") -> "MPS":
+        """ Generate MPS representing Single Up state.
+
+        Example
+        -------
+        >>> N = 5
+        >>> mps = qt.tensor.networks.MPS.generate_Neel_state(N, dtype=dtype, first_site="up")
+        >>> mps_vec = mps.to_vector()
+        >>> mps_vec /= np.linalg.norm(mps_vec)
+        >>> dir_vec = qt.generate.state.product_state(["up", "dn", "up", "dn", "up"]).astype(mps.dtype).squeeze() # >>> one down spin
+        >>> print(np.allclose(mps_vec, dir_vec))
+        """
+        Wup = np.zeros((1, 2, 1), dtype=dtype)
+        Wup[0, 0, 0] = 1.
+        Wdn = np.zeros((1, 2, 1), dtype=dtype)
+        Wdn[0, 1, 0] = 1.
+        # generate MPS
+        if first_site == "up":
+            Ws = [deepcopy(Wup), deepcopy(Wdn)] * (N//2)
+            Ws += [deepcopy(Wup)] if N % 2 == 1 else []
+        elif first_site == "dn":
+            Ws = [deepcopy(Wdn), deepcopy(Wup)] * (N//2)
+            Ws += [deepcopy(Wdn)] if N % 2 == 1 else []
+        return cls(Ws, llim=0, rlim=N-1)
