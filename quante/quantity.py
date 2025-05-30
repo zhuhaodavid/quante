@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-22 18:25:41
+# @Last Modified time: 2025-05-30 13:37:25
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -374,7 +374,7 @@ def mean_level_spacing(E,verbose=True):
 
         return _np.mean(_np.divide( aux.min(1), aux.max(1) )[0:-1] )
 
-def unfolding(eng, discard=0.2, polynomial_of_degree=15, n=30):
+def unfolding_diff(eng, discard=0.2, polynomial_of_degree=15, n=30):
     """unfolding energy spectrum.
 
     Parameters
@@ -400,7 +400,7 @@ def unfolding(eng, discard=0.2, polynomial_of_degree=15, n=30):
         from scipy.spatial import cKDTree
         eigval_2d = _np.column_stack((eng.real, eng.imag))
         tree = cKDTree(eigval_2d)
-        dists, _ = tree.query(eigval_2d, k=31)  # k=31 to include the point itself as the 0th neighbor
+        dists, _ = tree.query(eigval_2d, k=n+1)  # k=31 to include the point itself as the 0th neighbor
         rhobar = n/(_np.pi*dists[:, n]**2)
         return dists[:, 1] * rhobar**0.5
     else:
@@ -419,14 +419,29 @@ def unfolding(eng, discard=0.2, polynomial_of_degree=15, n=30):
         eps = Fit(_np.array(val_discard))  # unfolded energy
         # mean level density = mean level spacing = 1
         assert (eps[-1]-eps[0])/(len(eps)-1)-1. < 1.e-2
-        return eps
+        return _np.diff(eps)
 
 def plot_level_spacing_distribution(unfolded_eng, ax, bins=None):
-    """ 能级间距分布 """
+    """
+    Plot the level spacing distribution of unfolded energy spectrum.
+    
+    Parameters
+    ----------
+    unfolded_eng : ndarray
+        Unfolded energy spectrum, typically obtained from `qt.quantity.unfolding_diff`.
+    ax : matplotlib.axes.Axes
+        The axes on which to plot the histogram.
+    bins : int or None, optional
+        Number of bins for the histogram. If None, it will be automatically determined.
+        Default is None.
+
+    Example
+    -------
+    >>> eng_unfold = qt.quantity.unfolding_diff(eng)
+    >>> plot_level_spacing_distribution(eng_unfold, ax)
+    """
     eps_spc = _np.array(unfolded_eng)/_np.mean(unfolded_eng)
-    # stats
     if bins is None:
-        # 这是对高斯分布最优的选择，其它分布也应当保证 N**(-1/5)
         h = 1.05*_np.std(eps_spc) * eps_spc.size**(-1/5)
         bins = _np.arange(eps_spc.min(), eps_spc.max()+h, h)
     else:
@@ -516,193 +531,3 @@ def plot_energy_hist(vals, ax, bins=None):
 
 
 
-
-
-
-
-
-
-
-
-#####################################
-# Not frequently used indicators
-#####################################
-
-def discard_len(val, discard):
-    assert _np.linalg.norm(val - _np.sort(val)) < 1.0e-10
-    L = len(val)
-    discard = discard / 2
-    return val[int(L * discard) : -int(L * discard)]
-
-
-def staircase_function(val):
-    assert _np.linalg.norm(val - _np.sort(val)) < 1.0e-10
-    E_list, NE_list = [], []
-    for i in range(len(val) - 1):
-        E_list.append(val[i])
-        NE_list.append(i)
-        E_list.append(val[i])
-        NE_list.append(i + 1)
-    return E_list, NE_list
-
-
-def smooth_function(E_list, NE_list, polynomial_degree):
-    return _np.polynomial.Polynomial.fit(E_list, NE_list, polynomial_degree)
-
-
-def get_new_level(val, discard, polynomial_degree):
-    val = discard_len(val, discard=discard)
-    E_list, NE_list = staircase_function(val)
-    Nsm = smooth_function(E_list, NE_list, polynomial_degree)
-    return Nsm(val)
-
-
-def indicator_eta(eps, bin):
-    # mean level density = mean level spacing = 1
-    assert (eps[-1] - eps[0]) / (len(eps) - 1) - 1.0 < 1.0e-2
-    eps_spc = _np.diff(eps)
-    """Interable-Chaos transition"""
-    Ps, s_order = _np.histogram(
-        eps_spc, bins=list(_np.linspace(0, 4, bin + 1)) + [eps.max()], density=True
-    )
-    s0 = 0.4729
-    s0_lab = [
-        i for i, j in enumerate(s_order) if abs(j - s0) < 1.0e-3
-    ]  # find the lab of s0 in s_order
-    assert len(s0_lab) != 0  # enlarging the bins
-    s0_lab = s0_lab[0] + 1  # 横坐标截断 s0_lab 的个数，需要 +1.
-    diff_s_s0 = _np.diff(s_order[:s0_lab])
-    Ps_s0 = Ps[: s0_lab - 1]
-    integral_Ps = _np.sum(Ps_s0 * diff_s_s0)  # 求矩阵面积，Ps_s0*d(s_s0)
-
-    def Pp_s(s):
-        return _np.exp(-s)
-
-    def PWD_s(s):
-        return _np.pi * s / 2 * _np.exp(-_np.pi * s**2 / 4)
-
-    from scipy import integrate
-
-    integral_Pp_s, _ = integrate.quad(Pp_s, 0, s0)  # 分母减数
-    integral_PWD_s, _ = integrate.quad(PWD_s, 0, s0)  # 分母被减数
-    eta = (integral_Ps - integral_PWD_s) / (integral_Pp_s - integral_PWD_s)
-    return eta
-
-
-def level_spacing_indicator_eta(eps):  # ? # todo
-    """ eta 指数 可积：1 不可积：0 """
-    eps_spc = _np.diff(eps)
-    # stats
-    s0 = 0.4729
-    eps_spc.sort()
-    integral_Ps = _np.count_nonzero(eps_spc < s0) / eps_spc.size
-    integral_Pp_s = 0.37680761269947016
-    integral_PWD_s = 0.16108178372342252
-    eta = (integral_Ps - integral_PWD_s) / (integral_Pp_s - integral_PWD_s)
-    return eta
-
-
-def peak_position(eps, polynomial_of_degree=15):
-    """ 峰值位置 可积：0 不可积：0.8 """
-    eps_spc = _np.diff(eps)
-    eps_spc.sort()
-    e_list, Ne_list = [], []  # unit step function Theta: less or equal
-    for i in range(len(eps_spc)-1):
-        e_list.append(eps_spc[i])
-        Ne_list.append(i)
-        e_list.append(eps_spc[i])
-        Ne_list.append(i+1)
-    e_list = _np.array(e_list)
-    Ne_list = _np.array(Ne_list)/Ne_list[-1]
-    fit = _np.polynomial.Polynomial.fit(
-        e_list, Ne_list, polynomial_of_degree).deriv()  # polynomial fitting - degree 15
-    rt = fit.deriv().roots()
-    rt = rt[(abs(rt.imag) < 1e-10)*(rt.real >= 0)*(rt.real <= 1)].real
-    rt = _np.append(rt, [eps_spc[0]])
-    Pk = rt[_np.argmax(fit(rt))]
-    return Pk
-
-
-def plot_level_number_variance(eps, l_list, ax=None):
-    """ Sigma """
-    import matplotlib.pyplot as _plt
-    tag = False
-    if ax is None:
-        ax = _plt.subplot(111)
-        tag = True
-    Sigma_l = []
-    for l in l_list:
-        if l == 0:
-            Sigma_l.append(0)
-            continue
-        N_eps, _ = _np.histogram(eps, _np.arange(
-            eps[0], eps[-1]+0.1, l), density=False)
-        Sigma_l.append(_np.var(N_eps))
-    ax.plot(l_list, Sigma_l)
-    ax.plot(l_list, l_list, 'b-.')
-    y_d = [2*(_np.log(2*_np.pi*l)+_np.euler_gamma+1-_np.pi**2/8) /
-           _np.pi**2 if l != 0 else 0 for l in l_list]
-    ax.plot(l_list, y_d, 'r--')
-    ax.set_ylim((0, 2))
-    if tag:
-        _plt.show()
-    return l_list, ax
-
-
-def level_spacing_indicator_beta(eps, bandwidth=0.05):
-    """ beta 指数 可积：0 不可积：1 """
-    # fit eps with poly
-    import math
-
-    from scipy import optimize
-    from scipy.stats import norm
-    eps_spc = _np.diff(eps)
-    def b(beta): return math.gamma((beta + 2)/(beta + 1))**(beta + 1)
-    def PB(s, beta): return b(beta) * (beta+1) * \
-        s**beta * _np.exp(- b(beta) * s**(beta+1))
-    s_order = _np.linspace(0, _np.max(eps_spc), 1000)[1:]
-    Ps = sum(norm(xi, bandwidth).pdf(s_order) # type: ignore
-             for xi in eps_spc)/len(eps_spc)  # 有参数可调
-    beta = optimize.curve_fit(PB, s_order, Ps)[0][0]
-    return beta
-
-
-def plot_level_spacings_ratio(val, ax=None, bins=None):
-    """ r 的分布 """
-    import matplotlib.pyplot as _plt
-    tag = False
-    if ax is None:
-        ax = _plt.subplot(111)
-        tag = True
-    s_list = _np.diff(val)
-    r_list = []
-    for i in range(len(s_list)-1):
-        if s_list[i] < 1e-10 or s_list[i+1] < 1e-10:
-            r_list.append(0)
-        else:
-            r = min(s_list[i]/s_list[i+1], s_list[i+1]/s_list[i])
-            r_list.append(r)
-    if bins is None:
-        # 这是对高斯分布最优的选择，其它分布也应当保证 N**(-1/5)
-        h = 1.05 * _np.std(r_list) * len(r_list)**(-1/5)
-        bins = _np.arange(_np.min(r_list), _np.max(r_list)+h, h)
-    else:
-        bins = _np.linspace(0, 1+0.1, bins)
-    ax.hist(r_list, bins=bins, density=True, color='lightgray', ec="gray") # type: ignore
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 2)
-    """RMT result comparing"""
-    r = _np.linspace(0, 1, 100)
-    P_poisson = 2 / (r + 1)**2
-    Z1 = 8/27
-    P_GOE = 1/Z1 * 2 * (r + r**2) / (1 + r + r**2)**(5/2)
-    ax.plot(r, P_poisson, color="red", label='poisson')
-    ax.plot(r, P_GOE, color="blue", label='WD')
-    # 设置横纵坐标的名称以及对应字体格式
-    font = {'family': 'Times New Roman', 'weight': 'normal', 'size': 14}
-    ax.set_xlabel(r"$r$", font)
-    ax.set_ylabel(r"$P(r)$", font)
-    ax.legend(prop={'size': 12}, loc='upper right')
-    if tag:
-        _plt.show()
-    return ax

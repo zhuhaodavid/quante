@@ -142,6 +142,8 @@ ensure is installed and `gcc --verion` is greater than (suggest v11.4.0). if not
 
 - `sudo apt-get install libblas-dev liblapack-dev`
 
+- `sudo apt-get install gfortran`
+
 #### without root
 
 This part is mainly from <https://blog.csdn.net/weixin_38505222/article/details/120967948> and this process may take a lot time
@@ -288,8 +290,7 @@ v2.1.0+
 - `cd /home/yourname/myinstall/petsc-3.20.0/complex-double`
 
 - `export PETSC_ARCH=arch-linux-c-debug-complex-double`
-
-- install PETSC by `./configure --download-scalapack --download-mumps --download-metis --download-parmetis --with-precision=double --with-scalar-type=complex`. the `--with-fftw=1 --download-fftw --download-scalapack --download-mumps` are optional. the scalar type can also set to be real, but complex seems to be required by quimb. `--with-debugging=0` can be added to close debugging but not checked.
+- install PETSC by `./configure --download-metis --download-parmetis --with-precision=double --with-scalar-type=complex`. the `--with-fftw=1 --download-fftw --download-scalapack --download-mumps` are optional. the scalar type can also set to be real, but complex seems to be required by quimb. `--with-debugging=0` can be added to close debugging but not checked.
 
 - `make ... all` by the instruction to follow the installation
 
@@ -307,7 +308,7 @@ should be the same version as petsc
 
 - `wget https://slepc.upv.es/download/distrib/slepc-3.20.0.tar.gz` from <https://petsc.org/release/install/download/>
 
-- `tar -zxvf slepc-3.20.0.tar.gz`
+- `tar xf slepc-3.20.0.tar.gz`
 
 - `mkdir /home/yourname/myinstall/slepc-3.20.0`
 
