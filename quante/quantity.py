@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-30 13:37:25
+# @Last Modified time: 2025-05-31 16:58:53
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -10,6 +10,7 @@ import numpy as _np
 import math
 import warnings as _warnings
 from scipy.sparse import issparse, dia_array, dia_matrix
+from typing import Literal
 
 __all__ = [
     "spectral_form_factor",
@@ -421,32 +422,88 @@ def unfolding_diff(eng, discard=0.2, polynomial_of_degree=15, n=30):
         assert (eps[-1]-eps[0])/(len(eps)-1)-1. < 1.e-2
         return _np.diff(eps)
 
-def plot_level_spacing_distribution(unfolded_eng, ax, bins=None):
+def plot_level_spacing_distribution(
+    eng: _np.ndarray, 
+    ax = None, 
+    bins = None, 
+    unfolded:bool = False, 
+    st_dists: Literal['poisson', 'poisson-c',
+            'wigner-dyson-1', 'wigner-dyson-2','wigner-dyson-4', 
+            'ginibre'] | None = None
+):
     """
-    Plot the level spacing distribution of unfolded energy spectrum.
+    Plot the level spacing distribution of energy spectrum.
     
     Parameters
     ----------
-    unfolded_eng : ndarray
-        Unfolded energy spectrum, typically obtained from `qt.quantity.unfolding_diff`.
-    ax : matplotlib.axes.Axes
-        The axes on which to plot the histogram.
+    eng : _np.ndarray
+        The energy spectrum, can be real or complex.
+    ax : matplotlib.axes.Axes, optional
+        The axes to plot on, by default None, which creates a new figure.
     bins : int or None, optional
-        Number of bins for the histogram. If None, it will be automatically determined.
-        Default is None.
+        The number of bins for the histogram, by default None, which calculates the optimal number of bins.
+    unfolded : bool, optional
+        Whether to unfold the energy spectrum, by default False.
+        If True, the `unfolding_diff` function will be applied to the energy spectrum.
+    st_dists : str or list of str, optional
+        The standard distributions to plot, by default None.
+        Options are:
+        - 'poisson' or 'poisson-c': Poisson distribution (real or complex)
+        - 'wigner-dyson-1', 'wigner-dyson-2', 'wigner-dyson-4': Wigner-Dyson distributions
+        - 'ginibre': Ginibre distribution for complex eigenvalues
 
     Example
     -------
-    >>> eng_unfold = qt.quantity.unfolding_diff(eng)
-    >>> plot_level_spacing_distribution(eng_unfold, ax)
+    >>> eng = np.linalg.eigvalsh(hammat)
+    >>> plot_level_spacing_distribution(eng)
     """
-    eps_spc = _np.array(unfolded_eng)/_np.mean(unfolded_eng)
+    # ensure the eng is unfolded
+    if not unfolded:
+        eng = unfolding_diff(eng)
+    assert _np.isrealobj(eng), "eng must be real, unfolding_diff is needed for complex spectrum"
+
+    # set plot axes
+    if ax is None:
+        import matplotlib.pyplot as _plt
+        _, ax = _plt.subplots()
+    
+    # determine bins
+    eps_spc = _np.array(eng)/_np.mean(eng)
     if bins is None:
         h = 1.05*_np.std(eps_spc) * eps_spc.size**(-1/5)
         bins = _np.arange(eps_spc.min(), eps_spc.max()+h, h)
     else:
         bins = _np.linspace(0, 4+0.1, bins)
+    
+    # plot the histogram
     ax.hist(eps_spc, bins=bins, density=True, color='lightgray', ec="gray") # type: ignore
+
+    # plot the standard distributions
+    if st_dists is not None:
+        if isinstance(st_dists, str):
+            st_dists = [st_dists]
+        xs = _np.linspace(0, bins[-1], 1000)
+        for dist in st_dists or []:
+            if dist.lower() in ["poisson-r", "poisson"]:
+                ys = Poisson_distribution(xs)
+                ax.plot(xs, ys, label="Poisson", color="red")
+            elif dist.lower() == "poisson-c":
+                ys = Poisson_distribution(xs, complex_plane=True)
+                ax.plot(xs, ys, label="Poisson", color="red")
+            elif dist.lower() == "wigner-dyson-1":
+                ys = WignerDyson_distribution(xs, beta=1)
+                ax.plot(xs, ys, label="Wigner-Dyson-1", color="blue")
+            elif dist.lower() == "wigner-dyson-2":
+                ys = WignerDyson_distribution(xs, beta=2)
+                ax.plot(xs, ys, label="Wigner-Dyson-2", color="blue")
+            elif dist.lower() == "wigner-dyson-4":
+                ys = WignerDyson_distribution(xs, beta=4)
+                ax.plot(xs, ys, label="Wigner-Dyson-4", color="blue")
+            elif dist.lower() == "ginibre":
+                ys = Ginibre_distribution(xs)
+                ax.plot(xs, ys, label="Ginibre", color="blue")
+            else:
+                raise ValueError(f"Unknown distribution: {dist}")
     return ax
 
 def Poisson_distribution(s, complex_plane=False):
