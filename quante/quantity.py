@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-31 17:06:51
+# @Last Modified time: 2025-05-31 18:17:34
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -310,65 +310,65 @@ def cg_coef(j1:float, j2:float, j3:float, m1:float, m2:float, m3:float) -> float
     from .linalg.usenumba.operations_numba import clebsch
     return clebsch(j1, j2, j3, m1, m2, m3)
 
-
-def mean_level_spacing(E,verbose=True):
-    """Clebsch-Gordon coefficient 系数.
-    
-    三种系综的值如下：
-
-    .. code-block:: text
-        +----------+-------------+-------------+-------------+
-        |  Possion |     GOE     |     GUE     |     GSE     |
-        +----------+-------------+-------------+-------------+
-        |  0.38629 |  0.5307(1)  |  0.5996(1)  |  0.6744(1)  |
-        +----------+-------------+-------------+-------------+
+def mean_level_spacing(val,verbose=True):
+    """mean level spacing as a measure of level repulsion.
     
     Parameters
     ----------
-    E : list or _np.ndarray
-        能级列表，必须是升序且没有重复的能级
+    val : list or ndarray
+        energy spectrum or single eigenvalue spectrum.
     verbose : bool, optional
-        是否打印警告信息, by default True
+        if True, print warnings for degeneracies, by default True.
 
+    Notes
+    -----
+    typical values for the energy level spacing in different ensembles are
+    .. code-block:: text
+        +----------+----------+-------------+-------------+-------------+
+        |  class   |  Possion |   GUE/A     |   GOE/AI    |   GSE/AII   |
+        +----------+----------+-------------+-------------+-------------+
+        | symmetry |    -     |   None      | Time-re(+1) | Time-re(-1) |
+        +----------+----------+-------------+-------------+-------------+
+        |  energy  |  0.38629 |  0.5996(1)  |  0.5307(1)  |  0.6744(1)  |
+        +----------+----------+-------------+-------------+-------------+
+        | sv(herm) |  0.38629 |  0.422245   |  0.423589   |  0.411438   |
+        +----------+----------+-------------+-------------+-------------+
+        | sv(non-h)|  0.38629 |  0.6026     |  0.5358     |  0.6761     |
+        +----------+----------+-------------+-------------+-------------+
+       
     Returns
     -------
     float
-        平均能级间距
+        The mean level spacing, or NaN if degeneracies are found.
     
-    Examples
-    --------
-    计算 xxz 模型的平均能级间距：
-    
-    >>> import quante as qt
-    >>> import numpy as np
-    >>> ham = qt.generate.operas.heisenberg_operator(L=12, j=(1,1,0.5))
-    >>> basis = qt.generate.basis.spin_basis(L=12, Nup=6, zblock=1)
-    >>> mat = ham.to_matrix(basis)
-    >>> engs = np.linalg.eigvalsh(mat)
-    >>> qt.quantity.mean_level_spacing(engs)
-    0.3693119203415571
-    
+    Example
+    -------
+    >>> mat = np.random.randn(1000, 1000)
+    >>> mat += mat.conj().T  # make it Hermitian
+    >>> eng = np.linalg.eigvalsh(mat)
+    >>> qt.quantity.mean_level_spacing(eng) 
+    np.float64(0.5321503482669373)
+
     References
     ----------
-    https://arxiv.org/pdf/1212.5611.pdf
-	"""
-    if not isinstance(E,_np.ndarray):
-        E = _np.asarray(E)
 
-    if _np.any(_np.sort(E)!=E):
-        raise TypeError("Expecting a sorted list of ascending, nondegenerate eigenenergies 'E'.")
+    [1]. https://doi.org/10.1103/PhysRevLett.110.084101
+
+    [2]. https://doi.org/10.1103/PRXQuantum.4.040312 
+	"""
+    val = _np.sort(val)  # ensure the input is sorted
 
 	# check for degeneracies    
-    if len(_np.unique(E)) != len(E):
+    if len(_np.unique(val)) != len(val):
         if verbose:
             _warnings.warn("Degeneracies found in spectrum 'E'!")
         return _np.nan
     else:
 	    # compute consecutive E-differences
-        sn = _np.diff(E)
+        sn = _np.diff(val)
 		
 		# calculate the ratios of consecutive spacings
-        aux = _np.zeros((len(E)-1,2),dtype=_np.float64)
+        aux = _np.zeros((len(val)-1,2),dtype=_np.float64)
 
         aux[:,0] = sn
         aux[:,1] = _np.roll(sn,-1)
