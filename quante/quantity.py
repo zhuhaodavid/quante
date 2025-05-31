@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-31 16:58:53
+# @Last Modified time: 2025-05-31 17:06:51
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -426,7 +426,7 @@ def plot_level_spacing_distribution(
     eng: _np.ndarray, 
     ax = None, 
     bins = None, 
-    unfolded:bool = False, 
+    unfolding:bool = True, 
     st_dists: Literal['poisson', 'poisson-c',
             'wigner-dyson-1', 'wigner-dyson-2','wigner-dyson-4', 
             'ginibre'] | None = None
@@ -442,9 +442,8 @@ def plot_level_spacing_distribution(
         The axes to plot on, by default None, which creates a new figure.
     bins : int or None, optional
         The number of bins for the histogram, by default None, which calculates the optimal number of bins.
-    unfolded : bool, optional
-        Whether to unfold the energy spectrum, by default False.
-        If True, the `unfolding_diff` function will be applied to the energy spectrum.
+    unfolding : bool, optional
+        If True, the energy spectrum will be unfolded before plotting, by default True.
     st_dists : str or list of str, optional
         The standard distributions to plot, by default None.
         Options are:
@@ -458,7 +457,7 @@ def plot_level_spacing_distribution(
     >>> plot_level_spacing_distribution(eng)
     """
     # ensure the eng is unfolded
-    if not unfolded:
+    if unfolding:
         eng = unfolding_diff(eng)
     assert _np.isrealobj(eng), "eng must be real, unfolding_diff is needed for complex spectrum"
 
