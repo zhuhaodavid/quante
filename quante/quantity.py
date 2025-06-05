@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-23 14:26:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-31 18:17:34
+# @Last Modified time: 2025-05-31 20:00:46
 
 #!! 不要在这里引用 quante 中的其他函数（可以在函数中引用）
 
@@ -322,7 +322,8 @@ def mean_level_spacing(val,verbose=True):
 
     Notes
     -----
-    typical values for the energy level spacing in different ensembles are
+    typical values for the energy level spacing in different ensembles 
+    (Possion and the threefold ensembles) are
     .. code-block:: text
         +----------+----------+-------------+-------------+-------------+
         |  class   |  Possion |   GUE/A     |   GOE/AI    |   GSE/AII   |
@@ -556,6 +557,26 @@ def Ginibre_distribution(s, M=100):
     """
     c = 1.1429
     return c * _p(c * s, M)
+
+def plot_level_spacings_ratio(val, ax, bins=None):
+    """ r 的分布 """
+    s_list = _np.diff(val)
+    r_list = []
+    for i in range(len(s_list)-1):
+        if s_list[i] < 1e-10 or s_list[i+1] < 1e-10:
+            r_list.append(0)
+        else:
+            r = min(s_list[i]/s_list[i+1], s_list[i+1]/s_list[i])
+            r_list.append(r)
+    if bins is None:
+        # 这是对高斯分布最优的选择，其它分布也应当保证 N**(-1/5)
+        h = 1.05 * _np.std(r_list) * len(r_list)**(-1/5)
+        bins = _np.arange(_np.min(r_list), _np.max(r_list)+h, h)
+    else:
+        bins = _np.linspace(0, 1+0.1, bins)
+    ax.hist(r_list, bins=bins, density=True, color='lightgray', ec="gray") # type: ignore
+    # 设置横纵坐标的名称以及对应字体格式
+    return ax
 
 def plot_energy_density(vals, ax, bandwidth=1.):
     """利用 KDE 方法快速画出连续的能级密度分布曲线，调节 bandwidth 会改变结果
