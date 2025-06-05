@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
-# @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-02 16:46:11
+# @Last Modified by:   dzwang
+# @Last Modified time: 2025-05-29 15:17:07
 
 import torch as tc
 
@@ -446,7 +446,7 @@ def tn_inner(
         Lenv = _inner_step(Lenv, Ws1[i], Ws2[i])
     return _trace_Lenv(Lenv)
    
-
+    
 def tn_norm(Ws: list[tc.Tensor], lognorm=False) -> tc.Tensor:
     """计算 MPS(MPO) 的模（MPO 的模定义为： tr(M†M)）
 

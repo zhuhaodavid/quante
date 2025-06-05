@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:25
-# @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 16:50:07
+# @Last Modified by:   dzwang
+# @Last Modified time: 2025-05-29 14:03:40
 
 """
 生成一些常用的态（`np.ndarray`）
@@ -17,6 +17,7 @@
 
 import itertools
 import numpy as _np
+from numpy._typing._array_like import NDArray
 import scipy.sparse as _sparse
 import math as _math
 
@@ -61,7 +62,7 @@ def state_from_string(coef:list[float], basis:list[str]):
     return _sparse.coo_array((coef, (rows, cols))).tocsr()
 
 
-def product_state(updns:list[str], dtype=float, Nup=None):
+def product_state(updns:list[str], dtype=float, Nup=None) -> _np.ndarray:
     """通过字符串生成态
     
     如：'1010101'
