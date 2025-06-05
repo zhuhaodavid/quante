@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 13:29:30
+# @Last Modified time: 2025-05-23 11:11:11
 
 import gc as _gc
 import os as _os
@@ -1470,40 +1470,19 @@ def send_email(subject: str, body: str, to_email: str, from_email: str, smtp_ser
 
 
 class DynamicPlot:
-    def __init__(self, tlist, *args, ax=None, **kwargs):
-        """dynamic plot class
-
-        Parameters
-        ----------
-        tlist : list
-            the list of time
-        ax : matplotlib.axes.Axes | None, optional
-            the axes to plot on, by default None
-        kwargs : dict, optional
-            additional keyword arguments for plotting, by default {}
-
-        Example
-        -------
-        >>> try:
-        >>>     with DynamicPlot(engine.tlist, ax=ax) as dp:
-        >>>         for i, t in enumerate(engine.tlist):
-        >>>             state = engine.run()
-        >>>             res_t = _np.real_if_close(obs(t, state))
-        >>>             res = dp.update(res, res_t, i)
-        >>> except Exception as e:
-        >>>     _warnings.warn(f"DynamicPlot error: {e}")
-        """
-        import matplotlib.pyplot as plt
-        if ax is not None and not isinstance(ax, plt.Axes):
-            raise TypeError("The 'ax' parameter must be a matplotlib Axes object or None.")
+    def __init__(self, tlist, ax, *args, **kwargs):
+        # save package
         import matplotlib.pyplot as plt
         self.pkg = plt
 
-        self.tlist = tlist
+        # check ax
         if ax is None:
             fig, ax = plt.subplots()
+        if not isinstance(ax, plt.Axes):
+            raise TypeError("The 'ax' parameter must be a matplotlib Axes object or None.")
         self.ax = ax
 
+        # check if in ipython
         in_ipython = False
         try:
             from IPython import get_ipython
@@ -1515,64 +1494,127 @@ class DynamicPlot:
             self.clear_output = clear_output
             self.display = display
         self.in_ipython = in_ipython
+        
+        # save data
+        self.tlist = tlist
+        self.data = None
 
+        # save plot parameters
+        self.ptype = None
         self.args = args
         self.kwargs = kwargs
+
+        # initialize dp parameters
+        self.i = 0
+        self.xlim = None
+        self.ylim = None
+        self.clim = None
+        self.legend = None
+    
+    def __str__(self):
+        return self.data.__str__()
+    
+    def __repr__(self):
+        return self.data.__repr__()
         
-    def __enter__(self):
+    def set(self, xlim=None, ylim=None, clim=None, legend=None, ptype=None):
+        self.xlim = xlim
+        self.ylim = ylim
+        self.clim = clim
+        self.legend = legend
+        self.ptype = ptype
         return self
 
-    def update(self, res, res_t, i):
+    def append(self, res_t):
         ax = self.ax
         plt = self.pkg
+        i = self.i
 
-        if res is None:
-            try:
-                n = len(res_t)
-            except TypeError:
-                n = 1
-            res = _np.full((n, len(self.tlist)), _np.nan, dtype=_np.float64)
-            if n == 1:
-                line, = ax.plot(self.tlist, res.reshape(-1), *self.args, **self.kwargs)
-                ax.set_xlim(self.tlist[0], self.tlist[-1])
-            else:
-                img = ax.imshow(res.T, *self.args, aspect='auto', origin='lower', **self.kwargs, extent=(0, n, self.tlist[0], self.tlist[-1]))
-                plt.colorbar(img, ax=ax)
-        else:
-            n = res.shape[0]
-            if n == 1:
-                line = ax.lines[0]
-            else:
-                img = ax.images[0]
-        res[:, i] = res_t
-        if n == 1:
-            line.set_ydata(res.reshape(-1))
-            # 自动调整 y 轴范围
-            valid = res[0, :i+1]
-            if valid.size > 0:
-                ymin, ymax = _np.nanmin(valid), _np.nanmax(valid)
-                if ymin != ymax:
-                    ax.set_ylim(ymin, ymax)
-        else:
-            img.set_data(res.T)
-            # 自动调整色标范围
-            valid = res[:, :i+1]
-            vmin, vmax = _np.nanmin(valid), _np.nanmax(valid)
-            if vmin != vmax:
-                img.set_clim(vmin, vmax)
+        if self.data is None:
+            res_t = self._init_plot(res_t)
+            
+        if self.ptype == "line":
+            self.data[i] = res_t    
+            self.plot.set_xdata(self.tlist[:i+1])
+            self.plot.set_ydata(self.data[:i+1])
+            if self.xlim is None:
+                ax.set_xlim(min(self.tlist[:i+1]), max(self.tlist[:i+1]))
+            if self.ylim is None:
+                ax.set_ylim(min(self.data[:i+1]), max(self.data[:i+1]))
+        elif self.ptype == "para":
+            self.data[0, i] = res_t[0]
+            self.data[1, i] = res_t[1]
+            self.plot.set_xdata(self.data[0,:i+1])
+            self.plot.set_ydata(self.data[1,:i+1])
+            if self.xlim is None:
+                ax.set_xlim(min(self.data[0,:i+1]), max(self.data[0,:i+1]))
+            if self.ylim is None:
+                ax.set_ylim(min(self.data[1,:i+1]), max(self.data[1,:i+1]))
+        elif self.ptype == "dens":
+            self.data[:, i] = _np.asarray(res_t)
+            self.plot.set_data(self.data.T)
+            if self.clim is None:
+                valid = self.data[:, :i+1]
+                vmin, vmax = _np.nanmin(valid), _np.nanmax(valid)
+                if vmin != vmax:
+                    self.plot.set_clim(vmin, vmax)           
+        
         if self.in_ipython:
             self.clear_output(wait=True)
             self.display(plt.gcf())
         else:
             plt.pause(0.1)
-        return res
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if self.in_ipython:
-            self.clear_output(wait=True)
-        else:
-            self.pkg.show()
+        self.i += 1
         
-        if exc_type is not None:  # 检查是否发生错误
-            _traceback.print_exc()  # 打印堆栈跟踪
+        if i == len(self.tlist) - 1:
+            if self.in_ipython:
+                self.clear_output(wait=True)
+            else:
+                self.pkg.show()
+        return self.data
 
+
+    def _init_plot(self, res_t):
+        ax = self.ax
+        plt = self.pkg
+
+        res_t = _np.asarray(res_t)
+
+        if self.ptype is None:
+            # determine plot type according to the data type
+            if res_t.size == 1:
+                self.ptype = "line"
+            elif res_t.size == 2:
+                self.ptype = "para"
+            else:
+                self.ptype = "dens"
+        
+        if self.ptype == "line":
+            if self.xlim is None:
+                self.xlim = (self.tlist[0], self.tlist[-1])
+            self.data = _np.full(len(self.tlist), _np.nan, dtype=_np.float64)
+            self.plot, = ax.plot(self.tlist, self.data, *self.args, **self.kwargs)
+            if self.legend:
+                ax.legend()
+        elif self.ptype == "para":
+            self.data = _np.full((2, len(self.tlist)), _np.nan, dtype=_np.float64)
+            self.plot, = ax.plot(self.data[0,:], self.data[1,:], *self.args, **self.kwargs)
+            if self.legend:
+                ax.legend()
+        elif self.ptype == "dens":
+            n = len(res_t)
+            self.data = _np.full((n, len(self.tlist)), _np.nan, dtype=_np.float64)
+            self.plot = ax.imshow(self.data.T, *self.args, aspect='auto', origin='lower', **self.kwargs, extent=(0, n, self.tlist[0], self.tlist[-1]))
+            if self.legend:
+                plt.colorbar(self.plot, ax=ax)
+            if self.clim is not None:
+                self.plot.set_clim(*self.clim)           
+        else:
+            raise ValueError("Unknown plot type.")
+        
+        if self.xlim is not None:
+            ax.set_xlim(*self.xlim)
+        if self.ylim is not None:
+            ax.set_ylim(*self.ylim)
+            
+        return res_t

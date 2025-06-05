@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 22:38:04
+# @Last Modified time: 2025-06-04 11:11:53
 """
 生成矩阵：(`np.ndarray`)
 - `pauli_matrix`
@@ -20,7 +20,7 @@ import scipy.sparse as _sparse
 from ..linalg.operations import kron, ikron, kron_power, exp
 from .basis.symmetry.basis_wrapped import _check_spin_number # type: ignore
 
-from typing import Optional, Callable, Union
+from typing import Optional, Callable, Union, Literal
 number = Union[int, float, complex]
 
 __all__ = [
@@ -202,171 +202,6 @@ def _evaluate_string(evalable_string, _single_oper, _kron):
 # random matrix
 ##################################################
 
-def random_matrix(dim, type="simple", seed=None):
-    """生成随机矩阵
-    
-    这个函数本身不支持 njit （因为返回的数据类型不统一）
-    如果需要 njit 请使用内部的 _random_simple_matrix 等函数
-    
-    - type: 
-    
-        - "simple" -> 每个矩阵元实数高斯分布
-        
-        - "simple_real" -> 每个矩阵元实数高斯分布
-        
-        - "GOE"/"symm" -> 实对称矩阵
-        
-        - "GUE"/"herm" -> Hermite 矩阵
-        
-        - "CUE"/"unit" -> 幺正矩阵
-        
-        - "COE"/"orth" -> 正交矩阵(COE)
-        
-        - "CRE" -> 正交矩阵(CRE)
-        
-        - "positive" -> 正定矩阵
-        
-        - "normal" -> 正规矩阵
-        
-        - "noninv" -> 不可逆矩阵
-        
-        - "realeig" -> 实本征值的矩阵
-        
-        - "singular" -> 奇异矩阵
-        
-        - "rho" -> 密度矩阵
-        
-    
-    矩阵（方阵）的分类：
-    -----------------------
-    - **简单矩阵** (可以相似对角化)
-        
-       - **正规矩阵** (M.H @ M = M @ M.H,  可以幺正相似对角化)
-       
-        （**幺正矩阵**、**厄密矩阵**、**对角矩阵**，但这三者没有包含关系）
-        
-       - **非正规矩阵** (可以相似对角化，但不可以幺正相似对角化)
-        
-    - **不简单矩阵** (不可以相似对角化/只能相似到Jordan型上)
-
-    注：
-    - 本征值始终是存在的，无论是不是简单矩阵。
-    
-    - 本征值为实数的矩阵可以是：不简单矩阵、非正规矩阵、厄密矩阵。
-    
-    - 如果正规矩阵的本征值是实数，则该正规矩阵必定为厄密矩阵。
-    
-    
-    随机矩阵的分类：
-    --------------------
-    =========== ======================== ======================= ================== ===========
-    ensemble    matrix class drawn from  measure                 invariant under    beta
-    =========== ======================== ======================= ================== ===========
-    GOE         real, symmetric          ``~ exp(-n/4 tr(H^2))`` orthogonal O       1
-    ----------- ------------------------ ----------------------- ------------------ -----------
-    GUE         hermitian                ``~ exp(-n/2 tr(H^2))`` unitary U          2
-    ----------- ------------------------ ----------------------- ------------------ -----------
-    CRE         O(n)                     Haar                    orthogonal O       /
-    ----------- ------------------------ ----------------------- ------------------ -----------
-    COE         U in U(n) with U = U^T   Haar                    orthogonal O       1
-    ----------- ------------------------ ----------------------- ------------------ -----------
-    CUE         U(n)                     Haar                    unitary U          2
-    ----------- ------------------------ ----------------------- ------------------ -----------
-    O_close_1   O(n)                     ?                       /                  /
-    ----------- ------------------------ ----------------------- ------------------ -----------
-    U_close_1   U(n)                     ?                       /                  /
-    =========== ======================== ======================= ================== ===========
-    
-    
-    随机矩阵的概率性质：
-    ---------------------
-    - 简单矩阵（复数或实数）：    
-    
-        - 以概率 1 可相似对角化;
-        
-        - 以概率 1 不可酉相似对角化
-        
-        - 概率 1 可逆
-        
-    
-    - 正规矩阵（厄密矩阵，对称矩阵，幺正矩阵，实正交阵）：
-    
-        - 必可以相似对角化
-        
-        - 必可以酉相似对角化
-        
-        - 概率 1 可逆
-        
-    
-    - 非正规矩阵：
-    
-        - 必可以相似对角化
-        
-        - 概率 1 可逆
-        
-    
-    - 不简单矩阵：
-    
-        - 不可以相似对角化
-        
-        - 只能相似到Jordan型上
-        
-    
-    - 奇异矩阵：
-    
-        - 不能被相似对角化（用来对角化的矩阵的逆矩阵矩阵元发散。）
-        
-        - 不能被酉相似对角化
-        
-        - 概率 1 可逆
-        
-        
-    - 不可以逆矩阵：
-    
-        - 必不可逆 或者 逆矩阵发散
-        
-        - 以概率 1 可相似对角化
-        
-        - 以概率 1 不可酉相似对角化
-        
-    
-    - 实本征值单阵
-    
-        - 以概率 1 可相似对角化
-
-        - 以概率 1 不可酉相似对角化
-
-        - 以概率 1 可逆
-
-        
-    生成随机数的方法参见：https://numpy.org/doc/stable/reference/random/generator.html#
-    """
-    type_to_function = {
-        "simple": _random_simple_matrix,
-        "realsimple": _random_simple_real_matrix,
-        "GOE": _random_symmetric_matrix_goe,
-        "GUE": _random_hermition_matrix_gue,
-        "CUE": _random_unitary_matrix_cue,
-        "COE": _randomize_orthogonal_coe,
-        "CRE": _random_orthogonal_matrix_cre,
-        "singular": _random_singular_matrix,
-        "normal": _random_normal_matrix,
-        "noninv": _random_noninv_matrix,
-        "realeig": _random_real_eigen_matrix,
-        "positive": _random_positive_matrix,
-        "rho": _random_density_matrix
-    }
-
-    type = type.replace("herm", "GUE")
-    type = type.replace("unit", "CUE")
-    type = type.replace("symm", "GOE")
-    type = type.replace("orth", "COE")
-    if type in type_to_function:
-        return type_to_function[type](dim, seed=seed)
-    else:
-        raise ValueError(f"Unknown type '{type}'.")
-
-
 # @njit
 def _random_simple_matrix(dim, seed=None):
     if seed is not None:
@@ -391,6 +226,18 @@ def _random_hermition_matrix_gue(dim, seed):
     complex_matrix = _random_simple_matrix(dim, seed)
     return (complex_matrix + complex_matrix.T.conj()) * 0.5
 
+# @njit
+def _random_hermition_matrix_gse(dim, seed):
+    """Class AII: Gaussian Symplectic Ensemble
+    (N x N complex Hermitian with symplectic symmetry)"""
+    assert dim % 2 == 0, "Dimension must be even for GSE."
+    N = dim // 2
+    A = _random_hermition_matrix_gue(N, seed)  # Complex part
+    B = _random_simple_matrix(N, seed)  # Symplectic part
+    B = (B - B.T) / 2  # Skew-symmetric
+    upper = _np.hstack((A, B))
+    lower = _np.hstack((-B.conj(), A.conj()))
+    return _np.vstack((upper, lower))
 
 # @njit
 def _random_unitary_matrix_cue(dim, seed):
@@ -475,6 +322,173 @@ def _random_density_matrix(dim, seed):
     trace = _np.sum(_np.diag(res))
     res[:] /= trace
     return res
+
+type_to_function = {
+    "simple": _random_simple_matrix,
+    "realsimple": _random_simple_real_matrix,
+    "GOE": _random_symmetric_matrix_goe,
+    "GUE": _random_hermition_matrix_gue,
+    "GSE": _random_hermition_matrix_gse,
+    "CUE": _random_unitary_matrix_cue,
+    "COE": _randomize_orthogonal_coe,
+    "CRE": _random_orthogonal_matrix_cre,
+    "singular": _random_singular_matrix,
+    "normal": _random_normal_matrix,
+    "noninv": _random_noninv_matrix,
+    "realeig": _random_real_eigen_matrix,
+    "positive": _random_positive_matrix,
+    "rho": _random_density_matrix,
+}
+
+
+def random_matrix(
+    dim, 
+    type: Literal['simple', 'realsimple', 'GOE', 'GUE', 'GSE', 'CUE', 'COE', 'CRE',
+                    'singular', 'normal', 'noninv', 'realeig', 'positive', 'rho'] = "simple",
+    seed=None
+):
+    r"""generate a random matrix of given type and dimension.
+
+    Parameters
+    ----------
+    dim : int
+        The dimension of the square matrix to be generated.
+    type : str, optional
+        The type of the random matrix to be generated. Default is "simple".
+        - "simple" -> Each matrix element is drawn from a real Gaussian distribution.
+        - "simple_real" -> Each matrix element is drawn from a real Gaussian distribution.
+        - "GOE"/"symm" -> Real symmetric matrix.
+        - "GUE"/"herm" -> Hermitian matrix.
+        - "CUE"/"unit" -> Unitary matrix.
+        - "COE"/"orth" -> Orthogonal matrix (COE).
+        - "CRE" -> Orthogonal matrix (CRE).
+        - "positive" -> Positive definite matrix.
+        - "normal" -> Normal matrix.
+        - "noninv" -> Non-invertible matrix.
+        - "realeig" -> Matrix with real eigenvalues.
+        - "singular" -> Singular matrix.
+        - "rho" -> Density matrix.
+    seed : int, optional
+        Random seed for reproducibility. Default is None.
+    
+        
+    Random matrix ensembles
+    -----------------------
+    =========== ======================== ======================= ================== ===========
+    ensemble    drawn from               measure                 invariant under    beta
+    =========== ======================== ======================= ================== ===========
+    GOE         real, symmetric          ``~ exp(-n/4 tr(H^2))`` orthogonal O       1
+    ----------- ------------------------ ----------------------- ------------------ -----------
+    GUE         hermitian                ``~ exp(-n/2 tr(H^2))`` unitary U          2
+    ----------- ------------------------ ----------------------- ------------------ -----------
+    CRE         O(n)                     Haar                    orthogonal O       /
+    ----------- ------------------------ ----------------------- ------------------ -----------
+    COE         U in U(n) with U = U^T   Haar                    orthogonal O       1
+    ----------- ------------------------ ----------------------- ------------------ -----------
+    CUE         U(n)                     Haar                    unitary U          2
+    ----------- ------------------------ ----------------------- ------------------ -----------
+    O_close_1   O(n)                     ?                       /                  /
+    ----------- ------------------------ ----------------------- ------------------ -----------
+    U_close_1   U(n)                     ?                       /                  /
+    =========== ======================== ======================= ================== ===========
+
+    tenfold symmetry classification
+    ------------------------------
+    - TRS - Time Reversal Symmetry,
+        .. math::
+            T H^* T^{-1} = H,  T T^* = \pm 1
+    
+    - PHS - Particle-Hole Symmetry,
+        .. math::
+            C H^T C^{-1} = - H,  C C^* = \pm 1
+    
+    - CS - Chiral symmetry,
+        .. math::
+            S H S^{-1} = - H,  S^2 = + 1
+
+    ========= ======= ======= ======= ================
+    AZ class  TRS     PHS     CS      Example Ensemble
+    ========= ======= ======= ======= ================
+    A         0       0       0       GUE
+    --------- ------- ------- ------- ----------------
+    AI        +1      0       0       GOE
+    --------- ------- ------- ------- ----------------
+    AII       -1      0       0       GSE
+    --------- ------- ------- ------- ----------------
+    AIII      0       0       1       Chiral unitary
+    --------- ------- ------- ------- ----------------
+    BDI       +1      +1      1       Chiral orthogonal
+    --------- ------- ------- ------- ----------------
+    CII       -1      -1      1       Chiral symplectic
+    --------- ------- ------- ------- ----------------
+    D         0       +1      0       BdG
+    --------- ------- ------- ------- ----------------
+    DIII      -1      +1      1       BdG
+    --------- ------- ------- ------- ----------------
+    C         0       -1      0       BdG
+    --------- ------- ------- ------- ----------------
+    CI        +1      -1      1       BdG
+    ========= ======= ======= ======= ================
+ 
+    Notes
+    -----
+    
+    - classification of random matrices:
+        - simple matrix: can be diagonalized by similarity transformation.
+        - normal matrix: can be diagonalized by unitary transformation.
+        (H . H^† = H^† . H)
+        - non-normal matrix: can be diagonalized by similarity transformation, but not by unitary transformation.
+        - non-simple matrix: cannot be diagonalized by similarity transformation, only can be transformed to Jordan form.
+    
+    .. code-block:: text
+        +-------------------+--------------------+
+        |                   |  Normal matrix     |
+        |   simple matrix   +--------------------+
+        |                   |  Non-normal matrix |
+        +-------------------+--------------------+
+        | Non-simple matrix |                    |
+        +-------------------+--------------------+
+
+    - eigenvalue,
+        - there are always eigenvalues for matrices, even if they are not simple matrices.
+        - if the eigenvalues of a normal matrix are real, then the normal matrix must be hermitian.
+   
+    - random ensembles of random matrices:  
+    
+          
+    - basic properties of random matrices:
+        - simple matrices (complex or real): with probability 1, they can be diagonalized by similarity 
+        transformation; with probability 1, they cannot be diagonalized by unitary transformation; with 
+        probability 1, they are invertible.
+        - normal matrices (hermitian, symmetric, unitary, real orthogonal): they can always be diagonalized
+        by similarity transformation; they can always be diagonalized by unitary transformation; with
+        probability 1, they are invertible.
+        - non-normal matrices: they can always be diagonalized by similarity transformation; with probability 1,
+        they are invertible.
+        - non-simple matrices: they cannot be diagonalized by similarity transformation; they can only be
+        transformed to Jordan form.
+        - singular matrices: they cannot be diagonalized by similarity transformation (the inverse matrix of the
+        matrix used to diagonalize the matrix diverges); they cannot be diagonalized by unitary transformation;
+        with probability 1, they are invertible.
+        - non-invertible matrices: they are not invertible or the inverse matrix diverges; with probability 1,
+        they can be diagonalized by similarity transformation; with probability 1, they cannot be diagonalized
+        by unitary transformation.
+        - real eigenvalue single matrix: with probability 1, they can be diagonalized by similarity transformation;
+        with probability 1, they cannot be diagonalized by unitary transformation; with probability 1, they are
+        invertible.
+    
+    Methods for generating random numbers can be found at:
+    https://numpy.org/doc/stable/reference/random/generator.html#random-matrix-generation
+
+    """
+    type = type.replace("herm", "GUE")
+    type = type.replace("unit", "CUE")
+    type = type.replace("symm", "GOE")
+    type = type.replace("orth", "COE")
+    if type in type_to_function:
+        return type_to_function[type](dim, seed=seed)
+    else:
+        raise ValueError(f"Unknown type '{type}'.")
 
 
 def random_orthorgonal_matrix_close_I(dim, a=0.01, seed=None):

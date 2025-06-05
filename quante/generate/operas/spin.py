@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 22:53:30
+# @Last Modified time: 2025-05-20 11:48:46
 
 import warnings
 import traceback as tb
@@ -53,8 +53,9 @@ class SpinOper(Oper):
     
     def _has_expanded(self) -> bool:
         for opnm in self.data.keys():
-            if opnm not in ['I', "p", "m", "Z"]:
-                return False
+            for i in opnm:
+                if i not in ['I', "p", "m", "Z"]:
+                    return False
         return True
 
     def jw_transfer(self, pauli=False, force=False) -> 'FermionOper':
@@ -180,8 +181,8 @@ class SpinOper(Oper):
                 return np.zeros((basis.Ns, basis.Ns), dtype=float)
             return sp.csr_matrix((basis.Ns, basis.Ns), dtype=float)
         self._check_length(basis.L)
-        from ..basis.symmetry.basis_class import SpinHalfBasis, SpinHighBasis
-        if isinstance(basis, (SpinHalfBasis, SpinHighBasis)):
+        from ..basis.symmetry.basis_class import SpinBasis
+        if isinstance(basis, SpinBasis):
             if basis.S != 0.5 and pauli is True:
                 raise KeyError("自旋不是 1/2，不能使用 Pauli 矩阵")
             if self._has_expanded():
@@ -825,7 +826,7 @@ def _expand_term(name, c):
 
     return expanded_names, expanded_coefs
 
-class SpinBuilder(SpinOper):
+class SpinBuilder:
     def __init__(self):
         """
         可用的符号包括：I, p, m, x, y, z, n
@@ -878,19 +879,7 @@ class SpinBuilder(SpinOper):
             return self
         else:
             return super().__iadd__(term)
-    
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        data = {}
-        for name, (posnlist, coeflist) in self.terms.items():
-            data[name] = (np.vstack(posnlist), np.hstack(coeflist))
-        super().__init__(data, type='s')
-
-        if exc_type is not None:  # 检查是否发生错误
-            tb.print_exc()  # 打印堆栈跟踪
-    
+   
     def build(self):
         data = {}
         for name, (posnlist, coeflist) in self.terms.items():

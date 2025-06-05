@@ -1,1 +1,0 @@
-.. automodule:: quante.torch_utils
