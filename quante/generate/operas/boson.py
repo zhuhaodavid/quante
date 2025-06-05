@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 22:22:23
+# @Last Modified time: 2025-05-19 11:01:54
 import numpy as np
 from .general import Oper, _merge_poscoef, _single_term
 from .fermion import _sort_pm, _sort_posn
@@ -30,7 +30,7 @@ class BosonOper(Oper):
     def __init__(self, data:dict, type='b') -> None:
         assert type == 'b'
         super().__init__(data, stype='b')
- 
+    
     def normal_ordering(self):
         """通过对易关系将算符转换为正则序列。
 
@@ -43,20 +43,10 @@ class BosonOper(Oper):
             具有正则序列的 FermionOper 对象。
         """
         data = {}
-        expandn = []
-        for oper, (posnlist, coeflist) in self.data.items():
-            coeflen = len(coeflist)
-            if 'n' in oper:
-                positions = [i for i, char in enumerate(oper) if char == 'n']
-                for pos in sorted(positions, reverse=True):  # 从后往前插入，避免索引偏移
-                    posnlist = np.insert(posnlist, pos + 1, posnlist[:, pos], axis=1)
-                    for i in range(coeflen):
-                        expandn.append(
-                            (oper[:pos] + '+-' + oper[pos+1:], posnlist[i], coeflist[i])
-                            )
-            else:
-                for i in range(coeflen):
-                    expandn.append((oper, posnlist[i], coeflist[i]))
+        if not self._has_expanded():
+            expandn = list(self.expandn().each_term())
+        else:
+            expandn = list(self.each_term())
         for new_opnm, new_posn, new_coef in _sort_pm(expandn, 1.):
             new_posn, parity = _sort_posn(new_opnm, new_posn)
             posnlist, coeflist = data.setdefault(new_opnm, [[], []])
@@ -69,7 +59,6 @@ class BosonOper(Oper):
                 newdata[name] = (newposn, newcoef)
         return BosonOper(newdata)
 
-  
     def expandxy(self) -> 'BosonOper':
         """
         
@@ -100,8 +89,9 @@ class BosonOper(Oper):
 
     def _has_expanded(self) -> bool:
         for opnm in self.data.keys():
-            if opnm not in ['I', "+", "-", "n", "z"]:
-                return False
+            for o in opnm:
+                if o not in ['I', "+", "-"]:
+                    return False
         return True
     
     def dtype(self):
@@ -306,7 +296,7 @@ def _expand_term(name):
     return expanded_names, expanded_coefs
 
 
-class BosonBuilder(BosonOper):
+class BosonBuilder:
     def __init__(self):
         self.terms = {}
 
@@ -325,19 +315,7 @@ class BosonBuilder(BosonOper):
             return self
         else:
             return super().__iadd__(term)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        data = {}
-        for name, (posnlist, coeflist) in self.terms.items():
-            data[name] = _merge_poscoef(posnlist, coeflist)
-        super().__init__(data, type='f')
-        
-        if exc_type is not None:  # 检查是否发生错误
-            tb.print_exc()  # 打印堆栈跟踪
-    
+  
     def build(self):
         data = {}
         for name, (posnlist, coeflist) in self.terms.items():

@@ -4,6 +4,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 git_note.md
+.vscode/
 
 # C extensions
 *.so

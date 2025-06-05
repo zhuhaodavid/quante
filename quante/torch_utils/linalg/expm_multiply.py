@@ -82,6 +82,8 @@ def evolve_engine(A:tc.Tensor, scale=1., n0=1, herm=False):
     >>>     tcstate = nextstate
     """
     assert scale == 1.0 or scale == -1j, "scale 应当为 1.0 或 -1j"
+    if herm is None:
+        herm = False
     
     if len(A.shape) != 2 or A.shape[0] != A.shape[1]:
         raise ValueError('expected A to be like a square matrix')

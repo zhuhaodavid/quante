@@ -4,10 +4,6 @@
 # @Last Modified by:   dzwang
 # @Last Modified time: 2025-04-19 14:59:30
 """
-==================================
-tensor (:mod:`quante.tensor`)
-==================================
-
 numpy 张量网络
 """
 
