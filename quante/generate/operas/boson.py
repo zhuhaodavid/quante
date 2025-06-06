@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-19 11:01:54
+# @Last Modified time: 2025-06-06 10:57:32
 import numpy as np
 from .general import Oper, _merge_poscoef, _single_term
 from .fermion import _sort_pm, _sort_posn
@@ -185,13 +185,18 @@ def yx(i:int, j:int) -> BosonOper:
     return BosonOper({'yx': _single_term((i, j), 1.)})
 
 def sum(oper) -> BosonOper:
+    # lazy sum
     data = {}
+    stype = None
     for opx in oper:
         if isinstance(opx, (int,float,complex)):
             iterterm = (('I', (np.array([[0]], dtype=int), np.array([opx]))),)
         else:
-            assert isinstance(opx, BosonOper), "Operands must be instances of SpinfulFermionOper"
             iterterm = opx.data.items()
+            if stype is None:
+                stype = opx.type
+            else:
+                assert stype == opx.type, "Operands must have the same stype"
         for name, (posn, coef) in iterterm:
             posnlist, coeflist = data.get(name, (None,None))
             if posnlist is None and coeflist is None:
@@ -202,9 +207,11 @@ def sum(oper) -> BosonOper:
     # merge terms
     newdata = {}
     for name, (posnlist, coeflist) in data.items():
-        newposn, newcoef = merge_poscoef(posnlist, coeflist)
-        if len(newposn) > 0:
-            newdata[name] = (newposn, newcoef)
+        newpos, newcoef = np.vstack(posnlist), np.hstack(coeflist)
+        if len(newpos) > 0:
+            newdata[name] = (newpos, newcoef)
+    if stype is None:
+        stype = 'b'
     return BosonOper(newdata)
 
 def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> BosonOper:

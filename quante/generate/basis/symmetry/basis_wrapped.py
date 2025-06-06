@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-20 11:48:12
+# @Last Modified time: 2025-06-06 16:25:05
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -36,7 +36,7 @@ def _check_spin_number(value:Union[str, float, int]) -> Union[float, int]:
     except ValueError:
         raise ValueError("输入的值格式不正确")
 
-from .basis_class import SpinBasis
+from .basis_class import SpinBasis, FermionBasis
 
 def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, kblock: Optional[int] = None, pblock: Optional[int] = None, zblock: Optional[int] = None, pzblock: Optional[int] = None,jmblock: Optional[Union[int, tuple[int,int]]] = None) -> SpinBasis:
     """计算自旋基矢，这个基矢生成速度较快，如果需要未实现的对称性，可以使用 quspin_spin_basis 中的函数。
@@ -276,3 +276,52 @@ def _process_spin_high_Nup_block(L:int, S:Union[int, float], block_dic:dict) -> 
     from .spin_high.Nup.defclass import SpinHighBasisNup
     return SpinHighBasisNup(L, S, block_dic['Nup'])
 
+def fermion_basis(L:int, Nf:int|None=None) -> SpinBasis:
+    """Generate fermion basis for fermion systems.
+
+    !!! This function may not be high efficiency, if you need high efficiency, please use quspin_fermion_basis instead.
+
+    Parameters
+    ----------
+    L : int
+        The length of the chain, must be less than 63.
+    Nf : int | None, optional
+        The total number of fermions, :math:`\\sum_j N_f^j`, projection. If None, the full basis will be generated.
+
+    Returns
+    -------
+    SpinBasis
+        The generated fermion basis.
+
+    Raises
+    ------
+    NotImplementedError
+        If the combination of blocks is not supported yet.
+    """
+    block_name_list = ["Nf"]
+    block_value_list = [Nf]
+    # 将块的状态转换为元组
+    blocks_tuple = tuple(block is not None for block in block_value_list)
+
+    assert L < 63, "L must be less than 63 for fermion basis generation."
+    # 定义处理函数的映射
+    block_combinations = {
+        (False, ): _process_fermionbit_full_basis,
+        ( True, ): _process_fermionbit_Nf_block,
+    }
+    # 查找对应的处理函数
+    _process_func = block_combinations.get(blocks_tuple, None) # type: ignore
+
+    if _process_func is not None:
+        return _process_func(L, {name: value for name, value in zip(block_name_list, block_value_list)})
+    else:
+        wanted_blocks = [item for item, include in zip(block_name_list, blocks_tuple) if include is not None]
+        raise NotImplementedError(f"The combination of blocks: {wanted_blocks} is not supported yet for spin-1/2")
+    
+def _process_fermionbit_full_basis(L:int, block_dic:dict) -> FermionBasis:
+    from .fermion.noblock.defclass import FermionBitBasisNoBlock
+    return FermionBitBasisNoBlock(L)
+
+def _process_fermionbit_Nf_block(L:int, block_dic:dict) -> FermionBasis:
+    from .fermion.Nup.defclass import FermionBitBasisNup
+    return FermionBitBasisNup(L, block_dic['Nf'])
