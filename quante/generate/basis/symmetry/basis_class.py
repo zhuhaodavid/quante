@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-05 09:31:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-20 12:12:39
+# @Last Modified time: 2025-06-06 16:13:56
 
 from typing import Union
 import inspect
@@ -30,52 +30,10 @@ import scipy.sparse as _sp
 #             print(b, coef)
 
 
-class SpinBasis:
-    """
-    自旋基矢，目前包含：
-        具体的方法参见子类
-    
-    SpinBasis\n
-    |__ SpinHalfBasis
-        |__ SpinHalfBasisNoBlock: 
-        |           [noblock](file://./spin_half/noblock/defclass.py)
-        |
-        |__ SpinHalfBasisNup: 
-        |           [Nup](file://./spin_half/Nup/defclass.py)
-        |
-        |__ SpinHalfBasisKBlock: 
-        |           [kblock](file://./spin_half/kblock/defclass.py)
-        |
-        |__ SpinHalfBasisPBlock: 
-        |           [pblock](file://./spin_half/pblock/defclass.py)
-        |
-        |__ SpinHalfBasisZBlock: 
-        |           [zblock](file://./spin_half/zblock/defclass.py)
-        |
-        |__ SpinHalfBasisNupKBlock: 
-        |           [Nup_kblock](file://./spin_half/Nup_kblock/defclass.py)
-        |
-        |__ SpinHalfBasisNupPBlock: 
-        |           [Nup_pblock](file://./spin_half/Nup_pblock/defclass.py)
-        |
-        |__ SpinHalfBasisNupZBlock: 
-        |           [Nup_zblock](file://./spin_half/Nup_zblock/defclass.py) 
-        |
-        |__ SpinHalfBasisNupKPBlock: 
-        |           [Nup_kpblock](file://./spin_half/Nup_kblock_pblock/defclass.py)
-        |
-        |__ SpinHalfBasisNupKPZBlock:
-        |           [Nup_kpzblock](file://./spin_half/Nup_kblock_pblock_zblock/defclass.py)
-        |
-        |__ SpinHalfBasisSU2: 
-                    [SU2](file://./spin_half/su2/defclass.py)
-    
-    |__ SpinHighBasis
-    """
-    def __init__(self, L:int, S:Union[int, float]=0.5) -> None:
+class GeneralBasis:
+
+    def __init__(self, L:int) -> None:
         self.L: int = L
-        self.S: float = float(S)
-        self.local_dim = int(S * 2 + 1)
         self.Ns: int
         self.other_params: dict = {}
         self.s_list: Union[list, range]
@@ -109,6 +67,7 @@ class SpinBasis:
         else:
             print(f'{cls.__name__}:\n   "'+file_path+'"')
     
+
     def _sparse_matrix(self, op_list, hascomplex, savememory=False):
         """ takes list of operator strings and couplings to create matrix.
         
@@ -253,6 +212,55 @@ class SpinBasis:
     
     # todo: action_on(ham, state) 作用算符到态上，返回新的态，可以节约内存但是不如存下来速度快
 
+
+class SpinBasis(GeneralBasis):
+    """
+    自旋基矢，目前包含：
+        具体的方法参见子类
+    
+    SpinBasis\n
+    |__ SpinHalfBasis
+        |__ SpinHalfBasisNoBlock: 
+        |           [noblock](file://./spin_half/noblock/defclass.py)
+        |
+        |__ SpinHalfBasisNup: 
+        |           [Nup](file://./spin_half/Nup/defclass.py)
+        |
+        |__ SpinHalfBasisKBlock: 
+        |           [kblock](file://./spin_half/kblock/defclass.py)
+        |
+        |__ SpinHalfBasisPBlock: 
+        |           [pblock](file://./spin_half/pblock/defclass.py)
+        |
+        |__ SpinHalfBasisZBlock: 
+        |           [zblock](file://./spin_half/zblock/defclass.py)
+        |
+        |__ SpinHalfBasisNupKBlock: 
+        |           [Nup_kblock](file://./spin_half/Nup_kblock/defclass.py)
+        |
+        |__ SpinHalfBasisNupPBlock: 
+        |           [Nup_pblock](file://./spin_half/Nup_pblock/defclass.py)
+        |
+        |__ SpinHalfBasisNupZBlock: 
+        |           [Nup_zblock](file://./spin_half/Nup_zblock/defclass.py) 
+        |
+        |__ SpinHalfBasisNupKPBlock: 
+        |           [Nup_kpblock](file://./spin_half/Nup_kblock_pblock/defclass.py)
+        |
+        |__ SpinHalfBasisNupKPZBlock:
+        |           [Nup_kpzblock](file://./spin_half/Nup_kblock_pblock_zblock/defclass.py)
+        |
+        |__ SpinHalfBasisSU2: 
+                    [SU2](file://./spin_half/su2/defclass.py)
+    
+    |__ SpinHighBasis
+    """
+    def __init__(self, L, S = 0.5):
+        super().__init__(L)
+        self.S: float = float(S)
+        self.local_dim = int(S * 2 + 1)
+
+
 class SpinHalfBasis(SpinBasis):
     """
     自旋 1/2，特指用 0 和 1 二进制数表示的自旋基矢来实现的类
@@ -276,3 +284,12 @@ class SpinHighBasis(SpinBasis):
     def __init__(self, L: int, S:Union[float, int]) -> None:
         super().__init__(L, S=S)
         self.Ns = self.local_dim ** L
+
+class FermionBasis(GeneralBasis):
+    def __init__(self, L):
+        super().__init__(L)
+
+class FermionBitBasis(FermionBasis):
+    def __init__(self, L):
+        super().__init__(L)
+        self.local_dim = 2  # 费米子基矢的局部维度为 2

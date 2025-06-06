@@ -2,16 +2,15 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-20 11:48:46
+# @Last Modified time: 2025-06-06 16:09:12
 
 import warnings
-import traceback as tb
 import numpy as np
 import scipy.sparse as sp
-import typing
+from typing import overload, TYPE_CHECKING, Literal
 from .general import Oper, _single_term
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from .fermion import FermionOper
 
 
@@ -59,6 +58,7 @@ class SpinOper(Oper):
         return True
 
     def jw_transfer(self, pauli=False, force=False) -> 'FermionOper':
+        # !! todo: Z -> -Z
         from .fermion import FermionOper
         ham = self.expandxy(pauli=pauli)
         res = FermionOper({})
@@ -125,7 +125,11 @@ class SpinOper(Oper):
             static.append([opnm.replace('m', '-').replace('p', '+').replace('Z', 'z'), static_bond])
         return static
     
-    def to_matrix(self, basis, pauli=None, sparse=False, savememory=False):
+    @overload
+    def to_matrix(self, basis, pauli=None, sparse:Literal[True]=True, savememory=False) -> sp.csr_array:
+        ...
+
+    def to_matrix(self, basis, pauli=None, sparse:Literal[False]=False, savememory=False) -> np.ndarray:
         """
         生成哈密顿量在给定基矢下的矩阵，对于自旋 1/2 默认使用 symmetrize 的方法计算矩阵元
         

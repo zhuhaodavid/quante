@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-30 19:59:42
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-21 17:49:55
+# @Last Modified time: 2025-06-06 11:17:54
 
 import unittest
 import numpy as np
@@ -64,6 +64,23 @@ class TestKIM(unittest.TestCase):
         mat = mat1 @ mat2
         self.assertTrue(np.allclose(mat, qt.generate.matrix.KIM_matrix(b, J, h, L)))
            
+class TestSYK(unittest.TestCase):
+    
+    def test_syk4_dirac(self):
+        L = 10
+        Jmat = qt.generate.matrix._syk4_dirac_Jmat(L, J=1.0)
+        basis = qt.generate.basis.quspin_fermion_basis(L=L, Nf=L//2)
+        builder = qt.generate.operas.fermion.builder()
+        for i1 in range(L):
+            for i2 in range(L):
+                for j1 in range(L):
+                    for j2 in range(L):
+                        builder += "++--", [i1, i2, j1, j2], Jmat[i1 * L + i2, j1 * L + j2]
+        ham = builder.build()
+        mat1 = ham.to_matrix(basis)
+        mat2 = qt.generate.matrix.syk4_dirac(L, J=Jmat, Nf=L//2)
+        self.assertTrue(np.allclose(mat1, mat2))
 
+           
 if __name__ == "__main__":
    unittest.main()

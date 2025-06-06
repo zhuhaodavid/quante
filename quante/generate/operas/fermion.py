@@ -2,10 +2,10 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-19 11:01:35
+# @Last Modified time: 2025-06-06 16:22:55
 
 import numpy as np
-import traceback as tb
+import scipy.sparse as sp
 from .general import Oper, _single_term, _merge_poscoef 
 
 def _sort_pm(data:list, sign=-1.):
@@ -272,23 +272,65 @@ class FermionOper(Oper):
         return static
 
 
-    def to_matrix(self, basis, dtype=np.complex128, sparse=False):
-        self._check_length(basis.L)
-        from ..basis.quspin.quspin_basis.basis_1d.fermion import spinless_fermion_basis_1d
-        if isinstance(basis, spinless_fermion_basis_1d):
-            op_list = []
-            for opstr, posn, coef in self.each_term():
-                op_list.append([opstr, posn, coef])
-            mat = basis._make_matrix(op_list, dtype=dtype)
+    def to_matrix(self, basis, dtype=None, sparse=False):
+        if self.data == {}:
+            if not sparse:
+                return np.zeros((basis.Ns, basis.Ns), dtype=float)
+            return sp.csr_matrix((basis.Ns, basis.Ns), dtype=float)
+        self._check_length(basis.L) 
+        from ..basis.symmetry.basis_class import FermionBasis
+        if isinstance(basis, FermionBasis):
+            eachterm, hascomplex = self._convert_to_quick_form()
+            mat = basis._sparse_matrix(eachterm, hascomplex, savememory=False)
             if sparse:
                 return mat
             else:
                 return mat.toarray()
         else:
-            raise NotImplementedError("不支持的基矢类型")
+            from ..basis.quspin.quspin_basis.basis_1d.fermion import spinless_fermion_basis_1d
+            if isinstance(basis, spinless_fermion_basis_1d):
+                if dtype is None:
+                    dtype = np.complex128
+                op_list = []
+                for opstr, posn, coef in self.each_term():
+                    op_list.append([opstr, posn, coef])
+                mat = basis._make_matrix(op_list, dtype=dtype)
+                if sparse:
+                    return mat
+                else:
+                    return mat.toarray()
+            else:
+                raise NotImplementedError("不支持的基矢类型")
+
+
+    def _convert_to_quick_form(self):
+        """这个函数专门为 to_matrix 写的，其他函数不需要"""
+        eachterm = []
+        hascomplex = False
+        for opnm, posn, coef in self.each_term():
+            opnm_list = []
+            for i in opnm:
+                if i == '-':
+                    opnm_list.append(0)
+                elif i == '+':
+                    opnm_list.append(1)
+                elif i == 'I':
+                    opnm_list.append(2)
+                elif i == 'n':
+                    opnm_list.append(3)
+                else:
+                    raise ValueError(f"opnm {i} is not supported")
+            opnm_list = np.array(opnm_list, dtype=np.int64)
+            posn_list = np.array(posn, dtype=np.int64)
+            coef_real = np.real_if_close(coef).item()
+            if isinstance(coef_real, complex):
+                hascomplex = True
+            eachterm.append((opnm_list, posn_list, coef_real))
+        return eachterm, hascomplex
 
 
     def jw_transfer(self):
+        # !! todo: Z -> -Z
         from .spin import SpinBuilder
         builder = SpinBuilder()
         for opnm_, (poslist, coefflist) in self.data.items():
@@ -360,16 +402,7 @@ class FermionOper(Oper):
     def to_mpo(self, *args, **kwargs):
         spinoper = self.jw_transfer()
         return spinoper.to_mpo(*args, **kwargs)
-
-
-    @classmethod
-    def f(cls, i:int=0) -> "FermionOper":
-        return FermionOper({'+': _single_term((i,), 1.)})
-
-    @classmethod
-    def fdag(cls, i:int=0) -> "FermionOper":
-        return FermionOper({'-': _single_term((i,), 1.)})
-
+    
     @classmethod
     def _convert_from_spin(cls, opnm, i, coef):
         if opnm == 'p':
@@ -444,4 +477,52 @@ class FermionBuilder:
 def builder() -> FermionBuilder:
     """返回 FermionBuilder 对象"""
     return FermionBuilder()
+
+def sum(oper) -> FermionOper:
+    # lazy sum
+    data = {}
+    stype = None
+    for opx in oper:
+        if isinstance(opx, (int,float,complex)):
+            iterterm = (('I', (np.array([[0]], dtype=int), np.array([opx]))),)
+        else:
+            iterterm = opx.data.items()
+            if stype is None:
+                stype = opx.type
+            else:
+                assert stype == opx.type, "Operands must have the same stype"
+        for name, (posn, coef) in iterterm:
+            posnlist, coeflist = data.get(name, (None,None))
+            if posnlist is None and coeflist is None:
+                data[name] = ([posn], [coef])
+            else:
+                posnlist.append(posn)
+                coeflist.append(coef)
+    # merge terms
+    newdata = {}
+    for name, (posnlist, coeflist) in data.items():
+        newpos, newcoef = np.vstack(posnlist), np.hstack(coeflist)
+        if len(newpos) > 0:
+            newdata[name] = (newpos, newcoef)
+    if stype is None:
+        stype = 'f'
+    return FermionOper(newdata)
+
+def f(i:int=0) -> FermionOper:
+    return FermionOper({'-': _single_term((i,), 1.)})
+
+def fdag(i:int=0) -> FermionOper:
+    return FermionOper({'+': _single_term((i,), 1.)})
+
+def syk4_dirac(L, Jmat=None):
+    if Jmat is None:
+        from ..matrix import _syk4_dirac_Jmat
+        Jmat = _syk4_dirac_Jmat(L, J=1.0)
+    bd = builder()
+    for i1 in range(L):
+        for i2 in range(L):
+            for j1 in range(L):
+                for j2 in range(L):
+                    bd += "++--", [i1, i2, j1, j2], Jmat[i1 * L + i2, j1 * L + j2]
+    return bd.build()
 

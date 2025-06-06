@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-04 11:11:53
+# @Last Modified time: 2025-06-06 16:07:11
 """
 生成矩阵：(`np.ndarray`)
 - `pauli_matrix`
@@ -20,7 +20,7 @@ import scipy.sparse as _sparse
 from ..linalg.operations import kron, ikron, kron_power, exp
 from .basis.symmetry.basis_wrapped import _check_spin_number # type: ignore
 
-from typing import Optional, Callable, Union, Literal
+from typing import Optional, Callable, Union, Literal, overload
 number = Union[int, float, complex]
 
 __all__ = [
@@ -324,8 +324,8 @@ def _random_density_matrix(dim, seed):
     return res
 
 type_to_function = {
-    "simple": _random_simple_matrix,
-    "realsimple": _random_simple_real_matrix,
+    "GinUE": _random_simple_matrix,
+    "GinOE": _random_simple_real_matrix,
     "GOE": _random_symmetric_matrix_goe,
     "GUE": _random_hermition_matrix_gue,
     "GSE": _random_hermition_matrix_gse,
@@ -343,9 +343,9 @@ type_to_function = {
 
 def random_matrix(
     dim, 
-    type: Literal['simple', 'realsimple', 'GOE', 'GUE', 'GSE', 'CUE', 'COE', 'CRE',
-                    'singular', 'normal', 'noninv', 'realeig', 'positive', 'rho'] = "simple",
-    seed=None
+    mtype: Literal['GinUE', 'GinOE', 'GOE', 'GUE', 'GSE', 'CUE', 'COE', 'CRE',
+                'singular', 'normal', 'noninv', 'realeig', 'positive', 'rho'] = "GinUE",
+    seed = None
 ):
     r"""generate a random matrix of given type and dimension.
 
@@ -354,9 +354,9 @@ def random_matrix(
     dim : int
         The dimension of the square matrix to be generated.
     type : str, optional
-        The type of the random matrix to be generated. Default is "simple".
-        - "simple" -> Each matrix element is drawn from a real Gaussian distribution.
-        - "simple_real" -> Each matrix element is drawn from a real Gaussian distribution.
+        The type of the random matrix to be generated. Default is "GinUE".
+        - "GinUE/simple" -> Each matrix element is drawn from a complex Gaussian distribution.
+        - "GinOE/simple_real" -> Each matrix element is drawn from a real Gaussian distribution.
         - "GOE"/"symm" -> Real symmetric matrix.
         - "GUE"/"herm" -> Hermitian matrix.
         - "CUE"/"unit" -> Unitary matrix.
@@ -481,14 +481,16 @@ def random_matrix(
     https://numpy.org/doc/stable/reference/random/generator.html#random-matrix-generation
 
     """
-    type = type.replace("herm", "GUE")
-    type = type.replace("unit", "CUE")
-    type = type.replace("symm", "GOE")
-    type = type.replace("orth", "COE")
-    if type in type_to_function:
-        return type_to_function[type](dim, seed=seed)
+    mtype = mtype.replace("simple", "GinUE")
+    mtype = mtype.replace("simple_real", "GinOE")
+    mtype = mtype.replace("herm", "GUE")
+    mtype = mtype.replace("unit", "CUE")
+    mtype = mtype.replace("symm", "GOE")
+    mtype = mtype.replace("orth", "COE")
+    if mtype in type_to_function:
+        return type_to_function[mtype](dim, seed=seed)
     else:
-        raise ValueError(f"Unknown type '{type}'.")
+        raise ValueError(f"Unknown type '{mtype}'.")
 
 
 def random_orthorgonal_matrix_close_I(dim, a=0.01, seed=None):
@@ -855,104 +857,9 @@ def get_sparse_matrix(
         
     return res
 
-
-def syk_matrix(L:int, J:_np.ndarray, sparse=False):
-    r"""生成 SYK 模型的哈密顿量
-
-    #??? 两种方法，分别是利用 Majorana 费米子和 Dirac 费米子实现的；如何排除 Majorana 方法的对称性？
-    
-    SYK 模型的哈密顿量为：
-    .. math::
-        H = -\frac{1}{4!}\sum_{i,j,k,l=0}^{L-1} J_{ijkl} c^x_{i}c^x_{j}c^x_{k}c^x_{l},
-
-    Parameters
-    ----------
-    L : int
-        费米子个数
-    J : _np.ndarray
-        (LxLxLxL) 的张量
-    sparse : bool, optional
-        是否返回系数矩阵, by default False
-
-    Returns
-    -------
-    _np.ndarray | _sparse.csr_matrix
-        SYM模型矩阵
-    """
-    # # 这个是 quspin 的 example
-    # op_list = [
-    #     (
-    #         "xxxx",
-    #         (i, j, k, l),
-    #         J[i, j, k, l],
-    #     )
-    #     for i in range(L)
-    #     for j in range(i+1, L)
-    #     for k in range(j+1, L)
-    #     for l in range(k+1, L)
-    # ]
-    # from .basis.quspin.quspin_basis.basis_general.fermion import spinless_fermion_basis_general
-    # basis = spinless_fermion_basis_general(L)
-    # mat = basis._make_matrix(op_list, dtype=J.dtype)/4
-    # if sparse:
-    #     return mat.tocsr()
-    # else:
-    #     return mat.toarray()
-    
-    # 这个是文献中的方法 https://arxiv.org/pdf/1611.04650
-    # from .operas.fermion import FermionOper as op
-    # from .basis import quspin_spinless_fermion_basis
-    # assert L % 2 == 0, "L must be even"
-    # basis = quspin_spinless_fermion_basis(L//2, Nf=range(0,L//2,2))
-    # def psi(i):
-    #     if i % 2 == 0:
-    #         return (op.m(i//2) + op.p(i//2))/_np.sqrt(2)
-    #     else:
-    #         return 1j*(op.m(i//2) - op.p(i//2))/_np.sqrt(2)
-
-    # ham = op.sum(J[a,b,c,d] * psi(a) * psi(b) * psi(c) * psi(d) for a in range(L) for b in range(a+1, L) for c in range(b+1, L) for d in range(c+1, L))
-    # return ham.to_matrix(basis, sparse=sparse)
-    
-    #########################################################
-    # 优化之后
-    #########################################################
-    assert L % 2 == 0, "L must be even"
-    from .operas.fermion import SpinlessFermionOperBuilder
-    from .basis import quspin_spinless_fermion_basis
-    builder = SpinlessFermionOperBuilder()
-    #!! 这个循环还是比较慢，但相对于生成矩阵元的时间可以接受
-    for a in range(L):
-        for b in range(a+1, L):
-            for c in range(b+1, L):
-                for d in range(c+1, L):
-                    Jabcd = J[a,b,c,d] * (1j)**(a%2+b%2+c%2+d%2) / 4
-                    if a//2 != b//2:
-                        builder +=           Jabcd * (-1)**(c%2), '-', a//2, '-', b//2, '+', c//2, '-', d//2
-                        builder +=   Jabcd * (-1)**(a%2+b%2+d%2), '+', a//2, '+', b//2, '-', c//2, '+', d//2
-                    if b//2 != c//2:
-                        builder +=       Jabcd * (-1)**(b%2+c%2), '-', a//2, '+', b//2, '+', c//2, '-', d//2
-                        builder +=       Jabcd * (-1)**(a%2+d%2), '+', a//2, '-', b//2, '-', c//2, '+', d//2
-                    if c//2 != d//2:
-                        builder +=           Jabcd * (-1)**(b%2), '-', a//2, '+', b//2, '-', c//2, '-', d//2
-                        builder +=   Jabcd * (-1)**(a%2+c%2+d%2), '+', a//2, '-', b//2, '+', c//2, '+', d//2
-                    if a//2 != b//2 and b//2 != c//2:
-                        builder +=           Jabcd * (-1)**(d%2), '-', a//2, '-', b//2, '-', c//2, '+', d//2
-                        builder +=   Jabcd * (-1)**(a%2+b%2+c%2), '+', a//2, '+', b//2, '+', c//2, '-', d//2
-                    if a//2 != b//2 and c//2 != d//2:
-                        builder +=       Jabcd * (-1)**(a%2+b%2), '+', a//2, '+', b//2, '-', c//2, '-', d//2
-                        builder +=       Jabcd * (-1)**(c%2+d%2), '-', a//2, '-', b//2, '+', c//2, '+', d//2
-                    if b//2 != c//2 and c//2 != d//2:
-                        builder +=   Jabcd * (-1)**(b%2+c%2+d%2), '-', a//2, '+', b//2, '+', c//2, '+', d//2
-                        builder +=           Jabcd * (-1)**(a%2), '+', a//2, '-', b//2, '-', c//2, '-', d//2
-                    if a//2 != b//2 and b//2 != c//2 and c//2 != d//2:
-                        builder +=                         Jabcd, '-', a//2, '-', b//2, '-', c//2, '-', d//2
-                        builder += Jabcd*(-1)**(a%2+b%2+c%2+d%2), '+', a//2, '+', b//2, '+', c//2, '+', d//2
-                    builder +=           Jabcd * (-1)**(b%2+d%2), '-', a//2, '+', b//2, '-', c//2, '+', d//2
-                    builder +=           Jabcd * (-1)**(a%2+c%2), '+', a//2, '-', b//2, '+', c//2, '-', d//2
-    ham = builder.build()
-    basis = quspin_spinless_fermion_basis(L//2, Nf=range(0,L//2,2))
-    return ham.to_matrix(basis, sparse=sparse)  # todo 能否并行实现？
-
+#################################
+# KIM model
+#################################
 
 def KIM_Hk(b:float, L:int):
     cosb, sinb = _np.cos(b), _np.sin(b)
@@ -969,4 +876,175 @@ def KIM_Hi(J:float, h:_np.ndarray, L:int):
 
 def KIM_matrix(b:float, J:float, h:_np.ndarray, L:int):
     return KIM_Hk(b, L) * KIM_Hi(J, h, L)
+
+##################################
+# SYK model
+##################################
+
+def syk4_majorana(L:int, J:_np.ndarray, sparse=False):
+    op_list = [
+        (
+            "xxxx",
+            (i, j, k, l),
+            J[i, j, k, l],
+        )
+        for i in range(L)
+        for j in range(i+1, L)
+        for k in range(j+1, L)
+        for l in range(k+1, L)
+    ]
+    from .basis.quspin.quspin_basis.basis_general.fermion import spinless_fermion_basis_general
+    basis = spinless_fermion_basis_general(L)
+    mat = basis._make_matrix(op_list, dtype=J.dtype)/4
+    if sparse:
+        return mat.tocsr()
+    else:
+        return mat.toarray()
+    
+
+def _syk4_dirac_Jmat(L, J=1.0):
+    Jmat = _np.zeros((L**2, L**2), dtype=_np.complex128)
+    J2 = J / _np.sqrt(2)  # For the complex part
+
+    for i in range(Jmat.shape[0]):
+        for j in range(i, Jmat.shape[1]):
+            if i == j:
+                Jmat[i,j] = _np.random.randn() * J
+            else:
+                i1, i2 = i//L, i%L
+                j1, j2 = j//L, j%L
+                if i1 > i2 and j1 > j2:
+                    Jmat[i,j] = Jmat[i2 * L + i1, j2 * L + j1]
+                elif i1 > i2:
+                    Jmat[i,j] = -Jmat[i2 * L + i1, j]
+                elif j1 > j2:
+                    Jmat[i,j] = -Jmat[i, j2 * L + j1]
+                else:
+                    Jmat[i,j] = J2 * (_np.random.randn() + 1j * _np.random.randn())
+                Jmat[j,i] = Jmat[i,j].conj()
+    return Jmat
+
+
+def _syk4_dirac_each_term(L, Nf=None):
+    MEs, rows, cols, posn = [], [], [], []
+    indx = [0]
+    elenum = 0
+    op_args = []
+    for i1 in range(L):
+        for i2 in range(L):
+            for j1 in range(L):
+                for j2 in range(L):
+                    op_args.append((i1, i2, j1, j2))
+    
+    from .basis import quspin_fermion_basis
+    basis = quspin_fermion_basis(L=L, Nf=Nf)
+
+    # Use list comprehension for batch processing
+    for args in op_args:
+        ME, row, col = basis.Op("++--", list(args), 1.0, _np.float64)
+        if len(row) == 0:
+            continue
+        MEs.append(ME)
+        rows.append(row)
+        cols.append(col)
+        posn.append(args)
+        elenum += len(row)
+        indx.append(elenum)
+
+    ME = _np.concatenate(MEs)
+    row = _np.concatenate(rows)
+    col = _np.concatenate(cols)   
+    posn = _np.array(posn, dtype=_np.int64)
+    indx = _np.array(indx, dtype=_np.int64)
+
+    return ME, row, col, posn, indx, basis.Ns
+
+
+def _syk4_dirac_assemble(L, Jmat, ME, row, col, posn, indx, Ns):
+    dtype = Jmat.dtype
+    newME = ME.copy().astype(dtype)
+    for i in range(posn.shape[0]):
+        newME[indx[i]:indx[i+1]] *= Jmat[posn[i,0] * L + posn[i,1], posn[i,2] * L + posn[i,3]]
+
+    # Create the sparse matrix
+    res = _sparse.csr_array(
+        (newME, (row, col)), 
+        shape=(Ns, Ns), dtype=dtype
+    )   
+
+    return res
+
+@overload
+def syk4_dirac(L:int, J:float|_np.ndarray|None=None, Nf:int=None, sparse:Literal[True]=True) -> _sparse.csr_array:
+    ...
+
+def syk4_dirac(L:int, J:float|_np.ndarray|None=None, Nf:int=None, sparse:Literal[False]=False) -> _np.ndarray:
+    r"""generate the SYK4 Dirac Hamiltonian matrix.
+
+    The (complex) SYK4 Dirac Hamiltonian is defined as:
+    .. math::
+        H = 1/(2N)^(3/2) \sum_{ijkl} J_{ijkl} c_i^\dagger c_j^\dagger c_k c_l.
+    
+    for standard SYK4 model, we usually have diagonal coupling constants :math:`J_{ijkl}` 
+    such that:
+    .. math::
+        E[(\Re J_{ijij})^2] = J^2,
+        E[(\Im J_{ijij})^2] = 0, 
+    
+    and off-diagonal coupling constants such that:
+    .. math::
+        E[(\Re J_{ijkl})^2] = E[(\Im J_{ijkl})^2] = J^2 / 2,
+
+    Parameters
+    ----------
+    L : int
+        The number of Dirac fermion modes.
+    J : ndarray, float or None, optional
+        coupling constants for the SYK4 model, if None, will generate a random coupling matrix.
+        If a float, it will be used as the coupling constant for all terms.
+        defaults to None.
+    Nf : int, optional
+        The number of fermions, by default None.
+    sparse : bool, optional
+        If True, return a sparse matrix, otherwise return a dense matrix. Defaults to False.
+    
+    Notes
+    -----
+    For quickly generating the SYK4 Dirac Hamiltonian, we use a batch processing method to generate
+    the matrix elements.
+    
+    For example, we can first generate the matrix elements for all terms in the SYK4 Dirac Hamiltonian,
+    like:
+    >>> each_term = _syk4_dirac_each_term(L, Nf=Nf)
+
+    And then assemble the Hamiltonian matrix with the coupling constants:
+    >>> Jmat = _syk4_dirac_Jmat(L, J)
+    >>> res = _syk4_dirac_assemble(L, Jmat, *each_term)
+
+    Returns
+    -------
+    csr_matrix or ndarray
+        The SYK4 Dirac Hamiltonian matrix.
+
+    Raises
+    ------
+    ValueError
+        If J is not a number or a numpy array.
+    """
+    if J is None:
+        Jmat = _syk4_dirac_Jmat(L)
+    elif isinstance(J, _np.ndarray):
+        Jmat = J
+    elif isinstance(J, (int, float)):
+        Jmat = _syk4_dirac_Jmat(L, J)
+    else:
+        raise ValueError("J must be a number or a numpy array.")
+
+    # Generate each term in the SYK4 Hamiltonian
+    each_term = _syk4_dirac_each_term(L, Nf=Nf)
+
+    # Assemble with Jmat
+    res = _syk4_dirac_assemble(L, Jmat, *each_term)
+
+    return res if sparse else res.toarray()
 
