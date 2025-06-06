@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-05-02 14:52:59
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-23 11:11:11
+# @Last Modified time: 2025-06-06 17:29:37
 
 import gc as _gc
 import os as _os
@@ -25,7 +25,7 @@ from dataclasses import is_dataclass, asdict
 from itertools import chain
 from collections import deque
 from types import FunctionType
-from typing import Callable, Any, Dict, Union
+from typing import Callable, Any, Dict, Union, Literal
 
 _os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'  # 为了让 ctrl+c 中断程序可用
 _os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'  # 为了避免 scipy svd 与 gpu torch 冲突
@@ -1284,7 +1284,7 @@ def iload(filename:str, dataname:list[str]|str|None = None, *, group='/') -> Any
 # 画图预设
 # =======
 
-def plt_style_use(stylename:str = "quante", svg: bool = True, svg_display_width=600) -> None:
+def plt_style_use(stylename:Literal['quante', 'default', 'science'] = "quante", svg: bool = True) -> None:
     """设置 pyplot 风格样式。
     
     Parameters
@@ -1303,11 +1303,8 @@ def plt_style_use(stylename:str = "quante", svg: bool = True, svg_display_width=
     
     try:
         if svg:
-            from IPython.display import set_matplotlib_formats, display
+            from IPython.display import set_matplotlib_formats
             set_matplotlib_formats("svg")
-            display({
-                'text/html': f'<style>svg {{width: {svg_display_width}px !important; height: auto;}}</style>'
-            }, raw=True)
         else:
             from IPython.display import set_matplotlib_formats
             set_matplotlib_formats("png")
