@@ -9,6 +9,3 @@ from . import operas
 
 from . import matrix
 from . import state
-
-from .basis import spin_basis
-from .matrix import pauli_matrix, PAULI_MAT

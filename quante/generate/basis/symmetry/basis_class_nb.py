@@ -2,9 +2,9 @@
 # @Author: hzhu
 # @Date:   2024-09-19 14:26:06
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-17 15:54:01
+# @Last Modified time: 2025-06-11 22:58:01
 
-from ....linalg.usenumba.numba_settings import njit, config, numba_cache_dir, pnjit, prange
+from ....basicfun.utils_numba import njit, config, numba_cache_dir, pnjit, prange
 
 config.CACHE_DIR = numba_cache_dir
 @njit

@@ -5,7 +5,7 @@
 # @Last Modified time: 2025-06-06 13:30:07
 
 from ..bitsoperation import findstate, flip, operateon
-from ......linalg.usenumba.numba_settings import njit, config, numba_cache_dir, pnjit, prange
+from ......basicfun.utils_numba import njit, config, numba_cache_dir, pnjit, prange
 import numpy as np
 
 config.CACHE_DIR = numba_cache_dir

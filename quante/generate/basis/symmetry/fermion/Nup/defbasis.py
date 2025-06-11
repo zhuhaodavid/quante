@@ -4,7 +4,7 @@
 # @Last Modified by:   hzhu
 # @Last Modified time: 2024-09-24 01:10:21
 
-from ......linalg.usenumba.numba_settings import njit, config, numba_cache_dir
+from ......basicfun.utils_numba import njit, config, numba_cache_dir
 from ..bitsoperation import next_combination
 import numpy as np
 

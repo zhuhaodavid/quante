@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-19 10:58:46
+# @Last Modified time: 2025-06-11 23:07:22
 
 import warnings
 import traceback as tb
@@ -72,7 +72,7 @@ def _merge_poscoef(poss, coefs):
     res_pos = res_pos[sorted_indices]
     res_coef = res_coef[sorted_indices]
 
-    from ...linalg.usenumba.operations_numba import _quick_merge
+    from ...linalg.nbfuc.operations_numba import _quick_merge
     return _quick_merge(res_pos, res_coef)
 
 

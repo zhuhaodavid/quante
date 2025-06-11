@@ -4,9 +4,9 @@
 # @Last Modified by:   hzhu
 # @Last Modified time: 2024-09-12 14:23:48
 
-from ...linalg.usenumba.numba_settings import njit, vectorize
+from ...basicfun.utils_numba import njit, vectorize
 
-from ...linalg.usenumba.numba_settings import prange as prange
+from ...basicfun.utils_numba import prange as prange
 import numpy as _np
 
 @njit

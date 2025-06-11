@@ -4,7 +4,7 @@
 # @Last Modified by:   hzhu
 # @Last Modified time: 2024-09-30 12:39:15
 
-from ......linalg.usenumba.numba_settings import njit, config, numba_cache_dir, pnjit, prange
+from ......basicfun.utils_numba import njit, config, numba_cache_dir, pnjit, prange
 from ..basis_operations import operateon
 from .defbasis import index2state, state2index
 import numpy as np

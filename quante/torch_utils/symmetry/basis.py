@@ -10,7 +10,7 @@ import torch as tc
 from numba import cuda
 import cupyx as cpx
 
-from ...linalg.usenumba.numba_settings import numba_cache_dir, config
+from ...basicfun.utils_numba import numba_cache_dir, config
 from ...generate.basis.symmetry.basis_class_nb import _is_diagonal, _update_diag, add_, _get_index_type
 from ...generate.basis.symmetry.spin_half.bitsoperation import operateon
 

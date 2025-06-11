@@ -5,7 +5,7 @@
 # @Last Modified time: 2024-09-12 14:54:43
 
 import numpy as np
-from ......linalg.usenumba.numba_settings import njit, config, numba_cache_dir
+from ......basicfun.utils_numba import njit, config, numba_cache_dir
 from ..bitsoperation import reflectbits, next_combination
 
 config.CACHE_DIR = numba_cache_dir

@@ -5,7 +5,7 @@
 # @Last Modified time: 2024-09-19 18:11:32
 
 from ..bitsoperation import next_combination, count_tot_down
-from ......linalg.usenumba.numba_settings import njit, config, numba_cache_dir, pvectorize
+from ......basicfun.utils_numba import njit, config, numba_cache_dir, pvectorize
 import numpy as np
 
 # 1/2 ----- 0 ----- 1/2 ----- 0 ...

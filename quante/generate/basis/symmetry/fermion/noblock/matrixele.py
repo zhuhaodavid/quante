@@ -5,7 +5,7 @@
 # @Last Modified time: 2025-06-06 12:37:34
 
 from ..bitsoperation import operateon
-from ......linalg.usenumba.numba_settings import config, numba_cache_dir, pnjit, prange
+from ......basicfun.utils_numba import config, numba_cache_dir, pnjit, prange
 import numpy as np
 
 config.CACHE_DIR = numba_cache_dir

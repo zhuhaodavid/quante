@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-04 11:10:15
+# @Last Modified time: 2025-06-11 23:08:11
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -69,7 +69,7 @@ def toarray(H) -> _np.ndarray:
         try:
             return H.toarray()
         except:
-            from .usenumba.operations_numba import coo2array
+            from .nbfuc.operations_numba import coo2array
             if _ishamiltonian(H):
                 res = H.static.tocoo(copy=False)
             else:
@@ -272,11 +272,11 @@ def eigensolve(
         isherm = _np.allclose(Hmat, Hmat.conj().T) if isherm is None else isherm
         assert isherm
         if return_vecs:
-            from .usenumba.eig_modified_numba import _eigh_autoblocked
+            from .nbfuc.eig_modified_numba import _eigh_autoblocked
             dtpye = Hmat.dtype
             res = _eigh_autoblocked(Hmat, sort=True, dtpye=dtpye)
         else:
-            from .usenumba.eig_modified_numba import _eigvalsh_autoblocked
+            from .nbfuc.eig_modified_numba import _eigvalsh_autoblocked
             dtpye = Hmat.dtype
             res = _eigvalsh_autoblocked(Hmat, sort=True, dtpye=dtpye)
         if res is None:

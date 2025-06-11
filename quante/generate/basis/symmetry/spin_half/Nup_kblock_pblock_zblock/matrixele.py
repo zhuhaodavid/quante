@@ -9,7 +9,7 @@
 import numpy as np
 import scipy.sparse as sp
 
-from ......linalg.usenumba.numba_settings import njit, config, numba_cache_dir, pnjit, prange
+from ......basicfun.utils_numba import njit, config, numba_cache_dir, pnjit, prange
 from ..bitsoperation import flip, operateon, findstate
 from .defbasis import representative, get_nmc
 

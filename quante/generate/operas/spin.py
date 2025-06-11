@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-06 16:09:12
+# @Last Modified time: 2025-06-11 23:47:32
 
 import warnings
 import numpy as np
@@ -541,7 +541,7 @@ class SpinOper(Oper):
         else:
             assert L >= self.L
         assert site_position < L-1, "site_position should be less than L-1"
-        from ..matrix import PAULI_MAT
+        from ..matrix.pauli import PAULI_MAT
         
         local_hamiltonian = np.zeros((4,4), dtype=self.dtype)  # 用来储存所有作用到 position 和 position+1 这两个格点上的局域哈密顿量的和
         hasoper = False  # 用来判断是否有算符作用在 position 和 position+1 这两个格点上

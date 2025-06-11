@@ -7,7 +7,7 @@
 
 import numpy as np
 from ..bitsoperation import findstate, flip
-from ......linalg.usenumba.numba_settings import njit, config, numba_cache_dir, pnjit, prange
+from ......basicfun.utils_numba import njit, config, numba_cache_dir, pnjit, prange
 from ..bitsoperation import operateon, findstate
 from .defbasis import representative
 

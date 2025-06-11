@@ -5,7 +5,7 @@
 # @Last Modified time: 2024-09-19 12:31:27
 
 import numpy as np
-from ......linalg.usenumba.numba_settings import config, numba_cache_dir, pnjit, prange
+from ......basicfun.utils_numba import config, numba_cache_dir, pnjit, prange
 from ..bitsoperation import flip, operateon, findstate, reflectbits
 from .defbasis import representative
 

@@ -8,7 +8,7 @@
 import numpy as np
 # from tqdm import tqdm
 # from ...basicfun import println
-from ...linalg.usenumba.numba_settings import njit, prange
+from ...basicfun.utils_numba import njit, prange
 
 @njit
 def get_hammat(Tm:np.ndarray, Wr:np.ndarray, q:int, l:int) -> np.ndarray:

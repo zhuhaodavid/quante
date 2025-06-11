@@ -23,7 +23,7 @@ class TestTN(unittest.TestCase):
         # return mat, basis
     
     def test_expm_multiply_numba(self):
-        from quante.linalg.usenumba.expm_multiply_numba import _expm_multiply_simple, _expm_multiply_interval
+        from quante.linalg.nbfuc.expm_multiply_numba import _expm_multiply_simple, _expm_multiply_interval
         mat, state = self._gen_mat_state(16)
         state = state.astype(np.complex128)
 
@@ -184,7 +184,7 @@ class TestTN(unittest.TestCase):
         return mat, basis
     
     def test_expm_multiply_numba_matrix(self):
-        from quante.linalg.usenumba.expm_multiply_numba import _expm_multiply_simple, _expm_multiply_interval
+        from quante.linalg.nbfuc.expm_multiply_numba import _expm_multiply_simple, _expm_multiply_interval
         mat, state = self._gen_mat_state_matrix(20)
         statec = state.astype(np.complex128)
 

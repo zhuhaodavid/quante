@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-15 14:19:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 21:25:49
+# @Last Modified time: 2025-06-11 22:59:09
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -86,23 +86,23 @@ def exp(A:_np.ndarray, c: float | complex | int | None = None) -> _np.ndarray:
     """
     if c is None:
         if _np.iscomplexobj(A):
-            from .usenumba.operations_numba import parallel_exp_complex
+            from .nbfuc.operations_numba import parallel_exp_complex
             return parallel_exp_complex(A)
         else:
-            from .usenumba.operations_numba import parallel_exp_real
+            from .nbfuc.operations_numba import parallel_exp_real
             return parallel_exp_real(A)
     else:
         if not _np.iscomplexobj(A) and not _np.iscomplex(c):
-            from .usenumba.operations_numba import parallel_expmul_rr
+            from .nbfuc.operations_numba import parallel_expmul_rr
             return parallel_expmul_rr(A, c)
         elif not _np.iscomplexobj(A) and _np.iscomplex(c):
-            from .usenumba.operations_numba import parallel_expmul_rc
+            from .nbfuc.operations_numba import parallel_expmul_rc
             return parallel_expmul_rc(A, c)
         elif _np.iscomplexobj(A) and not _np.iscomplex(c):
-            from .usenumba.operations_numba import parallel_expmul_cr
+            from .nbfuc.operations_numba import parallel_expmul_cr
             return parallel_expmul_cr(A, c)
         elif _np.iscomplexobj(A) and _np.iscomplex(c):
-            from .usenumba.operations_numba import parallel_expmul_cc
+            from .nbfuc.operations_numba import parallel_expmul_cc
             return parallel_expmul_cc(A, c)
 
 
@@ -192,22 +192,22 @@ def logm(A:_np.ndarray, isherm = None) -> _np.ndarray:
 
 def uptrig(mat):
     """返回矩阵的对角元和上三角矩阵元"""
-    from .usenumba.operations_numba import uptri2list
+    from .nbfuc.operations_numba import uptri2list
     return uptri2list(mat)
 
 def uptrig_inv(lis):
     """将 uptrig 上三角矩阵元素重新组装为上三角矩阵"""
-    from .usenumba.operations_numba import list2uptri
+    from .nbfuc.operations_numba import list2uptri
     return list2uptri(lis)
 
 def uptrigindex(row_indx:list, col_indx:list, dim:int) -> _np.ndarray:
     """uptrig 将 (i,j) 指标变为生成的 list 的指标"""
-    from .usenumba.operations_numba import _uptrigindex
+    from .nbfuc.operations_numba import _uptrigindex
     return _uptrigindex(row_indx, col_indx, dim)
 
 def uptrigindex_inv(indices:list, dim:int) -> _np.ndarray:
     """uptrig 生成的 list 的指标变为上三角矩阵的指标"""
-    from .usenumba.operations_numba import _uptrigindex_inv
+    from .nbfuc.operations_numba import _uptrigindex_inv
     return _uptrigindex_inv(indices, dim)
 
 def observe_states(vecs:_np.ndarray, O:_np.ndarray) -> _np.ndarray:
@@ -221,10 +221,10 @@ def observe_states(vecs:_np.ndarray, O:_np.ndarray) -> _np.ndarray:
     >>> qla.observe_states(eigs, mat)
     """
     if  _np.issubdtype(vecs.dtype, _np.floating) and _np.issubdtype(O.dtype, _np.floating):
-        from .usenumba.operations_numba import observe_states_float
+        from .nbfuc.operations_numba import observe_states_float
         return observe_states_float(vecs, O)
     else:
-        from .usenumba.operations_numba import observe_states_complex
+        from .nbfuc.operations_numba import observe_states_complex
         return observe_states_complex(vecs.astype(complex), O.astype(complex))
 
 def real_if_close(val):
@@ -379,7 +379,7 @@ def kron(
     tmp_stype = "coo" if coo_build or stype == "coo" else None
     
     if parallel:
-        from .usenumba.numba_settings import parallel_reduce
+        from ..basicfun.utils_numba import parallel_reduce
         reducer = parallel_reduce
     else:
         reducer = functools.reduce

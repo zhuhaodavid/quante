@@ -205,7 +205,7 @@ def expm_multiply(
         lo = mat
     
     # 主要的工作:
-    from .usenumba.expm_multiply_numba import _expm_multiply_numba
+    from .nbfuc.expm_multiply_numba import _expm_multiply_numba
     return _expm_multiply_numba(lo, psi0, scale=scale, start=start, stop=stop, num=num, endpoint=endpoint, traceA=traceA)
 
 
@@ -492,7 +492,7 @@ class EvolveEngine:
     @lru_cache(maxsize=2)
     def get_evolve_engine(self, dt):
         if self.device == 'cpu':
-            from .usenumba.expm_multiply_numba import _evolve_engine
+            from .nbfuc.expm_multiply_numba import _evolve_engine
             return _evolve_engine(self.csr_mt, scale=self.scale, t=dt, traceA=self.traceA, herm=self.herm)
         else:
             from ..torch_utils.linalg.expm_multiply import evolve_engine

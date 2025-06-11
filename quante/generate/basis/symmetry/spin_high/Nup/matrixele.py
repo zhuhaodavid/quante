@@ -6,7 +6,7 @@
 
 
 
-from ......linalg.usenumba.numba_settings import pnjit, prange, config, numba_cache_dir
+from ......basicfun.utils_numba import pnjit, prange, config, numba_cache_dir
 import numpy as np
 from ..basis_operations import operateon, findstate
 

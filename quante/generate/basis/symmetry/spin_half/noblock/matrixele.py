@@ -5,7 +5,7 @@
 # @Last Modified time: 2025-04-16 17:19:52
 
 from ..bitsoperation import operateon, flip
-from ......linalg.usenumba.numba_settings import config, numba_cache_dir, pnjit, prange
+from ......basicfun.utils_numba import config, numba_cache_dir, pnjit, prange
 import numpy as np
 
 

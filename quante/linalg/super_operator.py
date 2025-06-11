@@ -394,7 +394,7 @@ class Liouvillian(LinearOperator):
             L = self.matrix
             n = self.Ns
             N = n * n
-            # from .usenumba.operations_numba import dot_parallel
+            # from .nbfuc.operations_numba import dot_parallel
             def LdagL_matvec(x):
                 # return dot_parallel(L.conj().T, dot_parallel(L, x))
                 return L.conj().T @ (L @ x)
