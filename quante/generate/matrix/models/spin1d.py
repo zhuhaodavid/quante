@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:35:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 23:22:45
+# @Last Modified time: 2025-06-12 10:30:22
 
 import numpy as _np
 
@@ -20,6 +20,35 @@ __all__ = [
 # ================================
 # local_hamiltonian_spin_1D
 # ================================
+
+@overload
+def local_hamiltonian_spin_1D(
+    model_key:Literal["XX", "TFI"], 
+    pauli:bool=True, 
+    J = None,
+    h = None,
+) -> _np.ndarray:
+    ...
+
+@overload
+def local_hamiltonian_spin_1D(
+    model_key:Literal["XXZ"], 
+    pauli:bool=True, 
+    J = None,
+    h = None,
+    Δ = None,
+) -> _np.ndarray:
+    ...
+
+@overload
+def local_hamiltonian_spin_1D(
+    model_key:Literal["TLFI"], 
+    pauli:bool=True, 
+    J = None,
+    h = None,
+    g = None,
+) -> _np.ndarray:
+    ...
 
 def local_hamiltonian_spin_1D(
     model_key:Literal["XX", "XXZ", "TFI", "TLFI"], 
@@ -93,7 +122,7 @@ def heisenberg_matrix(
     pzblock:Optional[int]=None,
     jmblock:Optional[Union[int, tuple[int, int]]]=None,
     sparse: bool = False
-    ) -> _np.ndarray:
+) -> _np.ndarray:
     """
     总是生成矩阵，而不是稀疏矩阵
     
