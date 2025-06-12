@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:42:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 23:26:32
+# @Last Modified time: 2025-06-12 10:17:30
 
 import numpy as _np
 import math
@@ -19,7 +19,7 @@ def _permutation_parity(perm):
                 parity *= -1
     return parity
 
-def sky_anti_symetrize(Jmat, hermitize=False):
+def sky_anti_symmetrize(Jmat, hermitize=False):
     L = Jmat.shape[0]
     q2 = Jmat.ndim//2
     # hermitize
@@ -70,9 +70,12 @@ def syk4_dirac(L:int, Nf:int, J:float|_np.ndarray=1., sparse:Literal[False]=Fals
     ----------
     L : int
         The number of Dirac fermion modes.
-    J : ndarray, float or None, optional
-        coupling constants for the SYK4 model, if None, will generate a random coupling matrix.
-        If a float, it will be used as the coupling constant for all terms.
+    J : ndarray or float, optional
+        coupling constants for the SYK4 model,
+        - If a float, it will be used as the coupling constant for all terms.
+        - If a numpy array, it should be a 4D array of shape (L, L, L, L).
+        The matrix will only use the anti-symmetrized part of the array, see
+        following notes for details.
         defaults to None.
     Nf : int, optional
         The number of fermions, by default None.
@@ -81,12 +84,23 @@ def syk4_dirac(L:int, Nf:int, J:float|_np.ndarray=1., sparse:Literal[False]=Fals
     
     Notes
     -----
-    This generates the same matrix as (but faster),
+    When `J` is a numpy array, it should be a 4D array of shape (L, L, L, L).
+
+    >>> Jmat = np.random.randn(L,L,L,L) + 1j * np.random.randn(L,L,L,L)
+    >>> mat = qt.generate.matrix.syk4_dirac(L, L//2, J=Jmat, sparse=False)
+
+    This will generate the same matrix as (but faster) following code:,
+
+    >>> qt.generate.matrix.sky_anti_symetrize(Jmat, hermitize=False)
     >>> builder = qt.generate.operas.fermion.builder()
     >>> for i1, i2, j1, j2 in np.ndindex((L,)*4):
     >>>     builder += "++--", [i1, i2, j1, j2], Jmat[i1, i2, j1, j2]
+    >>> basis = qt.generate.basis.quspin_fermion_basis(L=L, Nf=L//2)
     >>> mat = builder.build().to_matrix(basis)/(2*L)**(3/2)
-    
+
+    In this oper form, `Jmat` needs to be anti-symmetrized, so as
+    to obtain the correct Hamiltonian matrix.
+   
     Returns
     -------
     csr_matrix or ndarray
@@ -108,7 +122,7 @@ def syk4_dirac(L:int, Nf:int, J:float|_np.ndarray=1., sparse:Literal[False]=Fals
         Jmat = (J/_np.sqrt(2)) * (_np.random.randn(L**2,L**2) + 1j * _np.random.randn(L**2,L**2))
         _np.fill_diagonal(Jmat, _np.random.randn(L**2)*J)
         Jmat = Jmat.reshape(L, L, L, L)
-        sky_anti_symetrize(Jmat, hermitize=True)
+        sky_anti_symmetrize(Jmat, hermitize=True)
     else:
         raise ValueError("J must be a number or a numpy array.")
 

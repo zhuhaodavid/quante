@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:55:05
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 21:52:38
+# @Last Modified time: 2025-06-12 10:08:29
 
 import numpy as np
 from .....basicfun.utils_numba import njit, numba_cache_dir, config, prange
@@ -49,8 +49,8 @@ def make_syk_matrix(L, Nup, Jmat, bstates, Ns, nnz_eachcol):
         for Li in range(L):
             mask_i = 1 << (L - 1 - Li)
             if bstate & mask_i:  # should be 1
-                for Lj in range(Li+1, L): 
-                    # only need to consider Lj > Li
+                for Lj in range(Li): 
+                    # only need to consider Lj < Li
                     mask_i = 1 << (L - 1 - Lj)
                     if bstate & mask_i:
                         # should be 1
@@ -86,7 +86,18 @@ def make_syk_matrix(L, Nup, Jmat, bstates, Ns, nnz_eachcol):
                     mask_k = 1 << (L - 1 - Lk)
                     if bstate & mask_k:  
                         # c_k works
-                        res[indx, i] += Jmat[Li,Lk,Lj,Lk] * (-4) * _permucoef(bstate, Li, Lj, L)
+                        pc1 = _permucoef(bstate, Li, Lj, L)
+                        pc2 = _permucoef(bstate, Lj, Li, L)
+                        if Li < Lk:
+                            if Lj < Lk:
+                                res[indx, i] += Jmat[Li, Lk, Lj, Lk] * (-4) * pc1
+                            else:
+                                res[indx, i] += Jmat[Li, Lk, Lk, Lj] * 4 * pc2
+                        else:
+                            if Lj < Lk:
+                                res[indx, i] += Jmat[Lk, Li, Lj, Lk] * 4 * pc2
+                            else:
+                                res[indx, i] += Jmat[Lk, Li, Lk, Lj] * (-4) * pc2
                         col[indx, i] = findstate(bstates, bstate ^ mask_i ^ mask_j)
                 indx += 1
         
@@ -94,14 +105,14 @@ def make_syk_matrix(L, Nup, Jmat, bstates, Ns, nnz_eachcol):
         # c+_l c+_k c_j c_i
         for indx1 in range(Nup):
             Li = pos_1[indx1]
-            for indx2 in range(indx1+1, Nup):
+            for indx2 in range(indx1):
                 Lj = pos_1[indx2]
                 for indx3 in range(L-Nup):
                     Lk = pos_0[indx3]
                     if Lk == Li or Lk == Lj:
                         # repeat is not allowed
                         continue
-                    for indx4 in range(indx3+1, L-Nup):
+                    for indx4 in range(indx3):
                         Ll = pos_0[indx4]
                         if Ll == Li or Ll == Lj:
                             # repeat is not allowed
