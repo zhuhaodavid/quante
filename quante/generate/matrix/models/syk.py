@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:42:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-12 10:17:30
+# @Last Modified time: 2025-06-12 11:03:34
 
 import numpy as _np
 import math
@@ -46,10 +46,14 @@ def sky_anti_symmetrize(Jmat, hermitize=False):
     return Jmat
 
 @overload
-def syk4_dirac(L:int, J:float|_np.ndarray=1., Nf:int=None, sparse:Literal[True]=True, basis=None) -> _sparse.csr_array:
+def syk4_dirac(L:int, Nf:int, J:float|_np.ndarray=1., sparse:Literal[False]=False, basis=None) -> _np.ndarray:
     ...
 
-def syk4_dirac(L:int, Nf:int, J:float|_np.ndarray=1., sparse:Literal[False]=False, basis=None) -> _np.ndarray:
+@overload
+def syk4_dirac(L:int, Nf:int, J:float|_np.ndarray=1., sparse:Literal[True]=True, basis=None) -> _sparse.csr_matrix:
+    ...
+
+def syk4_dirac(L:int, Nf:int, J:float|_np.ndarray=1., sparse=False, basis=None) -> _sparse.csr_matrix:
     r"""generate the SYK4 Dirac Hamiltonian matrix.
 
     The (complex) SYK4 Dirac Hamiltonian is defined as:
@@ -115,7 +119,7 @@ def syk4_dirac(L:int, Nf:int, J:float|_np.ndarray=1., sparse:Literal[False]=Fals
         from ...basis import quspin_fermion_basis
         basis = quspin_fermion_basis(L=L, Nf=Nf)
     else:
-        assert basis.Nf == Nf, "The number of fermions in the basis must match the input Nf."
+        assert basis._Np == Nf, "The number of fermions in the basis must match the input Nf."
     if isinstance(J, _np.ndarray):
         Jmat = J.reshape(L, L, L, L)
     elif isinstance(J, (int, float)):

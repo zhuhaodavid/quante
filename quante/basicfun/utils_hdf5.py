@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:14:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 23:04:13
+# @Last Modified time: 2025-06-12 12:21:10
 
 import os as _os
 import numpy as _np
@@ -370,7 +370,13 @@ def view_hdf5(filename:str, group:str='/', depth=1):
             print_tree(group, g)
 
 
-def isave(filename:str, *dataargs, data:dict = None, group:Union[str, None] = '/', mode:str='a') -> None:
+def isave(
+    filename:str, 
+    *dataargs, 
+    data:dict = None, 
+    group:Union[str, None] = '/', 
+    mode:str='a'
+) -> None:
     """将数据保存为 .h5 文件
     
     Parameters
@@ -465,7 +471,8 @@ def iload(filename:str, dataname:list[str]|str|None = None, *, group='/') -> Any
         if call_frame is not None:
             call_frame = call_frame.f_back
         lv = get_lv(call_frame)
-        if isinstance(lv, str) or lv is None:
+        if lv is None:
+            # 如果没有找到 lv，那么使用 group 作为默认值
             lv = group
     else:
         # dataset is list or tuple
