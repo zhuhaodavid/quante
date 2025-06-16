@@ -232,7 +232,7 @@ Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1).to_matrix(basis=basis, sparse=True
 particle_number = [op.n(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
 
 lvn = qt.linalg.Liouvillian(hammat, Lindblad_R + Lindblad_L)
-state = qt.generate.state.product_state('1'+'0'*(L-1), Nup=1)
+state = qt.generate.state.product_state(['up']+['dn']*(L-1), Nup=1)
 rhoinit = np.outer(state, state)
 
 res = qt.linalg.evolve_and_measure(

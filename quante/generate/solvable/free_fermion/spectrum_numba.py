@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2024-08-12 15:55:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-09-12 14:23:48
+# @Last Modified time: 2025-06-16 19:08:16
 
-from ...basicfun.utils_numba import njit, vectorize
+from ....basicfun.utils_numba import njit, vectorize
 
-from ...basicfun.utils_numba import prange as prange
+from ....basicfun.utils_numba import prange as prange
 import numpy as _np
 
 @njit

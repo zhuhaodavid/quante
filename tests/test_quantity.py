@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-16 23:25:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-29 22:15:09
+# @Last Modified time: 2025-06-16 19:16:03
 
 import quante as qt
 import numpy as np
@@ -18,7 +18,7 @@ class TestQuantity(unittest.TestCase):
         state[0] = 1/np.sqrt(2)
         state[3] = 1/np.sqrt(2)
         # No basis provided, left_number=1 (split between qubits)
-        spectrum = qt.quantity.entanglement_spectrum(state, left_number=1)
+        spectrum = qt.measure.entanglement_spectrum(state, left_number=1)
         # The entanglement spectrum should be [1/sqrt(2), 1/sqrt(2)]
         expected = np.array([[1/np.sqrt(2), 1/np.sqrt(2)]])
         # Only the first two singular values are nonzero
@@ -44,7 +44,7 @@ class TestQuantity(unittest.TestCase):
         mat = ham.to_matrix(basis=basis)
         eng = np.linalg.eigvalsh(mat)
 
-        eng_unfold = qt.quantity.unfolding_diff(eng)
+        eng_unfold = qt.measure.unfolding_diff(eng)
 
         res = np.array([1.25435517, 0.46919587, 1.58384313, 
                         .43021752,1.58826541,0.46563927,1.22822096,

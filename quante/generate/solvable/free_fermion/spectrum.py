@@ -2,8 +2,8 @@
 # @Author: hzhu
 # @Date:   2023-07-14 15:28:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-14 17:34:19
-from ...linalg import eigvalsh
+# @Last Modified time: 2025-06-16 19:10:08
+from ....linalg import eigvalsh
 import numpy as _np
 import scipy as _sp
 from typing import Optional, Union
@@ -17,7 +17,7 @@ __all__ = [
     "XY_specific_heat",
     "XY_magnetization",
     "XXX_gdenergy_pbc_approx",
-    "XXZ_gdenergy_inf",
+    # "XXZ_gdenergy_inf",
 ]
 
 
@@ -516,22 +516,22 @@ def XXX_gdenergy_pbc_approx(L):
     return (Einf - Efinite * correction) / 2
 
 
-def XXZ_gdenergy_inf(J=1, Δ=0):
-    # todo M. Takahashi, "Thermodynamics of One-Dimensional Solvable Models," Cambridge University Press, 1999.
-    # 但是只能给出 L->∞ 的近似结果? 并且需要 J < 0???
-    ####################################################
-    Δ = 3
-    L = 10
-    M = 0
-    J = -1
-    ham = qt.generate.operas.heisenberg_operator(L=L, j=(-J,-J,-J*Δ), cyclic=True)
-    basis = qt.generate.basis.spin_basis(L=L)
-    mat = ham.to_matrix(basis, pauli=False)
-    eigvals = np.linalg.eigvalsh(mat)
-    print(eigvals[0])
+# def XXZ_gdenergy_inf(J=1, Δ=0):
+#     # todo M. Takahashi, "Thermodynamics of One-Dimensional Solvable Models," Cambridge University Press, 1999.
+#     # 但是只能给出 L->∞ 的近似结果? 并且需要 J < 0???
+#     ####################################################
+#     Δ = 3
+#     L = 10
+#     M = 0
+#     J = -1
+#     ham = qt.generate.operas.heisenberg_operator(L=L, j=(-J,-J,-J*Δ), cyclic=True)
+#     basis = qt.generate.basis.spin_basis(L=L)
+#     mat = ham.to_matrix(basis, pauli=False)
+#     eigvals = np.linalg.eigvalsh(mat)
+#     print(eigvals[0])
 
-    ϕ = np.arccosh(Δ)
-    print(-L*Δ/4)
+#     ϕ = np.arccosh(Δ)
+#     print(-L*Δ/4)
 
     # from quimb import *
     # from quimb.tensor import *

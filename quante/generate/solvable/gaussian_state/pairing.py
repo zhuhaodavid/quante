@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2025-04-19 17:58:24
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 22:47:15
+# @Last Modified time: 2025-06-16 19:12:42
 
 import numpy as np
 from functools import lru_cache
-from ...linalg import expm
+from ....linalg import expm
 
 
 def ising_evolve(L, model, init_state:str, tlist:np.ndarray):
@@ -50,7 +50,7 @@ def ising_evolve(L, model, init_state:str, tlist:np.ndarray):
     >>> plt.show()
     """
     # convert to fermion operator
-    from ...generate.operas import spin, fermion
+    from ...operas import spin, fermion
     if isinstance(model, spin.SpinOper):
         model = model.jw_transfer()
     assert isinstance(model, fermion.FermionOper), "model must be a fermion operator"

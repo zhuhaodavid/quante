@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:38:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 22:45:43
+# @Last Modified time: 2025-06-16 19:17:07
 
 import numpy as _np
 import math
@@ -137,7 +137,7 @@ def mean_level_spacing(val,verbose=True):
     >>> mat = np.random.randn(1000, 1000)
     >>> mat += mat.conj().T  # make it Hermitian
     >>> eng = np.linalg.eigvalsh(mat)
-    >>> qt.quantity.mean_level_spacing(eng) 
+    >>> qt.measure.mean_level_spacing(eng) 
     np.float64(0.5321503482669373)
 
     References

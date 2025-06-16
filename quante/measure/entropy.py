@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:35:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 23:37:41
+# @Last Modified time: 2025-06-16 19:17:10
 
 import numpy as _np
 import math
@@ -37,7 +37,7 @@ def entanglement_spectrum(
     >>> basis = qt.generate.basis.spin_basis(L=L, Nup=5, kblock=1)
     >>> hammat = ham.to_matrix(basis)
     >>> val, vec = qt.linalg.eigh(hammat, k=1)
-    >>> print(qt.quantity.entanglement_spectrum(vec, L=L, left_number=L//2, basis=basis))
+    >>> print(qt.measure.entanglement_spectrum(vec, L=L, left_number=L//2, basis=basis))
     [0.70710678 0.70710678 0.         0.         0.         0.         0.         0.        ]
     """
     if basis is not None:
@@ -84,7 +84,7 @@ def entanglement_entropy(
     >>> basis = qt.generate.basis.spin_basis(L=L, Nup=5, kblock=1)
     >>> hammat = ham.to_matrix(basis)
     >>> val, vec = qt.linalg.eigh(hammat, k=1)
-    >>> print(qt.quantity.entanglement_entropy(vec, L=L, left_number=L//2, basis=basis))
+    >>> print(qt.measure.entanglement_entropy(vec, L=L, left_number=L//2, basis=basis))
     0.6931471805599453
     """
     ee = entanglement_spectrum(states, left_number, basis)
@@ -161,9 +161,9 @@ def entropy_page(Dim_sub:int, Dim_tot:int) -> float:
     --------
     计算 12 个自旋，二分为 6 个自旋的 Page 熵：
     
-    >>> import quante.quantity as qq
+    >>> import quante.measure as qm
     >>> L = 12
-    >>> vals = qq.entropy_page(2**(L//2), 2**L)
+    >>> vals = qm.entropy_page(2**(L//2), 2**L)
     >>> vals
     3.6590254932605575
     
@@ -172,7 +172,7 @@ def entropy_page(Dim_sub:int, Dim_tot:int) -> float:
     >>> import quante as qt
     >>> vec = qt.generate.state.random(dim=2**12)
     >>> rho = qt.linalg.partial_trace(vec, [2]*L, range(L//2))
-    >>> qt.quantity.entropy(rho)
+    >>> qt.measure.entropy(rho)
     3.6520327465312925
     
     可以看到是非常接近的。

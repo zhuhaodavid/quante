@@ -90,33 +90,6 @@ def list2uptri(lis):
         mat[i, j] = lis[k]
     return mat
 
-@pnjit("float64[:](float64[:,:], float64[:,:])")
-def observe_states_float(vecs, O):
-    n = vecs.shape[1]
-    res = _np.empty(n, dtype=_np.float64)
-    O_contiguous = _np.ascontiguousarray(O)
-    for i in prange(n):
-        v = vecs[:, i]
-        v_conj = _np.ascontiguousarray(v.conj())
-        O_v = _np.dot(O_contiguous, _np.ascontiguousarray(v))
-        tmp = _np.dot(v_conj.T, O_v)
-        res[i] = _np.real(tmp)
-    return res
-
-@pnjit("complex128[:](complex128[:,:], complex128[:,:])")
-def observe_states_complex(vecs, O):
-    n = vecs.shape[1]
-    res = _np.empty(n, dtype=_np.complex128)
-    O_contiguous = _np.ascontiguousarray(O)
-    for i in prange(n):
-        v = vecs[:, i]
-        v_conj = _np.ascontiguousarray(v.conj())
-        O_v = _np.dot(O_contiguous, _np.ascontiguousarray(v))
-        tmp = _np.dot(v_conj.T, O_v)
-        res[i] = tmp
-    return res
-
-
 
 import scipy
 

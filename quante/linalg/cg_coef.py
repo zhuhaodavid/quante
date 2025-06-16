@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:41:02
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 22:43:31
+# @Last Modified time: 2025-06-16 19:16:34
 
 
 def cg_coef(j1:float, j2:float, j3:float, m1:float, m2:float, m3:float) -> float:
@@ -34,8 +34,7 @@ def cg_coef(j1:float, j2:float, j3:float, m1:float, m2:float, m3:float) -> float
     --------
     计算 [1] 中第一个数: (1/2,1/2) + (1/2,1/2) => (1,1)
     
-    >>> import quante.quantity as qq
-    >>> qq.cg_coef(1/2, 1/2, 1, 1/2, 1/2, 1)
+    >>> cg_coef(1/2, 1/2, 1, 1/2, 1/2, 1)
     1.0
     
     References

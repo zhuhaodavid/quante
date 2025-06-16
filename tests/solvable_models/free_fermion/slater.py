@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-04-19 12:02:23
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-19 18:01:56
+# @Last Modified time: 2025-06-16 18:53:47
 
 import unittest
 import quante as qt
@@ -58,7 +58,7 @@ class TestSlaterState(unittest.TestCase):
         basis = qt.generate.basis.spin_basis(L)
         obs = [op.z(i) + 0.5 for i in range(L)]
         state = qt.generate.state.neel(L, down_first=True)
-        obs = lambda state: qt.quantity.entanglement_entropy(state, L, L//2, basis=basis)
+        obs = lambda state: qt.measure.entanglement_entropy(state, L, L//2, basis=basis)
         result1 = ham.evolve(state, tlist, measure=obs, pauli=False, basis=basis)
 
         self.assertTrue(np.all(np.abs(result1 - result) < 1e-10))

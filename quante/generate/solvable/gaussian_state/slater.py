@@ -2,12 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-04-19 10:10:28
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 22:45:48
+# @Last Modified time: 2025-06-16 19:09:17
 
 import numpy as np
 from functools import lru_cache
 from typing import Literal
-from ...linalg import expm
+from ....linalg import expm
 from tqdm import tqdm
 
 def xx_evolve(L, model, init_state:str, tlist:np.ndarray):
@@ -51,7 +51,7 @@ def xx_evolve(L, model, init_state:str, tlist:np.ndarray):
     >>> plt.show()
     """
     # convert to fermion operator
-    from ...generate.operas import spin, fermion
+    from ...operas import spin, fermion
     if isinstance(model, spin.SpinOper):
         model = model.jw_transfer()
     assert isinstance(model, fermion.FermionOper), "model must be a fermion operator"
@@ -80,7 +80,7 @@ class SlaterState:
     def from_product_state(cls, state:str, spin=False):
         r"""生成自由费米子态的 U 矩阵"""
         L = len(state)
-        inds = np.flatnonzero(np.array(list(state)) == '1')
+        inds = np.flatnonzero(np.array(list(state)) == 'dn')
         M = len(inds)
         assert 0 < M < L, "vacuum state or full state is not allowed"
         U = np.zeros((L, M), dtype=complex)
@@ -280,7 +280,7 @@ class SlaterState:
         np.ndarray | float
             the entanglement entropy, shape (L-2,) if pos is None, else scalar
         """
-        from ...quantity import entropy
+        from ....measure import entropy
 
         if pos is None:
             C = self.correlation_matrix()
@@ -310,8 +310,8 @@ class SlaterState:
         """
         L, M = self.L, self.M
         if cs is None:
-            from ...generate.basis import spin_basis
-            from ...generate.operas import SpinOper
+            from ...basis import spin_basis
+            from ...operas import SpinOper
             basis = spin_basis(L)
             cs = [SpinOper({  # jordan-wigner string
                 'Z'*i + 'm': ([list(range(i+1))], [1.])
@@ -370,8 +370,8 @@ class SlaterState:
         """
         L = self.L
         if cs is None:
-            from ...generate.basis import spin_basis
-            from ...generate.operas import SpinOper
+            from ...basis import spin_basis
+            from ...operas import SpinOper
             basis = spin_basis(L)
             cs = [SpinOper({  # jordan-wigner string
                 'Z'*i + 'm': ([list(range(i+1))], [1.])
@@ -408,8 +408,8 @@ class SlaterState:
         """
         Lsub = len(pos)
         if cs is None:
-            from ...generate.basis import spin_basis
-            from ...generate.operas import SpinOper
+            from ...basis import spin_basis
+            from ...operas import SpinOper
             basis = spin_basis(Lsub)
             cs = [SpinOper({  # jordan-wigner string
                 'Z'*i + 'm': ([list(range(i+1))], [1.])

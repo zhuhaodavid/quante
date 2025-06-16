@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2025-05-14 22:03:39
-# @Last Modified by:   dzwang
-# @Last Modified time: 2025-05-18 23:06:52
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-06-16 18:48:53
 
 import numpy as np
 import scipy.sparse as sps
@@ -411,41 +411,3 @@ class Liouvillian(LinearOperator):
             return rho / rho.trace()
         else:
             raise ValueError("method should be 'direct' or 'eig' or 'svd'")
-
-    def trajectory_measure(
-        self, 
-        inistate:np.ndarray, 
-        tlist:list|np.ndarray, 
-        measure:Callable|np.ndarray,
-        method:Literal['mul-cpu', 'mul-cuda:0', 'linear_operator',
-                    'RK45', 'RK23', 'DOP853', 'Radau', 'BDF', 'LSODA']='mul-cpu',
-        **kwargs
-    ):
-        for t in tqdm(tlist, ascii=True):
-
-            pass
-        # it should look like,
-        
-        # def integrate(self, t, copy=False):
-        #     t_old, y_old = self._integrator.get_state(copy=False)
-        #     norm_old = self._prob_func(y_old)
-        #     while t_old < t:
-        #         t_step, state = self._integrator.mcstep(t, copy=False)
-        #         norm = self._prob_func(state)
-        #         if norm <= self.target_norm:
-        #             t_col, state = self._find_collapse_time(norm_old, norm,
-        #                                                     t_old, t_step)
-        #             self._do_collapse(t_col, state)
-        #             t_old, y_old = self._integrator.get_state(copy=False)
-        #             norm_old = 1.
-        #         else:
-        #             t_old, y_old = t_step, state
-        #             norm_old = norm
-
-        #     return t_old, _data.mul(y_old, 1 / self._norm_func(y_old))
-
-        # def run(self, tlist):
-        #     for t in tlist[1:]:
-        #         yield self.integrate(t, False)
-    
-        # reference https://qutip.org/docs/4.7/guide/dynamics/dynamics-monte.html
