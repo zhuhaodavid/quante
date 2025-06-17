@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-04-19 10:10:28
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 19:09:17
+# @Last Modified time: 2025-06-17 10:55:35
 
 import numpy as np
 from functools import lru_cache
@@ -18,7 +18,7 @@ def xx_evolve(L, model, init_state:str, tlist:np.ndarray):
     model : FermionOper, SpinOper
         the model to evolve, must be a fermion operator
     init_state : str
-        initial state string, e.g. '0101010101010101', 
+        initial state string, e.g. ['dn', 'up'] * (L//2), 
         length must match the model
     tlist : np.ndarray
         time list, e.g. np.linspace(0, 60, 500)
@@ -77,8 +77,11 @@ class SlaterState:
         self.M = U.shape[1]
     
     @classmethod
-    def from_product_state(cls, state:str, spin=False):
+    def from_product_state(cls, state:list[str], spin=False):
         r"""生成自由费米子态的 U 矩阵"""
+        for i in state:
+            if i not in ['up', 'dn']:
+                raise ValueError(f"state must be a list of 'up' and 'dn', got {i}")
         L = len(state)
         inds = np.flatnonzero(np.array(list(state)) == 'dn')
         M = len(inds)

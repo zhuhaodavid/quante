@@ -2,13 +2,12 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-02 16:46:11
+# @Last Modified time: 2025-06-17 10:48:18
 
 import torch as tc
 
-from ..linalg.decomp import qr, svd, truncate, rq, log_or_not_update
+from ..linalg.decomp import qr, svd, truncate, rq, log_or_not_update, TruncationError
 from ..utils import clone
-from ...linalg.svd_robust import TruncationError
 
 __all__ = [
     "mpo_eye",

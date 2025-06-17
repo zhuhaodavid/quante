@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # @Author: dzwang
 # @Date:   2024-03-04 11:37:55
-# @Last Modified by:   dzwang
-# @Last Modified time: 2024-10-16 15:49:18
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-06-17 09:52:24
 import numpy as _np 
 import numpy.linalg as _nla
-from ..linalg.svd_robust import svd_truncate
+from ...linalg.decomp.svd_robust import svd_truncate
 
 
 __all__ = ["MPS", "canonical_form_mps"]

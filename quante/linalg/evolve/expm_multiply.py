@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:31:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 18:40:08
+# @Last Modified time: 2025-06-17 10:20:31
 
 
 from scipy import sparse as sps
@@ -187,6 +187,6 @@ def expm_multiply(
         lo = mat
     
     # 主要的工作:
-    from ..nbfuc.expm_multiply_numba import _expm_multiply_numba
+    from .nbfuc.expm_mul_core import _expm_multiply_numba
     return _expm_multiply_numba(lo, psi0, scale=scale, start=start, stop=stop, num=num, endpoint=endpoint, traceA=traceA)
 

@@ -6,7 +6,7 @@
 
 from .entropy import *
 from .level_statistics import *
-from ..linalg.cg_coef import *
+from ..generate.solvable.angularmmt.cg_coef import *
 from .expect import *
 
 

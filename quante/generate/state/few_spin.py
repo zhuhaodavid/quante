@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 17:50:10
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 18:01:25
+# @Last Modified time: 2025-06-17 09:47:21
 
 import numpy as _np
 
@@ -125,7 +125,7 @@ def plot_bloch_state(co_state, j):
     phi = _np.arctan2(vy, vx)
     
     # 量子测量
-    from ...linalg.eig_modified import eigh
+    from ...linalg.decomp.eig_modified import eigh
     vx, Ux = eigh(x)
     vy, Uy = eigh(y)
     vz = z.diagonal().real

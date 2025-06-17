@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 # @Author: dzwang
 # @Date:   2023-09-28 15:06:12
-# @Last Modified by:   dzwang
-# @Last Modified time: 2024-10-16 15:00:15
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-06-17 09:52:15
 import copy
-from ..generate import *
+from ...generate import *
 import numpy as _np
 import numpy.linalg as _nla
-from ..linalg.svd_robust import svd_truncate
-from ..basicfun import load_hdf5, save_hdf5
-from .automata import contract
-from ..generate.matrix import pauli_matrix
+from ...linalg.decomp.svd_robust import svd_truncate
+from ...basicfun import load_hdf5, save_hdf5
+from ...generate.automata import contract
+from ...generate.matrix import pauli_matrix
 
 
 __all__ = ["MPO", "canonical_form_mpo", "add_mpo"]

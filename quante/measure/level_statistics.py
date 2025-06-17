@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:38:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 19:17:07
+# @Last Modified time: 2025-06-17 10:14:08
 
 import numpy as _np
 import math
@@ -368,3 +368,19 @@ def plot_level_spacings_ratio(val, ax, bins=None):
     ax.hist(r_list, bins=bins, density=True, color='lightgray', ec="gray") # type: ignore
     # 设置横纵坐标的名称以及对应字体格式
     return ax
+
+
+def log_Gauss(mu, sigma2, xlist):
+    """生成 xlist 对应的 log高斯分布数值"""
+    ylist = []
+    for xi in xlist:
+        yi = (
+            1
+            / (2 * _np.pi * sigma2) ** 0.5
+            * _np.exp(-((_np.log(abs(xi)) - mu) ** 2) / (2 * sigma2))
+            / abs(xi)
+            / 2
+        )
+        ylist.append(yi)
+    return ylist
+

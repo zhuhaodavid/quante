@@ -2,14 +2,14 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 20:15:56
+# @Last Modified time: 2025-06-17 10:43:33
 
 import functools
 
 import re
 import numpy as _np
 
-from ...linalg.operations import kron
+from ...linalg.matops import kron
 from ..basis.symmetry.basis_wrapped import _check_spin_number # type: ignore
 
 from typing import Callable, Union 

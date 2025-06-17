@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 # @Author: dzwang
 # @Date:   2023-09-25 19:22:03
-# @Last Modified by:   dzwang
-# @Last Modified time: 2024-09-09 08:50:07
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-06-17 09:51:27
 import copy
 import numpy as _np
 import numpy.linalg as _nla
 import scipy.linalg as _sla
-from ..generate.matrix import pauli_matrix
-from ..linalg.eig_modified import eigh
-from ..linalg.operations import expm, kron
+from ...generate.matrix import pauli_matrix
+from ...linalg.decomp.eig_modified import eigh
+from ...linalg.operations import expm, kron
 
 
 __all__ = ["get_dissipative_uniform", "get_dissipative_boundary_driven"]

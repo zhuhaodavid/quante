@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 18:56:13
+# @Last Modified time: 2025-06-17 10:32:10
 
 
 from scipy import sparse as sps
@@ -11,13 +11,13 @@ from scipy.integrate import solve_ivp
 
 import numpy as _np
 import warnings as _warnings
-from typing import Callable, Literal, TYPE_CHECKING
+from typing import Callable, Literal
 from functools import lru_cache
 from typing import Literal
 from tqdm import tqdm
 
 from ...measure.expect import expect
-from ..super_operator import Liouvillian
+from .super_operator import Liouvillian
 from .EDevolve import _in_CPU, _in_GPU, Uinvpsi, Uexp
 
 __all__ = [
@@ -170,7 +170,7 @@ class EvolveEngine:
     @lru_cache(maxsize=2)
     def get_evolve_engine(self, dt):
         if self.device == 'cpu':
-            from ..nbfuc.expm_multiply_numba import _evolve_engine
+            from .nbfuc.expm_mul_core import _evolve_engine
             return _evolve_engine(self.csr_mt, scale=self.scale, t=dt, traceA=self.traceA, herm=self.herm)
         else:
             from ...torch_utils.linalg.expm_multiply import evolve_engine

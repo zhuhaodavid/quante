@@ -40,11 +40,5 @@ class TestTN(unittest.TestCase):
         self.assertAlmostEqual(eng1.item(), vec1.measure(ℋ).item())
        
 
-if __name__ == "__main__":
-    unittest.main()
-    # suite = unittest.TestSuite()
-    # suite.addTest(TestTN("test_dm"))
-    # runner = unittest.TextTestRunner()
-    # runner.run(suite)
 
 

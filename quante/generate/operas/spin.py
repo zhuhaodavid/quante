@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 23:47:32
+# @Last Modified time: 2025-06-17 10:57:34
 
 import warnings
 import numpy as np
@@ -274,7 +274,7 @@ class SpinOper(Oper):
         else:
             assert L >= self.L
 
-        from ..automata import automata_mpo
+        from .automata.method2 import automata_mpo
         from ..matrix import pauli_matrix
         from functools import partial
         expanded = self.expandxy(pauli=pauli)
@@ -286,13 +286,13 @@ class SpinOper(Oper):
             return [tmp.reshape(1,*tmp.shape,1)]
         return automata_mpo(path, L, local_matrix, expanded.dtype)
 
-        # 下面是使用 simple_automata_mpo 的调用方式
+        ## not efficient one
+        # from .automata.method1 import automata_mpo
         # from ..matrix import pauli_matrix
         # local_matrix = lambda x: pauli_matrix(x.upper() if x in ['x', 'y', 'z'] else x, S=S) if pauli else pauli_matrix(x.upper() if x in ['X', 'Y', 'Z'] else x, S=S)
-        # from ..automata import simple_automata_mpo
         # hlocals, positions, coefficients = self.expandxy(pauli=pauli).split_data()
         # coefficients = np.real_if_close(coefficients)
-        # return simple_automata_mpo(L, hlocals, positions, coefficients, d=d, pauli=pauli, local_matrix_function=local_matrix, dtype=coefficients.dtype)
+        # return automata_mpo(L, hlocals, positions, coefficients, d=d, pauli=pauli, local_matrix_function=local_matrix, dtype=coefficients.dtype)
 
     def split_data(self):
         """这个函数是为 automata 写的，但 parallel_matrix 等函数可能会用到"""
@@ -955,7 +955,7 @@ class HeisenbergOper(SpinOper):
 
     def gdenergy(self, isinf=False, pauli=False, *, k=1, return_eigenvectors=False):
         if not return_eigenvectors:
-            from ...solvable_models.free_fermion import spectrum as ff
+            from ..solvable.free_fermion import spectrum as ff
             L = self.L if not isinf else np.inf
             if self.hx == self.hy == self.hz == 0 and self.jx == self.jy == self.jz and not np.isinf(L) and self.cyclic and k == 1:
                 print("approximate: ", end='')

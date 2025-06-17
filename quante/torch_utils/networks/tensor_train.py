@@ -13,8 +13,7 @@ T = TypeVar('T')
 
 from . import tensor_operations as tf
 from ..utils import clone
-from ..linalg.decomp import eigh, qr, rq, svd, truncate, log_or_not_update
-from ...linalg.svd_robust import TruncationError
+from ..linalg.decomp import eigh, qr, rq, svd, truncate, log_or_not_update, TruncationError
 
 
 class TensorTrain:

@@ -1,0 +1,268 @@
+# -*- coding: utf-8 -*-
+# @Author: hzhu
+# @Date:   2025-06-17 10:33:50
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-06-17 10:38:46
+
+import numpy as _np
+from quante.generate.matrix import pauli_matrix
+import scipy.sparse as _sparse
+
+# ================================================================
+#  automata 的一个简单的实现
+
+#    这个实现的优势是：逻辑清晰，代码简洁易读，可以用于理解 automata 的原理
+   
+#    存在的问题是：效率低，尤其是 L 大时，速度会迅速下降，
+#        主要是 fill_Id 会导致多此重复单位阵
+#        时间复杂度为 O(n * L), n 为 local hamiltonian 的个数
+#        例如 L = 1000, n = 3000, 会导致 9e6 的计算量
+# ================================================================
+
+def _get_Qmat(i: int, left: int, right: int, Qmat: _np.ndarray, N: int) -> _np.ndarray:
+    """
+    Initial Qmat:
+                       ---> N site
+                 [[1,| 1, 1, 1, ...],
+                   --|---------------
+               |  [1,| 0, 0, 0, ...],
+               v     |    .
+               n     |    .
+             basis   |    .
+                  [1,| 0, 0, 0, ...],
+                  [1,| 0, 0, 0, ...]]
+
+    # Each element of row is dependent of
+    # its position, previous element and the max number of this column.
+    """
+    for j in range(N):  # j-th site of basis
+        k = j + 1  # k-th column of Qmat
+        max_val_in_col = _np.max(
+            Qmat[:, k]
+        )  # Optimize by calculating once per iteration
+        if left == right:
+            Qmat[i, k] = 1 if j < left else -1
+        elif j < left:
+            Qmat[i, k] = 1
+        elif j == left:
+            Qmat[i, k] = max_val_in_col + 1
+        elif left < j < right:
+            Qmat[i, k] = (
+                Qmat[i, k - 1]
+                if max_val_in_col < Qmat[i, k - 1]
+                else max_val_in_col + 1
+            )
+        elif j >= right:
+            Qmat[i, k] = -1
+    return Qmat
+
+
+def _finalize_Qmat(Qmat: _np.ndarray) -> _np.ndarray:
+    """
+    Examples
+        Before: Qmat =  [[1,  1,  1],    After: Qmat = [[1, 2, 3],
+                         [1,  2, -1],                   [1, 3, 3]]
+                         [1, -1, -1]]
+    Where D = 2 + 1 = 5
+    """
+    D = _np.max(Qmat) + 1  # the max bond dimension
+    Qmat[Qmat == -1] = D
+    Qmat[:, -1] = 1
+    Qmat = Qmat[1:, :]
+    return Qmat
+
+
+def _fill_Id_in_local_hamiltonian(
+    N: int, hlocals: list[str], positions: list[tuple]
+) -> list[str]:
+    """
+    Examples
+        Input:
+            N = 4
+            hlocals = ['xx', 'yy', 'zz']
+            positions = [(1, 2), (0, 1), (2, 3)]
+        Output:
+            ['IxxI', 'yyII', 'IIzz']
+    """
+    hlocals_Id = [None] * len(hlocals)
+    for i, (hlocal, position) in enumerate(zip(hlocals, positions)):
+        temp = ["I" for _ in range(N)]
+        for j, index in enumerate(position):
+            temp[index] = hlocal[j]
+        hlocals_Id[i] = "".join(temp)
+    return hlocals_Id
+
+
+def automata_mpo(
+    N: int,
+    hlocals: list[str],
+    positions: list[tuple],
+    coefficients: _np.ndarray,
+    d: int = 2,
+    pauli: int = True,
+    local_matrix_function=None,
+    dtype=None
+) -> list[_np.ndarray]:
+    """
+    Basis could only to be string such as "01101..."
+
+    called from `generate.opera.Oper.automata`
+    
+    """
+    coefficients = _np.real_if_close(coefficients)
+    if dtype is None:
+        dtype = coefficients.dtype
+        
+    if local_matrix_function is None:
+        local_matrix_function = lambda x: pauli_matrix(x.upper() if x in ['x', 'y', 'z'] else x) if pauli else pauli_matrix(x.upper() if x in ['X', 'Y', 'Z'] else x)
+    
+    # * rewrite hlocals str to be full str
+    hlocals = _fill_Id_in_local_hamiltonian(N, hlocals, positions)
+
+    # * initialize each tensor in mpo
+    n = len(hlocals)  # n: local hamitonian h_{i,j}, N: site of each local hamitonian
+    Qmat = _np.zeros((n + 1, N + 1), dtype=_np.int64)
+    Qmat[0, :], Qmat[:, 0] = 1, 1
+    for i, position in enumerate(positions):
+        left, right = position[0], position[-1]  #!! left < right 一定吗？
+        Qmat = _get_Qmat(i + 1, left, right, Qmat, N)
+    Qmat = _finalize_Qmat(Qmat)
+    Q = [_np.max(Qmat[:, i]) for i in range(N + 1)]
+    mpo = [_np.zeros((Q[i], d, d, Q[i + 1]), dtype=dtype) for i in range(N)]
+
+    # * write element of 4-order of mpo
+    for i, (hlocal, position) in enumerate(zip(hlocals, positions)):
+        # print(hlocal)  #!! 看看这个就知道为什么慢了
+        Qrow = Qmat[i, :]
+        for j, operator in enumerate(hlocal):
+            coefficient = coefficients[i] if j == position[0] else 1.0
+            operator_mat = local_matrix_function(operator)
+
+            self_add = True
+            if Qrow[j] == Qrow[j + 1] == 1 and j != N - 1:
+                self_add = False
+            if Qrow[j] == _np.max(Q):
+                self_add = False
+
+            if self_add:
+                mpo[j][Qrow[j] - 1, :, :, Qrow[j + 1] - 1] += coefficient * operator_mat
+            else:
+                mpo[j][Qrow[j] - 1, :, :, Qrow[j + 1] - 1] = coefficient * operator_mat
+    
+    return mpo
+
+
+def automata_mpo_str(
+    N: int,
+    hlocals: list[str],
+    positions: list[tuple],
+    coefficients: _np.ndarray,
+    dtype=None
+) -> list[_np.ndarray]:
+    """
+    字符格式，方便调试
+    """
+    coefficients = _np.real_if_close(coefficients)
+    if dtype is None:
+        dtype = coefficients.dtype
+        
+    # * rewrite hlocals str to be full str
+    hlocals = _fill_Id_in_local_hamiltonian(N, hlocals, positions)
+
+    # * initialize each tensor in mpo
+    n = len(hlocals)  # n: local hamitonian h_{i,j}, N: site of each local hamitonian
+    Qmat = _np.zeros((n + 1, N + 1), dtype=_np.int64)
+    Qmat[0, :], Qmat[:, 0] = 1, 1
+    for i, position in enumerate(positions):
+        left, right = position[0], position[-1]
+        Qmat = _get_Qmat(i + 1, left, right, Qmat, N)
+    Qmat = _finalize_Qmat(Qmat)
+    # Qmat2wf(Qmat, coefficients, hlocals)  # 图示
+    Q = [_np.max(Qmat[:, i]) for i in range(N + 1)]
+
+    mpo_sign = [_np.zeros((Q[i], Q[i + 1]), dtype=object) for i in range(N)]
+
+    # * write element of 4-order of mpo
+    for i, (hlocal, position) in enumerate(zip(hlocals, positions)):
+        Qrow = Qmat[i, :]
+        for j, operator in enumerate(hlocal):
+            coefficient = coefficients[i] if j == position[0] else 1.0
+
+            self_add = True
+            if Qrow[j] == Qrow[j + 1] == 1 and j != N - 1:
+                self_add = False
+            if Qrow[j] == _np.max(Q):
+                self_add = False
+
+            if self_add:
+                mpo_sign[j][Qrow[j] - 1, Qrow[j + 1] - 1] = (
+                    str(mpo_sign[j][Qrow[j] - 1, Qrow[j + 1] - 1])
+                    + "+"
+                    + str(coefficient)
+                    + operator
+                )
+            else:
+                mpo_sign[j][Qrow[j] - 1, Qrow[j + 1] - 1] = str(coefficient) + operator
+    for i in mpo_sign:
+        print(i)
+
+
+def automata_mps(array):
+    """根据 ndarray/sparse_array 生成相应的 mps，spin 1/2
+
+    Parameters
+    ----------
+    array : ndarray/sparse_array
+        系数矩阵表示
+
+    Returns
+    -------
+    list[ndarray]
+        mps 表示
+    """
+    d = 2  # 2 for spin
+    up, down = pauli_matrix("u")[:, -1], pauli_matrix("d")[:, -1]  # (2,1) -> (2,)
+
+    # * initialize each tensor of MPS
+    spare_array = _sparse.coo_array(array.reshape(-1, 1))
+    basiss, coefficients = spare_array.row, spare_array.data
+    has_full_zero = basiss[0] == 0
+    if has_full_zero:
+        full_zero_coe = coefficients[0]
+        coefficients = coefficients[1:]
+        basiss = basiss[1:]
+
+    N, n = int(_np.log2(spare_array.shape[0])), len(basiss)  # numbers of site N, numbers of basis n
+    assert 2 ** N == spare_array.shape[0], "The length of array must be 2^N"
+    Qmat = _np.zeros((n + 1, N + 1), dtype=basiss.dtype)
+    Qmat[0, :], Qmat[:, 0] = 1, 1
+    for i in range(n):
+        basis = basiss[i]
+        left, right = N-int(_np.log2(basis))-1, N-int(_np.log2(basis & -basis))-1
+        Qmat = _get_Qmat(
+            i + 1, left, right, Qmat, N
+        )  # i-th basis corresponds to (i+1)-th row of Qmat
+    Qmat = _finalize_Qmat(Qmat)
+    # Qmat2wf(Qmat, coefficients, basiss)
+    Q = [_np.max(Qmat[:, i]) for i in range(N + 1)]
+    Ws = [_np.zeros((Q[i], d, Q[i + 1]), dtype=coefficients.dtype) for i in range(N)]
+
+    # * recode position of the first not "1" element
+    coe_positions = [
+        _np.argmax(row != 1) if _np.any(row != 1) else len(row) - 1 for row in Qmat
+    ]
+
+    # * write element of 3-order tensor of mps
+    for i, basis in enumerate(basiss):
+        Qrow = Qmat[i, :]
+        for j in range(N):
+            spin = "1" if (basis >> (N-1-j)) & 1 else "0"
+            coefficient = coefficients[i] if j == coe_positions[i] - 1 else 1.0
+            Ws[j][Qrow[j] - 1, :, Qrow[j + 1] - 1] = (
+                coefficient * up if spin == "0" else coefficient * down
+            )
+            # "-1" because 1x1 matrix only has [0,0] element
+    if has_full_zero:
+        Ws[-1][0, :, 0] += full_zero_coe * up
+    return Ws
+

@@ -2,14 +2,14 @@
 # @Author: hzhu
 # @Date:   2025-04-19 17:58:24
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 19:12:42
+# @Last Modified time: 2025-06-17 10:53:31
 
 import numpy as np
 from functools import lru_cache
 from ....linalg import expm
 
 
-def ising_evolve(L, model, init_state:str, tlist:np.ndarray):
+def ising_evolve(L, model, init_state:list[str], tlist:np.ndarray):
     """Example of ising evolution (measure particle number)
 
     Parameters
@@ -17,7 +17,7 @@ def ising_evolve(L, model, init_state:str, tlist:np.ndarray):
     model : FermionOper, SpinOper
         the model to evolve, must be a fermion operator
     init_state : str
-        initial state string, e.g. '0000000000000000', 
+        initial state string, e.g. ['up', 'dn'] * L, 
         length must match the model
     tlist : np.ndarray
         time list, e.g. np.linspace(0, 60, 500)
@@ -115,8 +115,12 @@ class PairingState:
         G = np.zeros((L, L), dtype=complex)
         F = np.zeros((L, L), dtype=complex)
         for i, s in enumerate(state):
-            if s == '1':
+            if s == 'up':
                 G[i, i] = 1
+            elif s == 'dn':
+                pass
+            else:
+                raise ValueError(f"Invalid state '{s}', must be 'up' or 'dn'.")
         Gamma = np.block([[G, F], [F.conj().T, np.eye(G.shape[0]) - G.T]])
         return cls(Gamma)
 

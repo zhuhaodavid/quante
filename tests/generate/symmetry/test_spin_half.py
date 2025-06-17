@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-08 17:12:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-16 18:57:35
+# @Last Modified time: 2025-06-17 11:23:53
 
 import unittest
 import numpy as np
@@ -84,7 +84,7 @@ class TestSpinHalf(unittest.TestCase):
         from quante.generate.basis.symmetry.spin_half.noblock.matrixele import heisenberg_matrix_element
 
         L = 10
-        basis = gen.spin_basis(L=L)
+        basis = gen.basis.spin_basis(L=L)
         for cyclic in [True, False]:
             jxy = np.random.randn()
             jz = np.random.randn()
@@ -114,7 +114,7 @@ class TestSpinHalf(unittest.TestCase):
                 M, s_list = construct_Nup_basis(L, Nup)
                 mat1 = heisenberg_matrix_element(L, M, s_list, jxy, jz, cyclic=cyclic)
                 ham = op.heisenberg_operator(L, (jxy, jxy, jz), 0., cyclic=cyclic)
-                basis = gen.spin_basis(L=L, Nup=Nup)
+                basis = gen.basis.spin_basis(L=L, Nup=Nup)
                 mat2 = ham.to_matrix(basis, sparse=True).toarray()
                 self.assertTrue(np.allclose(mat1, mat2))
 
@@ -122,7 +122,7 @@ class TestSpinHalf(unittest.TestCase):
         for Nup in range(1,L):
             quspin_basis = gen.basis.quspin_spin_basis(L=L, Nup=Nup, pauli=0)
             mat3 = ham.to_matrix(quspin_basis)
-            basis = gen.spin_basis(L=L, Nup=Nup)
+            basis = gen.basis.spin_basis(L=L, Nup=Nup)
             mat4 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat3, mat4))
         
@@ -137,7 +137,7 @@ class TestSpinHalf(unittest.TestCase):
         for k in range(L):
             M, s_list, R_list = construct_kblock_basis(L, k)
             mat1 = heisenberg_matrix_element(L, M, k, jxy=j, jz=h, s_list=s_list, R_list=R_list)
-            basis = gen.spin_basis(L=L, kblock=k)
+            basis = gen.basis.spin_basis(L=L, kblock=k)
             ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=True)
             mat2 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat1, mat2))
@@ -146,7 +146,7 @@ class TestSpinHalf(unittest.TestCase):
         for k in range(L):
             quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, kblock=k)
             mat3 = ham.to_matrix(quspin_basis)
-            basis = gen.spin_basis(L=L, kblock=k)
+            basis = gen.basis.spin_basis(L=L, kblock=k)
             mat4 = ham.to_matrix(basis)
     
             self.assertTrue(np.allclose(mat3, mat4))
@@ -164,7 +164,7 @@ class TestSpinHalf(unittest.TestCase):
         for p in [-1, 1]:
             M, s_list = construct_pblock_basis(L, p)
             mat1 = heisenberg_matrix_element(L, M, p, jxy=j, jz=h, s_list=s_list, cyclic=cyclic)
-            basis = gen.spin_basis(L=L, pblock=p)
+            basis = gen.basis.spin_basis(L=L, pblock=p)
             ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
             mat2 = ham.to_matrix(basis, sparse=True).toarray()
             self.assertTrue(np.allclose(mat1, mat2))
@@ -173,7 +173,7 @@ class TestSpinHalf(unittest.TestCase):
         for p in [-1, 1]:
             quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, pblock=p)
             mat3 = ham.to_matrix(quspin_basis)
-            basis = gen.spin_basis(L=L, pblock=p)
+            basis = gen.basis.spin_basis(L=L, pblock=p)
             mat4 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat3, mat4))
         
@@ -189,7 +189,7 @@ class TestSpinHalf(unittest.TestCase):
             for z in [-1, 1]:
                 M, s_list = construct_zblock_basis(L, z)
                 mat1 = heisenberg_matrix_element(L, M, z, jxy=j, jz=h, s_list=s_list, cyclic = cyclic)
-                basis = gen.spin_basis(L=L, zblock=z)
+                basis = gen.basis.spin_basis(L=L, zblock=z)
                 ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
                 mat2 = ham.to_matrix(basis, sparse=True).toarray()
                 self.assertTrue(np.allclose(mat1, mat2))
@@ -198,7 +198,7 @@ class TestSpinHalf(unittest.TestCase):
         for z in [-1, 1]:
             quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, zblock=z)
             mat3 = ham.to_matrix(quspin_basis)
-            basis = gen.spin_basis(L=L, zblock=z)
+            basis = gen.basis.spin_basis(L=L, zblock=z)
             mat4 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -215,7 +215,7 @@ class TestSpinHalf(unittest.TestCase):
             for pz in [-1, 1]:
                 M, s_list = construct_pzblock_basis(L, pz)
                 mat1 = heisenberg_matrix_element(L, M, pz, jxy=j, jz=h, s_list=s_list, cyclic = cyclic)
-                basis = gen.spin_basis(L=L, pzblock=pz)
+                basis = gen.basis.spin_basis(L=L, pzblock=pz)
                 ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
                 mat2 = ham.to_matrix(basis, sparse=True).toarray()
                 self.assertTrue(np.allclose(mat1, mat2))
@@ -225,7 +225,7 @@ class TestSpinHalf(unittest.TestCase):
         for pz in [-1, 1]:
             quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, pzblock=pz)
             mat3 = ham.to_matrix(quspin_basis)
-            basis = gen.spin_basis(L=L, pzblock=pz)
+            basis = gen.basis.spin_basis(L=L, pzblock=pz)
             mat4 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -243,7 +243,7 @@ class TestSpinHalf(unittest.TestCase):
             for k in range(L):
                 M, s_list, R_list = construct_Nup_kblock_basis(L=L,Nup=Nup,k=k)
                 mat1 = heisenberg_matrix_element(L, M, k, jxy=j, jz=h, s_list=s_list, R_list=R_list)
-                basis = gen.spin_basis(L=L, Nup=Nup, kblock=k)
+                basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k)
                 ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
                 mat2 = ham.to_matrix(basis, sparse=True).toarray()
                 self.assertTrue(np.allclose(mat1, mat2))
@@ -254,7 +254,7 @@ class TestSpinHalf(unittest.TestCase):
             for k in range(L):
                 quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=Nup, kblock=k)
                 mat3 = ham.to_matrix(quspin_basis)
-                basis = gen.spin_basis(L=L, Nup=Nup, kblock=k)
+                basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k)
                 mat4 = ham.to_matrix(basis)
                 self.assertTrue(np.allclose(mat3, mat4))
             
@@ -272,7 +272,7 @@ class TestSpinHalf(unittest.TestCase):
                 for p in [-1,1]:
                     M, s_list = construct_Nup_pblock_basis(L, Nup, p)
                     mat1 = heisenberg_matrix_element(L, M, p, jxy=j, jz=h, s_list=s_list, cyclic=cyclic)
-                    basis = gen.spin_basis(L=L, Nup=Nup, pblock=p)
+                    basis = gen.basis.spin_basis(L=L, Nup=Nup, pblock=p)
                     ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
                     mat2 = ham.to_matrix(basis, sparse=True).toarray()
                     self.assertTrue(np.allclose(mat1, mat2))
@@ -286,7 +286,7 @@ class TestSpinHalf(unittest.TestCase):
             for p in [-1,1]:
                 quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=Nup, pblock=p)
                 mat3 = ham.to_matrix(quspin_basis)
-                basis = gen.spin_basis(L=L, Nup=Nup, pblock=p)
+                basis = gen.basis.spin_basis(L=L, Nup=Nup, pblock=p)
                 mat4 = ham.to_matrix(basis)
                 self.assertTrue(np.allclose(mat3, mat4))
             
@@ -304,7 +304,7 @@ class TestSpinHalf(unittest.TestCase):
                 for z in [-1,1]:
                     M, s_list = construct_Nup_zblock_basis(L, Nup, z)
                     mat1 = heisenberg_matrix_element(L, M, z, jxy=j, jz=h, s_list=s_list, cyclic=cyclic)
-                    basis = gen.spin_basis(L=L, Nup=Nup, zblock=z)
+                    basis = gen.basis.spin_basis(L=L, Nup=Nup, zblock=z)
                     ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
                     mat2 = ham.to_matrix(basis, sparse=True).toarray()
                     self.assertTrue(np.allclose(mat1, mat2))
@@ -315,7 +315,7 @@ class TestSpinHalf(unittest.TestCase):
         for z in [-1,1]:
             quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=Nup, zblock=z)
             mat3 = ham.to_matrix(quspin_basis)
-            basis = gen.spin_basis(L=L, Nup=Nup, zblock=z)
+            basis = gen.basis.spin_basis(L=L, Nup=Nup, zblock=z)
             mat4 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -333,7 +333,7 @@ class TestSpinHalf(unittest.TestCase):
                 for pz in [-1,1]:
                     M, s_list = construct_Nup_pzblock_basis(L, Nup, pz)
                     mat1 = heisenberg_matrix_element(L, M, pz, jxy=j, jz=h, s_list=s_list, cyclic=cyclic)
-                    basis = gen.spin_basis(L=L, Nup=Nup, pzblock=pz)
+                    basis = gen.basis.spin_basis(L=L, Nup=Nup, pzblock=pz)
                     ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
                     mat2 = ham.to_matrix(basis, sparse=True).toarray()
                     self.assertTrue(np.allclose(mat1, mat2))
@@ -344,7 +344,7 @@ class TestSpinHalf(unittest.TestCase):
         for pz in [-1,1]:
             quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=Nup, pzblock=pz)
             mat3 = ham.to_matrix(quspin_basis)
-            basis = gen.spin_basis(L=L, Nup=Nup, pzblock=pz)
+            basis = gen.basis.spin_basis(L=L, Nup=Nup, pzblock=pz)
             mat4 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -363,7 +363,7 @@ class TestSpinHalf(unittest.TestCase):
                 for p in [-1, 1]:
                     M, s_list, R_list, m_list = construct_Nup_kblock_pblock_basis(L=L, Nup=Nup, k=k, p=p)
                     mat1 = heisenberg_matrix_element(L, M, k, p, jxy=j, jz=h, s_list=s_list, R_list=R_list, m_list=m_list)
-                    basis = gen.spin_basis(L=L, Nup=Nup, kblock=k, pblock=p)
+                    basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k, pblock=p)
                     ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
                     mat2 = ham.to_matrix(basis, sparse=True).toarray()
                     self.assertTrue(np.allclose(mat1, mat2))
@@ -375,7 +375,7 @@ class TestSpinHalf(unittest.TestCase):
                     quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=Nup, kblock=k, pblock=p)
                     mat3 = ham.to_matrix(quspin_basis)
                     engs3 = np.linalg.eigvalsh(mat3)
-                    basis = gen.spin_basis(L=L, Nup=Nup, kblock=k, pblock=p)
+                    basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k, pblock=p)
                     mat4 = ham.to_matrix(basis)
                     engs4 = np.linalg.eigvalsh(mat4)
                     self.assertTrue(np.allclose(engs3, engs4))
@@ -395,7 +395,7 @@ class TestSpinHalf(unittest.TestCase):
                 for z in [-1, 1]:
                     M, s_list, R_list, m_list, c_list = construct_Nup_kblock_pblock_zblock_basis(L=L, k=k, p=p, z=z)
                     mat1 = heisenberg_matrix_element(L, M, k, p, z, jxy=j, jz=h, s_list=s_list, R_list=R_list, m_list=m_list, c_list=c_list)
-                    basis = gen.spin_basis(L=L, Nup=L//2, kblock=k, pblock=p, zblock=z)
+                    basis = gen.basis.spin_basis(L=L, Nup=L//2, kblock=k, pblock=p, zblock=z)
                     ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
                     mat2 = ham.to_matrix(basis, sparse=True).toarray()
                     self.assertTrue(np.allclose(mat1, mat2))
@@ -407,7 +407,7 @@ class TestSpinHalf(unittest.TestCase):
                     quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=L//2, kblock=k, pblock=p, zblock=z)
                     mat3 = ham.to_matrix(quspin_basis)
                     engs3 = np.linalg.eigvalsh(mat3)
-                    basis = gen.spin_basis(L=L, Nup=L//2, kblock=k, pblock=p, zblock=z)
+                    basis = gen.basis.spin_basis(L=L, Nup=L//2, kblock=k, pblock=p, zblock=z)
                     mat4 = ham.to_matrix(basis)
                     engs4 = np.linalg.eigvalsh(mat4)
                     self.assertTrue(np.allclose(engs3, engs4))

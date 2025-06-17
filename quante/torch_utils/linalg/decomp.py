@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-22 18:19:24
+# @Last Modified time: 2025-06-17 10:47:58
 
 
 import numpy as np
-from ...linalg.svd_robust import TruncationError
+from ...linalg.decomp.svd_robust import TruncationError
 import torch as tc
 from ...basicfun import save_hdf5, load_hdf5
 

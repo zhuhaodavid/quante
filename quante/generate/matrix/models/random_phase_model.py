@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:42:42
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 20:43:28
+# @Last Modified time: 2025-06-17 10:43:58
 
 import numpy as _np
 
-from ....linalg.operations import kron
+from ....linalg.matops import kron
 from ..random import _random_unitary_matrix_cue, _random_simple_matrix
 
 def random_phase_model(L, q, ε, seed=None):

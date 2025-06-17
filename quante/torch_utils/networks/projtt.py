@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-24 09:46:58
+# @Last Modified time: 2025-06-17 11:33:41
 
 # 定义了 ProjOper, ProjMPO, ProjMPS, ProjSumMPO, ProjMPOMPS 等类
 # 它们关系为：
@@ -162,6 +162,10 @@ class ProjMPO(ProjOper):
         self.mid = H
         self.ndim = 3
         super().__init__(L=len(H), dtype=H.dtype, device=H.device, nsite=nsite, ifnorm=ifnorm)
+    
+    @property
+    def phys_dim(self):
+        return self.mid.phys_dim
     
     @property
     def lognm(self):

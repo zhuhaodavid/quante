@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-02 15:58:02
+# @Last Modified time: 2025-06-17 10:20:29
 
 import unittest
 import scipy.sparse
@@ -23,7 +23,7 @@ class TestTN(unittest.TestCase):
         # return mat, basis
     
     def test_expm_multiply_numba(self):
-        from quante.linalg.nbfuc.expm_multiply_numba import _expm_multiply_simple, _expm_multiply_interval
+        from quante.linalg.evolve.nbfuc.expm_mul_core import _expm_multiply_simple, _expm_multiply_interval
         mat, state = self._gen_mat_state(16)
         state = state.astype(np.complex128)
 
@@ -184,7 +184,7 @@ class TestTN(unittest.TestCase):
         return mat, basis
     
     def test_expm_multiply_numba_matrix(self):
-        from quante.linalg.nbfuc.expm_multiply_numba import _expm_multiply_simple, _expm_multiply_interval
+        from quante.linalg.evolve.nbfuc.expm_mul_core import _expm_multiply_simple, _expm_multiply_interval
         mat, state = self._gen_mat_state_matrix(20)
         statec = state.astype(np.complex128)
 

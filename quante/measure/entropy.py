@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:35:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 19:17:10
+# @Last Modified time: 2025-06-17 09:49:04
 
 import numpy as _np
 import math
@@ -130,7 +130,7 @@ def entropy(a, rank=None, base=_np.e) -> _np.float64:
     elif _np.ndim(a) == 2 and (a.shape[0] == 1 or a.shape[1] == 1):
         evals = a.flatten()
     else:
-        from ..linalg.eig_modified import eigvals
+        from ..linalg.decomp import eigvals
         if rank is None:
             evals = eigvals(a)
         else:  # know that not all eigenvalues needed

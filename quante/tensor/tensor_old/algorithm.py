@@ -2,19 +2,18 @@
 # @Author: dzwang
 # @Date:   2023-09-23 15:55:53
 # @Last Modified by:   hzhu
-# @Last Modified time: 2024-10-31 19:28:52
+# @Last Modified time: 2025-06-17 09:50:55
 import scipy as _scipy
 import numpy as _np
 import scipy.sparse as _sparse
 import scipy.sparse.linalg as _sla
 import numpy.linalg as _nla
-from ..linalg.svd_robust import svd_truncate
+from ...linalg.decomp import svd_truncate, eigh
 from .mpo import MPO, add_mpo
 from .mps import MPS, canonical_form_mps
-from ..linalg.operations import expm, logm, kron
-from ..generate.matrix import pauli_matrix
-from ..linalg.operations import kron
-from ..linalg.eig_modified import eigh
+from ...linalg.operations import expm, logm, kron
+from ...generate.matrix import pauli_matrix
+from ...linalg.operations import kron
 
 
 __all__ = ["get_tensorT"]
