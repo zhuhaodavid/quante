@@ -14,6 +14,11 @@
     
     `git push origin master && git checkout xxxx && git merge master`
 
+- 添加版本号
+    `git tag vx.x.x`
+    `git push origin --tags`
+
+
 ### git cmt 风格
 
 以下是一套推荐的 Git 提交信息风格指南：
