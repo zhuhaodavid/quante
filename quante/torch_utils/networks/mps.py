@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:40
-# @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-24 09:36:22
+# @Last Modified by:   dzwang
+# @Last Modified time: 2025-05-28 11:07:16
 
 import numpy as np
 import torch as tc
@@ -455,7 +455,7 @@ class MPS(TensorTrain):
             return trLenv * tc.exp(self.lognm)**2 * tc.exp(operator.lognm)
 
         raise ValueError(f"operator type {type(operator)} is not supported")
- 
+    
     
     def _apply_1b_gate(self, pos, gate_1b):
         gate_1b = self._convert_gate(gate_1b, 1)
