@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:57:34
+# @Last Modified time: 2025-06-18 17:14:40
 
 import warnings
 import numpy as np
@@ -126,10 +126,14 @@ class SpinOper(Oper):
         return static
     
     @overload
-    def to_matrix(self, basis, pauli=None, sparse:Literal[True]=True, savememory=False) -> sp.csr_array:
+    def to_matrix(self, basis, pauli=None, sparse:Literal[True]=True) -> sp.csr_array:
+        ...
+    
+    @overload
+    def to_matrix(self, basis, pauli=None, sparse:Literal[False]=False) -> np.ndarray:
         ...
 
-    def to_matrix(self, basis, pauli=None, sparse:Literal[False]=False, savememory=False) -> np.ndarray:
+    def to_matrix(self, basis, pauli=None, sparse=False, savememory=False):
         """
         生成哈密顿量在给定基矢下的矩阵，对于自旋 1/2 默认使用 symmetrize 的方法计算矩阵元
         
@@ -940,7 +944,7 @@ class HeisenbergOper(SpinOper):
         return HeisenbergOper(data)
 
     def energies(self, isinf=False, pauli=False):
-        from ...solvable_models.free_fermion import spectrum as ff
+        from ..solvable.free_fermion import spectrum as ff
         L = self.L if not isinf else np.inf
         if self.jz == self.hx == self.hy == 0 and not self.cyclic:
             # xy model
