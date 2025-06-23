@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:13:41
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-13 14:47:53
+# @Last Modified time: 2025-06-23 15:26:52
  
 import os as _os
 import ast as _ast
@@ -110,9 +110,8 @@ def check_file_exists(filename):
             similar_files_with_ext = [f for f in all_files if f.split('.')[0] in similar_files]
             wrapped_filename = textwrap.fill("   ".join(similar_files_with_ext), width=80)
             raise FileNotFoundError(
-                f"Did you mean: \n"
-                f"{wrapped_filename}\n"
-                f"desired file: {filename}"
+                f"file\n    {filename} \ndoes not exist, did you mean:\n"
+                f"    {wrapped_filename}\n"
                 )
         else:
             wrapped_filename = textwrap.fill("   ".join(all_files), width=80)
@@ -120,17 +119,15 @@ def check_file_exists(filename):
             if all_folder:
                 wrapped_foldername = textwrap.fill("   ".join(all_folder), width=80)
                 raise FileNotFoundError(
-                    f"\navailable files here: \n"
+                    f"file\n    {filename} \ndoes not exist, available files are\n"
                     f"    {wrapped_filename} \n"
-                    f"folders here: \n"
+                    f"folders are \n"
                     f"    {wrapped_foldername}\n"
-                    f"desired file: {filename}"
                     )
             else:
                 raise FileNotFoundError(
-                    f"\navailable files here: \n"
+                    f"file\n    {filename} \ndoes not exist, available files are\n"
                     f"    {wrapped_filename}\n"
-                    f"desired file: {filename}"
                     )
 
 

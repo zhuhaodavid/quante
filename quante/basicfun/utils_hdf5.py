@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:14:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-12 12:21:10
+# @Last Modified time: 2025-06-23 18:02:30
 
 import os as _os
 import numpy as _np
@@ -30,9 +30,10 @@ __all__ = [
 
 def save_hdf5(
     filename:str, 
-    group:str, 
     data: dict[str, Any], 
-    mode: Literal["a", "w"] = "a"
+    *,
+    group:str='/', 
+    mode: Literal["a", "w"] = "a",
 ) -> tuple[str, str]:
     """
     将数据保存到 HDF5 文件中。
@@ -61,7 +62,7 @@ def save_hdf5(
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5
     >>> mat = np.random.randn(10,10)
-    >>> save_hdf5("data.h5", "", {"mat": mat})
+    >>> save_hdf5("data.h5", data={"mat": mat}, group="/mygroup")
     """
     assert filename.endswith(".h5"), "Filename must to be `.h5` file."
     group = "/" + group.strip("/")  # make group to be "/xxx/xxx/..."
@@ -171,17 +172,17 @@ _SAVE_FUNC: Dict[str, Callable[[_h5py.Group, str, Any], None]] = {
 
 # -> load
 
-def load_hdf5(filename:str, group:str, dataname:str|list[str]) -> Any:
+def load_hdf5(filename:str, data:str|list[str], *, group:str='/') -> Any:
     """从 HDF5 文件中加载数据。
     
     Parameters
     ----------
     filename : str
         HDF5 文件的路径。
+    data : str | list[str]
+        要加载的数据名称。
     group : str
         HDF5 文件中的组路径，例如 "/mygroup"。
-    dataname : str | list[str]
-        要加载的数据名称。
         
     Returns
     -------
@@ -193,8 +194,8 @@ def load_hdf5(filename:str, group:str, dataname:str|list[str]) -> Any:
     >>> import numpy as np
     >>> from quante.basicfun import save_hdf5, load_hdf5
     >>> mat = np.random.randn(10,10)
-    >>> save_hdf5("data.h5", "/", {"mat": mat})
-    >>> mat = load_hdf5("data.h5", "/", "mat")
+    >>> save_hdf5("data.h5", group="/", data={"mat": mat})
+    >>> mat = load_hdf5("data.h5", group="/", data="mat")
     """
     check_file_exists(filename)
     group = "/" + group.strip("/")  # # 规范化组路径 "/xxx/xxx/..."
@@ -202,7 +203,7 @@ def load_hdf5(filename:str, group:str, dataname:str|list[str]) -> Any:
     logger.debug("Loading from " + _os.path.abspath(filename) + " ... ")
     with _h5py.File(filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
         group_location = _get_data_location(f, group)
-        data = _load_main(group_location, dataname)
+        data = _load_main(group_location, data)
     logger.debug("Load done")
     return data
 
@@ -408,7 +409,7 @@ def isave(
 
     if data is not None:
         assert len(dataargs) == 0, "data and datadic cannot be used at the same time."
-        save_hdf5(filename, group, data, mode=mode)
+        save_hdf5(filename, data=data, group=group, mode=mode)
         return None
 
     call_frame = _inspect.currentframe()
@@ -433,17 +434,17 @@ def isave(
         else:
             data_dic[args[i]] = eachdata
         
-    save_hdf5(filename, group, data_dic, mode=mode)
+    save_hdf5(filename, data=data_dic, group=group, mode=mode)
 
 
-def iload(filename:str, dataname:list[str]|str|None = None, *, group='/') -> Any:
+def iload(filename:str, data:list[str]|str|None = None, *, group='/') -> Any:
     """从 .h5 文件中加载数据.
     
     Parameters
     ----------
     filename : str
         保存的文件名，必须以.h5 结尾。
-    dataname : list[str] | str | None, optional
+    data : list[str] | str | None, optional
         要加载的数据名称，可以是多个。
     group : str, optional
         保存到 HDF5 文件中的组路径，可以是字符串。如果为 None，则从根目录开始查找。
@@ -466,7 +467,7 @@ def iload(filename:str, dataname:list[str]|str|None = None, *, group='/') -> Any
     assert isinstance(group, str)
     
     # obtain left value names
-    if dataname is None:
+    if data is None:
         call_frame = _inspect.currentframe()
         if call_frame is not None:
             call_frame = call_frame.f_back
@@ -476,8 +477,8 @@ def iload(filename:str, dataname:list[str]|str|None = None, *, group='/') -> Any
             lv = group
     else:
         # dataset is list or tuple
-        assert isinstance(dataname, (list, tuple, str)), "dataset must be list or tuple."
-        lv = dataname
+        assert isinstance(data, (list, tuple, str)), "dataset must be list or tuple."
+        lv = data
 
-    return load_hdf5(filename, group, lv)
+    return load_hdf5(filename, group=group, data=lv)
 

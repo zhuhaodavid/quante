@@ -2,10 +2,28 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:13:29
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:41:29
+# @Last Modified time: 2025-06-23 17:47:36
 
 import numpy as _np
 
+def hist_gaussian(data, ax=None, bins=None):
+    if ax is None:
+        import matplotlib.pyplot as plt
+        fig = plt.figure(figsize=(6, 4))
+        ax = fig.add_subplot(1, 1, 1)
+    
+    if bins is None:
+        h = 1.05*_np.std(data) * data.size**(-1/5)
+        bins = _np.arange(data.min(), data.max()+h, h)
+    
+    ax.hist(data, bins=bins, density=True, histtype='step', color='orange', linewidth=2)
+    mean, std = _np.mean(data), _np.std(data)
+    xs = _np.linspace(mean - 4 * std, mean + 4 * std, 100)
+    from scipy.stats import norm
+    ys = norm.pdf(xs, loc=mean, scale=std)
+    ax.plot(xs, ys, 'k--', label='Gaussian fit')
+    return ax
+   
 
 def fit(xs: list, ys: list, polynomial_degree: int) -> tuple:
     """

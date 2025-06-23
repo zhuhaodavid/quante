@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:38:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:14:08
+# @Last Modified time: 2025-06-23 17:17:33
 
 import numpy as _np
 import math
@@ -27,8 +27,8 @@ def plot_energy_density(vals, ax, bandwidth=1.):
     """
     import matplotlib.pyplot as _plt
     from scipy.stats import norm
-    color1 = "C0"  # 统计图的颜色
-    color2 = "|C3"  # 能级的线和颜色
+    color1 = "C0"
+    color2 = "|C3"
     x_d = _np.linspace(vals.min(), vals.max(), 500)
     density = sum(norm(xi, bandwidth).pdf(x_d) for xi in vals) / len(vals) # type: ignore
     ax.fill_between(x_d, density, color=color1, alpha=0.8)
@@ -36,10 +36,8 @@ def plot_energy_density(vals, ax, bandwidth=1.):
     return ax
 
 def plot_energy_hist(vals, ax, bins=None):
-    import matplotlib.pyplot as _plt
-    color2 = "|C5"  # 能级的线和颜色
+    color2 = "|C5"
     if bins is None:
-        # 这是对高斯分布最优的选择，其它分布也应当保证 N**(-1/5)
         h = 1.05*_np.std(vals) * vals.size**(-1/5)
         bins = _np.arange(vals.min(), vals.max()+h, h)
     ax.hist(vals, bins=bins, density=True, color="0.7")
