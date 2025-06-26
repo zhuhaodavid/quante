@@ -2,11 +2,24 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:13:29
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-23 17:47:36
+# @Last Modified time: 2025-06-26 16:05:19
 
 import numpy as _np
 
-def hist_gaussian(data, ax=None, bins=None):
+def plot_gaussian(mean, std, ax=None, xrange=None, **kwargs):
+    if ax is None:
+        import matplotlib.pyplot as plt
+        fig = plt.figure(figsize=(6, 4))
+        ax = fig.add_subplot(1, 1, 1)
+    if xrange is None:
+        xrange = [mean - 4 * std, mean + 4 * std]
+    xs = _np.linspace(*xrange, 100)
+    from scipy.stats import norm
+    ys = norm.pdf(xs, loc=mean, scale=std)
+    ax.plot(xs, ys, **kwargs)
+
+
+def hist_gaussian(data, ax=None, bins=None, **kwargs):
     if ax is None:
         import matplotlib.pyplot as plt
         fig = plt.figure(figsize=(6, 4))
@@ -16,14 +29,26 @@ def hist_gaussian(data, ax=None, bins=None):
         h = 1.05*_np.std(data) * data.size**(-1/5)
         bins = _np.arange(data.min(), data.max()+h, h)
     
-    ax.hist(data, bins=bins, density=True, histtype='step', color='orange', linewidth=2)
+    hist, bin_edges, _ = ax.hist(data, bins=bins, density=True, histtype='step', **kwargs)
     mean, std = _np.mean(data), _np.std(data)
-    xs = _np.linspace(mean - 4 * std, mean + 4 * std, 100)
-    from scipy.stats import norm
-    ys = norm.pdf(xs, loc=mean, scale=std)
-    ax.plot(xs, ys, 'k--', label='Gaussian fit')
-    return ax
-   
+    plot_gaussian(mean, std, ax=ax, color='k', linestyle='--', linewidth=1.5)  
+    return hist, bin_edges, mean, std
+
+
+def plot_hist(top, bins, ax=None, **kwargs):
+    if ax is None:
+        import matplotlib.pyplot as plt
+        fig = plt.figure(figsize=(6, 4))
+        ax = fig.add_subplot(1, 1, 1)
+    x = _np.zeros(4 * len(bins) - 3)
+    y = _np.zeros(4 * len(bins) - 3)
+    x[0:2*len(bins)-1:2], x[1:2*len(bins)-1:2] = bins, bins[:-1]
+    x[2*len(bins)-1:] = x[1:2*len(bins)-1][::-1]
+    y[1:2*len(bins)-1:2] = y[2:2*len(bins):2] = top
+    y[0] = y[-1]
+    split = 2 * len(bins)
+    ax.plot(x[:split], y[:split], **kwargs)
+
 
 def fit(xs: list, ys: list, polynomial_degree: int) -> tuple:
     """
@@ -46,7 +71,7 @@ def fit(xs: list, ys: list, polynomial_degree: int) -> tuple:
     (array([ 1.,  4.,  9., 16., 25.]), array([1., 0., 0.]))
     """
     Fit = _np.polynomial.Polynomial.fit(xs, ys, polynomial_degree).convert()
-    return Fit(xs), Fit.coef
+    return Fit
 
 
 def interp(x, y, x0, kind="linear"):

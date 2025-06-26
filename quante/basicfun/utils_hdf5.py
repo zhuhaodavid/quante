@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:14:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-23 18:02:30
+# @Last Modified time: 2025-06-24 15:42:06
 
 import os as _os
 import numpy as _np
@@ -228,11 +228,12 @@ def _get_data_location(f: _h5py.File | _h5py.Group, name: str) -> _h5py.Group:
     try:
         return f[name]
     except:
-        print(f, name)
         res = []
         names = name.split("/")
         eachname = name
         for eachname in names:
+            if eachname == "":
+                continue
             try:
                 f = f[eachname]
                 res.append(eachname)
