@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:13:29
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-26 17:39:12
+# @Last Modified time: 2025-06-26 17:53:47
 
 import numpy as _np
 
@@ -87,7 +87,7 @@ def plot_hist(top, bins, ax=None, **kwargs):
     ax.plot(x[:split], y[:split], **kwargs)
 
 
-def hist_gaussian(data, ax=None, bins=None, **kwargs):
+def hist_gaussian(data, ax=None, bins=None, plot=False, **kwargs):
     """Plot a histogram of the data and overlay a Gaussian distribution
 
     Parameters
@@ -98,6 +98,8 @@ def hist_gaussian(data, ax=None, bins=None, **kwargs):
         The axes to plot on, by default None (creates a new figure and axes)
     bins : list or int, optional
         The bins for the histogram, by default None (uses Freedman-Diaconis rule)
+    plot : bool, optional
+        Whether to plot the histogram and Gaussian distribution, by default False
     **kwargs : dict, optional
         Additional keyword arguments for the histogram function
 
@@ -112,7 +114,7 @@ def hist_gaussian(data, ax=None, bins=None, **kwargs):
     >>> import numpy as np
     >>> from quante.measure.curve_fit import hist_gaussian
     >>> data = np.random.normal(0, 1, 1000)
-    >>> hist, bin_edges, mean, std = hist_gaussian(data)
+    >>> hist, bin_edges, mean, std = hist_gaussian(data, plot=True)
     >>> print(f"Mean: {mean}, Std: {std}")
     >>> import matplotlib.pyplot as plt
     >>> plt.show()
@@ -122,13 +124,16 @@ def hist_gaussian(data, ax=None, bins=None, **kwargs):
         fig = plt.figure(figsize=(6, 4))
         ax = fig.add_subplot(1, 1, 1)
     
+    mean, std = _np.mean(data), _np.std(data)
     if bins is None:
-        h = 1.05*_np.std(data) * data.size**(-1/5)
+        h = 1.05*std * data.size**(-1/5)
         bins = _np.arange(data.min(), data.max()+h, h)
     
-    hist, bin_edges, _ = ax.hist(data, bins=bins, density=True, histtype='step', **kwargs)
-    mean, std = _np.mean(data), _np.std(data)
-    plot_gaussian(mean, std, ax=ax, color='k', linestyle='--', linewidth=1.5)  
+    hist, bin_edges = _np.histogram(data, bins=bins, density=True)
+    if plot:
+        plot_gaussian(mean, std, ax=ax, xrange=(min(bin_edges), max(bin_edges)), 
+                      color='k', linestyle='--', linewidth=1.5)  
+        plot_hist(hist, bin_edges, ax=ax, **kwargs)
     return hist, bin_edges, mean, std
 
 
