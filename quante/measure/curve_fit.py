@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:13:29
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-26 17:31:41
+# @Last Modified time: 2025-06-26 17:39:12
 
 import numpy as _np
 
@@ -132,7 +132,7 @@ def hist_gaussian(data, ax=None, bins=None, **kwargs):
     return hist, bin_edges, mean, std
 
 
-def fit(xs: list, ys: list, polynomial_degree: int=1) -> tuple[_np.polynomial.Polynomial, _np.ndarray]:
+def fit(xs: list, ys: list, polynomial_degree: int=1) -> _np.polynomial.Polynomial:
     """fit the data with a polynomial curve
 
     Parameters
@@ -146,13 +146,13 @@ def fit(xs: list, ys: list, polynomial_degree: int=1) -> tuple[_np.polynomial.Po
    
     Returns
     -------
-    tuple
-        A tuple containing the fitted polynomial and its coefficients.
-        The first element is a _np.polynomial.Polynomial object representing the fitted curve,
-        and the second element is a numpy array of the polynomial coefficients.
+    _np.polynomial.Polynomial
+        A polynomial object representing the fitted curve. 
+        The coefficients can be accessed via the `coef` method.
 
         ..math::
             f(x) = c_0 + c_1 * x + c_2 * x^2 + ... + c_n * x^n
+        
    
     Examples
     --------
@@ -161,8 +161,8 @@ def fit(xs: list, ys: list, polynomial_degree: int=1) -> tuple[_np.polynomial.Po
     >>> import matplotlib.pyplot as plt
     >>> xs = np.linspace(1, 10, 10)
     >>> ys = 3 * xs + 7 + 0.1 * np.random.normal(0, 1, xs.shape)
-    >>> f, c = fit(xs, ys)
-    >>> print(c)
+    >>> f = fit(xs, ys)
+    >>> print(f.c)
     [6.94646096 3.01413511]
     >>> nxs = np.linspace(1, 10, 100)
     >>> nys = f(nxs)
@@ -170,7 +170,7 @@ def fit(xs: list, ys: list, polynomial_degree: int=1) -> tuple[_np.polynomial.Po
     >>> plt.plot(nxs, nys, label='fit')
     """
     Fit = _np.polynomial.Polynomial.fit(xs, ys, polynomial_degree).convert()
-    return Fit, Fit.coef
+    return Fit
 
 
 def interp(x, y, x0, kind="linear"):
