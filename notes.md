@@ -8,7 +8,7 @@
 
 - 拉取并提交当前分支的改动
     
-    `git pull origin xxxx && git push origin xxxx`
+    `git pull && git push`
 
 - 添加版本号
     `git tag vx.x.x`
