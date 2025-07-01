@@ -2,11 +2,37 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:13:29
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-26 16:05:19
+# @Last Modified time: 2025-06-26 17:53:47
 
 import numpy as _np
 
 def plot_gaussian(mean, std, ax=None, xrange=None, **kwargs):
+    """plot a Gaussian distribution
+
+    Parameters
+    ----------
+    mean : float
+        the mean of the Gaussian distribution
+    std : float
+        the standard deviation of the Gaussian distribution
+    ax : axes, optional
+        the axes to plot on, by default None
+    xrange : list, optional
+        the range of x values to plot, by default None (mean ± 4 * std)
+    **kwargs : dict, optional
+        additional keyword arguments for the plot function
+    
+    Examples
+    --------
+    >>> import matplotlib.pyplot as plt
+    >>> import numpy as np
+    >>> from quante.measure.curve_fit import plot_gaussian
+    >>> mean = 0
+    >>> std = 1
+    >>> fig, ax = plt.subplots()
+    >>> plot_gaussian(mean, std, ax=ax, color='blue', linestyle='-', linewidth=2)
+    >>> plt.show()
+    """
     if ax is None:
         import matplotlib.pyplot as plt
         fig = plt.figure(figsize=(6, 4))
@@ -19,23 +45,34 @@ def plot_gaussian(mean, std, ax=None, xrange=None, **kwargs):
     ax.plot(xs, ys, **kwargs)
 
 
-def hist_gaussian(data, ax=None, bins=None, **kwargs):
-    if ax is None:
-        import matplotlib.pyplot as plt
-        fig = plt.figure(figsize=(6, 4))
-        ax = fig.add_subplot(1, 1, 1)
-    
-    if bins is None:
-        h = 1.05*_np.std(data) * data.size**(-1/5)
-        bins = _np.arange(data.min(), data.max()+h, h)
-    
-    hist, bin_edges, _ = ax.hist(data, bins=bins, density=True, histtype='step', **kwargs)
-    mean, std = _np.mean(data), _np.std(data)
-    plot_gaussian(mean, std, ax=ax, color='k', linestyle='--', linewidth=1.5)  
-    return hist, bin_edges, mean, std
-
-
 def plot_hist(top, bins, ax=None, **kwargs):
+    """Plot a histogram with the top values connected by lines
+
+    The `top` and `bins` parameters should be the output of a histogram function, 
+    such as `numpy.histogram`.
+
+    Parameters
+    ----------
+    top : numpy.ndarray
+        The top values of the histogram to be connected
+    bins : numpy.ndarray
+        The bin edges of the histogram
+    ax : matplotlib.axes.Axes, optional
+        The axes to plot on, by default None (creates a new figure and axes)
+    **kwargs : dict, optional
+        Additional keyword arguments for the plot function
+    
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from quante.measure.curve_fit import plot_hist
+    >>> import matplotlib.pyplot as plt
+    >>> data = np.random.normal(0, 1, 1000)
+    >>> hist, bins = np.histogram(data, bins=30, density=True)
+    >>> fig, ax = plt.subplots()
+    >>> plot_hist(hist, bins, ax=ax, color='blue', linestyle='-', linewidth=2)
+    >>> plt.show()
+    """
     if ax is None:
         import matplotlib.pyplot as plt
         fig = plt.figure(figsize=(6, 4))
@@ -50,25 +87,92 @@ def plot_hist(top, bins, ax=None, **kwargs):
     ax.plot(x[:split], y[:split], **kwargs)
 
 
-def fit(xs: list, ys: list, polynomial_degree: int) -> tuple:
-    """
-    将曲线光滑化
-    
-    参数:
-    xs (list): x 坐标的数据列表
-    ys (list): y 坐标的数据列表
-    polynomial_degree (int): 多项式的阶数，表示拟合曲线的复杂度
-    
-    返回:
-    tuple: 包含两个元素的元组，第一个元素是拟合后的 y 值数组，第二个元素是拟合多项式的系数
+def hist_gaussian(data, ax=None, bins=None, plot=False, **kwargs):
+    """Plot a histogram of the data and overlay a Gaussian distribution
+
+    Parameters
+    ----------
+    data : numpy.ndarray
+        The data to plot the histogram for
+    ax : matplotlib.axes.Axes, optional
+        The axes to plot on, by default None (creates a new figure and axes)
+    bins : list or int, optional
+        The bins for the histogram, by default None (uses Freedman-Diaconis rule)
+    plot : bool, optional
+        Whether to plot the histogram and Gaussian distribution, by default False
+    **kwargs : dict, optional
+        Additional keyword arguments for the histogram function
+
+    Returns
+    -------
+    tuple
+        A tuple containing the histogram values, bin edges, mean, and standard deviation of the data
+        This can be used in plot_gaussian and plot_hist functions.
     
     Examples
     --------
-    >>> xs = [1, 2, 3, 4, 5]
-    >>> ys = [1, 4, 9, 16, 25]
-    >>> polynomial_degree = 2
-    >>> fit(xs, ys, polynomial_degree)
-    (array([ 1.,  4.,  9., 16., 25.]), array([1., 0., 0.]))
+    >>> import numpy as np
+    >>> from quante.measure.curve_fit import hist_gaussian
+    >>> data = np.random.normal(0, 1, 1000)
+    >>> hist, bin_edges, mean, std = hist_gaussian(data, plot=True)
+    >>> print(f"Mean: {mean}, Std: {std}")
+    >>> import matplotlib.pyplot as plt
+    >>> plt.show()
+    """
+    if ax is None:
+        import matplotlib.pyplot as plt
+        fig = plt.figure(figsize=(6, 4))
+        ax = fig.add_subplot(1, 1, 1)
+    
+    mean, std = _np.mean(data), _np.std(data)
+    if bins is None:
+        h = 1.05*std * data.size**(-1/5)
+        bins = _np.arange(data.min(), data.max()+h, h)
+    
+    hist, bin_edges = _np.histogram(data, bins=bins, density=True)
+    if plot:
+        plot_gaussian(mean, std, ax=ax, xrange=(min(bin_edges), max(bin_edges)), 
+                      color='k', linestyle='--', linewidth=1.5)  
+        plot_hist(hist, bin_edges, ax=ax, **kwargs)
+    return hist, bin_edges, mean, std
+
+
+def fit(xs: list, ys: list, polynomial_degree: int=1) -> _np.polynomial.Polynomial:
+    """fit the data with a polynomial curve
+
+    Parameters
+    ----------
+    xs : list
+        x coordinates of the data points
+    ys : list
+        y coordinates of the data points
+    polynomial_degree : int
+        degree of the polynomial to fit, default is 1 (linear fit)
+   
+    Returns
+    -------
+    _np.polynomial.Polynomial
+        A polynomial object representing the fitted curve. 
+        The coefficients can be accessed via the `coef` method.
+
+        ..math::
+            f(x) = c_0 + c_1 * x + c_2 * x^2 + ... + c_n * x^n
+        
+   
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from quante.measure.curve_fit import fit
+    >>> import matplotlib.pyplot as plt
+    >>> xs = np.linspace(1, 10, 10)
+    >>> ys = 3 * xs + 7 + 0.1 * np.random.normal(0, 1, xs.shape)
+    >>> f = fit(xs, ys)
+    >>> print(f.c)
+    [6.94646096 3.01413511]
+    >>> nxs = np.linspace(1, 10, 100)
+    >>> nys = f(nxs)
+    >>> plt.plot(xs, ys, 'o', label='data')
+    >>> plt.plot(nxs, nys, label='fit')
     """
     Fit = _np.polynomial.Polynomial.fit(xs, ys, polynomial_degree).convert()
     return Fit

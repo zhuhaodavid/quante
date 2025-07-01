@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2025-05-16 23:25:52
-# @Last Modified by:   dzwang
-# @Last Modified time: 2025-06-18 13:46:01
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-06-26 17:27:53
 
 import quante as qt
 import numpy as np
@@ -326,11 +326,4 @@ class TestQuantity(unittest.TestCase):
         res1 = np.real_if_close([(mat.to(tc.complex128) @ states[:,:,i]).trace().item() for i in range(n)])
         self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
 
-
-
-#todo write more tests
-
-
-if __name__ == '__main__':
-    unittest.main()
 
