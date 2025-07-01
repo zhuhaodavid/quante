@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:15:34
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 22:27:32
+# @Last Modified time: 2025-07-01 17:42:33
 
 import numpy as _np
 from typing import Literal
@@ -124,6 +124,22 @@ def plt_style_use(stylename:Literal['quante', 'default', 'science'] = "quante", 
 
 class DynamicPlot:
     def __init__(self, tlist, ax, *args, **kwargs):
+        """Initialize a dynamic plot object.
+
+        This class is designed to create a dynamic plot that updates as new data is appended.
+        It supports different types of plots (line, parametric, and density) based on the data provided.
+
+        Parameters
+        ----------
+        tlist : list or array-like
+            A list of time points or x-coordinates for the plot.
+        ax : matplotlib.axes.Axes, optional
+            A matplotlib Axes object where the plot will be drawn. If None, a new figure and axes will be created.
+        *args : tuple
+            Additional positional arguments to pass to the plot function.
+        **kwargs : dict
+            Additional keyword arguments to pass to the plot function.
+        """
         # save package
         import matplotlib.pyplot as plt
         self.pkg = plt
@@ -170,7 +186,36 @@ class DynamicPlot:
     def __repr__(self):
         return self.data.__repr__()
         
-    def set(self, xlim=None, ylim=None, clim=None, legend=None, ptype=None):
+    def set(self, 
+            xlim=None, 
+            ylim=None, 
+            clim=None, 
+            legend=None, 
+            ptype=None
+        ):
+        """Set the parameters for the dynamic plot.
+
+        This method allows you to set the limits for the x and y axes, color limits for density plots,
+        whether to display a legend, and the type of plot to be used.
+
+        Parameters
+        ----------
+        xlim : tuple, optional
+            A tuple specifying the limits for the x-axis, by default None
+        ylim : tuple, optional
+            A tuple specifying the limits for the y-axis, by default None
+        clim : tuple, optional
+            A tuple specifying the color limits for density plots, by default None
+        legend : bool, optional
+            Whether to display a legend on the plot, by default None
+        ptype : Literal['line', 'para', 'dens'], optional
+            The type of plot to be used. Can be 'line' for line plots, 'para' for parametric plots, or 'dens' for density plots.
+
+        Returns
+        -------
+        self : DynamicPlot
+            Returns the instance of the DynamicPlot class with updated parameters.
+        """
         self.xlim = xlim
         self.ylim = ylim
         self.clim = clim
@@ -179,6 +224,24 @@ class DynamicPlot:
         return self
 
     def append(self, res_t):
+        """Append new data to the plot and update the display.
+
+        This method updates the plot with new data at each time step. It initializes the plot if it hasn't been done yet.
+        The type of plot (line, parametric, or density) is determined based on the shape of the data provided.
+
+        Parameters
+        ----------
+        res_t : list or array-like
+            The new data to append to the plot. It can be 
+            - a single value (for line plots), 
+            - a pair of values (for parametric plots),
+            - a list of values (for density plots).
+
+        Returns
+        -------
+        data : numpy.ndarray
+            The updated data array after appending the new data.
+        """
         ax = self.ax
         plt = self.pkg
         i = self.i

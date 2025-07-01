@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:38:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-23 17:17:33
+# @Last Modified time: 2025-07-01 18:04:00
 
 import numpy as _np
 import math
@@ -10,6 +10,7 @@ import warnings as _warnings
 from typing import Literal
 
 __all__ = [
+    "winding_number",
     "plot_energy_density",
     "plot_energy_hist",
     "spectral_form_factor",
@@ -21,6 +22,37 @@ __all__ = [
     "Poisson_distribution",
     "WignerDyson_distribution",
 ]
+
+def winding_number(detval):
+    """Calculate the winding number of a complex spectrum.
+
+    The winding number is defined as the number of times the spectrum winds around the origin in the complex plane.
+    .. math::
+        W = \\frac{1}{2\\pi i} \int_{-\\pi}^{\\pi} \\partial_{k} \\ln \\det[\\mathcal{H}(k) - E_a I] dk
+
+    Parameters
+    ----------
+    detval : _np.ndarray
+        the determinant values of the Hamiltonian at different momenta or energies, i.e., detval = det(H - E * I)
+
+    Returns
+    -------
+    int
+        The winding number, which is an integer.
+
+    Raises
+    ------
+    ValueError
+        If the winding number is not an integer, a ValueError is raised.
+    """
+    W = _np.sum(_np.angle(detval/_np.roll(detval, 1))) / (2 * _np.pi)
+    if abs(W - _np.round(W)) > 1e-2:
+        raise ValueError(
+            f"winding number {W} is not an integer, "
+            "please check the input spectrum."
+        )
+    return _np.round(W).astype(int)
+
 
 def plot_energy_density(vals, ax, bandwidth=1.):
     """利用 KDE 方法快速画出连续的能级密度分布曲线，调节 bandwidth 会改变结果
