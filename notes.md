@@ -4,15 +4,11 @@
 
 ### GitHub 同步流程
 
-- 首先确定自己分支的改动全部提交，如果使用 OneDrive，最好关闭同步。
+- 首先确定自己分支的改动全部提交!!!
 
-- 切换到主分支，并拉取最新代码，merge 自己分支，如果有冲突，git 会提示解决冲突。
+- 拉取并提交当前分支的改动
     
-    `git checkout master && git pull origin master && git merge xxxx`
-
-- 上传到 github，并切换回最近的分支 
-    
-    `git push origin master && git checkout xxxx && git merge master`
+    `git pull origin xxxx && git push origin xxxx`
 
 - 添加版本号
     `git tag vx.x.x`

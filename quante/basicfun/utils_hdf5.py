@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:14:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-24 15:42:06
+# @Last Modified time: 2025-07-01 11:04:07
 
 import os as _os
 import numpy as _np
@@ -65,6 +65,7 @@ def save_hdf5(
     >>> save_hdf5("data.h5", data={"mat": mat}, group="/mygroup")
     """
     assert filename.endswith(".h5"), "Filename must to be `.h5` file."
+    assert isinstance(data, dict), "Data must be a dictionary."
     group = "/" + group.strip("/")  # make group to be "/xxx/xxx/..."
     logger.debug(f"Saving {list(data.keys())} to " + _os.path.abspath(filename) + " ... ")
     with _h5py.File(filename.encode("utf-8"), mode) as f:  # `f` is a type `h5py.File`
@@ -172,7 +173,7 @@ _SAVE_FUNC: Dict[str, Callable[[_h5py.Group, str, Any], None]] = {
 
 # -> load
 
-def load_hdf5(filename:str, data:str|list[str], *, group:str='/') -> Any:
+def load_hdf5(filename:str, data:str|list[str]='/', *, group:str='/') -> Any:
     """从 HDF5 文件中加载数据。
     
     Parameters
@@ -375,7 +376,6 @@ def view_hdf5(filename:str, group:str='/', depth=1):
 def isave(
     filename:str, 
     *dataargs, 
-    data:dict = None, 
     group:Union[str, None] = '/', 
     mode:str='a'
 ) -> None:
@@ -404,21 +404,14 @@ def isave(
     >>> import quante.basicfun as bf
     >>> mat = np.random.randn(10,10)
     >>> vec = np.random.randn(10)
-    >>> bf.save_h5("data.h5", mat, vec)
+    >>> bf.isave("data.h5", mat, vec)
     """
-    assert filename[-3:] == ".h5", "use .h5 file"
-
-    if data is not None:
-        assert len(dataargs) == 0, "data and datadic cannot be used at the same time."
-        save_hdf5(filename, data=data, group=group, mode=mode)
-        return None
-
     call_frame = _inspect.currentframe()
     if call_frame is not None:
         call_frame = call_frame.f_back
     
     if len(dataargs) == 0:
-        args = get_last_lv(call_frame)
+        args = get_lv(call_frame)
         args = flatten_tuple(args)
         vals = get_vals(args, call_frame)
     else:
@@ -436,6 +429,8 @@ def isave(
             data_dic[args[i]] = eachdata
         
     save_hdf5(filename, data=data_dic, group=group, mode=mode)
+
+    return vals
 
 
 def iload(filename:str, data:list[str]|str|None = None, *, group='/') -> Any:

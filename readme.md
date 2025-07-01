@@ -52,48 +52,36 @@ qt.basicfun.set_logging(savelog=False, logtime=True)
 
 ### save and load
 
-`quante` 提供了 `isave` 和 `iload` 函数来保存和加载数据。
+`quante` 提供了 `save_hdf5` 和 `load_hdf5` 函数来保存和加载数据。
 
 ```python
-a, b = [1,2,3], 1
-qt.basicfun.isave("data.h5", a, b)
+import numpy as np
+qt.basicfun.save_hdf5(
+    "data.h5", 
+    {
+        "a": np.random.randn(2,2),
+        "b": [1,2,3],
+        "c": {"d": 1, "e": 2}
+    },
+    group='test'
+)
 ```
 
-将建立一个 `data.h5` 文件，`/` 组中包含一个 `a` 数据集和一个 `b` 数据集。
-
-如果不填写数据，那么会自动寻找上一个赋值语句 (10 行以内) 的左值并保存，如：
+将建立一个 `data.h5` 文件，`test` 组中包含三个数据集。
 
 ```python
-a, b = [1,2,3], 1
-qt.basicfun.isave("data.h5") # 与上面等价
+a, b, c = qt.basicfun.load_hdf5("data.h5", ['a', 'b', 'c'], group='test')
 ```
 
-如果需要自定义数据集名称，需要使用 keyword 参数 `dataset`：
+将会加载 `data.h5` 文件中 `test` 组下的 `a`, `b`, `c` 数据集。
+
+同时提供了 `isave` 和 `iload` 函数可以更加方便的保存和加载数据。
+
+通过 `isave` 和 `iload` 函数可以加载数据。
 
 ```python
-a, b = [1,2,3], 1
-qt.basicfun.isave("data.h5", data={"data1": a, "data2": b})
-```
-
-
-通过 `iload` 函数可以加载数据。
-
-```python
-data = qt.basicfun.iload("data.h5")
-```
-
-将会 load 数据为一个字典
-
-```python
-b, = qt.basicfun.iload("data.h5")
-```
-
-则只会 load `b` 数据集。
-
-如果需要自定义数据集名称，可以提供字符串名称：
-
-```python
-data1, data2 = qt.basicfun.iload("data.h5", ('a', 'b'))
+a, b, c = qt.basicfun.isave("data.h5", group='test')
+a, b, c = qt.basicfun.iload("data.h5", group='test')
 ```
 
 ### Exact Diagonalization
