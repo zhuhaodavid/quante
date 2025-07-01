@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-18 17:14:40
+# @Last Modified time: 2025-07-01 23:04:12
 
 import warnings
 import numpy as np
@@ -744,10 +744,10 @@ def z(i:int=0) -> "SpinOper":
     return SpinOper({'z': _single_term((i,), 1.)})
 
 def n(i:int=0) -> "SpinOper":
-    return SpinOper({'pm': _single_term((i, i), 1.)})
+    return SpinOper({'n': _single_term((i,), 1.)})
 
 def nn(i:int, j:int) -> "SpinOper":
-    return SpinOper({'pmpm': _single_term((i, i, j, j), 1.)})
+    return SpinOper({'nn': _single_term((i, j), 1.)})
 
 def zz(i:int, j:int) -> "SpinOper":
     return SpinOper({'zz': _single_term((i, j), 1.)})
@@ -817,6 +817,9 @@ def _expand_term(name, c):
         elif char == 'z':
             prefixes = ['Z']
             factors = [c]
+        elif char == 'n':
+            prefixes = ['Z', 'I']
+            factors = [0.5, 0.5]
         else:
             prefixes = [char]
             factors = [1]
