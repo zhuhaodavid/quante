@@ -869,21 +869,6 @@ class SpinBuilder:
             opnm = opnm.replace('+', 'p')
             opnm = opnm.replace('-', 'm')
 
-            # 将 n 转换为 pm
-            if 'n' in opnm:
-                new_opnm = ''
-                new_posn = []
-                for opnm_i, posn_i in zip(opnm, posn):
-                    if opnm_i == 'n':
-                        new_opnm += 'pm'
-                        new_posn.append(posn_i)
-                        new_posn.append(posn_i)
-                    else:
-                        new_opnm += opnm_i
-                        new_posn.append(posn_i)
-                opnm = new_opnm
-                posn = np.array(new_posn, dtype=int)
-                        
             posnlist, coeflist = self.terms.setdefault(opnm, [[], []])
             posnlist.append(posn)
             coeflist.append(np.array([term[2]]))
