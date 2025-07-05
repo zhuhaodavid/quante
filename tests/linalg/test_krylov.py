@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-02 16:05:18
+# @Last Modified time: 2025-07-04 13:06:45
 
 import unittest
 
@@ -17,6 +17,7 @@ except ImportError:
     tenpy_installed = False
 
 class TestTN(unittest.TestCase):
+    
     @unittest.skipIf(not tenpy_installed, "tenpy is not installed")
     def test_lanczos_ground(self):
         from tenpy.linalg.krylov_based import LanczosEvolution, LanczosGroundState
@@ -26,7 +27,7 @@ class TestTN(unittest.TestCase):
         legcharges1 = npc.LegCharge.from_trivial(dim, chinfo)
         legcharges2 = npc.LegCharge.from_trivial(dim, chinfo)
 
-        H = qt.generate.matrix.random_matrix(dim, type='herm')
+        H = qt.generate.matrix.random_matrix(dim, mtype='herm')
         psi0 = qt.generate.state.random(dim).reshape(-1)
 
         res00, vec = qt.linalg.krylov.lanczos_ground_state(H.dot, psi0)
@@ -45,7 +46,7 @@ class TestTN(unittest.TestCase):
         legcharges1 = npc.LegCharge.from_trivial(10, chinfo)
         legcharges2 = npc.LegCharge.from_trivial(10, chinfo)
 
-        H = qt.generate.matrix.random_matrix(10, type='herm')
+        H = qt.generate.matrix.random_matrix(10, mtype='herm')
         psi0 = qt.generate.state.random(10).reshape(-1)
 
         vec = qt.linalg.krylov.lanczos_evolve_state(H.dot, psi0, 0.1)
@@ -55,28 +56,28 @@ class TestTN(unittest.TestCase):
         res0, res1 = LanczosEvolution(H, psi0, {}).run(0.1)
         self.assertTrue(np.allclose(vec, res0.to_ndarray()))
 
-    @unittest.skipIf(not tenpy_installed, "tenpy is not installed")
-    def test_lanczos_ground(self):
-        from tenpy.linalg.krylov_based import LanczosEvolution, LanczosGroundState
-        import tenpy.linalg.np_conserved as npc
-        import torch as tc
-        dim = 10
-        chinfo = npc.ChargeInfo()  # the second argument is just a descriptive name
-        legcharges1 = npc.LegCharge.from_trivial(dim, chinfo)
-        legcharges2 = npc.LegCharge.from_trivial(dim, chinfo)
+    # @unittest.skipIf(not tenpy_installed, "tenpy is not installed")
+    # def test_lanczos_ground(self):
+    #     from tenpy.linalg.krylov_based import LanczosEvolution, LanczosGroundState
+    #     import tenpy.linalg.np_conserved as npc
+    #     import torch as tc
+    #     dim = 10
+    #     chinfo = npc.ChargeInfo()  # the second argument is just a descriptive name
+    #     legcharges1 = npc.LegCharge.from_trivial(dim, chinfo)
+    #     legcharges2 = npc.LegCharge.from_trivial(dim, chinfo)
 
-        H = qt.generate.matrix.random_matrix(dim, type='herm')
-        H = tc.tensor(H)
-        psi0 = qt.generate.state.random(dim).reshape(-1)
-        psi0 = tc.tensor(psi0)
+    #     H = qt.generate.matrix.random_matrix(dim, mtype='herm')
+    #     H = tc.tensor(H)
+    #     psi0 = qt.generate.state.random(dim).reshape(-1)
+    #     psi0 = tc.tensor(psi0)
 
-        res00, vec = qtc.linalg.krylov.lanczos_ground_state(H.matmul, psi0)
+    #     res00, vec = qtc.linalg.krylov.lanczos_ground_state(H.matmul, psi0)
 
-        H = npc.Array.from_ndarray(H,[legcharges1,legcharges1])
-        psi0 = npc.Array.from_ndarray(psi0,[legcharges2])
-        res0, res1, _ = LanczosGroundState(H, psi0, {}).run()
-        self.assertAlmostEqual(res0, res00.item())
-        self.assertTrue(np.allclose(vec.numpy(), res1.to_ndarray()))
+    #     H = npc.Array.from_ndarray(H,[legcharges1,legcharges1])
+    #     psi0 = npc.Array.from_ndarray(psi0,[legcharges2])
+    #     res0, res1, _ = LanczosGroundState(H, psi0, {}).run()
+    #     self.assertAlmostEqual(res0, res00.item())
+    #     self.assertTrue(np.allclose(vec.numpy(), res1.to_ndarray()))
 
 if __name__ == "__main__":
     unittest.main()

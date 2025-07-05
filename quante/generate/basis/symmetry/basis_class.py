@@ -282,7 +282,7 @@ class SpinHighBasis(SpinBasis):
     """
     def __init__(self, L: int, S:Union[float, int]) -> None:
         super().__init__(L, S=S)
-        self.Ns = self.local_dim ** L
+        self.Ns = self.local_dim ** int(L)
 
 class FermionBasis(GeneralBasis):
     def __init__(self, L):

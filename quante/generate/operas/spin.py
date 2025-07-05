@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-01 23:04:12
+# @Last Modified time: 2025-07-04 22:40:52
 
 import warnings
 import numpy as np
@@ -16,12 +16,25 @@ if TYPE_CHECKING:
 
 class SpinOper(Oper):
     def __init__(self, data:dict, type='s') -> None:
+        self._pauli = None
         assert type == 's'
         super().__init__(data, stype='s')
+    
+    @classmethod
+    def from_quspin(cls, static:list[tuple[str, list[list[int]]]]) -> 'SpinOper':
+        b = SpinBuilder()
+        for oper_name, coef_pos, in static:
+            non = oper_name.replace('-', 'm').replace('+', 'p')
+            for coef_pos_item in coef_pos:
+                b += non, coef_pos_item[1:], coef_pos_item[0]
+        return b.build()
+    
+    def _check_pauli(self, pauli:bool):
+        if self._pauli is not None:
+            assert pauli == self._pauli, "pauli should be the same as the previous one"
 
     def expandxy(self, pauli:bool = False) -> 'SpinOper':
         """
-        
         展开算符中的 `x`,`y`，同时将 `z` 替换为 `Z` 
         其中 `Z` = `pm`-`mp` = `sigma_z`，这是为了 `to_matrix` 方便
         
@@ -40,15 +53,52 @@ class SpinOper(Oper):
         
         注:只是自旋
         """
+        self._check_pauli(pauli)
+
         if self._has_expanded():
-            return self.copy()
-        c = 1.0 if pauli else 0.5
-        res = SpinOper({})
-        for name, (posn, coef) in self.data.items():
-            expanded_names, expanded_coefs = _expand_term(name, c)
-            for expanded_name, expanded_coef in zip(expanded_names, expanded_coefs):
-                res += SpinOper({expanded_name: (posn, coef * expanded_coef)})
+            res = self.copy()
+        else:
+            c = 1.0 if pauli else 0.5
+            res = SpinOper({})
+            for name, (posn, coef) in self.data.items():
+                expanded_names, expanded_coefs = _expand_term(name, c)
+                for expanded_name, expanded_coef in zip(expanded_names, expanded_coefs):
+                    res += SpinOper({expanded_name: (posn, coef * expanded_coef)})
+        
+        res._pauli = pauli
         return res
+    
+    def expandn(self, to:Literal['z', 'pm']='z'):
+        # this should not be used 
+        if to == 'pm':
+            res = {}
+            for oper, (posnlist, coeflist) in self.data.items():
+                if 'n' in oper:
+                    positions = []
+                    newoper = ''
+                    for i, char in enumerate(oper):
+                        if char == 'n':
+                            newoper += 'pm'
+                            positions.append(i)
+                        else:
+                            newoper += char
+                    for pos in sorted(positions, reverse=True):  # 从后往前插入，避免索引偏移
+                        posnlist = np.insert(posnlist, pos + 1, posnlist[:, pos], axis=1)
+                    posnlist_ = posnlist
+                else:
+                    newoper = oper
+                    posnlist_ = posnlist.copy()
+                res[newoper] = (posnlist_, coeflist.copy())
+            return SpinOper(res)
+        elif to == 'z':
+            res = SpinOper({})
+            for name, (posn, coef) in self.data.items():
+                expanded_names, expanded_coefs = _expandn(name)
+                for expanded_name, expanded_coef in zip(expanded_names, expanded_coefs):
+                    res += SpinOper({expanded_name: (posn, coef * expanded_coef)})
+            return res
+        else:
+            raise ValueError(f"to should be 'pm' or 'z', but got {to}")
     
     def _has_expanded(self) -> bool:
         for opnm in self.data.keys():
@@ -57,8 +107,10 @@ class SpinOper(Oper):
                     return False
         return True
 
-    def jw_transfer(self, pauli=False, force=False) -> 'FermionOper':
+    def jw_transfer(self, pauli=None, force=False) -> 'FermionOper':
         # !! todo: Z -> -Z
+        self._check_pauli(pauli)
+
         from .fermion import FermionOper
         ham = self.expandxy(pauli=pauli)
         res = FermionOper({})
@@ -104,7 +156,7 @@ class SpinOper(Oper):
                 return complex
         return float
     
-    def quspin_form(self):
+    def to_quspin(self, pauli=False):
         """
         返回 quspin 可以接受的格式
         
@@ -116,24 +168,27 @@ class SpinOper(Oper):
         >>> basis = spin_basis_1d(L=6)
         >>> mat = hamiltonian(ham.quspin_form(), [], basis=basis)
         """
+        self._check_pauli(pauli)
+        cf = 0 if pauli is True else 1
+
         static = []
         for opnm, (posn, coef) in self.data.items():
             static_bond = []
-            c = opnm.count('Z')
+            c = opnm.count('Z') * cf
             for i in range(len(coef)):
                 static_bond.append([coef[i]*2**c] + list(posn[i]))
             static.append([opnm.replace('m', '-').replace('p', '+').replace('Z', 'z'), static_bond])
         return static
     
     @overload
-    def to_matrix(self, basis, pauli=None, sparse:Literal[True]=True) -> sp.csr_array:
+    def to_matrix(self, basis, pauli=False, sparse:Literal[True]=True) -> sp.csr_array:
         ...
     
     @overload
-    def to_matrix(self, basis, pauli=None, sparse:Literal[False]=False) -> np.ndarray:
+    def to_matrix(self, basis, pauli=False, sparse:Literal[False]=False) -> np.ndarray:
         ...
 
-    def to_matrix(self, basis, pauli=None, sparse=False, savememory=False):
+    def to_matrix(self, basis, pauli=False, sparse=False, savememory=False):
         """
         生成哈密顿量在给定基矢下的矩阵，对于自旋 1/2 默认使用 symmetrize 的方法计算矩阵元
         
@@ -184,42 +239,38 @@ class SpinOper(Oper):
         
         可以反复使用 `basis._sparse_matrix(eachterm, hascomplex)`
         """
+        self._check_pauli(pauli)
+        self._check_length(basis.L)
+
         if self.data == {}:
             if not sparse:
                 return np.zeros((basis.Ns, basis.Ns), dtype=float)
             return sp.csr_matrix((basis.Ns, basis.Ns), dtype=float)
-        self._check_length(basis.L)
+        
+        expanded = self.expandxy(pauli=pauli) if not self._has_expanded() else self
+
         from ..basis.symmetry.basis_class import SpinBasis
+        # use SpinBasis
         if isinstance(basis, SpinBasis):
             if basis.S != 0.5 and pauli is True:
                 raise KeyError("自旋不是 1/2，不能使用 Pauli 矩阵")
-            if self._has_expanded():
-                if pauli is not None:
-                    warnings.warn("pauli in to_matrix is not used")
-                eachterm, hascomplex = self._convert_to_quick_form()
-            else:
-                if pauli is None:
-                    pauli = False
-                eachterm, hascomplex = self.expandxy(pauli)._convert_to_quick_form()
-            mat = basis._sparse_matrix(eachterm, hascomplex, savememory=savememory)
-            if sparse:
-                return mat
-            else:
-                return mat.toarray()
+            
+            mat = basis._sparse_matrix(
+                *expanded._convert_to_quick_form(),
+                savememory=savememory)
+            return mat if sparse else mat.toarray()
+        
+        # use quspin_basis
+        from ..basis.quspin.quspin_basis.basis_1d.spin import spin_basis_1d
+        if isinstance(basis, spin_basis_1d):
+            qs_list = []
+            for opnm, posncoefs in expanded.to_quspin(pauli=pauli):
+                for posn in posncoefs:
+                    qs_list.append((opnm, posn[1:], posn[0]))
+            mat = basis._make_matrix(qs_list, dtype=np.complex128)
+            return mat if sparse else mat.toarray()
         else:
-            from ..basis.quspin.quspin_basis.basis_1d.spin import spin_basis_1d
-            if isinstance(basis, spin_basis_1d):
-                qs_list = []
-                for opnm, posncoefs in self.quspin_form():
-                    for posn in posncoefs:
-                        qs_list.append((opnm, posn[1:], posn[0]))
-                mat = basis._make_matrix(qs_list, dtype=np.complex128)
-                if sparse:
-                    return mat
-                else:
-                    return mat.toarray()
-            else:
-                raise NotImplementedError(f"Spin Oper 不支持的 {type(basis).__name__} 作为基矢")
+            raise NotImplementedError(f"Spin Oper 不支持的 {type(basis).__name__} 作为基矢")
     
     def _convert_to_quick_form(self):
         """这个函数专门为 to_matrix 写的，其他函数不需要"""
@@ -273,10 +324,9 @@ class SpinOper(Oper):
         >>> basis = (L, pauli=False)
         >>> mpo = ham.automata(L, pauli=False)
         """
-        if L is None:
-            L = self.L
-        else:
-            assert L >= self.L
+        L = L if L is not None else self.L
+        self._check_length(L)
+        self._check_pauli(pauli)
 
         from .automata.method2 import automata_mpo
         from ..matrix import pauli_matrix
@@ -393,6 +443,7 @@ class SpinOper(Oper):
         >>> evolve_operator = qt.linalg.expm( -1j*tau*mat)
         >>> print(np.linalg.norm(evolve_operator - U_tau.full_contract().numpy()))
         """
+        self._check_pauli(pauli)
         expandself = self.expandxy(pauli=pauli)
         
         gates = []  # 用于存储局部两体门
@@ -466,6 +517,7 @@ class SpinOper(Oper):
         >>>     U_tau.apply_gate_(pos_cur, gate)
         """
         from ...linalg import expm
+        self._check_pauli(pauli)
         expandself = self.expandxy(pauli=pauli)
         # 获取偶数位置和局域哈密顿量
         even_positions, even_hamiltonians = expandself._get_local_hamiltonians(L, increment=2, layer="even")
@@ -655,8 +707,10 @@ class SpinOper(Oper):
         raise ValueError("Unknown order {0!r} for Suzuki Trotter decomposition".format(order))
     
     def to_mpo(self, L=None, pauli=False, backend='torch', device=None):
-        if L is None:
-            L = max([np.max(posn) for posn, _ in self.data.values()]) + 1 
+        L = L if L is not None else self.L
+        self._check_pauli(pauli)
+        self._check_length(L)
+         
         if backend == 'torch':
             from ...torch_utils.networks import MPO
             from ...torch_utils.utils import totc 
@@ -691,9 +745,11 @@ class SpinOper(Oper):
         return l, SpinOper(newdata)
 
 
-    def energies(self, pauli=None, basis=None, L=None):
-        if L is None:
-            L = self.L
+    def energies(self, pauli=False, basis=None, L=None):
+        L = L if L is not None else self.L
+        self._check_pauli(pauli)
+        self._check_length(L)
+        
         if basis is None:
             from ..basis import spin_basis
             basis = spin_basis(L)
@@ -703,8 +759,10 @@ class SpinOper(Oper):
                     False: np.linalg.eigvals}[isherm](mat)
 
     def gdenergy(self, pauli=None, k=1, return_eigenvectors=False, basis=None, L=None):
-        if L is None:
-            L = self.L
+        L = L if L is not None else self.L
+        self._check_pauli(pauli)
+        self._check_length(L)
+        
         if basis is None:
             from ..basis import spin_basis
             basis = spin_basis(L)
@@ -717,58 +775,68 @@ class SpinOper(Oper):
             else:
                 val, vec = {True: np.linalg.eigh,
                         False: np.linalg.eig}[isherm](mat.todense())
+                if k == 1:
+                    return val[0], vec[:, 0:1] 
                 return val[:k], vec[:, :k]
         else:
             if isherm:
-                return sp.linalg.eigsh(mat, k=k, which='SA', return_eigenvectors=return_eigenvectors)
+                res = sp.linalg.eigsh(mat, k=k, which='SA', return_eigenvectors=return_eigenvectors)
+                return res[0] if k == 1 else res
             else:
-                return sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=return_eigenvectors)
+                res = sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=return_eigenvectors)
+                return res[0] if k == 1 else res
+                
 
+def _make_oper(name: str, posn: tuple[int], coef: float, L:None|int) -> "SpinOper":
+    """Helper function to create a SpinOper with a single term."""
+    if L is not None:
+        posn = [i % L for i in posn]  # Ensure positions are within bounds
+    return SpinOper({name: _single_term(posn, coef)})
 
 def I(i:int=0) -> "SpinOper":
-    return SpinOper({'I': _single_term((0,), 1.)})
+    return _make_oper('I', (0,), 1.)
 
-def p(i:int=0) -> "SpinOper":
-    return SpinOper({'p': _single_term((i,), 1.)})
+def p(i:int=0, L=None) -> "SpinOper":
+    return _make_oper('p', (i,), 1., L)
 
-def m(i:int=0) -> "SpinOper":
-    return SpinOper({'m': _single_term((i,), 1.)})
+def m(i:int=0, L=None) -> "SpinOper":
+    return _make_oper('m', (i,), 1., L)
 
-def x(i:int=0) -> "SpinOper":
-    return SpinOper({'x': _single_term((i,), 1.)})
+def x(i:int=0, L=None) -> "SpinOper":
+    return _make_oper('x', (i,), 1., L)
 
-def y(i:int=0) -> "SpinOper":
-    return SpinOper({'y': _single_term((i,), 1.)})
+def y(i:int=0, L=None) -> "SpinOper":
+    return _make_oper('y', (i,), 1., L)
 
-def z(i:int=0) -> "SpinOper":
-    return SpinOper({'z': _single_term((i,), 1.)})
+def z(i:int=0, L=None) -> "SpinOper":
+    return _make_oper('z', (i,), 1., L)
 
-def n(i:int=0) -> "SpinOper":
-    return SpinOper({'n': _single_term((i,), 1.)})
+def n(i:int=0, L=None) -> "SpinOper":
+    return _make_oper('n', (i,), 1., L)
 
-def nn(i:int, j:int) -> "SpinOper":
-    return SpinOper({'nn': _single_term((i, j), 1.)})
+def nn(i:int, j:int, L=None) -> "SpinOper":
+    return _make_oper('nn', (i,j), 1., L)
 
-def zz(i:int, j:int) -> "SpinOper":
-    return SpinOper({'zz': _single_term((i, j), 1.)})
+def zz(i:int, j:int, L=None) -> "SpinOper":
+    return _make_oper('zz', (i,j), 1., L)
 
-def mp(i:int, j:int) -> "SpinOper":
-    return SpinOper({'mp': _single_term((i, j), 1.)})
+def mp(i:int, j:int, L=None) -> "SpinOper":
+    return _make_oper('mp', (i,j), 1., L)
 
-def pm(i:int, j:int) -> "SpinOper":
-    return SpinOper({'pm': _single_term((i, j), 1.)})
+def pm(i:int, j:int, L=None) -> "SpinOper":
+    return _make_oper('pm', (i,j), 1., L)
 
-def xx(i:int, j:int) -> "SpinOper":
-    return SpinOper({'xx': _single_term((i, j), 1.)})
+def xx(i:int, j:int, L=None) -> "SpinOper":
+    return _make_oper('xx', (i,j), 1., L)
 
-def yy(i:int, j:int) -> "SpinOper":
-    return SpinOper({'yy': _single_term((i, j), 1.)})
+def yy(i:int, j:int, L=None) -> "SpinOper":
+    return _make_oper('yy', (i,j), 1., L)
 
-def xy(i:int, j:int) -> "SpinOper":
-    return SpinOper({'xy': _single_term((i, j), 1.)})
+def xy(i:int, j:int, L=None) -> "SpinOper":
+    return _make_oper('xy', (i,j), 1., L)
 
-def yx(i:int, j:int) -> "SpinOper":
-    return SpinOper({'yx': _single_term((i, j), 1.)})
+def yx(i:int, j:int, L=None) -> "SpinOper":
+    return _make_oper('yx', (i,j), 1., L)
 
 def sum(oper) -> "SpinOper":
     # lazy sum
@@ -837,6 +905,36 @@ def _expand_term(name, c):
 
     return expanded_names, expanded_coefs
 
+
+def _expandn(name):
+    """Expand the term based on the given name and coefficient."""
+    # Initialize with base case
+    expanded_names = ['']
+    expanded_coefs = [1]
+
+    for char in reversed(name):  # Process characters from the end to the start
+        if char == 'n':
+            prefixes = ['Z', 'I']
+            factors = [0.5, 0.5]
+        else:
+            prefixes = [char]
+            factors = [1]
+
+        # Combine prefixes and coefficients with the current expansions
+        new_names = []
+        new_coefs = []
+        for p, f in zip(prefixes, factors):
+            for n, coef in zip(expanded_names, expanded_coefs):
+                new_names.append(p + n)
+                new_coefs.append(f * coef)
+
+        # Update expanded terms
+        expanded_names, expanded_coefs = new_names, new_coefs
+
+    return expanded_names, expanded_coefs
+
+
+
 class SpinBuilder:
     def __init__(self):
         """
@@ -858,7 +956,7 @@ class SpinBuilder:
         if isinstance(term, tuple):
             assert len(term) == 3 and len(term[0]) == len(term[1]), f"length wrong for term: {term}"
             for i in term[0]:
-                assert i in ['I', 'p', 'm', 'x', 'y', 'z', '+', '-', 'n', 'Z'], f"term {i} must be a tuple of I, p, m, '+', '-', x, y, z, n, 'Z"
+                assert i in ['I', 'p', 'm', 'x', 'y', 'z', '+', '-', 'n'], f"term {i} must be a tuple of I, p, m, '+', '-', x, y, z, n"
             
             posn = np.array(term[1], dtype=int)
             inc_indx = np.argsort(posn, kind='stable')
@@ -886,13 +984,9 @@ def builder() -> SpinBuilder:
     return SpinBuilder()
 
 class HeisenbergOper(SpinOper):
-    def __init__(self, data, type='s'):
-        super().__init__(data, type=type)
-        
-    @classmethod
-    def _make_spinoper(cls, L, j=1.0, h=0.0, cyclic=False):
-        cls.L = L
-        cls.cyclic = cyclic
+    def __init__(self, L, j, h, cyclic, type='s'):
+        self._L = L
+        self.cyclic = cyclic
         try:
             jx, jy, jz = j # type: ignore
         except TypeError:
@@ -902,38 +996,63 @@ class HeisenbergOper(SpinOper):
         except TypeError:
             hz = h
             hx = hy = 0.0
-        cls.jx = jx
-        cls.jy = jy
-        cls.jz = jz
-        cls.hx = hx
-        cls.hy = hy
-        cls.hz = hz
-        data = {}
-        posn1 = np.arange(0,L, dtype=np.int32).reshape(L,1)
-        coef1 = np.ones(L, dtype=np.float64)
-        if cyclic:
-            posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=np.int32)
-            coef2 = np.ones(L, dtype=np.float64)
+        self.jx = jx
+        self.jy = jy
+        self.jz = jz
+        self.hx = hx
+        self.hy = hy
+        self.hz = hz
+        self._pauli = None
+        
+    def _make_spinoper(self):
+        if not np.isinf(self._L):
+            L, cyclic = self._L, self.cyclic
+            data = {}
+            posn1 = np.arange(0,L, dtype=np.int32).reshape(L,1)
+            coef1 = np.ones(L, dtype=np.float64)
+            if cyclic:
+                posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=np.int32)
+                coef2 = np.ones(L, dtype=np.float64)
+            else:
+                posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
+                coef2 = np.ones(L-1, dtype=np.float64)
+            if self.jx != 0:
+                data["xx"] = (posn2, self.jx*coef2)
+            if self.jy != 0:
+                data["yy"] = (posn2, self.jy*coef2)
+            if self.jz != 0:
+                data["zz"] = (posn2, self.jz*coef2)
+            if self.hx != 0:
+                data["x"] = (posn1, self.hx*coef1)
+            if self.hy != 0:
+                data["y"] = (posn1, self.hy*coef1)
+            if self.hz != 0:
+                data["z"] = (posn1, self.hz*coef1)
+            pauli = self._pauli
+            super().__init__(data, type='s')
+            self._pauli = pauli
+        return self
+    
+    def table_form(self, maxlen=90) -> str:
+        if hasattr(self, 'data'):
+            return super().table_form(maxlen=maxlen)
         else:
-            posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
-            coef2 = np.ones(L-1, dtype=np.float64)
-        if jx != 0:
-            data["xx"] = (posn2, jx*coef2)
-        if jy != 0:
-            data["yy"] = (posn2, jy*coef2)
-        if jz != 0:
-            data["zz"] = (posn2, jz*coef2)
-        if hx != 0:
-            data["x"] = (posn1, hx*coef1)
-        if hy != 0:
-            data["y"] = (posn1, hy*coef1)
-        if hz != 0:
-            data["z"] = (posn1, hz*coef1)
-        return HeisenbergOper(data)
+            res = f"{self.__class__.__name__} at {hex(id(self))}, with\n"
+            res += f"    L={self._L}, \n    j={(self.jx,self.jy,self.jz)}, \n    h={(self.hx,self.hy,self.hz)}, \n    cyclic={self.cyclic}\n"
+            return res
+    
+    def table_form2(self, maxlen=90) -> str:
+        if hasattr(self, 'data'):
+            return super().table_form2(maxlen=maxlen)
+        else:
+            res = f"{self.__class__.__name__} at {hex(id(self))}, with\n"
+            res += f"  L={self._L}, j={(self.jx,self.jy,self.jz)}, h={(self.hx,self.hy,self.hz)}, cyclic={self.cyclic}\n"
+            return res
 
-    def energies(self, isinf=False, pauli=False):
+    def energies(self, pauli=False):
         from ..solvable.free_fermion import spectrum as ff
-        L = self.L if not isinf else np.inf
+        L = self._L
+        self._check_pauli(pauli)
         if self.jz == self.hx == self.hy == 0 and not self.cyclic:
             # xy model
             return ff.XY_energies(L=L, jxx=self.jx, jyy=self.jy, hz=self.hz, pauli=pauli)
@@ -945,10 +1064,39 @@ class HeisenbergOper(SpinOper):
         return super().energies(pauli=pauli)
         
 
-    def gdenergy(self, isinf=False, pauli=False, *, k=1, return_eigenvectors=False):
+    def gdenergy(self, pauli=False, *, k=1, return_eigenvectors=False):
+        """The ground state energy of the Heisenberg model.
+
+        This function computes the ground state energy of the Heisenberg model.
+        It uses analytical solutions for specific cases (k=1, without eigenvector), 
+        - infinite XY model (including the Ising model)
+        - infinite XXX model
+        - finite XY model with obc (including the Ising model)
+        - finite XXX model with pbc
+
+        Parameters
+        ----------
+        pauli : bool, optional
+            If True, the energy is computed in terms of Pauli matrices, by default False
+        k : int, optional
+            The number of lowest eigenvalues to return, by default 1
+        return_eigenvectors : bool, optional
+            If True, the function returns the eigenvectors as well, by default False
+
+        Returns
+        -------
+        float or tuple
+            The ground state energy of the Heisenberg model. If `return_eigenvectors` is True,
+
+        Raises
+        ------
+        ValueError
+            If the system size is infinite and the parameters do not match the known analytical solutions.
+        """
+        self._check_pauli(pauli)
+        L = self._L
         if not return_eigenvectors:
             from ..solvable.free_fermion import spectrum as ff
-            L = self.L if not isinf else np.inf
             if self.hx == self.hy == self.hz == 0 and self.jx == self.jy == self.jz and not np.isinf(L) and self.cyclic and k == 1:
                 print("approximate: ", end='')
                 return ff.XXX_gdenergy_pbc_approx(L) * (4 if pauli else 1)
@@ -959,7 +1107,9 @@ class HeisenbergOper(SpinOper):
             # todo 其它的结论？
             
         if np.isinf(L):
-            raise ValueError("Infinite system size is not supported")
+            if self.hx == self.hy == self.hz == 0 and self.jx == self.jy == self.jz and k == 1:
+                return (0.5 - 2 * np.log(2))/2 * (4 if pauli else 1)
+            raise ValueError("Analytic solution is not known for infinite system size with such parameters")
         return super().gdenergy(pauli=pauli, k=k, return_eigenvectors=return_eigenvectors)
     
 
@@ -989,4 +1139,4 @@ def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> HeisenbergOper:
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(1.0, 1.0, 0.0), h=0.0)  # xy model
     >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(0.0, 0.0, 1.0), h=(1.0, 0.0, 0.0))  # ising model
     """
-    return HeisenbergOper._make_spinoper(L=L, j=j, h=h, cyclic=cyclic)
+    return HeisenbergOper(L=L, j=j, h=h, cyclic=cyclic)._make_spinoper()

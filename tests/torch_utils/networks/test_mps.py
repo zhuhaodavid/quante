@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 16:47:15
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 18:19:33
+# @Last Modified time: 2025-07-04 12:52:47
 
 
 import unittest
@@ -10,6 +10,13 @@ import torch as tc
 import numpy as np
 import quante as qt
 import quante.torch_utils as qtc
+
+try:
+    import tenpy
+    tenpy_available = True
+except ImportError:
+    tenpy_available = False
+
 
 class TestTN(unittest.TestCase):
     def test_canonicalize(self):
@@ -90,12 +97,20 @@ class TestTN(unittest.TestCase):
         psi = qtc.MPS.from_vector(vec.reshape(-1))
         psi.swapsite_(1,4)
         self.assertTrue(tc.allclose(psi.to_vector(), vec.swapaxes(1,4).reshape(-1)))
+    
+    # if tenpy is installed, test the conversion to tenpy MPS
+    @unittest.skipIf(not tenpy_available, "tenpy is not installed")
+    def test_to_tenpy(self):
+        import tenpy.linalg.np_conserved as npc
+        L = 10
+        psi = qtc.MPS.from_random(L, bond_dim=10)
+        bm_vec = psi.to_vector().numpy()
+        tpsi = psi.to_tenpy()
+        res = tpsi.get_B(0, form='B', label_p='0')
+        for i in range(1,L):
+            res = npc.tensordot(res, tpsi.get_B(i, form='B', label_p=f'{i}'), axes=('vR', 'vL'))
+        vec = res.to_ndarray().reshape(-1)
 
+        self.assertAlmostEqual(np.linalg.norm(vec - bm_vec), 0)
 
-if __name__ == "__main__":
-    unittest.main()
-    # suite = unittest.TestSuite()
-    # suite.addTest(TestTN("test_dm"))
-    # runner = unittest.TextTestRunner()
-    # runner.run(suite)
 

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:40
-# @Last Modified by:   dzwang
-# @Last Modified time: 2025-05-28 11:07:16
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-07-04 12:49:31
 
 import numpy as np
 import torch as tc
@@ -130,6 +130,45 @@ class MPS(TensorTrain):
         res.append(tc.tensor(tmp, device=device).reshape(*tmp.shape, 1))
         return MPS(res)
         
+    def to_tenpy(self):
+        import tenpy.linalg.np_conserved as npc
+        import tenpy.networks as tpn
+
+        norm = self.norm()
+        Bflat = [i.numpy().swapaxes(0,1) for i in self.data]
+        bc = 'finite' if Bflat[0].shape[0] == 1 else 'infinite'
+        dtype = np.complex128 if self.dtype.is_complex else np.float64
+
+        # The following code is adapted from tenpy.networks.MPS.from_Bflat
+        # with some modifications to support torch tensors.
+        sites = [tpn.site.SpinHalfSite(conserve=None, sort_charge=True)]*self.L
+        L = len(sites)
+        Bflat = list(Bflat)
+        if len(Bflat) != L:
+            raise ValueError("Length of Bflat does not match number of sites.")
+        ci = sites[0].leg.chinfo
+        legL = npc.LegCharge.from_qflat(ci, [ci.make_valid(None)] * Bflat[0].shape[1])
+        legL = legL.bunch()[1]
+        SVs = [np.ones(B.shape[1]) / np.sqrt(B.shape[1]) for B in Bflat]
+        SVs.append(np.ones(Bflat[-1].shape[2]) / np.sqrt(Bflat[-1].shape[2]))
+        Bs = []
+        if dtype is None:
+            dtype = np.dtype(np.common_type(*Bflat))
+        for i, site in enumerate(sites):
+            B = np.array(Bflat[i], dtype)
+            # calculate the LegCharge of the right leg
+            legs = [site.leg, legL, None]  # other legs are known
+            legs = npc.detect_legcharge(B, ci, legs, None, qconj=-1)
+            B = npc.Array.from_ndarray(B, legs, dtype)
+            B.iset_leg_labels(['p', 'vL', 'vR'])
+            Bs.append(B)
+            legL = legs[-1].conj()  # prepare for next `i`
+        if bc == 'infinite':
+            # for an iMPS, the last leg has to match the first one.
+            # so we need to gauge `qtotal` of the last `B` such that the right leg matches.
+            chdiff = Bs[-1].get_leg('vR').charges[0] - Bs[0].get_leg('vL').charges[0]
+            Bs[-1] = Bs[-1].gauge_total_charge('vR', ci.make_valid(chdiff))
+        return tpn.MPS(sites, Bs, SVs, form='B', bc=bc, norm=norm)
         
     @classmethod
     def from_random(cls, L:int, bond_dim:Union[list[int], int], phys_dim=2, dtype=tc.complex128, device=None) -> 'MPS':

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:24:20
+# @Last Modified time: 2025-07-05 21:53:17
 
 import warnings
 import traceback as tb
@@ -333,7 +333,7 @@ class Oper:
             lines.append(line)
         print('\n'.join(lines))
     
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         """
         返回算符的字符串形式
         """

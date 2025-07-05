@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-06 16:22:55
+# @Last Modified time: 2025-07-03 17:21:59
 
 import numpy as np
 import scipy.sparse as sp
@@ -508,11 +508,30 @@ def sum(oper) -> FermionOper:
         stype = 'f'
     return FermionOper(newdata)
 
-def f(i:int=0) -> FermionOper:
-    return FermionOper({'-': _single_term((i,), 1.)})
+def _make_oper(name: str, posn: tuple[int], coef: float, L:None|int) -> "SpinOper":
+    """Helper function to create a SpinOper with a single term."""
+    if L is not None:
+        posn = [i % L for i in posn]  # Ensure positions are within bounds
+    return FermionOper({name: _single_term(posn, coef)})
 
-def fdag(i:int=0) -> FermionOper:
-    return FermionOper({'+': _single_term((i,), 1.)})
+def f(i:int=0, L=None) -> FermionOper:
+    return _make_oper('-', (i,), 1., L)
+
+def fdag(i:int=0, L=None) -> FermionOper:
+    return _make_oper('+', (i,), 1., L)
+
+def p(i:int=0, L=None) -> FermionOper:
+    return _make_oper('+', (i,), 1., L)
+
+def m(i:int=0, L=None) -> FermionOper:
+    return _make_oper('-', (i,), 1., L)
+
+def pm(i:int=0, j:int=0, L=None) -> FermionOper:
+    return _make_oper('+-', (i,j), 1., L)
+
+def mp(i:int=0, j:int=0, L=None) -> FermionOper:
+    return _make_oper('-+', (i,j), 1., L)
+
 
 def syk4_dirac(L, Jmat=None):
     if Jmat is None:

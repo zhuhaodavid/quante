@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-06 10:57:32
+# @Last Modified time: 2025-07-03 17:25:18
 import numpy as np
 from .general import Oper, _merge_poscoef, _single_term
 from .fermion import _sort_pm, _sort_posn
@@ -137,52 +137,104 @@ class BosonOper(Oper):
         else:
             raise NotImplementedError("不支持的基矢类型")
 
+def _make_oper(name: str, posn: tuple[int], coef: float, L:None|int) -> BosonOper:
+    """Helper function to create a BosonOper with a single term."""
+    if L is not None:
+        posn = [i % L for i in posn]  # Ensure positions are within bounds
+    return BosonOper({name: _single_term(posn, coef)})
+
 def I(i:int=0) -> BosonOper:
-    return BosonOper({'I': _single_term((0,), 1.)})
+    return _make_oper('I', (0,), 1.)
 
-def p(i:int=0) -> BosonOper:
-    return BosonOper({'+': _single_term((i,), 1.)})
+def p(i:int=0, L=None) -> BosonOper:
+    return _make_oper('+', (i,), 1., L)
 
-def m(i:int=0) -> BosonOper:
-    return BosonOper({'-': _single_term((i,), 1.)})
+def m(i:int=0, L=None) -> BosonOper:
+    return _make_oper('-', (i,), 1., L)
 
-def x(i:int=0) -> BosonOper:
-    return BosonOper({'x': _single_term((i,), 1.)})
+def x(i:int=0, L=None) -> BosonOper:
+    return _make_oper('x', (i,), 1., L)
 
-def y(i:int=0) -> BosonOper:
-    return BosonOper({'y': _single_term((i,), 1.)})
+def y(i:int=0, L=None) -> BosonOper:
+    return _make_oper('y', (i,), 1., L)
 
-def z(i:int=0) -> BosonOper:
-    return BosonOper({'z': _single_term((i,), 1.)})
+def z(i:int=0, L=None) -> BosonOper:
+    return _make_oper('z', (i,), 1., L)
 
-def n(i:int=0) -> BosonOper:
-    return BosonOper({'n': _single_term((i,), 1.)})
+def n(i:int=0, L=None) -> BosonOper:
+    return _make_oper('n', (i,), 1., L)
 
-def nn(i:int, j:int) -> BosonOper:
-    return BosonOper({'nn': _single_term((i, j), 1.)})
+def nn(i:int, j:int, L=None) -> BosonOper:
+    return _make_oper('nn', (i,j), 1., L)
 
-def zz(i:int, j:int) -> BosonOper:
-    return BosonOper({'zz': _single_term((i, j), 1.)})
+def zz(i:int, j:int, L=None) -> BosonOper:
+    return _make_oper('zz', (i,j), 1., L)
 
-def mp(i:int, j:int) -> BosonOper:
-    if i==j:
-        return BosonOper({'n': _single_term((i,), 1.)})
-    return BosonOper({'-+': _single_term((i, j), 1.)})
+def mp(i:int, j:int, L=None) -> BosonOper:
+    return _make_oper('-+', (i,j), 1., L)
 
-def pm(i:int, j:int) -> BosonOper:
-    return BosonOper({'+-': _single_term((i, j), 1.)})
+def pm(i:int, j:int, L=None) -> BosonOper:
+    return _make_oper('+-', (i,j), 1., L)
 
-def xx(i:int, j:int) -> BosonOper:
-    return BosonOper({'xx': _single_term((i, j), 1.)})
+def xx(i:int, j:int, L=None) -> BosonOper:
+    return _make_oper('xx', (i,j), 1., L)
 
-def yy(i:int, j:int) -> BosonOper:
-    return BosonOper({'yy': _single_term((i, j), 1.)})
+def yy(i:int, j:int, L=None) -> BosonOper:
+    return _make_oper('yy', (i,j), 1., L)
 
-def xy(i:int, j:int) -> BosonOper:
-    return BosonOper({'xy': _single_term((i, j), 1.)})
+def xy(i:int, j:int, L=None) -> BosonOper:
+    return _make_oper('xy', (i,j), 1., L)
 
-def yx(i:int, j:int) -> BosonOper:
-    return BosonOper({'yx': _single_term((i, j), 1.)})
+def yx(i:int, j:int, L=None) -> BosonOper:
+    return _make_oper('yx', (i,j), 1., L)
+
+
+# def I(i:int=0) -> BosonOper:
+#     return BosonOper({'I': _single_term((0,), 1.)})
+
+# def p(i:int=0) -> BosonOper:
+#     return BosonOper({'+': _single_term((i,), 1.)})
+
+# def m(i:int=0) -> BosonOper:
+#     return BosonOper({'-': _single_term((i,), 1.)})
+
+# def x(i:int=0) -> BosonOper:
+#     return BosonOper({'x': _single_term((i,), 1.)})
+
+# def y(i:int=0) -> BosonOper:
+#     return BosonOper({'y': _single_term((i,), 1.)})
+
+# def z(i:int=0) -> BosonOper:
+#     return BosonOper({'z': _single_term((i,), 1.)})
+
+# def n(i:int=0) -> BosonOper:
+#     return BosonOper({'n': _single_term((i,), 1.)})
+
+# def nn(i:int, j:int) -> BosonOper:
+#     return BosonOper({'nn': _single_term((i, j), 1.)})
+
+# def zz(i:int, j:int) -> BosonOper:
+#     return BosonOper({'zz': _single_term((i, j), 1.)})
+
+# def mp(i:int, j:int) -> BosonOper:
+#     if i==j:
+#         return BosonOper({'n': _single_term((i,), 1.)})
+#     return BosonOper({'-+': _single_term((i, j), 1.)})
+
+# def pm(i:int, j:int) -> BosonOper:
+#     return BosonOper({'+-': _single_term((i, j), 1.)})
+
+# def xx(i:int, j:int) -> BosonOper:
+#     return BosonOper({'xx': _single_term((i, j), 1.)})
+
+# def yy(i:int, j:int) -> BosonOper:
+#     return BosonOper({'yy': _single_term((i, j), 1.)})
+
+# def xy(i:int, j:int) -> BosonOper:
+#     return BosonOper({'xy': _single_term((i, j), 1.)})
+
+# def yx(i:int, j:int) -> BosonOper:
+#     return BosonOper({'yx': _single_term((i, j), 1.)})
 
 def sum(oper) -> BosonOper:
     # lazy sum
