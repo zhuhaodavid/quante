@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-07-04 19:45:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-04 20:45:19
+# @Last Modified time: 2025-07-06 13:25:22
 
 import unittest
 import quante as qt
@@ -10,8 +10,8 @@ import numpy as np
 
 try:
     import tenpy
-    from quante.generate.tenpy_bridge.tebd import (
-        tenpy_tebd_model,
+    from quante.generate.tenpy_bridge import (
+        tenpy_model_tebd,
         tenpy_tebd_GS_,
         tenpy_tebd_params_imag_time, 
     )
@@ -29,7 +29,7 @@ class TestSpinHalfProj(unittest.TestCase):
         L = 10
         g = 1.0
         ham = - op.sum(op.xx(i, i+1) for i in range(L-1)) - g * op.sum(op.z(i) for i in range(L))
-        M = tenpy_tebd_model(
+        M = tenpy_model_tebd(
             L=L, oper=ham, pauli=True, conserve='None', bc_MPS='finite',
         )
 
@@ -59,7 +59,7 @@ class TestSpinHalfProj(unittest.TestCase):
         L = 2
         op = qt.generate.operas.spin
         ham = - op.sum(op.xx(i, i+1) for i in range(L)) - g * op.sum(op.z(i) for i in range(L))
-        M = tenpy_tebd_model(
+        M = tenpy_model_tebd(
             L=L, oper=ham, pauli=True, conserve='None', bc_MPS='infinite',
         )
 

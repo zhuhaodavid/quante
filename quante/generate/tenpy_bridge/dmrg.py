@@ -2,126 +2,23 @@
 # @Author: hzhu
 # @Date:   2025-06-26 17:28:00
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-05 20:58:20
+# @Last Modified time: 2025-07-06 12:53:23
 
-import tenpy
-from tenpy.models import CouplingMPOModel, NearestNeighborModel, Chain
-from tenpy.networks import SpinHalfSite, OnsiteTerms, CouplingTerms
-from ..operas.spin import SpinOper
 from typing import Literal
-from tqdm import tqdm
-from warnings import warn
-
-from tenpy.tools.params import asConfig
 from tenpy.algorithms.dmrg import SingleSiteDMRGEngine, TwoSiteDMRGEngine
 
 
-class TenpyMPOModel(CouplingMPOModel):
-    def init_sites(self, model_params):
-        conserve = model_params.get('conserve', 'None', str)
-        sort_charge = model_params.get('sort_charge', True, bool)
-        site = SpinHalfSite(conserve, sort_charge=sort_charge)
-        return site
-
-    def init_terms(self, model_params):
-        oper = model_params.get('oper', None, None)
-        pauli = model_params.get('pauli', False, bool)
-
-        if any(o not in 'IpmZxyz' for opnm in oper.data for o in opnm):
-            oper = oper.expandxy(pauli=pauli)
-            warn(
-            "Operator contains unsupported characters, "
-            "expanding to Pauli operators."
-            )
-        
-        oper._check_pauli(pauli)
-        Sx = 'Sigmax' if pauli else 'Sx'
-        Sy = 'Sigmay' if pauli else 'Sy'
-        Sz = 'Sigmaz' if pauli else 'Sz'
-        name_map = {'I': 'Id', 'p': 'Sp', 'm': 'Sm', 'Z': 'Sigmaz',
-                    'x': Sx, 'y': Sy, 'z': Sz}
-        for opnm, pos, strength in oper.each_term():
-            term = [(name_map[o], [p, 0]) for o, p in zip(opnm, pos)] 
-            self.add_local_term(strength, term, category=opnm)
-
-
-def tenpy_mpo_model(
-    L: int,
-    oper: SpinOper,  
-    pauli: bool = False,
-    conserve: Literal['Sz', 'parity', 'None'] = 'None',
-    bc_MPS: Literal['finite', 'periodic'] = 'finite',
-    **kwargs
-):
-    """Create a TenPy MPO model.
-
-    Parameters
-    ----------
-    L : int
-        The length of the chain.
-    oper : OperSpin
-        The operator defining the Hamiltonian.
-    pauli : bool, optional
-        Whether to use Pauli matrices for the operators. Default is False.
-    conserve : str, optional
-        The conservation law, can be 'parity', 'Sz', or None. Default is None.
-    bc_MPS : str, optional
-        The boundary condition for the MPS, either 'finite' or 'periodic'. Default is 'finite'.
-    **kwargs : dict, optional
-        Additional parameters for the model, such as: 
-        - explicit_plus_hc : bool, optional
-            Whether to explicitly include the Hermitian conjugate terms in the Hamiltonian. Default is True.
-        - lattice : type, optional
-            The lattice class to use, default is Chain.
-        - random_seed : int, optional
-            Random seed for reproducibility. Default is None.
-        - order : str, optional
-            The order of the TEBD algorithm, default is 'default'.
-        - sort_charge : bool, optional
-            Whether to sort the charge of the sites. Default is True.
-        - bc_x : str, optional
-            The boundary condition for the x-direction, either 'open' or 'periodic'. Default is 'open'.
-        - helical : str, optional
-            Whether to use helical boundary conditions, default is None.
-        - irregular_remove : str, optional
-            Whether to remove irregular sites, default is None.
-        - sort_mpo_legs : bool, optional
-            Whether to sort the legs of the MPO, default is False.
-    
-    Returns
-    -------
-    TenpyMPOModel
-        An instance of the TenpyMPOModel class, which is a CouplingMPOModel with SpinHalfSite as the site type.
-    """
-    model_params = {
-        'L': L,
-        'oper': oper,
-        'pauli': pauli,
-        'conserve': conserve,
-        'bc_MPS': bc_MPS,
-    }
-    model_params.update(kwargs)
-    return TenpyMPOModel(model_params)
-
-
 def tenpy_dmrg_params(
-    active_sites: int = 2,
     chi_list: dict[int, int] | None = None,
+    svd_min: float = 1.e-14,
+    max_E_err: float = 1.e-8,
     diag_method: Literal['default', 'lanczos', 'arpack', 'ED_block', 'ED_all'] = 'default',
     mixer: str | type | bool | None = None,
-    max_E_err: float = 1.e-8,
-    chi_max: int = 100,
-    svd_min: float = 1.e-14,
     **kwargs
 ):
     """
     Parameters
     ----------
-    active_sites : int, optional
-        Default is 2.
-        The number of active sites to be used by DMRG.
-        If set to 1, :class:`SingleSiteDMRGEngine` is used.
-        If set to 2, DMRG is handled by :class:`TwoSiteDMRGEngine`.
     chi_list : dict[int, int] | None, optional
         By default (``None``) this feature is disabled.
         A dict allows to gradually increase the `chi_max`.
@@ -131,6 +28,15 @@ def tenpy_dmrg_params(
         20 sweeps and ``chi_max=100`` afterwards.
         A value of `None` is initialized to the current value of
         ``trunc_params['chi_max']`` at algorithm initialization.
+    svd_min : float, optional
+        Default is 1.e-14.
+        Discard all small Schmidt values ``S[i] < svd_min``.
+    max_E_err : float, optional
+        default is 1.e-8.
+        Convergence if the change of the energy in each step
+        satisfies ``|Delta E / max(E, 1)| < max_E_err``. Note that
+        this might be satisfied even if ``Delta E > 0``,
+        i.e., if the energy increases (due to truncation).
     diag_method : {'default', 'lanczos', 'arpack', 'ED_block', 'ED_all'}, optional
         Default is 'default'.
         One of the following strings:
@@ -165,18 +71,6 @@ def tenpy_dmrg_params(
         to instantiate the :attr:`mixer`.
         ``None`` uses no mixer.
         ``True`` uses the mixer specified by the :attr:`DefaultMixer` class attribute.
-    max_E_err : float, optional
-        default is 1.e-8.
-        Convergence if the change of the energy in each step
-        satisfies ``|Delta E / max(E, 1)| < max_E_err``. Note that
-        this might be satisfied even if ``Delta E > 0``,
-        i.e., if the energy increases (due to truncation).
-    chi_max : int, optional
-        Default is 100.
-        Keep at most `chi_max` Schmidt values. 
-    svd_min : float, optional
-        Default is 1.e-14.
-        Discard all small Schmidt values ``S[i] < svd_min``. 
     **kwargs : dict, optional
         Additional parameters for the DMRG algorithm. You can pass:
         - N_sweeps_check : int, optional.
@@ -230,8 +124,7 @@ def tenpy_dmrg_params(
             *and* have enough RAM to do the simulation. We raise an error in that case.
             Can be downgraded to a warning by setting this option to None. 
         ---   
-        trunc_params : dict
-        Dictionary with truncation parameters:
+        trunc_params:
         - chi_max : int, optional
             Default is 100.
             Keep at most `chi_max` Schmidt values. 
@@ -256,8 +149,7 @@ def tenpy_dmrg_params(
             Discard all small Schmidt values as long as
             ``sum_{i discarded} S[i]**2 <= trunc_cut**2``.
         ---   
-        mixer_params : dict
-        Dictionary with truncation parameters:
+        mixer_params: 
         - amplitude : float | None, optional
             Default is 1.e-5.
             Current amplitude of the mixer. Meaning is specific to the concrete Mixer subclass.
@@ -306,8 +198,7 @@ def tenpy_dmrg_params(
             Default is 1.e-4
             Upper bound for `E_tol` in Lanczos.
         --- 
-        lanczos_params : dict
-        Dictionary with Lanczos parameters:
+        lanczos_params:
         - E_tol : float, optional
             Default is inf.
             Stop if energy difference per step < `E_tol`
@@ -378,26 +269,36 @@ def tenpy_dmrg_params(
     dmrg_params : dict
         Dictionary of DMRG parameters suitable for TeNPy DMRG algorithms.
     """
+    allowed_keys = {
+        'trunc_params': ['chi_max', 'chi_min', 'degeneracy_tol', 'trunc_cut'],
+        'mixer_params': ['amplitude', 'decay', 'disable_after'],
+        'lanczos_params': [
+            'E_tol', 'N_min', 'N_max', 'N_cache', 'P_tol', 'min_gap',
+            'reortho', 'E_shift', 'cutoff'
+        ],
+    }
+
+    extracted_params = {
+        key: {k: kwargs.pop(k) for k in keys if k in kwargs}
+        for key, keys in allowed_keys.items()
+    }
+
     dmrg_params = {
-        'active_sites': active_sites,
         'chi_list': chi_list,
+        'max_E_err': max_E_err,
         'diag_method': diag_method,
         'mixer': mixer,
-        'max_E_err': max_E_err,
+        'trunc_params': {
+            'svd_min': svd_min,
+            **extracted_params['trunc_params'],
+        },
+        'mixer_params': extracted_params['mixer_params'],
+        'lanczos_params': extracted_params['lanczos_params'],
+        **kwargs,
     }
-    # Merge user-provided truncation, mixer, and lanczos params if present
-    dmrg_params['trunc_params'] = {'chi_max': chi_max, 'svd_min': svd_min}
-    dmrg_params['mixer_params'] = {}
-    dmrg_params['lanczos_params'] = {}
-    for key, value in kwargs.items():
-        if key in ('trunc_params', 'mixer_params', 'lanczos_params'):
-            dmrg_params[key].update(value)
-        else:
-            dmrg_params[key] = value
     return dmrg_params
 
-
-def tenpy_dmrg(psi, model, options):
+def tenpy_dmrg(psi, model, options, active_sites=2):
     r"""Run the DMRG algorithm to find the ground state of the given model.
 
     Parameters
@@ -408,6 +309,9 @@ def tenpy_dmrg(psi, model, options):
         The model representing the Hamiltonian for which we want to find the ground state.
     options : dict
         Further optional parameters as described in :cfg:config:`DMRG`.
+    active_sites : int, optional
+        The number of active sites to use in the DMRG algorithm.
+        Can be either 1 or 2, where 1 corresponds to single-site DMRG and 2 to two-site DMRG.
     
     Returns
     -------
@@ -419,9 +323,6 @@ def tenpy_dmrg(psi, model, options):
         The DMRG engine used to run the algorithm, which contains additional information
         such as the number of sweeps, bond dimensions, and convergence criteria.
     """
-    # initialize the engine
-    options = asConfig(options, 'DMRG')
-    active_sites = options.get('active_sites', 2, int)
     if active_sites == 1:
         engine = SingleSiteDMRGEngine(psi, model, options)
     elif active_sites == 2:
