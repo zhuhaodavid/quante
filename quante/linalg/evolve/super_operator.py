@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-14 22:03:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:31:59
+# @Last Modified time: 2025-07-07 16:20:52
 
 import numpy as np
 import scipy.sparse as sps
@@ -247,8 +247,8 @@ class Liouvillian(LinearOperator):
             - 'sp': use sparse matrix multiplication
             - 'lo': use linear operator multiplication
         """
-        if ham is not None:
-            assert sps.issparse(ham), "ham must be sparse matrix"
+        # if ham is not None:
+        #     assert sps.issparse(ham), "ham must be sparse matrix"
         if ham is None and lindblad_ops is None:
             raise ValueError("ham and lindblad_ops cannot be both None")
         

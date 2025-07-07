@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:13:41
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-23 15:26:52
+# @Last Modified time: 2025-07-07 17:19:15
  
 import os as _os
 import ast as _ast
@@ -110,7 +110,7 @@ def check_file_exists(filename):
             similar_files_with_ext = [f for f in all_files if f.split('.')[0] in similar_files]
             wrapped_filename = textwrap.fill("   ".join(similar_files_with_ext), width=80)
             raise FileNotFoundError(
-                f"file\n    {filename} \ndoes not exist, did you mean:\n"
+                f"file\n    {filename} \ndoes not exist, do you mean:\n"
                 f"    {wrapped_filename}\n"
                 )
         else:
