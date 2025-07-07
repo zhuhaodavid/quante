@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:42:51
+# @Last Modified time: 2025-07-07 23:06:02
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -162,7 +162,7 @@ def eigensolve_core(
 
 def _load_eigres(E_file):
     """load eigen result from E_file"""
-    res = load_hdf5(E_file, "", "/")
+    res = load_hdf5(E_file, group="", data="/")
     try:
         return res["real"] + 1j * res["imag"]
     except:
