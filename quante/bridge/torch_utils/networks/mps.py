@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-04 12:49:31
+# @Last Modified time: 2025-07-07 11:33:28
 
 import numpy as np
 import torch as tc
@@ -12,9 +12,9 @@ if TYPE_CHECKING:  # 类型检查时，导入 torch
 
 from .tensor_train import TensorTrain
 from . import tensor_operations as tf
-from ..utils import promote_dtype
+from ..core_utils import promote_dtype
 from ..linalg.decomp import log_or_not_update, tt_decompose
-from ...generate.matrix import pauli_matrix
+from ....generate.matrix import pauli_matrix
 
 class MPS(TensorTrain):
     def __init__(
@@ -437,7 +437,7 @@ class MPS(TensorTrain):
             return tc.exp(self.lognm*2) * res
         
         # -------- 部分 MPO --------
-        from ...generate.operas import SpinOper
+        from ....generate.operas import SpinOper
         if isinstance(operator, SpinOper):
             assert pos is None, "pos must be None when operator is SpinOper"
             # 如果 operator 只包含一项

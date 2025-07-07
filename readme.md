@@ -243,7 +243,7 @@ res.shape
 类似的解决方案，如 [**`ITensors`**](https://github.com/ITensor/ITensors.jl), [**`tenpy`**](https://github.com/tenpy/tenpy), [**`quimb`**](https://github.com/jcmgray/quimb) 
 
 ```python
-import quante.torch_utils as qtc
+import quante.bridge.torch_utils as qtc
 ```
 
 生成随机的 MPS:

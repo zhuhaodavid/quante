@@ -2,14 +2,14 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:45:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-24 09:45:46
+# @Last Modified time: 2025-07-07 11:16:57
 
 import time  # type: ignore
 import torch as tc
 from tqdm import tqdm
 import warnings
 
-from ...linalg.krylov import lanczos_arpack
+from ....linalg.krylov import lanczos_arpack
 from ..linalg.krylov import argsort, arnoldi_ground_state, lanczos_ground_state
 
 from .mps import MPS

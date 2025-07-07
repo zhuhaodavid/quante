@@ -7,8 +7,8 @@
 
 import unittest
 import torch as tc
-import quante.torch_utils as qtc
-import quante.torch_utils.networks.tensor_operations as tf
+import quante.bridge.torch_utils as qtc
+import quante.bridge.torch_utils.networks.tensor_operations as tf
 
 class TestTN(unittest.TestCase):
     def test_noise_proj_left(self):

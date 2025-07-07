@@ -7,7 +7,7 @@
 import unittest
 
 import quante as qt
-import quante.torch_utils as qtc
+import quante.bridge.torch_utils as qtc
 op = qt.generate.operas
 spin_basis = qt.generate.basis.spin_basis
 

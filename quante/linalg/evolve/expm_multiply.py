@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:31:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:20:31
+# @Last Modified time: 2025-07-07 11:28:31
 
 
 from scipy import sparse as sps
@@ -150,8 +150,8 @@ def expm_multiply(
             hasshifted = True
             
         
-        from ...torch_utils.linalg.sparse import to_csr
-        from ...torch_utils.linalg.expm_multiply import expm_multiply
+        from ...bridge.torch_utils.linalg.sparse import to_csr
+        from ...bridge.torch_utils.linalg.expm_multiply import expm_multiply
         import torch as tc
         
         dtype = tc.complex128 if scale == -1j or _np.iscomplexobj(mat) or _np.iscomplexobj(psi0) else tc.float64

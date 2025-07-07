@@ -7,7 +7,7 @@
 import torch as tc
 
 from ..linalg.decomp import qr, svd, truncate, rq, log_or_not_update, TruncationError
-from ..utils import clone
+from ..core_utils import clone
 
 __all__ = [
     "mpo_eye",

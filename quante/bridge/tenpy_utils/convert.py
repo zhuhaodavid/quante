@@ -2,13 +2,13 @@
 # @Author: hzhu
 # @Date:   2025-07-04 10:42:20
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-06 13:22:45
+# @Last Modified time: 2025-07-07 11:49:57
 
 import logging
 
 from tenpy.models import CouplingMPOModel, NearestNeighborModel, Chain
 from tenpy.networks import SpinHalfSite, OnsiteTerms, CouplingTerms
-from ..operas.spin import SpinOper
+from ...generate.operas.spin import SpinOper
 from typing import Literal
 from warnings import warn
 

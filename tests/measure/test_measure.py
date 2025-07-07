@@ -2,14 +2,14 @@
 # @Author: hzhu
 # @Date:   2025-05-16 23:25:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-26 17:27:53
+# @Last Modified time: 2025-07-07 11:56:28
 
 import quante as qt
 import numpy as np
 import scipy.sparse as sps
 import unittest
 import torch as tc
-import quante.torch_utils as qtc
+import quante.bridge.torch_utils as qtc
 
 class TestQuantity(unittest.TestCase):
     def test_entanglement_spectrum(self):

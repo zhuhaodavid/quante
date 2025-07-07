@@ -2,7 +2,10 @@
 # @Author: hzhu
 # @Date:   2025-06-16 22:24:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 22:24:38
+# @Last Modified time: 2025-07-07 12:04:43
+
+
+# qiskit can give some convenient tools to generate random Clifford gates
 
 from qiskit.quantum_info import random_clifford
 

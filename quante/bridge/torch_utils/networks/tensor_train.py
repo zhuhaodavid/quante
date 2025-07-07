@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-24 09:33:37
+# @Last Modified time: 2025-07-07 11:15:27
 
 import copy
 import warnings
@@ -12,7 +12,7 @@ from typing import Union, TypeVar, Optional
 T = TypeVar('T')
 
 from . import tensor_operations as tf
-from ..utils import clone
+from ..core_utils import clone
 from ..linalg.decomp import eigh, qr, rq, svd, truncate, log_or_not_update, TruncationError
 
 

@@ -14,7 +14,7 @@ class TestOperas(unittest.TestCase):
         import quante as qt
         import numpy as np
         import torch as tc
-        import quante.torch_utils as qtc
+        import quante.bridge.torch_utils as qtc
         op = qt.generate.operas
         
         # 定义哈密顿量
@@ -58,7 +58,7 @@ class TestOperas(unittest.TestCase):
         import quante as qt
         import numpy as np
         import torch as tc
-        import quante.torch_utils as qtc
+        import quante.bridge.torch_utils as qtc
         op = qt.generate.operas
         
         # 定义哈密顿量

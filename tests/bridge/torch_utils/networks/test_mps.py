@@ -9,7 +9,7 @@ import unittest
 import torch as tc
 import numpy as np
 import quante as qt
-import quante.torch_utils as qtc
+import quante.bridge.torch_utils as qtc
 
 try:
     import tenpy

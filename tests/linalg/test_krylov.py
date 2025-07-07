@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-04 13:06:45
+# @Last Modified time: 2025-07-07 11:57:56
 
 import unittest
 
-import quante.torch_utils as qtc
+import quante.bridge.torch_utils as qtc
 import quante as qt
 import numpy as np
 

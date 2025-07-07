@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-04 22:40:52
+# @Last Modified time: 2025-07-07 11:38:20
 
 import warnings
 import numpy as np
@@ -31,7 +31,7 @@ class SpinOper(Oper):
     
     def _check_pauli(self, pauli:bool):
         if self._pauli is not None:
-            assert pauli == self._pauli, "pauli should be the same as the previous one"
+            assert pauli == self._pauli, f"pauli has been set to be {self._pauli} before, but now we are using {pauli}"
 
     def expandxy(self, pauli:bool = False) -> 'SpinOper':
         """
@@ -107,7 +107,7 @@ class SpinOper(Oper):
                     return False
         return True
 
-    def jw_transfer(self, pauli=None, force=False) -> 'FermionOper':
+    def jw_transfer(self, pauli=False, force=False) -> 'FermionOper':
         # !! todo: Z -> -Z
         self._check_pauli(pauli)
 
@@ -221,12 +221,12 @@ class SpinOper(Oper):
         
         对于**没有对称性**的基矢，automata 收缩是最快的方法：
         
-        >>> from ..tensor.automata import get_sparse_matrix
+        >>> from quante.generate.automata import get_sparse_matrix
         >>> mat = get_sparse_matrix(L, *ham.split_data(), pauli=pauli, usecuda=True)
         
         对于**没有对称性**的基矢，也可以使用 `to_matrix_cuda` 来实现：
         
-        >>> from ..torch_utils.symmetry import to_matrix_cuda
+        >>> from quante.bridge.torch_utils.symmetry import to_matrix_cuda
         >>> eachterm, hascomplex = ham.expandxy(False)._convert_to_quick_form()
         >>> mat = to_matrix_cuda(basis, eachterm, hascomplex)
         
@@ -712,8 +712,8 @@ class SpinOper(Oper):
         self._check_length(L)
          
         if backend == 'torch':
-            from ...torch_utils.networks import MPO
-            from ...torch_utils.utils import totc 
+            from ...bridge.torch_utils.networks import MPO
+            from ...bridge.torch_utils.core_utils import totc
             import torch as tc # type: ignore
             tt = self.automata(L, pauli=pauli)
             dtype = tc.float64
@@ -984,7 +984,7 @@ def builder() -> SpinBuilder:
     return SpinBuilder()
 
 class HeisenbergOper(SpinOper):
-    def __init__(self, L, j, h, cyclic, type='s'):
+    def __init__(self, L, j, h, cyclic):
         self._L = L
         self.cyclic = cyclic
         try:
@@ -1064,7 +1064,7 @@ class HeisenbergOper(SpinOper):
         return super().energies(pauli=pauli)
         
 
-    def gdenergy(self, pauli=False, *, k=1, return_eigenvectors=False):
+    def gdenergy(self, pauli=False, *, k=1, return_eigenvectors=False, basis=None):
         """The ground state energy of the Heisenberg model.
 
         This function computes the ground state energy of the Heisenberg model.
@@ -1110,7 +1110,7 @@ class HeisenbergOper(SpinOper):
             if self.hx == self.hy == self.hz == 0 and self.jx == self.jy == self.jz and k == 1:
                 return (0.5 - 2 * np.log(2))/2 * (4 if pauli else 1)
             raise ValueError("Analytic solution is not known for infinite system size with such parameters")
-        return super().gdenergy(pauli=pauli, k=k, return_eigenvectors=return_eigenvectors)
+        return super().gdenergy(pauli=pauli, k=k, return_eigenvectors=return_eigenvectors, basis=basis)
     
 
 def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> HeisenbergOper:

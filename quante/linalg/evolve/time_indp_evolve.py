@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:32:10
+# @Last Modified time: 2025-07-07 11:30:00
 
 
 from scipy import sparse as sps
@@ -118,7 +118,7 @@ class EvolveEngine:
         else:
             # first move the data to the device
             # assert sps.issparse(ham), "ham should be sparse array"
-            from ...torch_utils.utils import totc
+            from ...bridge.torch_utils.core_utils import totc
             import torch as tc
             dtype = tc.complex128 if dtype is None else dtype
             self.csr_mt = totc(ham, device=device)
@@ -173,7 +173,7 @@ class EvolveEngine:
             from .nbfuc.expm_mul_core import _evolve_engine
             return _evolve_engine(self.csr_mt, scale=self.scale, t=dt, traceA=self.traceA, herm=self.herm)
         else:
-            from ...torch_utils.linalg.expm_multiply import evolve_engine
+            from ...bridge.torch_utils.linalg.expm_multiply import evolve_engine
             return evolve_engine(dt * self.csr_mt, scale=self.scale, herm=self.herm)
 
     def run(self):
@@ -226,7 +226,7 @@ class EvolveEngine:
             return lambda t, state: state.reshape(self.state_shape)
         elif isinstance(obs, (sps.sparray, sps.spmatrix, list, _np.ndarray)):
             if self.device != 'cpu':
-                from ...torch_utils import totc
+                from ...bridge.torch_utils import totc
                 obs = totc(obs, device=self.device)
             return lambda t, state: expect(obs, state.reshape(self.state_shape), isdm=self.isdm)
         elif callable(obs):
@@ -380,7 +380,7 @@ class EvolveEngine:
         try:
             if isinstance(measure, (sps.sparray, sps.spmatrix, list, _np.ndarray)):
                 if self.device != 'cpu':
-                    from ...torch_utils import totc
+                    from ...bridge.torch_utils import totc
                     measure = totc(measure, device=self.device)
                 return expect(measure, states.reshape(*self.state_shape,-1), isdm=self.isdm).T
             else:

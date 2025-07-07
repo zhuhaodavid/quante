@@ -88,7 +88,7 @@ def _in_GPU(
     在 GPU 上计算初始态在不同时刻的时间演化态。
     """
     import torch as _tc
-    from ...torch_utils import totc
+    from ...bridge.torch_utils import totc
 
     # 将数据从 numpy 数组转换为 GPU 上的 torch.Tensor。
     initial_state = totc(initial_state, device=device)

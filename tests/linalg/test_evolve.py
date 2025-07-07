@@ -92,8 +92,8 @@ class TestTN(unittest.TestCase):
 
 
     def test_expm_multiply_torch(self):
-        from quante.torch_utils.linalg.expm_multiply import _expm_multiply_simple, _expm_multiply_interval
-        from quante.torch_utils.linalg.sparse import to_csr
+        from quante.bridge.torch_utils.linalg.expm_multiply import _expm_multiply_simple, _expm_multiply_interval
+        from quante.bridge.torch_utils.linalg.sparse import to_csr
         import torch as tc
         mat, state = self._gen_mat_state(16)
         # tcmat = tc.tensor(mat, device="cuda").to_sparse_csr()
@@ -253,7 +253,7 @@ class TestTN(unittest.TestCase):
 
 
     def test_expm_multiply_torch_matrix(self):
-        from quante.torch_utils.linalg.expm_multiply import _expm_multiply_simple, _expm_multiply_interval
+        from quante.bridge.torch_utils.linalg.expm_multiply import _expm_multiply_simple, _expm_multiply_interval
         import torch as tc
         mat, state = self._gen_mat_state_matrix(20)
         try:

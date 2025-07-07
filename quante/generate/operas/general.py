@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-05 21:53:17
+# @Last Modified time: 2025-07-07 11:43:39
 
 import warnings
 import traceback as tb
@@ -138,8 +138,9 @@ class Oper:
         return self_copy
 
     def copy(self) -> 'Oper':
-        cls = self.__class__
-        return cls(copy.deepcopy(self.data), self.type)
+        return copy.deepcopy(self)
+        # cls = self.__class__
+        # return cls(copy.deepcopy(self.data), self.type)
     
     def __radd__(self, oper) -> 'Oper':
         """ num + oper """
