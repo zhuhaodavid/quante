@@ -2,12 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-07-04 10:42:20
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 11:49:57
+# @Last Modified time: 2025-07-08 16:43:54
 
 import logging
 
 from tenpy.models import CouplingMPOModel, NearestNeighborModel, Chain
-from tenpy.networks import SpinHalfSite, OnsiteTerms, CouplingTerms
+from tenpy.networks import SpinHalfSite, OnsiteTerms, CouplingTerms, MPS
 from ...generate.operas.spin import SpinOper
 from typing import Literal
 from warnings import warn
@@ -105,57 +105,53 @@ def set_tenpy_logging(level: int = 1, savelog: bool = False, filenameTime: bool 
     tenpy_logger.propagate = False  # 防止重复输出到 root
 
 
-
-class TenpyTEBDModel(CouplingMPOModel, NearestNeighborModel):
-    """A TenPy model for the TEBD algorithm.
-
-    This class is designed to work with the TEBD algorithm in TenPy.
-
-    It initializes the model parameters, including the lattice, operator,
-    boundary conditions, and conservation laws. It also sets up the onsite
-    and coupling terms based on the provided operator.
-
-    Parameters
-    ----------
-    model_params : dict
-        A dictionary containing the model parameters. The following keys are expected:
-        - 'L' : int
-            The length of the chain.
-        - 'oper' : OperSpin
-            The operator defining the Hamiltonian.
-        - 'bc_MPS' : str
-            The boundary condition for the MPS, either 'finite' or 'periodic'.
-        - 'conserve' : str or None
-            The conservation law, can be 'parity', 'Sz', or None.
-        - 'pauli' : bool
-            Whether to use Pauli matrices for the operators.
-        - 'explicit_plus_hc' : bool
-            Whether to explicitly include the Hermitian conjugate terms in the Hamiltonian.
-        - 'lattice' : class
-            The lattice class to use, default is Chain.
-        - 'random_seed' : int
-            Random seed for reproducibility.
-        - 'order' : str
-            The order of the TEBD algorithm, default is 'default'.
-        - 'sort_charge' : bool
-            Whether to sort the charge of the sites.
-        - 'bc_x' : str
-            The boundary condition for the x-direction, either 'open' or 'periodic'.
-        - 'helical' : None or str
-            Whether to use helical boundary conditions, default is None.
-        - 'irregular_remove' : None or str
-            Whether to remove irregular sites, default is None.
-        - 'sort_mpo_legs' : bool
-            Whether to sort the legs of the MPO, default is False.
-    """
-    default_lattice = Chain
-    force_default_lattice = True
-
+class TenpyMPOModel(CouplingMPOModel):
     def init_sites(self, model_params):
         conserve = model_params.get('conserve', 'None', str)
         sort_charge = model_params.get('sort_charge', True, bool)
-        site = SpinHalfSite(conserve=conserve, sort_charge=sort_charge)
+        site = SpinHalfSite(conserve, sort_charge=sort_charge)
         return site
+
+    def init_terms(self, model_params):
+        oper = model_params.get('oper', None, None)
+        pauli = model_params.get('pauli', False, bool)
+
+        if any(o not in 'IpmZxyz' for opnm in oper.data for o in opnm):
+            oper = oper.expandxy(pauli=pauli)
+            warn(
+            "Operator contains unsupported characters, "
+            "expanding to Pauli operators."
+            )
+        
+        oper._check_pauli(pauli)
+        Sx = 'Sigmax' if pauli else 'Sx'
+        Sy = 'Sigmay' if pauli else 'Sy'
+        Sz = 'Sigmaz' if pauli else 'Sz'
+        name_map = {'I': 'Id', 'p': 'Sp', 'm': 'Sm', 'Z': 'Sigmaz',
+                    'x': Sx, 'y': Sy, 'z': Sz}
+        for opnm, pos, strength in oper.each_term():
+            term = [(name_map[o], [p, 0]) for o, p in zip(opnm, pos)] 
+            self.add_local_term(strength, term, category=opnm)
+
+    def product_state(self, product_state: list[str]):
+        """Create a product state MPS based on the model's lattice.
+
+        Parameters
+        ----------
+        product_state : list[str]
+            A list of strings representing the product state, e.g., ["up", "down", "up", ...].
+
+        Returns
+        -------
+        MPS
+            An MPS object representing the product state on the model's lattice.
+        """
+        return MPS.from_product_state(self.lat.mps_sites(), product_state, bc=self.lat.bc_MPS)
+
+
+class TenpyTEBDModel(TenpyMPOModel, NearestNeighborModel):
+    default_lattice = Chain
+    force_default_lattice = True
 
     def init_terms(self, model_params):
 
@@ -262,36 +258,6 @@ def tenpy_model_tebd(
     }
     model_params.update(kwargs)
     return TenpyTEBDModel(model_params)
-
-
-class TenpyMPOModel(CouplingMPOModel):
-    def init_sites(self, model_params):
-        conserve = model_params.get('conserve', 'None', str)
-        sort_charge = model_params.get('sort_charge', True, bool)
-        site = SpinHalfSite(conserve, sort_charge=sort_charge)
-        return site
-
-    def init_terms(self, model_params):
-        oper = model_params.get('oper', None, None)
-        pauli = model_params.get('pauli', False, bool)
-
-        if any(o not in 'IpmZxyz' for opnm in oper.data for o in opnm):
-            oper = oper.expandxy(pauli=pauli)
-            warn(
-            "Operator contains unsupported characters, "
-            "expanding to Pauli operators."
-            )
-        
-        oper._check_pauli(pauli)
-        Sx = 'Sigmax' if pauli else 'Sx'
-        Sy = 'Sigmay' if pauli else 'Sy'
-        Sz = 'Sigmaz' if pauli else 'Sz'
-        name_map = {'I': 'Id', 'p': 'Sp', 'm': 'Sm', 'Z': 'Sigmaz',
-                    'x': Sx, 'y': Sy, 'z': Sz}
-        for opnm, pos, strength in oper.each_term():
-            term = [(name_map[o], [p, 0]) for o, p in zip(opnm, pos)] 
-            self.add_local_term(strength, term, category=opnm)
-
 
 def tenpy_model_mpo(
     L: int,
