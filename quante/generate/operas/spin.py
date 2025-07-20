@@ -2,9 +2,8 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 11:38:20
+# @Last Modified time: 2025-07-20 16:26:42
 
-import warnings
 import numpy as np
 import scipy.sparse as sp
 from typing import overload, TYPE_CHECKING, Literal
@@ -26,7 +25,8 @@ class SpinOper(Oper):
         for oper_name, coef_pos, in static:
             non = oper_name.replace('-', 'm').replace('+', 'p')
             for coef_pos_item in coef_pos:
-                b += non, coef_pos_item[1:], coef_pos_item[0]
+                if abs(coef_pos_item[0]) > 0:
+                    b += non, coef_pos_item[1:], coef_pos_item[0]
         return b.build()
     
     def _check_pauli(self, pauli:bool):
@@ -779,11 +779,17 @@ class SpinOper(Oper):
                     return val[0], vec[:, 0:1] 
                 return val[:k], vec[:, :k]
         else:
-            if isherm:
-                res = sp.linalg.eigsh(mat, k=k, which='SA', return_eigenvectors=return_eigenvectors)
-                return res[0] if k == 1 else res
+            if isherm and return_eigenvectors:
+                val, vec = sp.linalg.eigsh(mat, k=k, which='SA', return_eigenvectors=True)
+                return (val[0],vec[:,0]) if k == 1 else (val, vec)
+            elif isherm and not return_eigenvectors:
+                val = sp.linalg.eigsh(mat, k=k, which='SA', return_eigenvectors=False)
+                return val[0] if k == 1 else val
+            elif not isherm and return_eigenvectors:
+                val, vec = sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=True)
+                return (val[0], vec[:, 0]) if k == 1 else (val, vec)
             else:
-                res = sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=return_eigenvectors)
+                res = sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=False)
                 return res[0] if k == 1 else res
                 
 
