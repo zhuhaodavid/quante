@@ -2,12 +2,12 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-20 16:26:42
+# @Last Modified time: 2025-07-21 15:12:42
 
 import numpy as np
 import scipy.sparse as sp
 from typing import overload, TYPE_CHECKING, Literal
-from .general import Oper, _single_term
+from .general import Oper, _single_term, _merge_poscoef
 
 if TYPE_CHECKING:
     from .fermion import FermionOper
@@ -32,6 +32,26 @@ class SpinOper(Oper):
     def _check_pauli(self, pauli:bool):
         if self._pauli is not None:
             assert pauli == self._pauli, f"pauli has been set to be {self._pauli} before, but now we are using {pauli}"
+        
+    def clean(self, pauli:bool = False) -> 'SpinOper':
+        opr = self.expandxy(pauli=pauli).expandn(to='z')
+        res = builder()
+        for opstr, posn, coef in opr.each_term():
+            lis = _merge_terms(opstr, posn, coef)
+            for opstr1, posn1, coef1 in lis:
+                res += opstr1, posn1, coef1
+        return res.build()
+
+    def hc(self):
+        """ 返回自旋算符的厄米共轭算符
+        """
+        res = builder()
+        for opstr, posn, coef in self.each_term():
+            newopstr = ''.join(
+                'p' if i == 'm' else 'm' if i == 'p' else i for i in opstr
+            )
+            res += newopstr, posn, np.conj(coef)
+        return res.build()
 
     def expandxy(self, pauli:bool = False) -> 'SpinOper':
         """
@@ -69,7 +89,9 @@ class SpinOper(Oper):
         return res
     
     def expandn(self, to:Literal['z', 'pm']='z'):
-        # this should not be used 
+        if self._has_expanded():
+            return self.copy()
+
         if to == 'pm':
             res = {}
             for oper, (posnlist, coeflist) in self.data.items():
@@ -239,13 +261,12 @@ class SpinOper(Oper):
         
         可以反复使用 `basis._sparse_matrix(eachterm, hascomplex)`
         """
-        self._check_pauli(pauli)
-        self._check_length(basis.L)
-
         if self.data == {}:
             if not sparse:
                 return np.zeros((basis.Ns, basis.Ns), dtype=float)
             return sp.csr_matrix((basis.Ns, basis.Ns), dtype=float)
+        self._check_pauli(pauli)
+        self._check_length(basis.L)
         
         expanded = self.expandxy(pauli=pauli) if not self._has_expanded() else self
 
@@ -331,7 +352,7 @@ class SpinOper(Oper):
         from .automata.method2 import automata_mpo
         from ..matrix import pauli_matrix
         from functools import partial
-        expanded = self.expandxy(pauli=pauli)
+        expanded = self.clean(pauli=pauli)
         local_matrix = partial(pauli_matrix, S=S)
 
         path = expanded._preoperation4automata()
@@ -706,7 +727,13 @@ class SpinOper(Oper):
         # else
         raise ValueError("Unknown order {0!r} for Suzuki Trotter decomposition".format(order))
     
-    def to_mpo(self, L=None, pauli=False, backend='torch', device=None):
+    def to_mpo(
+        self, 
+        L=None, 
+        pauli=False, 
+        backend:Literal['torch', 'tenpy', 'tensor', 'quimb']='torch', 
+        device=None
+    ):
         L = L if L is not None else self.L
         self._check_pauli(pauli)
         self._check_length(L)
@@ -734,6 +761,17 @@ class SpinOper(Oper):
                 else:
                     builder[*posn] += tuple([coef*conuntZ] + list(oper))
             return builder.build_mpo(L=L)
+        elif backend == 'tenpy':
+            from ...bridge.tenpy_utils.convert import TenpyMPOModel
+            oper = self.clean(pauli=pauli)
+            model_params = {
+                'L': int(L),
+                'oper': oper,
+                'pauli': pauli,
+                'conserve': 'None',
+                'bc_MPS': 'finite',
+            }
+            return TenpyMPOModel(model_params)
         else:
             raise ValueError("backend should be 'torch' or 'tensor'")
  
@@ -940,6 +978,106 @@ def _expandn(name):
     return expanded_names, expanded_coefs
 
 
+reduce_dic = {
+    ('p', 'p'): (),
+    ('p', 'm'): (('I', 0.5), ('Z', 0.5)),
+    ('p', 'Z'): (('p', -1.), ),
+    ('p', 'I'): (('p', 1.), ),
+
+    ('m', 'm'): (),
+    ('m', 'p'): (('I', 0.5), ('Z', -0.5)),
+    ('m', 'Z'): (('m', 1.), ),
+    ('m', 'I'): (('m', 1.), ),
+
+    ('Z', 'p'): (('p', 1.), ),
+    ('Z', 'm'): (('m', -1.), ),
+    ('Z', 'Z'): (('I', 1.), ),
+    ('Z', 'I'): (('Z', 1.), ),
+
+    ('I', 'p'): (('p', 1.), ),
+    ('I', 'm'): (('m', 1.), ),
+    ('I', 'Z'): (('Z', 1.), ),
+    ('I', 'I'): (('I', 1.), ),
+}
+
+# todo: optimize this
+def _merge_terms(opnm: str, posn: np.ndarray, coef: float) -> tuple[str, np.ndarray, float]:
+    # 首先排个序
+    posn = np.array(posn, dtype=int)
+    inc_indx = np.argsort(posn, kind='stable')
+    posn = posn[inc_indx]
+    opnm = "".join(opnm[i] for i in inc_indx)
+
+    # remove first 'I' if it exists
+    if opnm.startswith('I'):
+        for i in range(len(opnm)):
+            if opnm[i] != 'I':
+                opnm = opnm[i:]
+                posn = posn[i:]
+                break
+    
+    if len(opnm) == 0:
+        return []
+    
+    res = [[[opnm[0]], [posn[0]], coef], ]
+
+    for cur in range(len(posn)-1):
+        o2, p2 = opnm[cur+1], posn[cur+1]
+        if o2 == 'I':
+            continue # 'I' is identity, skip it
+
+        should_remove = []
+        l = len(res)
+        for i in range(l):
+            opnm_i, posn_i, coef_i = res[i][0], res[i][1], res[i][2]
+            if len(opnm_i) == 0:
+                res[i][0] = [o2]
+                res[i][1] = [p2]
+                continue
+        
+            o1, p1 = opnm_i[-1], posn_i[-1]
+            if p1 == p2:
+                no = reduce_dic[(o1, o2)]
+                if len(no) == 0:
+                    should_remove.append(i)
+                elif len(no) == 1:
+                    if no[0][0] == 'I':
+                        res[i][0] = opnm_i[:-1]
+                        res[i][1] = posn_i[:-1]
+                        res[i][2] *= no[0][1]
+                    else:
+                        res[i][0] = opnm_i[:-1] + [no[0][0]]
+                        res[i][2] *= no[0][1]
+                else:
+                    if no[0][0] == 'I':
+                        res[i][0] = opnm_i[:-1]
+                        res[i][1] = posn_i[:-1]
+                        res[i][2] *= no[0][1]
+                    else:
+                        res[i][0] = opnm_i[:-1] + [no[0][0]]
+                        res[i][2] *= no[0][1]
+                    for j in range(1, len(no)):
+                        if no[j][0] == 'I':
+                            newopnm = opnm_i[:-1]
+                            newposn = posn_i[:-1]
+                        else:
+                            newopnm = opnm_i[:-1] + [no[j][0]]
+                            newposn = posn_i
+                        newcoef = coef_i * no[j][1]
+                        if len(newopnm) > 0:
+                            res.append([newopnm, newposn, newcoef])
+            else:
+                opnm_i.append(o2)
+                posn_i.append(p2)
+    
+        for i in reversed(should_remove):
+            res.pop(i)
+        
+    res = [(''.join(opnm), np.array(posn,dtype=int), coef) 
+           for opnm, posn, coef in res]
+    
+    return res
+
 
 class SpinBuilder:
     def __init__(self):
@@ -962,14 +1100,16 @@ class SpinBuilder:
         if isinstance(term, tuple):
             assert len(term) == 3 and len(term[0]) == len(term[1]), f"length wrong for term: {term}"
             for i in term[0]:
-                assert i in ['I', 'p', 'm', 'x', 'y', 'z', '+', '-', 'n'], f"term {i} must be a tuple of I, p, m, '+', '-', x, y, z, n"
+                assert i in ['I', 'p', 'm', 'x', 'y', 'z', '+', '-', 'n', 'Z'], f"term {i} must be a tuple of I, p, m, '+', '-', x, y, z, n, Z"
             
+            opnm = term[0]
             posn = np.array(term[1], dtype=int)
+
             inc_indx = np.argsort(posn, kind='stable')
             posn = posn[inc_indx]
-            
+            opnm = "".join(opnm[i] for i in inc_indx)
+                
             # 把字符串中的 + 和 - 替换成 p 和 m
-            opnm = opnm = "".join(term[0][i] for i in inc_indx)
             opnm = opnm.replace('+', 'p')
             opnm = opnm.replace('-', 'm')
 
@@ -983,7 +1123,9 @@ class SpinBuilder:
     def build(self):
         data = {}
         for name, (posnlist, coeflist) in self.terms.items():
-            data[name] = (np.vstack(posnlist), np.hstack(coeflist))
+            posn, coef = _merge_poscoef(posnlist, coeflist)
+            if len(posn) > 0:
+                data[name] = (posn, coef)
         return SpinOper(data, 's')
 
 def builder() -> SpinBuilder:

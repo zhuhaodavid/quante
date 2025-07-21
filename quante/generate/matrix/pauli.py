@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:43:33
+# @Last Modified time: 2025-07-21 12:41:32
 
 import functools
 
@@ -164,4 +164,7 @@ def _rpmethod(match):
 def _evaluate_string(evalable_string, _single_oper, _kron):
     assert isinstance(_single_oper, Callable)
     assert isinstance(_kron, Callable)
-    return eval(evalable_string)
+    try:
+        return eval(evalable_string)
+    except Exception as e:
+        raise ValueError(f"Error evaluating string '{evalable_string}': {e}") from e
