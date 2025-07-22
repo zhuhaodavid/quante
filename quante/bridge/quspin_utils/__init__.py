@@ -2,10 +2,10 @@
 # @Author: hzhu
 # @Date:   2025-07-07 12:03:27
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 12:04:10
+# @Last Modified time: 2025-07-22 15:25:39
 
 
-# todo, how to write 2d system and time-dependent Hamiltonian more easily with quspin?
+from .gen_matrix import optimize_basis
 
 
 

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 23:06:02
+# @Last Modified time: 2025-07-22 13:31:24
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -14,6 +14,12 @@ import numpy as _np
 import scipy.linalg as _sla
 import scipy.sparse as _sparse
 import scipy.sparse.linalg as _spla
+
+import threading
+import queue
+from scipy.sparse import csr_matrix
+from scipy.sparse.linalg import LinearOperator
+from scipy.sparse import load_npz
 
 from typing import Optional, Union
 
@@ -30,7 +36,8 @@ __all__ = [
     "eigh",
     "eigvals",
     "eigvalsh",
-    "eighbetween"
+    "eighbetween",
+    "StreamingLinearOperator",
 ]
 
 # ------------------------------
@@ -1163,3 +1170,112 @@ def eighbetween(
             )
         else:
             raise ValueError("direction not understood")
+
+
+class MatrixLoaderThread(threading.Thread):
+    def __init__(self, filenames, result_queue, mmap):
+        super().__init__()
+        self.filenames = filenames
+        self.q = result_queue
+        self.mmap = mmap
+
+    def run(self):
+        for i in range(len(self.filenames)):
+            prefix = self.filenames[i]
+            mat = self._load_sparse_csr(prefix)
+            self.q.put(mat)
+            del mat  # Free memory
+        self.q.put(None)  # end signal
+
+    def _load_sparse_csr(self, prefix):
+        if self.mmap:
+            mmap_mode = 'r' if self.mmap else None
+            data = _np.load(f"{prefix}_data.npy", mmap_mode=mmap_mode)
+            indices = _np.load(f"{prefix}_indices.npy", mmap_mode=mmap_mode)
+            indptr = _np.load(f"{prefix}_indptr.npy", mmap_mode=mmap_mode)
+            shape = _np.load(f"{prefix}_shape.npy", mmap_mode=mmap_mode)
+            return csr_matrix((data, indices, indptr), shape=shape)
+        else:
+            return load_npz(f"{prefix}.npz")  # Use load_npz for sparse matrix loading
+
+class StreamingLinearOperator:
+    """A linear operator that streams its matrix data from disk."""
+    def __init__(self, matrix_prefixes, shape, dtype=_np.float64, mmap=True):
+        """Initialize the streaming linear operator.
+        
+        For calculating large sparse matrices,
+        .. math::
+            A = \sum_i A_i
+        where each :math:`A_i` is a sparse matrix stored in separate files.
+        
+        Parameters
+        ----------
+        matrix_prefixes : list of str
+            List of prefixes for the matrix files to be loaded.
+        shape : tuple
+            Shape of the linear operator (m, n).
+        dtype : data-type, optional
+            Data type of the matrix entries (default is np.float64).
+        mmap : bool, optional
+            Whether to memory-map the matrix files (default is True).
+        
+        Notes
+        -----
+        The matrix files should be stored in a format compatible with
+        `scipy.sparse.load_npz` or saved as numpy arrays with the following
+        naming convention:
+          - `{prefix}_data.npy`
+          - `{prefix}_indices.npy`
+          - `{prefix}_indptr.npy`
+          - `{prefix}_shape.npy`
+        The `prefixes` should be a list of strings that point to the base names
+        of the matrix files without extensions.
+        The shape should be a tuple of two integers (m, n) representing the
+        dimensions of the linear operator.
+        The dtype specifies the data type of the matrix entries, defaulting to
+        `np.float64`.
+        The `mmap` parameter determines whether to memory-map the matrix files
+        for efficient loading. If set to `True`, the files will be memory-mapped
+        using numpy's `np.load` with `mmap_mode='r'`. If set to `False`, the files
+        will be loaded into memory directly using `scipy.sparse.load_npz`.
+        
+        The operator can be used with `scipy.sparse.linalg.LinearOperator` to
+        perform matrix-vector products without loading the entire matrix into memory.
+        
+        Example
+        -------
+        >>> matrix_dir = "data/hamiltonian"
+        >>> matrix_files = [os.path.join(matrix_dir, f"{i}") for i in range(number)]
+        >>> stream_op = StreamingLinearOperator(matrix_files, shape, dtype=dtype, mmap=mmap)
+        >>> H = stream_op.as_linear_operator()
+        >>> res = spla.eigsh(H, k=1, which="SA", maxiter=1e4, return_eigenvectors=True)
+        """
+        self.prefixes = matrix_prefixes
+        self.shape = shape
+        self.dtype = dtype
+        self.mmap = mmap
+        self._counter = 0
+
+        self.operator = LinearOperator(shape, matvec=self._matvec, dtype=dtype)
+
+    def _matvec(self, v):
+        q = queue.Queue(maxsize=2)
+        loader = MatrixLoaderThread(self.prefixes, q, self.mmap)
+        
+        loader.start()
+        result = _np.zeros_like(v)
+        while True:
+            Ai = q.get()
+            if Ai is None:
+                break
+            result += Ai @ v
+            del Ai
+        loader.join()
+
+        self._counter += 1
+        print(f"[matvec #{self._counter}] done")
+        return result
+
+    def as_linear_operator(self):
+        return self.operator
+
