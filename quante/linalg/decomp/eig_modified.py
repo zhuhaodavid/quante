@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-22 15:31:03
+# @Last Modified time: 2025-07-22 21:09:04
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -1207,7 +1207,7 @@ class StreamingLinearOperator:
         .. math::
             A = \sum_i A_i
         where each :math:`A_i` is a sparse matrix stored in separate files.
-        
+
         Parameters
         ----------
         matrix_prefixes : list of str
@@ -1244,6 +1244,8 @@ class StreamingLinearOperator:
         
         Example
         -------
+        For a real exapmle, refer to ../generate/matrix/JR.py
+
         >>> matrix_dir = "data/hamiltonian"
         >>> matrix_files = [os.path.join(matrix_dir, f"{i}") for i in range(number)]
         >>> stream_op = StreamingLinearOperator(matrix_files, shape, dtype=dtype, mmap=mmap)
@@ -1254,6 +1256,7 @@ class StreamingLinearOperator:
         self.shape = shape
         self.dtype = dtype
         self.mmap = mmap
+        self.monitor = 10
         self._counter = 0
 
         self.operator = LinearOperator(shape, matvec=self._matvec, dtype=dtype)
@@ -1273,7 +1276,11 @@ class StreamingLinearOperator:
         loader.join()
 
         self._counter += 1
-        print(f"[matvec #{self._counter}] done")
+        if self._counter % self.monitor == 0:
+            residual = _np.linalg.norm(result - v)
+            print(f"[matvec #{self._counter}] residual: {residual:.2e}")
+        else:
+            print(f"[matvec #{self._counter}] done")
         return result
 
     def as_linear_operator(self):

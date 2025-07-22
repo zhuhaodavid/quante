@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-07-22 15:12:21
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-22 15:26:06
+# @Last Modified time: 2025-07-22 18:23:15
 
 import os
 from multiprocessing import get_context
@@ -11,6 +11,7 @@ import scipy.sparse as sp
 from itertools import islice
 import numba
 from ...generate.basis.symmetry.basis_class_nb import coodiaglists2csr
+from tqdm import tqdm
 
 # 辅助函数：判断是否为对角元素
 @numba.njit
@@ -41,13 +42,13 @@ def chunker(seq, size):
 
 def process_chunk(args):
     """处理单个块的函数，需在全局定义"""
-    chunk, self_ref, index_type, dtype = args
+    chunk, op_func, index_type, dtype = args
     diag_part, offdiag_part = [], []
     
     # 每个子进程重新获取 self (通过代理)
-    self = self_ref()
     for opstr, indx, J in chunk:
-        ME, row, col = self.Op(opstr, indx, J, dtype)
+        ME, row, col = op_func(opstr, indx, J, dtype)
+        print(1)
         if len(ME) > 0:
             row = row.astype(index_type)
             col = col.astype(index_type)
@@ -57,7 +58,7 @@ def process_chunk(args):
                 offdiag_part.append((ME, row, col))
     return diag_part, offdiag_part
 
-def parallel_process(self, op_list, index_type, dtype, chunksize=50, n_workers=None):
+def parallel_process(self, op_list, index_type, dtype, chunksize=5, n_workers=None):
     diag_list = []
     offdiag_list = []
     
@@ -67,6 +68,7 @@ def parallel_process(self, op_list, index_type, dtype, chunksize=50, n_workers=N
     # Windows 或多线程回退
     if n_workers <= 1 or os.name == 'nt':
         # 顺序执行 (Windows 或单线程)
+        op_list = tqdm(op_list, ascii=True)
         for opstr, indx, J in op_list:
             ME, row, col = self.Op(opstr, indx, J, dtype)
             if len(ME) > 0:
@@ -83,8 +85,10 @@ def parallel_process(self, op_list, index_type, dtype, chunksize=50, n_workers=N
     ctx = get_context('fork')
     with ctx.Pool(processes=n_workers) as pool:
         # 通过弱引用代理传递 self 避免直接传递大对象
-        from weakref import ref
-        self_ref = ref(self)
+        #todo: how to make it work?
+        # from weakref import ref
+        # self_ref = ref(self)
+        self_ref = self.Op
         
         # 分块处理
         chunks = list(chunker(op_list, chunksize))
@@ -99,12 +103,12 @@ def parallel_process(self, op_list, index_type, dtype, chunksize=50, n_workers=N
     return diag_list, offdiag_list
 
 
-def _make_matrix(self, op_list, dtype):
+def _make_matrix_parallel(self, op_list, dtype, chunksize=5, n_workers=1):
     """takes list of operator strings and couplings to create matrix."""
     diag = None
     index_type = _get_index_type(self.Ns)
 
-    diag_list, offdiag_list = parallel_process(self, op_list, index_type, dtype)
+    diag_list, offdiag_list = parallel_process(self, op_list, index_type, dtype, chunksize=chunksize, n_workers=n_workers)
 
     if len(diag_list) > 0:
         diag = np.zeros(self.Ns, dtype=dtype)
@@ -121,8 +125,10 @@ def _make_matrix(self, op_list, dtype):
     else:
         return sp.dia_array((self.Ns,self.Ns),dtype=dtype)
 
-def optimize_basis(basis):
+def optimize_basis(basis, chunksize=5, n_workers=1):
     from types import MethodType
+    def _make_matrix(*args, **kwargs):
+        return _make_matrix_parallel(*args, chunksize=chunksize, n_workers=n_workers, **kwargs)
     basis._make_matrix = MethodType(_make_matrix, basis)
     return basis
 
