@@ -2,10 +2,10 @@
 # @Author: hzhu
 # @Date:   2025-07-23 00:05:42
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 00:40:29
+# @Last Modified time: 2025-07-23 01:37:08
 
 from quspin.operators._make_hamiltonian import _consolidate_static
-
+import numpy as np
 
 def clean_static(static):
     """Clean the static list by removing duplicate terms and combining coefficients."""
@@ -124,20 +124,17 @@ def clean_static2(static):
     
     This apply only of spin-1/2 operators!!! 
     """
-    from quspin.basis import spin_basis_general
-    basis = spin_basis_general(N=1, S='1/2', pauli=0)  # dummy call to load the module
-    tmp, _ = basis._get_local_lists(static, [])
     reduce_dic = {
         ('x', 'x'): ('I', 0.25),
-        ('x', 'y'): ('z', 0.5),
-        ('x', 'z'): ('y', -0.5),
+        ('x', 'y'): ('z', 0.5j),
+        ('x', 'z'): ('y', -0.5j),
         ('x', 'I'): ('x', 1.0),
-        ('y', 'x'): ('z', -0.5),
+        ('y', 'x'): ('z', -0.5j),
         ('y', 'y'): ('I', 0.25),
-        ('y', 'z'): ('x', 0.5),
+        ('y', 'z'): ('x', 0.5j),
         ('y', 'I'): ('y', 1.0),
-        ('z', 'x'): ('y', 0.5),
-        ('z', 'y'): ('x', -0.5),
+        ('z', 'x'): ('y', 0.5j),
+        ('z', 'y'): ('x', -0.5j),
         ('z', 'z'): ('I', 0.25),
         ('z', 'I'): ('z', 1.0),
         ('I', 'x'): ('x', 1.0),
@@ -146,39 +143,32 @@ def clean_static2(static):
         ('I', 'I'): ('I', 1.0),
     }
     static_dict = {}
-    for opstr, indx, J in tmp:
-        if opstr.startswith('I'):
-            for i in range(len(opstr)):
-                if opstr[i] != 'I':
-                    opstr = opstr[i:]
-                    indx = indx[i:]
-                    break
-
-        if len(opstr) == 0:
-            newopstr = ['I']
-            newindx = [0]
-            newcoef = J
-        else:
-            newopstr = [opstr[0]]
-            newindx = [indx[0]]
-            newcoef = J
-
-            for i in range(len(opstr) - 1):
-                o1, p1 = opstr[i], indx[i]
-                o2, p2 = opstr[i+1], indx[i+1]
-
-                if p1 == p2:
-                    no, cf = reduce_dic.get((o1, o2), (None, None))
-                    if no is None and cf is None:
-                        raise ValueError(f"Unsupported operator combination: {o1}, {o2}")
-                    newopstr[-1] = no
-                    newcoef *= cf
-                else:
-                    newopstr.append(o2)
-                    newindx.append(p2)
-        
-        newopstr = ''.join(newopstr)
+    for opstr, indx, J in _consolidate_static(static):
+        sortindx = np.argsort(indx, kind='stable')
+        opstr = [opstr[i] for i in sortindx]
+        indx = [indx[i] for i in sortindx]
+        newopstr = [opstr[0]]
+        newindx = [indx[0]]
+        newcoef = J
+        for i in range(len(opstr) - 1):
+            o1, p1 = opstr[i], indx[i]
+            o2, p2 = opstr[i+1], indx[i+1]
+            if p1 == p2:
+                no, cf = reduce_dic.get((o1, o2), (None, None))
+                if no is None and cf is None:
+                    raise ValueError(f"Unsupported operator combination: {o1}, {o2}")
+                newopstr[-1] = no
+                newcoef *= cf
+            else:
+                newopstr.append(o2)
+                newindx.append(p2)
+        notIindx = [i for i, c in enumerate(newopstr) if c != 'I']
+        newopstr = ''.join(c for i, c in enumerate(newopstr) if i in notIindx)
+        newindx = [c for i, c in enumerate(newindx) if i in notIindx]
         newindx.insert(0, newcoef)
+        if len(newopstr) == 0:
+            newopstr = 'I'
+            newindx.append(0)
         if newopstr in static_dict:
             for j in static_dict[newopstr]:
                 if all(a==b for a,b in zip(j[1:], newindx[1:])):
@@ -189,7 +179,6 @@ def clean_static2(static):
                 static_dict[newopstr].append(newindx)
         else:
             static_dict[newopstr] = [newindx]
-
     return [[str(key), list(value)] for key, value in static_dict.items()]
 
 
