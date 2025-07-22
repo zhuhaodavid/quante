@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-07-22 15:12:21
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-22 22:26:20
+# @Last Modified time: 2025-07-23 02:47:03
 
 import numpy as np
 import scipy.sparse as sp
@@ -39,7 +39,7 @@ def _make_matrix(self, op_list, dtype):
     diag_list = []
     offdiag_list = []
     
-    op_list = tqdm(op_list, ascii=True)
+    # op_list = tqdm(op_list, ascii=True)
     for opstr, indx, J in op_list:
         ME, row, col = self.Op(opstr, indx, J, dtype)
         if len(ME) > 0:
@@ -66,9 +66,13 @@ def _make_matrix(self, op_list, dtype):
         return sp.dia_array((self.Ns,self.Ns),dtype=dtype)
 
 
-def optimize_basis(basis):
-    from types import MethodType
-    basis._make_matrix = MethodType(_make_matrix, basis)
+def optimize_basis(basis, parallel=True):
+    if parallel:
+        from types import MethodType
+        basis._make_matrix = MethodType(_make_matrix, basis)
+    else:
+        import dowhen
+        dowhen.do("op_list = tqdm(op_list, ascii=True)").when(basis._make_matrix, "+2")
     return basis
 
 

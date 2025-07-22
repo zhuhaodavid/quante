@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-# @Author: hzhu
 # @Date:   2025-07-19 20:32:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-22 21:10:10
+# @Last Modified time: 2025-07-23 03:14:46
 
 # This file is an example on 
 
@@ -18,10 +18,12 @@ from quspin.operators._make_hamiltonian import _consolidate_static
 from quspin.basis.basis_general.base_general import _check_symm_map
 from quspin.operators import hamiltonian
 from quspin.basis import spin_basis_general
-from itertools import permutations
 from scipy.sparse import save_npz, load_npz
 from scipy.sparse.linalg import LinearOperator
 from typing import Literal
+
+import quante as qt
+op = qt.generate.operas.spin
 
 class TriangularLattice:
     r"""generate a triangular lattice with periodic boundary conditions.
@@ -167,99 +169,22 @@ class TriangularLattice:
             - r \sum_{<ijmn>} [S_i \cdot (S_m \times S_n)][S_j \cdot (S_m \times S_n)] + h.c.
         
         """
-        posn = []
+        res = 0
         for s in range(self.N):
-            diamonds = self.diamond_cell(s)
-            for i, j, m, n in diamonds:
-                posn.append([i, j, m, n])
-                # h.c.
-                posn.append([j, i, m, n])
-
-        terms, signs = generate_cross_dot_terms()
-        res = []
-        for term, sign in zip(terms, signs):
-            coef_posn_positive = [
-                [(-r)*sign, *pos] for pos in posn
-            ]
-            res.append([term, coef_posn_positive])
-        return res
-                
-
-def generate_cross_dot_terms():
-    """Generate cross dot product terms for the chirality-chirality interaction.
-    
-    total 36 terms.
-    """
-    axes = 'xyz'
-    epsilon_sign = {}
-
-    # Build the Levi-Civita sign table
-    for p in permutations([0, 1, 2]):
-        i, j, k = p
-        key = axes[i] + axes[j] + axes[k]
-        # Compute parity of permutation: even -> +1, odd -> -1
-        parity = (
-            1 if (i - j)*(j - k)*(k - i) > 0 else -1
-        )
-        epsilon_sign[key] = parity
-
-    terms = []
-    signs = []
-
-    for abc in epsilon_sign:
-        for a_b_c in epsilon_sign:
-            sign = epsilon_sign[abc] * epsilon_sign[a_b_c]
-            term, coef = reduce_term(abc, a_b_c)
-            terms.append(term)
-            signs.append(sign*coef)
-
-    return terms, signs
-
-reduce_dic = {
-    ('x', 'x'): ('I', 1/4),
-    ('y', 'y'): ('I', 1/4),
-    ('z', 'z'): ('I', 1/4),
-    ('x', 'y'): ('z', 1j/2),
-    ('x', 'z'): ('y', -1j/2),
-    ('y', 'x'): ('z', -1j/2),
-    ('y', 'z'): ('x', 1j/2),
-    ('z', 'x'): ('y', 1j/2),
-    ('z', 'y'): ('x', -1j/2),
-}           
-
-def reduce_term(abc, a_b_c):
-    a, b, c = abc
-    a_, b_, c_ = a_b_c
-
-    b__, c1 = reduce_dic[(b,b_)]
-    c__, c2 = reduce_dic[(c,c_)]
-    return f"{a}{a_}{b__}{c__}", c1 * c2
-
-def clean_static(static):
-    """Clean the static list by removing duplicate terms and combining coefficients."""
-    # first expand with pmz
-    from quspin.basis import spin_basis_general
-    basis = spin_basis_general(N=1, S='1/2', pauli=0)  # dummy call to load the module
-    tmp, _ = basis.expanded_form(static)
-    res = []
-    for oper, posn_coef in tmp:
-        if 'I' in oper:
-            # find all positions of 'i' and remove them
-            inc_indx = [i for i, c in enumerate(oper) if c == 'I']
-            new_oper = ''.join(c for i, c in enumerate(oper) if i not in inc_indx)
-            new_posn_coef = [
-                [t 
-                 for i,t in enumerate(eachterm) 
-                 if (i-1) not in inc_indx
-                ] 
-                for eachterm in posn_coef
-            ]
-            res.append([new_oper, new_posn_coef])
-        else:
-            res.append([oper, posn_coef])
-           
-    res, _ = basis.expanded_form(res)
-    return res
+            for i, j, m, n in self.diamond_cell(s):
+                smxsn = [
+                    op.y(m) * op.z(n) - op.z(m) * op.y(n),
+                    op.z(m) * op.x(n) - op.x(m) * op.z(n),
+                    op.x(m) * op.y(n) - op.y(m) * op.x(n),
+                ]
+                si = [op.x(i), op.y(i), op.z(i)]
+                sj = [op.x(j), op.y(j), op.z(j)]
+                R = (
+                    op.sum(si[p] * smxsn[p] for p in range(3)) * 
+                    op.sum(sj[p] * smxsn[p] for p in range(3))
+                ).clean(pauli=False)
+                res = res + (-r) * (R + R.hc())
+        return res.to_quspin(pauli=False)
 
 
 def get_basis(Lx, Ly, Nup=None, kblock=(0,0), pblock=None, zblock=0):
@@ -324,31 +249,28 @@ def get_basis(Lx, Ly, Nup=None, kblock=(0,0), pblock=None, zblock=0):
     return basis
 
 def generate_sym_oper(basis, opstr, indx, J):
-    generated_list = [(opstr, indx, J), ]
-    while True:
-        tmp = []
-        bk = True
-        for block, map in basis._maps_dict.items():
+    generated_list = [basis._sort_opstr((opstr, indx, J)), ]
+
+    for block, map in basis._maps_dict.items():
+        while True:
             _, missing_ops = _check_symm_map(
                 map, basis._sort_opstr, generated_list
             )
 
+            if not missing_ops:
+                break
+
             for opstr, indx, J in missing_ops:
                 already_exists = False
-                for i, (opstr1, indx1, J1) in enumerate(tmp):
+                for i, (opstr1, indx1, J1) in enumerate(generated_list):
                     if opstr == opstr1 and all(a == b for a, b in zip(indx, indx1)) and J1 == J:
                         already_exists = True
                         break
                 if not already_exists:
-                    tmp.append((opstr, indx, J))
+                    generated_list.append((opstr, indx, J))
 
-            if missing_ops:
-                bk = False
-            
-        if bk:
-            break
-        generated_list += tmp
     return generated_list
+
  
 def split_static(static, basis):
     """accerlerate the generation of the Hamiltonian matrix using the hermitian property."""
@@ -479,6 +401,13 @@ def lanczos(H, mode='normal'):
         return res
 
 def solve_ground_state(static, basis, mode:Literal['normal', 'sequential']='normal'):
+    """Solves the ground state of the Hamiltonian defined by `static` and `basis`.
+
+    mode:
+    - 'normal': uses the standard `quspin` method to generate the Hamiltonian matrix and solve it.
+    - 'sequential': generates the Hamiltonian matrix in a sequential manner, saving each part to disk.
+    This is useful for large systems where the full Hamiltonian cannot fit in memory.
+    """
     # Generate the Hamiltonian matrix
     print("Basis size:", basis.Ns)
     H = generate_hamiltonian(static, basis, mode=mode)
@@ -496,7 +425,59 @@ def solve_ground_state(static, basis, mode:Literal['normal', 'sequential']='norm
     return psi
 
 
+# class TenpyMPOModel(CouplingMPOModel):
+#     def init_sites(self, model_params):
+#         conserve = model_params.get('conserve', 'None', str)
+#         sort_charge = model_params.get('sort_charge', True, bool)
+#         site = SpinHalfSite(conserve, sort_charge=sort_charge)
+#         return site
+
+#     def init_terms(self, model_params):
+#         static = model_params.get('static', None, None)
+#         pauli = model_params.get('pauli', False, bool)
+
+#         Sx = 'Sigmax' if pauli else 'Sx'
+#         Sy = 'Sigmay' if pauli else 'Sy'
+#         Sz = 'Sigmaz' if pauli else 'Sz'
+#         name_map = {'I': 'Id', 'p': 'Sp', 'm': 'Sm', 'Z': 'Sigmaz',
+#                     'x': Sx, 'y': Sy, 'z': Sz, '+': 'Sp', '-': 'Sm'}
+#         for opnm, coef_posn_list in static:
+#             for coef_posn in coef_posn_list:
+#                 strength = coef_posn[0]
+#                 pos = coef_posn[1:]
+#                 term = [(name_map[o], [p, 0]) for o, p in zip(opnm, pos)] 
+#                 self.add_local_term(strength, term, category=opnm)
+
+#     def product_state(self, product_state: list[str]):
+#         return MPS.from_product_state(self.lat.mps_sites(), product_state, bc=self.lat.bc_MPS)
+
+
+# def run_dmrg(Lx, Ly, static):
+#     model_params = {
+#         'L': Lx*Ly,
+#         'static': static,
+#         'pauli': False,
+#         'conserve': 'Sz',
+#         'bc_MPS': 'finite',
+#     }
+#     model = TenpyMPOModel(model_params)
+#     psi = model.product_state(['up', 'down'] * ((Lx * Ly) // 2))
+#     dmrg_params = {
+#         'chi_list': {0: 10, 20:20, 30:50, 80:100},
+#         'max_E_err': 1.e-8,
+#         'trunc_params': {
+#             'svd_min': 1.e-14,
+#         },
+#     }
+#     engine = TwoSiteDMRGEngine(psi, model, dmrg_params)
+#     E, gs = engine.run()
+#     print("Ground state energy:", E)
+
+
+
 if __name__ == "__main__":
+    from quante.bridge.quspin_utils import clean_static, optimize_basis
+
     os.makedirs('data/hamiltonian', exist_ok=True)
     
     Lx = 4
@@ -506,17 +487,12 @@ if __name__ == "__main__":
     r = 10.
 
     tl = TriangularLattice(Lx=Lx, Ly=Ly)
+
     static = tl.j1j2(j1=Jnn, j2=Jnnn) + tl.cc(r=r)
     static = clean_static(static)
-    basis = get_basis(Lx, Ly, Nup=(Lx*Ly)//2, kblock=(0,0), zblock=0)
-    print(basis.Ns)
 
-    
-    import quante as qt
-    from quante.bridge.quspin_utils import optimize_basis
-    basis = optimize_basis(basis)
-    # import dowhen
-    # dowhen.do("op_list = tqdm(op_list, ascii=True)").when(basis._make_matrix, "+2")
+    basis = get_basis(Lx, Ly, Nup=(Lx*Ly)//2, kblock=(0,0), zblock=0)
+    basis = optimize_basis(basis, parallel=True)
 
     with qt.basicfun.Timer("total time"):
         solve_ground_state(static, basis, mode='sequential')
