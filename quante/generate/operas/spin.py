@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-21 15:12:42
+# @Last Modified time: 2025-07-23 00:53:22
 
 import numpy as np
 import scipy.sparse as sp
@@ -1017,7 +1017,7 @@ def _merge_terms(opnm: str, posn: np.ndarray, coef: float) -> tuple[str, np.ndar
                 break
     
     if len(opnm) == 0:
-        return []
+        return [('I', [0], coef)]
     
     res = [[[opnm[0]], [posn[0]], coef], ]
 
@@ -1073,10 +1073,14 @@ def _merge_terms(opnm: str, posn: np.ndarray, coef: float) -> tuple[str, np.ndar
         for i in reversed(should_remove):
             res.pop(i)
         
-    res = [(''.join(opnm), np.array(posn,dtype=int), coef) 
-           for opnm, posn, coef in res]
+    final = []
+    for opnm, posn, coef in res:
+        if len(opnm) == 0:
+            final.append(('I', [0], coef))
+        else:
+            final.append((''.join(opnm), posn, coef))
     
-    return res
+    return final
 
 
 class SpinBuilder:

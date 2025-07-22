@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2025-07-07 12:03:27
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 00:41:30
+# @Last Modified time: 2025-07-23 00:48:32
 
 
 from .gen_matrix import optimize_basis
-from oper_mani import clean_static, clean_static2
+from .oper_mani import clean_static, clean_static2
 
 
 
