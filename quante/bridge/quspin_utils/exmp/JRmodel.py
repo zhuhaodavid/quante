@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-# @Author: hzhu
 # @Date:   2025-07-19 20:32:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 03:33:01
+# @Last Modified time: 2025-07-23 03:36:02
 
 # This file is an example on 
 
@@ -531,12 +531,13 @@ def run_dmrg(Lx, Ly, static):
 
 
 if __name__ == "__main__":
-    from quante.bridge.quspin_utils import clean_static, optimize_basis
+    # from quante.bridge.quspin_utils.exmp.JRmodel import *
+    # from quante.bridge.quspin_utils import *
 
     os.makedirs('data/hamiltonian', exist_ok=True)
-    
+
     Lx = 4
-    Ly = 6
+    Ly = 8
     Jnn = 0.
     Jnnn = 0.
     r = 10.
@@ -547,9 +548,13 @@ if __name__ == "__main__":
     static = clean_static(static)
 
     basis = get_basis(Lx, Ly, Nup=(Lx*Ly)//2, kblock=(0,0), zblock=0)
-    basis = optimize_basis(basis, parallel=True)
+    basis = optimize_basis(basis, parallel=True, processbar=True)
 
     with qt.basicfun.Timer("total time"):
-        solve_ground_state(static, basis, mode='sequential')
-    
-    
+        psi = solve_ground_state(static, basis, mode='sequential')
+
+    basis = optimize_basis(basis, parallel=True, processbar=False)
+    for oper in ['x', 'y', 'z']:
+        sym_expectation(psi, basis, oper)
+    for opers in ['xx', 'yy', 'zz']:
+        sym_correlation(psi, basis, opers)
