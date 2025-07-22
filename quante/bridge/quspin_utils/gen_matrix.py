@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-07-22 15:12:21
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-22 22:23:45
+# @Last Modified time: 2025-07-22 22:26:20
 
 import numpy as np
 import scipy.sparse as sp
@@ -39,7 +39,6 @@ def _make_matrix(self, op_list, dtype):
     diag_list = []
     offdiag_list = []
     
-    # 顺序执行 (Windows 或单线程)
     op_list = tqdm(op_list, ascii=True)
     for opstr, indx, J in op_list:
         ME, row, col = self.Op(opstr, indx, J, dtype)

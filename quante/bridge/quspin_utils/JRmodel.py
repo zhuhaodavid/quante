@@ -1,15 +1,27 @@
-# -*- coding: utf-8 -*-
-# @Author: hzhu
+# -*- coding: utf-8 -*-# @Author: hzhu
 # @Date:   2025-07-19 20:32:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-20 16:25:30
+# @Last Modified time: 2025-07-22 21:10:10
 
-from itertools import permutations
+# This file is an example on 
+
+import os
+import pickle
+import threading
+import queue
+import time
+
 import numpy as np
+import scipy.sparse.linalg as spla
+
+from quspin.operators._make_hamiltonian import _consolidate_static
+from quspin.basis.basis_general.base_general import _check_symm_map
 from quspin.operators import hamiltonian
 from quspin.basis import spin_basis_general
-import numpy as np
-
+from itertools import permutations
+from scipy.sparse import save_npz, load_npz
+from scipy.sparse.linalg import LinearOperator
+from typing import Literal
 
 class TriangularLattice:
     r"""generate a triangular lattice with periodic boundary conditions.
@@ -249,9 +261,19 @@ def clean_static(static):
     res, _ = basis.expanded_form(res)
     return res
 
-    
+
 def get_basis(Lx, Ly, Nup=None, kblock=(0,0), pblock=None, zblock=0):
     """Generate the basis for a 2D triangular lattice."""
+    try:
+        with open("data/basis_info.pkl", "rb") as f:
+            datadic = pickle.load(f)
+        if (datadic["Lx"] == Lx and datadic["Ly"] == Ly 
+            and datadic["Nup"] == Nup and datadic["kblock"] == kblock 
+            and datadic["pblock"] == pblock and datadic["zblock"] == zblock):
+            return datadic["basis"]
+    except FileNotFoundError:
+        pass
+    
     N_2d = Lx * Ly  # total number of sites
     s = np.arange(N_2d)  # sites [0,1,2,..]
     x = s % Lx  # x positions for sites
@@ -274,9 +296,9 @@ def get_basis(Lx, Ly, Nup=None, kblock=(0,0), pblock=None, zblock=0):
         pxblock = pyblock = None
 
     if zblock is not None:
-        zblock = (Z, zblock)
+        _zblock = (Z, zblock) 
 
-    return spin_basis_general(
+    basis = spin_basis_general(
         N_2d,
         S='1/2',
         pauli=0,
@@ -285,20 +307,218 @@ def get_basis(Lx, Ly, Nup=None, kblock=(0,0), pblock=None, zblock=0):
         kyblock=kyblock,
         pxblock=pxblock,
         pyblock=pyblock,
-        zblock=zblock,
-    )           
+        zblock=_zblock,
+    )
+   
+    
+    with open("data/basis_info.pkl", "wb") as f:
+        pickle.dump({
+            "Lx": Lx,
+            "Ly": Ly,
+            "Nup": Nup,
+            "kblock": kblock,
+            "pblock": pblock,
+            "zblock": zblock,
+            "basis": basis
+        }, f)
+    return basis
+
+def generate_sym_oper(basis, opstr, indx, J):
+    generated_list = [(opstr, indx, J), ]
+    while True:
+        tmp = []
+        bk = True
+        for block, map in basis._maps_dict.items():
+            _, missing_ops = _check_symm_map(
+                map, basis._sort_opstr, generated_list
+            )
+
+            for opstr, indx, J in missing_ops:
+                already_exists = False
+                for i, (opstr1, indx1, J1) in enumerate(tmp):
+                    if opstr == opstr1 and all(a == b for a, b in zip(indx, indx1)) and J1 == J:
+                        already_exists = True
+                        break
+                if not already_exists:
+                    tmp.append((opstr, indx, J))
+
+            if missing_ops:
+                bk = False
+            
+        if bk:
+            break
+        generated_list += tmp
+    return generated_list
+ 
+def split_static(static, basis):
+    """accerlerate the generation of the Hamiltonian matrix using the hermitian property."""
+    res = []
+
+    remained_oper = _consolidate_static(static)
+
+    while len(remained_oper) > 0:
+        opstr0, indx0, J0 = remained_oper.pop(0)
+        # generate the symmetry operations
+        generated_list = generate_sym_oper(basis, opstr0, indx0, J0)
+
+        # remove the generated list from the remained operations
+        for opstr, indx, J in generated_list:
+            if opstr== opstr0 and all(a==b for a,b in zip(indx, indx0)) and J == J0:
+                continue
+
+            notin = True
+            for i, (opstr1, indx1, J1) in enumerate(remained_oper):
+                if opstr == opstr1 and all(a==b for a,b in zip(indx, indx1)):
+                    notin = False
+                    remained_oper.pop(i)
+                    if J != J1:
+                        remained_oper.append((opstr, indx, J1 - J))
+                    break
+            if notin:
+                print(opstr, indx, J, "not in remained operations")
+
+        # consolidate the generated list
+        static_dict = {}
+        for opstr, indx, J  in generated_list:
+            indx = list(indx)
+            indx.insert(0, J)
+            if opstr in static_dict:
+                static_dict[opstr].append(indx)
+            else:
+                static_dict[opstr] = [indx]
+        generated_static = [[str(key), list(value)] for key, value in static_dict.items()]
+
+        res.append(generated_static)
+    return res
+
+def generate_hamiltonian(static, basis, mode='normal'):
+    if mode == 'normal':
+        H = hamiltonian(static, [], basis=basis, dtype=np.complex128, check_herm=True)
+        print("Number of Non zeros:", H.static.nnz)
+        return H
+    elif mode == 'sequential':
+        splited_static = split_static(static, basis)
+        dtype = np.float64
+        addany = False
+        for idx, each_static in enumerate(splited_static):
+            if os.path.exists(f"data/hamiltonian/{idx}.npz"):
+                print(f"Matrix {idx} already exists, skipping.")
+                continue
+            addany = True
+            H = hamiltonian(each_static, [], basis=basis, dtype=np.complex128, check_herm=False, check_pcon=False, check_symm=False).static
+            # if the spare matrix is almost real, convert it to real
+            if np.allclose(H.data.imag, 0, atol=1e-10):
+                H = H.real
+            else:
+                dtype = np.complex128
+            save_npz(f"data/hamiltonian/{idx}.npz", H, compressed=False)
+            print(f"Saved matrix {idx} with shape {H.shape} and dtype {dtype}")
+        if addany:
+            with open(f"data/hamiltonian/mat_info.pkl", "wb") as f:
+                pickle.dump({"dim": H.shape, "dtype": dtype, "number": len(splited_static)}, f)
+        return None
+
+def preload_matrices(filenames, q):
+    for fname in filenames:
+        Ai = load_npz(fname)
+        q.put(Ai)
+    q.put(None)  # 结束信号
+
+ct = 0
+monitor = 10
+def matvec_factory(filenames):
+    def matvec(v):
+        result = np.zeros_like(v)
+        q = queue.Queue(maxsize=2)  # 控制并行深度：最多缓存 2 个矩阵
+
+        # 启动加载线程
+        loader = threading.Thread(target=preload_matrices, args=(filenames, q))
+        loader.start()
+
+        while True:
+            Ai = q.get()
+            if Ai is None:
+                break
+            result += Ai @ v
+            del Ai
+
+        loader.join()
+        global ct
+        ct += 1
+        if ct % monitor == 0:
+            nm1 = np.linalg.norm(v)
+            nm2 = np.linalg.norm(result)
+            residual = np.linalg.norm(result/nm2 - v/nm1)
+            print(f"Matvec #{ct}, norm(result): {nm2:.2e}, residual: {residual:.2e}")
+            np.save("data/psi_ground.npy", v)
+        else:
+            print(f"[matvec #{ct}] done")
+        return result
+    return matvec
+
+def lanczos(H, mode='normal'):
+    if mode == 'normal':
+        return H.eigsh(k=1, which="SA", maxiter=1e4, return_eigenvectors=True)
+    elif mode == 'sequential':
+        with open("data/hamiltonian/mat_info.pkl", "rb") as f:
+            mat_info = pickle.load(f)
+        N = mat_info["dim"][0]
+        dtype = mat_info["dtype"]
+        number = mat_info["number"]
+        matrix_dir = "data/hamiltonian"
+        matrix_files = [os.path.join(matrix_dir, f"{i}.npz") for i in range(number)]
+        matvec = matvec_factory(matrix_files)
+        A_linop = LinearOperator((N, N), matvec=matvec, dtype=dtype)
+        try:
+            v0 = np.load("data/psi_ground.npy")
+        except FileNotFoundError:
+            v0 = None
+        t = time.time()
+        res = spla.eigsh(A_linop, k=1, which="SA", maxiter=1e4, return_eigenvectors=True, v0=v0)
+        print(f"Lanczos solver: {time.time() - t:.2f} seconds.")
+        return res
+
+def solve_ground_state(static, basis, mode:Literal['normal', 'sequential']='normal'):
+    # Generate the Hamiltonian matrix
+    print("Basis size:", basis.Ns)
+    H = generate_hamiltonian(static, basis, mode=mode)
+
+    # Solve for the ground state energy and wave function
+    Emin, psi = lanczos(H, mode=mode)
+
+    # save ground state energy
+    print("Ground state energy:", Emin)
+    np.savetxt("data/E_ground.txt", [Emin])  
+
+    # save ground state wave function
+    np.save("data/psi_ground.npy", psi) 
+
+    return psi
+
 
 if __name__ == "__main__":
-    Lx, Ly = 4, 4
-    Jnn = Jnnn = 0.0
-    r = 10.0
+    os.makedirs('data/hamiltonian', exist_ok=True)
+    
+    Lx = 4
+    Ly = 6
+    Jnn = 0.
+    Jnnn = 0.
+    r = 10.
 
     tl = TriangularLattice(Lx=Lx, Ly=Ly)
     static = tl.j1j2(j1=Jnn, j2=Jnnn) + tl.cc(r=r)
     static = clean_static(static)
+    basis = get_basis(Lx, Ly, Nup=(Lx*Ly)//2, kblock=(0,0), zblock=0)
+    print(basis.Ns)
 
-    basis_2d = get_basis(Lx, Ly, Nup=(Lx*Ly)//2, kblock=(0,0), zblock=0)
-    H = hamiltonian(static, [], basis=basis_2d, dtype=np.complex128, check_herm=True)
+    
+    import quante as qt
+    from quante.bridge.quspin_utils import optimize_basis
+    basis = optimize_basis(basis)
+    # import dowhen
+    # dowhen.do("op_list = tqdm(op_list, ascii=True)").when(basis._make_matrix, "+2")
 
-
-
+    with qt.basicfun.Timer("total time"):
+        solve_ground_state(static, basis, mode='sequential')
+    
+    

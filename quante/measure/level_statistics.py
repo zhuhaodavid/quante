@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:38:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-01 18:04:00
+# @Last Modified time: 2025-07-22 15:54:00
 
 import numpy as _np
 import math
@@ -24,7 +24,7 @@ __all__ = [
 ]
 
 def winding_number(detval):
-    """Calculate the winding number of a complex spectrum.
+    r"""Calculate the winding number of a complex spectrum.
 
     The winding number is defined as the number of times the spectrum winds around the origin in the complex plane.
     .. math::
