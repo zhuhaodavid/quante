@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-22 13:31:24
+# @Last Modified time: 2025-07-22 15:31:03
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -1201,7 +1201,7 @@ class MatrixLoaderThread(threading.Thread):
 class StreamingLinearOperator:
     """A linear operator that streams its matrix data from disk."""
     def __init__(self, matrix_prefixes, shape, dtype=_np.float64, mmap=True):
-        """Initialize the streaming linear operator.
+        r"""Initialize the streaming linear operator.
         
         For calculating large sparse matrices,
         .. math::
