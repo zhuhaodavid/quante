@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-# @Author: hzhu
 # @Date:   2025-07-19 20:32:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 03:14:46
+# @Last Modified time: 2025-07-23 03:33:01
 
 # This file is an example on 
 
@@ -425,53 +425,108 @@ def solve_ground_state(static, basis, mode:Literal['normal', 'sequential']='norm
     return psi
 
 
-# class TenpyMPOModel(CouplingMPOModel):
-#     def init_sites(self, model_params):
-#         conserve = model_params.get('conserve', 'None', str)
-#         sort_charge = model_params.get('sort_charge', True, bool)
-#         site = SpinHalfSite(conserve, sort_charge=sort_charge)
-#         return site
-
-#     def init_terms(self, model_params):
-#         static = model_params.get('static', None, None)
-#         pauli = model_params.get('pauli', False, bool)
-
-#         Sx = 'Sigmax' if pauli else 'Sx'
-#         Sy = 'Sigmay' if pauli else 'Sy'
-#         Sz = 'Sigmaz' if pauli else 'Sz'
-#         name_map = {'I': 'Id', 'p': 'Sp', 'm': 'Sm', 'Z': 'Sigmaz',
-#                     'x': Sx, 'y': Sy, 'z': Sz, '+': 'Sp', '-': 'Sm'}
-#         for opnm, coef_posn_list in static:
-#             for coef_posn in coef_posn_list:
-#                 strength = coef_posn[0]
-#                 pos = coef_posn[1:]
-#                 term = [(name_map[o], [p, 0]) for o, p in zip(opnm, pos)] 
-#                 self.add_local_term(strength, term, category=opnm)
-
-#     def product_state(self, product_state: list[str]):
-#         return MPS.from_product_state(self.lat.mps_sites(), product_state, bc=self.lat.bc_MPS)
+def _symmetrize(oper, basis, indx):
+    oplist = generate_sym_oper(basis, oper, indx, 1.)
+    static_dict = {}
+    for opstr, indx, J  in oplist:
+        indx = [int(i) for i in indx]
+        indx.insert(0, J)
+        if opstr in static_dict:
+            static_dict[opstr].append(indx)
+        else:
+            static_dict[opstr] = [indx]
+    generated_static = [[str(key), list(value)] for key, value in static_dict.items()]
+    return generated_static, len(oplist)
 
 
-# def run_dmrg(Lx, Ly, static):
-#     model_params = {
-#         'L': Lx*Ly,
-#         'static': static,
-#         'pauli': False,
-#         'conserve': 'Sz',
-#         'bc_MPS': 'finite',
-#     }
-#     model = TenpyMPOModel(model_params)
-#     psi = model.product_state(['up', 'down'] * ((Lx * Ly) // 2))
-#     dmrg_params = {
-#         'chi_list': {0: 10, 20:20, 30:50, 80:100},
-#         'max_E_err': 1.e-8,
-#         'trunc_params': {
-#             'svd_min': 1.e-14,
-#         },
-#     }
-#     engine = TwoSiteDMRGEngine(psi, model, dmrg_params)
-#     E, gs = engine.run()
-#     print("Ground state energy:", E)
+def sym_correlation(psi, basis, oper):
+    print(f"Calculating {oper} correlation function...")
+    N_2d = basis.N
+    corr_mat = np.zeros((N_2d, N_2d),dtype=np.complex128)
+    record = []
+    for i in range(N_2d):
+        for j in range(N_2d):
+            if (i, j) in record:
+                continue
+            oper_zz, l = _symmetrize(oper, basis, (i, j))
+            op = hamiltonian(oper_zz, [], basis=basis, dtype=np.complex128, check_herm=False, check_symm=False, check_pcon=False)
+            val = op.expt_value(psi)[0]
+            for coef, ci, cj in oper_zz[0][1]:
+                corr_mat[i, j] = val/l/coef
+                corr_mat[ci, cj] = val/l/coef
+                record.append((ci, cj))
+    corr_mat = np.real_if_close(corr_mat)
+    np.savetxt(f"data/symm_corr_S{oper[0]}S{oper[1]}.csv", corr_mat, fmt="%.12e", delimiter=',')
+    return corr_mat
+
+
+def sym_expectation(psi, basis, oper):
+    print(f"Calculating {oper} expectation value...")
+    N_2d = basis.N
+    expect = np.zeros((N_2d),dtype=np.complex128)
+    record = []
+    for i in range(N_2d):
+        static, l = _symmetrize(oper, basis, (i,))
+        op = hamiltonian(static, [], basis=basis, dtype=np.complex128, check_herm=False, check_symm=False, check_pcon=False)
+        val = op.expt_value(psi)[0]
+        for coef, ci in static[0][1]:
+            expect[ci] = val/coef/l/coef
+            record.append(ci)
+    expect = np.real_if_close(expect)
+    np.savetxt(f"data/symm_expt_{oper}.csv", expect, fmt="%.12e", delimiter=',')
+    return expect
+
+
+def run_dmrg(Lx, Ly, static):
+    from tenpy.models import CouplingMPOModel
+    from tenpy.algorithms.dmrg import SingleSiteDMRGEngine, TwoSiteDMRGEngine
+
+    class TenpyMPOModel(CouplingMPOModel):
+        def init_sites(self, model_params):
+            conserve = model_params.get('conserve', 'None', str)
+            sort_charge = model_params.get('sort_charge', True, bool)
+            site = SpinHalfSite(conserve, sort_charge=sort_charge)
+            return site
+
+        def init_terms(self, model_params):
+            static = model_params.get('static', None, None)
+            pauli = model_params.get('pauli', False, bool)
+
+            Sx = 'Sigmax' if pauli else 'Sx'
+            Sy = 'Sigmay' if pauli else 'Sy'
+            Sz = 'Sigmaz' if pauli else 'Sz'
+            name_map = {'I': 'Id', 'p': 'Sp', 'm': 'Sm', 'Z': 'Sigmaz',
+                        'x': Sx, 'y': Sy, 'z': Sz, '+': 'Sp', '-': 'Sm'}
+            for opnm, coef_posn_list in static:
+                for coef_posn in coef_posn_list:
+                    strength = coef_posn[0]
+                    pos = coef_posn[1:]
+                    term = [(name_map[o], [p, 0]) for o, p in zip(opnm, pos)] 
+                    self.add_local_term(strength, term, category=opnm)
+
+        def product_state(self, product_state: list[str]):
+            return MPS.from_product_state(self.lat.mps_sites(), product_state, bc=self.lat.bc_MPS)
+
+
+    model_params = {
+        'L': Lx*Ly,
+        'static': static,
+        'pauli': False,
+        'conserve': 'Sz',
+        'bc_MPS': 'finite',
+    }
+    model = TenpyMPOModel(model_params)
+    psi = model.product_state(['up', 'down'] * ((Lx * Ly) // 2))
+    dmrg_params = {
+        'chi_list': {0: 10, 20:20, 30:50, 80:100},
+        'max_E_err': 1.e-8,
+        'trunc_params': {
+            'svd_min': 1.e-14,
+        },
+    }
+    engine = TwoSiteDMRGEngine(psi, model, dmrg_params)
+    E, gs = engine.run()
+    print("Ground state energy:", E)
 
 
 

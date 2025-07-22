@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-07-22 15:12:21
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 02:47:03
+# @Last Modified time: 2025-07-23 03:27:21
 
 import numpy as np
 import scipy.sparse as sp
@@ -31,7 +31,7 @@ def _update_diag(diag, ind, ME):
         diag[ind[i]] += ME[i]
 
 
-def _make_matrix(self, op_list, dtype):
+def _make_matrix(self, op_list, dtype, processbar=False):
     """takes list of operator strings and couplings to create matrix."""
     diag = None
     index_type = _get_index_type(self.Ns)
@@ -39,7 +39,8 @@ def _make_matrix(self, op_list, dtype):
     diag_list = []
     offdiag_list = []
     
-    # op_list = tqdm(op_list, ascii=True)
+    if processbar:
+        op_list = tqdm(op_list, ascii=True)
     for opstr, indx, J in op_list:
         ME, row, col = self.Op(opstr, indx, J, dtype)
         if len(ME) > 0:
@@ -66,13 +67,16 @@ def _make_matrix(self, op_list, dtype):
         return sp.dia_array((self.Ns,self.Ns),dtype=dtype)
 
 
-def optimize_basis(basis, parallel=True):
+def optimize_basis(basis, parallel=True, processbar=False):
     if parallel:
         from types import MethodType
-        basis._make_matrix = MethodType(_make_matrix, basis)
+        from functools import partial
+        make_matrix = partial(_make_matrix, processbar=processbar)
+        basis._make_matrix = MethodType(make_matrix, basis)
     else:
-        import dowhen
-        dowhen.do("op_list = tqdm(op_list, ascii=True)").when(basis._make_matrix, "+2")
+        if processbar:
+            import dowhen
+            dowhen.do("op_list = tqdm(op_list, ascii=True)").when(basis._make_matrix, "+2")
     return basis
 
 
