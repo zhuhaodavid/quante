@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:50:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 18:58:37
+# @Last Modified time: 2025-07-23 20:51:37
 
 import numpy as _np
 import scipy.sparse as _sparse
@@ -61,6 +61,11 @@ def _matmat(mat, state):
     else:
         return mat @ state
 
+def _isdiagonal(mat):
+    return (
+        isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)) and
+        all(mat.offsets == [0])
+    )
 
 @overload
 def expect(mat:_np.ndarray|_sparse.sparray, state:_np.ndarray, isdm=False) -> _np.ndarray: ...
@@ -99,14 +104,14 @@ def expect(mat, state, isdm=False) -> _np.ndarray:
             state.shape[1] == 1 or state.shape[0] == 1
         ):
             state = state.reshape(-1)
-            if isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)):
+            if _isdiagonal(mat):
                 matdiag = mat.diagonal()
                 res = state.conj() @ (matdiag * state)
             else:
                 res = state.conj() @ (mat @ state)
             return real_if_close(res).item()
         elif state.ndim == 2:
-            if isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)):
+            if _isdiagonal(mat):
                 matdiag = mat.diagonal()
                 res = _np.sum(state.conj() * (matdiag.reshape(-1, 1) * state), 
                               axis=0)
@@ -121,13 +126,13 @@ def expect(mat, state, isdm=False) -> _np.ndarray:
             raise ValueError("state must be a 1D or 2D array for state vector")
     else:
         if state.ndim == 2:
-            if isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)):
+            if _isdiagonal(mat):
                 res = (mat.diagonal() * state.diagonal()).sum()
             else:
                 res = _matmat(mat, state).trace()
             return real_if_close(res).item()
         elif state.ndim == 3:
-            if isinstance(mat, (_sparse.dia_array, _sparse.dia_matrix)):
+            if _isdiagonal(mat):
                 res = (mat.diagonal().reshape(-1,1,1) * state).trace(axis1=0, axis2=1)
             else:
                 try:

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 11:30:00
+# @Last Modified time: 2025-07-23 21:15:53
 
 
 from scipy import sparse as sps
@@ -17,7 +17,7 @@ from typing import Literal
 from tqdm import tqdm
 
 from ...measure.expect import expect
-from .super_operator import Liouvillian
+from ...generate.superoper import Liouvillian
 from .EDevolve import _in_CPU, _in_GPU, Uinvpsi, Uexp
 
 __all__ = [
