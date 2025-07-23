@@ -14,6 +14,8 @@ quante 是处理一维自旋量子系统的 python 工具集合，包含了一�
 
 - 进入 setup.py 所在的文件夹 `cd path/to/setup.py` 后，使用开发者模式安装：`pip install -e .`（如果需要安装到本地，可以使用`pip install .`）
 
+- 其他很好的包：`pip install quspin tenpy dowhen`
+
 ## Usage
 
 通过 `import quante as qt` 导入 quante。更多使用方法请参考 `examples` 文件夹中的示例。
@@ -219,7 +221,7 @@ Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i).to_matrix(basis=basis, sparse=True
 Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1).to_matrix(basis=basis, sparse=True) for i in range(L-1)]
 particle_number = [op.n(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
 
-lvn = qt.linalg.Liouvillian(hammat, Lindblad_R + Lindblad_L)
+lvn = qt.generate.superoper.Liouvillian(hammat, Lindblad_R + Lindblad_L)
 state = qt.generate.state.product_state(['up']+['dn']*(L-1), Nup=1)
 rhoinit = np.outer(state, state)
 

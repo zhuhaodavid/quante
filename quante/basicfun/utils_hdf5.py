@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:14:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-01 11:04:07
+# @Last Modified time: 2025-07-23 21:51:20
 
 import os as _os
 import numpy as _np
@@ -15,13 +15,14 @@ from dataclasses import is_dataclass, asdict
 from typing import Callable, Any, Dict, Union, Literal
 
 from .utils_logging import (logger, check_file_exists, get_lv, 
-                            get_last_lv, flatten_tuple, get_vals,
+                            flatten_tuple, get_vals,
                             get_args)
 
 __all__ = [
     "save_hdf5",
     "load_hdf5",
     "view_hdf5",
+    "exists_hdf5",
     "isave",
     "iload",
 ]
@@ -143,9 +144,36 @@ def _save_csr(h5group:_h5py.Group, key:str, csrdata) -> None:
     subgroup = h5group.create_group(key)
     subgroup.attrs["object_type"] = "csr"
     subgroup.attrs['shape'] = csrdata.shape
+    subgroup.attrs['nnz'] = csrdata.nnz
     subgroup.create_dataset('data', data=csrdata.data)
     subgroup.create_dataset('indices', data=csrdata.indices)
     subgroup.create_dataset('indptr', data=csrdata.indptr)
+
+def _save_coo(h5group:_h5py.Group, key:str, coodata) -> None:
+    subgroup = h5group.create_group(key)
+    subgroup.attrs["object_type"] = "coo"
+    subgroup.attrs['shape'] = coodata.shape
+    subgroup.attrs['nnz'] = coodata.nnz
+    subgroup.create_dataset('data', data=coodata.data)
+    subgroup.create_dataset('row', data=coodata.row)
+    subgroup.create_dataset('col', data=coodata.col)
+
+def _save_csc(h5group:_h5py.Group, key:str, cscdata) -> None:
+    subgroup = h5group.create_group(key)
+    subgroup.attrs["object_type"] = "csc"
+    subgroup.attrs['shape'] = cscdata.shape
+    subgroup.attrs['nnz'] = cscdata.nnz
+    subgroup.create_dataset('data', data=cscdata.data)
+    subgroup.create_dataset('indices', data=cscdata.indices)
+    subgroup.create_dataset('indptr', data=cscdata.indptr)
+    
+def _save_dia(h5group:_h5py.Group, key:str, diadata) -> None:
+    subgroup = h5group.create_group(key)
+    subgroup.attrs["object_type"] = "dia"
+    subgroup.attrs['shape'] = diadata.shape
+    subgroup.attrs['nnz'] = diadata.nnz
+    subgroup.create_dataset('data', data=diadata.data)
+    subgroup.create_dataset('offsets', data=diadata.offsets)
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # 类型检查时，导入 torch
@@ -167,6 +195,12 @@ def _save_torch(h5group:_h5py.Group, key:str, value:'_tc.Tensor') -> None:
 _SAVE_FUNC: Dict[str, Callable[[_h5py.Group, str, Any], None]] = {
     "csr_array": _save_csr,
     "csr_matrix": _save_csr,
+    "coo_array": _save_coo,
+    "coo_matrix": _save_coo,
+    "csc_array": _save_csc,
+    "csc_matrix": _save_csc,
+    "dia_array": _save_dia,
+    "dia_matrix": _save_dia,
     "Tensor": _save_torch,
 }
 # 也可以在外部文件中自定义其他方法，如：_SAVE_FUC.update({'coo_array':_save_coo})
@@ -266,7 +300,7 @@ def _load_dict(h5group: _h5py.Group) -> Dict[str, Any]:
     dic = {}
     for key in h5group.keys():
         subgroup = h5group[key]
-        if isinstance(subgroup, _h5py.Group):
+        if isinstance(subgroup, _h5py.Group) and subgroup.attrs.get("object_type", None) is None:
             newdic = _load_dict(subgroup)  # 如果是字典，那么递归的下载
             dic[key] = newdic
         else:
@@ -283,6 +317,25 @@ def _load_csr(data_location: _h5py.Group) -> _sp.sparse.csr_array:
     shape: tuple = data_location.attrs["shape"] # type: ignore
     return _sp.sparse.csr_array((data, indices, indptr), shape=shape, dtype=data.dtype)
 
+def _load_coo(data_location: _h5py.Group) -> _sp.sparse.coo_array:
+    data: np.ndarray = data_location["data"][()] # type: ignore
+    row: np.ndarray = data_location["row"][()] # type: ignore
+    col: np.ndarray = data_location["col"][()] # type: ignore
+    shape: tuple = data_location.attrs["shape"] # type: ignore
+    return _sp.sparse.coo_array((data, (row, col)), shape=shape, dtype=data.dtype)
+
+def _load_csc(data_location: _h5py.Group) -> _sp.sparse.csc_array:
+    indptr: np.ndarray = data_location["indptr"][()] # type: ignore
+    indices: np.ndarray = data_location["indices"][()] # type: ignore
+    data: np.ndarray = data_location["data"][()] # type: ignore
+    shape: tuple = data_location.attrs["shape"] # type: ignore
+    return _sp.sparse.csc_array((data, indices, indptr), shape=shape, dtype=data.dtype)
+
+def _load_dia(data_location: _h5py.Group) -> _sp.sparse.dia_array:
+    data: np.ndarray = data_location["data"][()] # type: ignore
+    offsets: np.ndarray = data_location["offsets"][()] # type: ignore
+    shape: tuple = data_location.attrs["shape"] # type: ignore
+    return _sp.sparse.dia_array((data, offsets), shape=shape, dtype=data.dtype)
 
 def _load_dataclass(data_location: _h5py.Group) -> Any:
     data_str = data_location[()]
@@ -294,7 +347,6 @@ def _load_dataclass(data_location: _h5py.Group) -> Any:
     Parameters = namedtuple(data_name, data_dict.keys())
     return Parameters(**data_dict)
 
-
 def _load_serialized_bytes(data_location: _h5py.Group) -> Any:
     serialized_bytes = data_location[()]
     import pickle
@@ -305,6 +357,9 @@ _LOAD_FUNC: Dict[Union[str,None], Callable]  = {
     "pylist": _load_pylist,
     "dict": _load_dict,
     "csr": _load_csr,
+    "coo": _load_coo,
+    "csc": _load_csc,
+    "dia": _load_dia,
     "Tensor": _load_tctensor,
     "dataclass": _load_dataclass,
     "serialized_bytes": _load_serialized_bytes
@@ -371,6 +426,50 @@ def view_hdf5(filename:str, group:str='/', depth=1):
             # 使用递归函数遍历所有组和数据集，并只显示一个层级
             g = _get_data_location(f, group)
             print_tree(group, g)
+
+
+def exists_hdf5(filename:str, data:Union[str, list[str]]=None, group:str='/') -> bool:
+    """检查 HDF5 文件中是否存在指定的组或数据集。
+    
+    Parameters
+    ----------
+    filename : str
+        HDF5 文件的路径。
+    group : str
+        HDF5 文件中的组路径，例如 "/mygroup"。
+    data : str | list[str], optional
+        要检查的数据集名称，可以是单个字符串或字符串列表。默认为 None，表示只检查组是否存在。
+    
+    Returns
+    -------
+    bool:
+        如果指定的组和数据集存在，则返回 True，否则返回 False。
+
+    Examples
+    --------
+    >>> exists_hdf5("data.h5", "/mygroup", "mydataset")
+    True
+    """
+    if not _os.path.exists(filename):
+        return False
+
+    try:
+        with _h5py.File(filename.encode("utf-8"), "r") as f:
+            group_location = _get_data_location(f, group)
+            if data is None:
+                return True  # 只检查组是否存在
+            
+            if isinstance(data, str):
+                return data in group_location
+            
+            for dataname in data:
+                if dataname not in group_location:
+                    return False
+            return True
+    
+    except Exception as e:
+        logger.error(f"Error checking HDF5 file: {e}")
+        return False
 
 
 def isave(

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-22 21:09:04
+# @Last Modified time: 2025-07-24 00:25:07
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -11,25 +11,32 @@ import platform as _platform
 import warnings as _warnings
 
 import numpy as _np
+import h5py as _h5py
 import scipy.linalg as _sla
 import scipy.sparse as _sparse
 import scipy.sparse.linalg as _spla
 
-import threading
 import queue
-from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import LinearOperator
-from scipy.sparse import load_npz
-
 from typing import Optional, Union
+from concurrent.futures import ThreadPoolExecutor
 
 from ...basicfun import (
     create_folder,
     get_free_space,
     load_hdf5,
     save_hdf5,
+    exists_hdf5,
     logger,
+    Timer,
 )
+
+import scipy.sparse as _sp
+from ...generate.basis.symmetry.basis_class_nb import(
+    _get_index_type, addBp, addone, getBp, writeA2B, writediag, ajustBp, sum_duplicates   
+)
+from ...basicfun.utils_hdf5 import (_LOAD_FUNC, _default_load, _load_dia)
+from ..matops.sparse_mul import dot_parallel
 
 __all__ = [
     "eig",
@@ -37,6 +44,7 @@ __all__ = [
     "eigvals",
     "eigvalsh",
     "eighbetween",
+    "save_matrices",
     "StreamingLinearOperator",
 ]
 
@@ -1172,117 +1180,144 @@ def eighbetween(
             raise ValueError("direction not understood")
 
 
-class MatrixLoaderThread(threading.Thread):
-    def __init__(self, filenames, result_queue, mmap):
-        super().__init__()
-        self.filenames = filenames
-        self.q = result_queue
-        self.mmap = mmap
+def save_matrices(oper_dict, basis, filename):
+    from ...generate.operas.general import Oper
+    dtype = _np.float64
+    addany = False
 
-    def run(self):
-        for i in range(len(self.filenames)):
-            prefix = self.filenames[i]
-            mat = self._load_sparse_csr(prefix)
-            self.q.put(mat)
-            del mat  # Free memory
-        self.q.put(None)  # end signal
+    if isinstance(oper_dict, Oper):
+        get_matrix = lambda oper: oper.to_matrix(basis=basis, sparse=True)
+    else:
+        from quspin.operators import hamiltonian
+        get_matrix = lambda static: hamiltonian(static, [], basis=basis, dtype=_np.complex128, 
+                            check_herm=False, check_pcon=False, check_symm=False).static
 
-    def _load_sparse_csr(self, prefix):
-        if self.mmap:
-            mmap_mode = 'r' if self.mmap else None
-            data = _np.load(f"{prefix}_data.npy", mmap_mode=mmap_mode)
-            indices = _np.load(f"{prefix}_indices.npy", mmap_mode=mmap_mode)
-            indptr = _np.load(f"{prefix}_indptr.npy", mmap_mode=mmap_mode)
-            shape = _np.load(f"{prefix}_shape.npy", mmap_mode=mmap_mode)
-            return csr_matrix((data, indices, indptr), shape=shape)
-        else:
-            return load_npz(f"{prefix}.npz")  # Use load_npz for sparse matrix loading
+    for key, oper in oper_dict.items():
+        if exists_hdf5(f"data/hamiltonian.h5", f'{key}'):
+            logger.info(f"Matrix {key} already exists, skipping.")
+            continue
+        addany = True
+        mat = get_matrix(oper)
+        if mat.dtype == _np.complex128:
+            if _np.allclose(mat.data.imag, 0, atol=1e-10):
+                mat = mat.real
+            else:
+                dtype = _np.complex128
+        save_hdf5(f"data/hamiltonian.h5", {f'{key}': mat})
+        logger.info(f"Saved matrix {key} with shape {mat.shape} and dtype {dtype}")
+    
+    if addany:
+        with _h5py.File(filename.encode("utf-8"), 'a') as f:
+            f.attrs['dim'] = basis.Ns
+            f.attrs['dtype'] = 'float64' if dtype == _np.float64 else 'complex128'
 
-class StreamingLinearOperator:
-    """A linear operator that streams its matrix data from disk."""
-    def __init__(self, matrix_prefixes, shape, dtype=_np.float64, mmap=True):
-        r"""Initialize the streaming linear operator.
-        
-        For calculating large sparse matrices,
-        .. math::
-            A = \sum_i A_i
-        where each :math:`A_i` is a sparse matrix stored in separate files.
 
-        Parameters
-        ----------
-        matrix_prefixes : list of str
-            List of prefixes for the matrix files to be loaded.
-        shape : tuple
-            Shape of the linear operator (m, n).
-        dtype : data-type, optional
-            Data type of the matrix entries (default is np.float64).
-        mmap : bool, optional
-            Whether to memory-map the matrix files (default is True).
-        
-        Notes
-        -----
-        The matrix files should be stored in a format compatible with
-        `scipy.sparse.load_npz` or saved as numpy arrays with the following
-        naming convention:
-          - `{prefix}_data.npy`
-          - `{prefix}_indices.npy`
-          - `{prefix}_indptr.npy`
-          - `{prefix}_shape.npy`
-        The `prefixes` should be a list of strings that point to the base names
-        of the matrix files without extensions.
-        The shape should be a tuple of two integers (m, n) representing the
-        dimensions of the linear operator.
-        The dtype specifies the data type of the matrix entries, defaulting to
-        `np.float64`.
-        The `mmap` parameter determines whether to memory-map the matrix files
-        for efficient loading. If set to `True`, the files will be memory-mapped
-        using numpy's `np.load` with `mmap_mode='r'`. If set to `False`, the files
-        will be loaded into memory directly using `scipy.sparse.load_npz`.
-        
-        The operator can be used with `scipy.sparse.linalg.LinearOperator` to
-        perform matrix-vector products without loading the entire matrix into memory.
-        
-        Example
-        -------
-        For a real exapmle, refer to ../generate/matrix/JR.py
+def assemble_sparse_matrix(filename):
+    csr_nnz = 0
+    diag = None
+    with _h5py.File(filename, 'r') as f:
+        n_row = f.attrs.get('dim')
+        dtype = _np.float64 if f.attrs['dtype'] == 'float64' else _np.complex128
+        for key in f.keys():
+            if f[key].attrs.get('object_type') == 'csr':
+                csr_nnz += f[key].attrs['nnz']
+            elif f[key].attrs.get('object_type') == 'dia':
+                if diag is None:
+                    diag = _load_dia(f[key]).diagonal()
+                else:
+                    diag += _load_dia(f[key]).diagonal()
+            else:
+                raise ValueError(f"Unknown object type in {key}: {f[key].attrs.get('object_type')}")
+        nnz = csr_nnz + (len(diag) if diag is not None else 0)
+        index_type = _get_index_type(n_row)
+        new_index_type = _get_index_type(nnz)
+        Bp = _np.zeros(n_row+1, dtype=new_index_type)
+        Bj = _np.zeros(nnz, dtype=index_type)
+        Bx = _np.zeros(nnz, dtype=dtype)
+        for key in f.keys():
+            if f[key].attrs.get('object_type') == 'csr':
+                indptr = f[key]['indptr'][()]
+                row = _np.repeat(_np.arange(len(indptr) - 1), _np.diff(indptr))
+                addBp(Bp, row)
+        if not isinstance(diag, int):
+            addone(Bp)
+        getBp(Bp, nnz, n_row)
+        for key in f.keys():
+            if f[key].attrs.get('object_type') == 'csr':
+                indices = f[key]['indices'][()]
+                indptr = f[key]['indptr'][()]
+                row = _np.repeat(_np.arange(len(indptr) - 1), _np.diff(indptr))
+                col = indices
+                writeA2B(row, col, f[key]['data'][()], Bp, Bj, Bx)
+        if not isinstance(diag, int):
+            writediag(diag, Bp, Bj, Bx)
+        ajustBp(Bp, n_row)
+        csr = _sp.csr_array((Bx, Bj, Bp), shape=(n_row, n_row), dtype=dtype)
+    return sum_duplicates(csr)
 
-        >>> matrix_dir = "data/hamiltonian"
-        >>> matrix_files = [os.path.join(matrix_dir, f"{i}") for i in range(number)]
-        >>> stream_op = StreamingLinearOperator(matrix_files, shape, dtype=dtype, mmap=mmap)
-        >>> H = stream_op.as_linear_operator()
-        >>> res = spla.eigsh(H, k=1, which="SA", maxiter=1e4, return_eigenvectors=True)
-        """
-        self.prefixes = matrix_prefixes
-        self.shape = shape
-        self.dtype = dtype
-        self.mmap = mmap
-        self.monitor = 10
+
+class StreamingLinearOperator(LinearOperator):
+    def __init__(self, filename, loadonce=False, maxsize=2, coef=None):
+        with _h5py.File(filename.encode("utf-8"), 'a') as f:
+            N = f.attrs['dim']
+            dtype = _np.float64 if f.attrs['dtype'] == 'float64' else _np.complex128
+        super().__init__(shape=(N,N), dtype=dtype)
+        self.filename = filename
         self._counter = 0
-
-        self.operator = LinearOperator(shape, matvec=self._matvec, dtype=dtype)
-
-    def _matvec(self, v):
-        q = queue.Queue(maxsize=2)
-        loader = MatrixLoaderThread(self.prefixes, q, self.mmap)
-        
-        loader.start()
-        result = _np.zeros_like(v)
-        while True:
-            Ai = q.get()
-            if Ai is None:
-                break
-            result += Ai @ v
-            del Ai
-        loader.join()
-
-        self._counter += 1
-        if self._counter % self.monitor == 0:
-            residual = _np.linalg.norm(result - v)
-            print(f"[matvec #{self._counter}] residual: {residual:.2e}")
+        self.loadonce = loadonce
+        self.coef = coef
+        # if coef is None, we should first ensure that they share the same keys
+        # with the data loaded from the file
+        if coef is not None:
+            with _h5py.File(filename.encode("utf-8"), "r") as f:
+                keys = set(f.keys())
+                if not keys.issubset(set(coef.keys())):
+                    raise ValueError(
+                        "The keys in coef must be a subset of the keys in the file."
+                    )
+        if self.loadonce:
+            self.data = load_hdf5(filename)
         else:
-            print(f"[matvec #{self._counter}] done")
+            self.q = queue.Queue(maxsize=maxsize)  # 控制并行深度：最多缓存 2 个矩阵
+            self.executor = ThreadPoolExecutor(max_workers=1)
+        
+    def _matvec(self, v):
+        if self.loadonce:
+            return self._matvec1(v)
+        else:
+            return self._matvec2(v)
+
+    def preload_matrices(self, q):
+        with _h5py.File(self.filename.encode("utf-8"), "r") as f:  # `f` is a type `h5py.File`
+            for key in f.keys():
+                subgroup = f[key]
+                data_type_str = subgroup.attrs.get("object_type", None)
+                load_func = _LOAD_FUNC.get(data_type_str, _default_load)
+                Ai = load_func(subgroup)
+                q.put((key, Ai))
+        q.put((None, None))
+
+    def _matvec1(self, v):
+        result = _np.zeros_like(v)
+        self._counter += 1
+        with Timer(f"[matvec #{self._counter}]:", level=1):
+            for key, Ai in self.data.items():
+                a = self.coef[key] if self.coef is not None else None
+                result = dot_parallel(Ai, v, Yx=result, a=a, overwrite=False)
         return result
 
-    def as_linear_operator(self):
-        return self.operator
-
+    def _matvec2(self, v):
+        result = _np.zeros_like(v)
+        self._counter += 1
+        with Timer(f"[matvec #{self._counter}]:", level=1):
+            future = self.executor.submit(self.preload_matrices, self.q)
+            while True:
+                key, Ai = self.q.get()
+                if Ai is None:
+                    break
+                a = self.coef[key] if self.coef is not None else None
+                result = dot_parallel(Ai, v, Yx=result, a=a, overwrite=False)
+                del Ai
+            future.result()  # 等待线程完成
+        return result
+ 

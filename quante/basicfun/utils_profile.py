@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:13:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 22:27:49
+# @Last Modified time: 2025-07-23 20:20:52
 
 import os as _os
 import gc as _gc
@@ -92,7 +92,7 @@ def profile(
 
 
 class Timer:
-    def __init__(self, *str_or_funcs, output_unit: float|None = None, save=False):
+    def __init__(self, *str_or_funcs, output_unit: float|None = None, save=False, level=1):
         """通过上下文管理器记录函数的执行时间.
 
         Parameters
@@ -121,18 +121,34 @@ class Timer:
         if len(str_or_funcs) == 0:
             self.only_time = True
             self.string = "Time elapsed"
+            self.level = level
             return
         elif len(str_or_funcs)==1 and isinstance(str_or_funcs[0], str):
             self.string = str_or_funcs[0]
             self.only_time = True
+            self.level = level
             return
         else:
             self.only_time = False
         from line_profiler import LineProfiler
         self.profile = LineProfiler(*str_or_funcs)
         self.functions = str_or_funcs
-        self.outplut_unit = output_unit
+        self.output_unit = output_unit
         self.save = save
+    
+    def logging(self, message: str) -> None:
+        """记录日志信息."""
+        from .utils_logging import logger
+        if self.level == 1:
+            logger.info(message)
+        elif self.level == 2:
+            logger.warning(message)
+        elif self.level == 3:
+            logger.error(message)
+        elif self.level == 4:
+            logger.critical(message)
+        else:
+            logger.debug(message)
 
     def __enter__(self):
         self.start_time = _time.perf_counter()  # 记录开始时间
@@ -143,7 +159,7 @@ class Timer:
     def __exit__(self, exc_type, exc_value, traceback_obj):
         elapsed_time = _time.perf_counter() - self.start_time  # 计算经过的时间
         if self.only_time:
-            print(f"{self.string}: {elapsed_time} seconds")
+            self.logging(f"{self.string}: {elapsed_time} seconds")
             if exc_type is not None:  # 检查是否发生错误
                 _traceback.print_exc()  # 打印堆栈跟踪
             return elapsed_time
@@ -171,6 +187,7 @@ class Timer:
         
         if exc_type is not None:  # 检查是否发生错误
             _traceback.print_exc()  # 打印堆栈跟踪
+
 
 def print_memory_usage(obj: Any) -> None:
     """ 打印对象的占用空间的大小.

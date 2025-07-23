@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 11:27:59
+# @Last Modified time: 2025-07-23 21:21:03
 
 import unittest
 import quante as qt
@@ -24,7 +24,7 @@ class TestLiouvillian(unittest.TestCase):
         Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1).to_matrix(basis=basis, sparse=True) for i in range(L-1)]
         particle_number = [op.n(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
 
-        lvn = qt.linalg.Liouvillian(hammat, Lindblad_R + Lindblad_L)
+        lvn = qt.generate.superoper.Liouvillian(hammat, Lindblad_R + Lindblad_L)
         state = qt.generate.state.product_state(['up']+['dn']*(L-1), Nup=1)
         rhoinit = np.outer(state, state)
 
