@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:50:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 20:51:37
+# @Last Modified time: 2025-07-26 19:20:57
 
 import numpy as _np
 import scipy.sparse as _sparse
@@ -86,7 +86,7 @@ def expect(mat, state, isdm=False) -> _np.ndarray:
     mat : _np.ndarray | tc.Tensor | sps.sparray
         观测量
     state : _np.ndarray | tc.Tensor
-        态矢量
+        态矢量，第二个指标可以表示多个态的编号(如何 isdm=False)
     isdm : bool, optional
         是否是密度矩阵, by default False
 

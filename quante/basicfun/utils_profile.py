@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:13:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 20:20:52
+# @Last Modified time: 2025-07-27 17:52:01
 
 import os as _os
 import gc as _gc
@@ -164,13 +164,13 @@ class Timer:
                 _traceback.print_exc()  # 打印堆栈跟踪
             return elapsed_time
         self.profile.disable()  # 停止分析
-        if self.outplut_unit is None:
+        if self.output_unit is None:
             if elapsed_time < 0.0001:  # 如果小于 0.0001 秒，则认为是微秒级
-                self.outplut_unit = None  # 微秒
+                self.output_unit = None  # 微秒
             elif elapsed_time < 0.1:  # 如果小于 0.1 秒，则认为是毫秒级
-                self.outplut_unit = 1e-3  # 毫秒
+                self.output_unit = 1e-3  # 毫秒
             else:  # 其他情况，使用秒
-                self.outplut_unit = 1  # 秒
+                self.output_unit = 1  # 秒
         if self.save:
             filename = "profile_" + _os.path.basename(_sys.argv[0])[:-3] + '.txt'  # 根据运行的脚本文件名生成日志文件名 
             header = "#"*60+'\n' + f"[{_time.strftime('%Y-%m-%d %H:%M:%S', _time.localtime(_time.time()))}]\n" + f"Profiling result for {len(self.functions)} functions: {[i.__name__ for i in self.functions]}\n" + "#"*60+'\n\n'
@@ -180,10 +180,10 @@ class Timer:
                 # 写入性能分析结果
                 original_stdout = _sys.stdout
                 _sys.stdout = f
-                self.profile.print_stats(output_unit=self.outplut_unit)  # 打印执行时间统计信息
+                self.profile.print_stats(output_unit=self.output_unit)  # 打印执行时间统计信息
                 _sys.stdout = original_stdout
         else:
-            self.profile.print_stats(_sys.stdout, output_unit=self.outplut_unit)  # 打印出性能分析结果
+            self.profile.print_stats(_sys.stdout, output_unit=self.output_unit)  # 打印出性能分析结果
         
         if exc_type is not None:  # 检查是否发生错误
             _traceback.print_exc()  # 打印堆栈跟踪

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-25 22:20:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-14 21:25:15
+# @Last Modified time: 2025-07-27 09:41:10
 
 # 梯度下降的工具
 
@@ -190,6 +190,8 @@ def totc(data: list | np.ndarray | tc.Tensor, dtype=None, device=None) -> list |
     elif issparse(data):
         from .linalg.sparse import to_csr
         return to_csr(data, device=device, dtype=dtype)
+    elif isinstance(data, (int, float, complex)):
+        return tc.tensor(data, dtype=dtype, device=device)
     else:
         raise TypeError(f"Unsupported input type: {type(data)}")
 

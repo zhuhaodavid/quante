@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 00:53:22
+# @Last Modified time: 2025-07-26 20:18:54
 
 import numpy as np
 import scipy.sparse as sp
@@ -402,7 +402,13 @@ class SpinOper(Oper):
             res.append((newopnms, newposns, coef))
         return res
   
-    def gate2_decomposition(self, L:int, tau:float, form="ladder", pauli:bool=True) -> tuple[list[int],list[np.ndarray]]:
+    def gate2_decomposition(
+        self, 
+        L:int, 
+        tau:float, 
+        form:Literal["ladder", "brick"]="ladder", 
+        pauli:bool=True
+    ) -> tuple[list[int],list[np.ndarray]]:
         r"""
         用最简单的方法（ladder/brick）将哈密顿量的演化拆分成一些列局域两体门：
         
