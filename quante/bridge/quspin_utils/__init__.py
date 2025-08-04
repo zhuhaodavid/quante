@@ -2,11 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-07-07 12:03:27
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 00:48:32
+# @Last Modified time: 2025-08-04 20:05:28
 
+try:
+    import quspin
+    from .quspin_example import *
+except ImportError:
+    pass
 
-from .gen_matrix import optimize_basis
-from .oper_mani import clean_static, clean_static2
-
-
-
+from .quspin_extension_wrap import *

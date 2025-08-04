@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-21 12:41:32
+# @Last Modified time: 2025-08-04 19:55:12
 
 import functools
 
@@ -10,7 +10,7 @@ import re
 import numpy as _np
 
 from ...linalg.matops import kron
-from ..basis.symmetry.basis_wrapped import _check_spin_number # type: ignore
+from ..basis.basis_wrapped import _check_spin_number # type: ignore
 
 from typing import Callable, Union 
 

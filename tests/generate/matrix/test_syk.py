@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-30 19:59:42
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-12 10:00:06
+# @Last Modified time: 2025-08-04 20:22:27
 
 import unittest
 import numpy as np
@@ -15,7 +15,8 @@ class TestSYK(unittest.TestCase):
         mat2 = qt.generate.matrix.syk4_dirac(L, L//2, J=Jmat)
 
         qt.generate.matrix.sky_anti_symmetrize(Jmat, hermitize=False)
-        basis = qt.generate.basis.quspin_fermion_basis(L=L, Nf=L//2)
+        from quante.bridge.quspin_utils.quspin_extension_wrap.basis.basis_1d.fermion import spinless_fermion_basis_1d
+        basis = spinless_fermion_basis_1d(L=L, Nf=L//2)
         builder = qt.generate.operas.fermion.builder()
         for i1, i2, j1, j2 in np.ndindex((L,)*4):
             builder += "++--", [i1, i2, j1, j2], Jmat[i1, i2, j1, j2]

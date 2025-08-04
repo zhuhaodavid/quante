@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-14 22:03:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 21:22:22
+# @Last Modified time: 2025-08-04 19:55:53
 
 import numpy as np
 import scipy.sparse as sps
@@ -76,7 +76,7 @@ class Liouvillian(LinearOperator):
                 return None
             # self._sum_jump = sum(sps.kron(lo, lo.conj()) for lo in self.lindblad_ops)
             # 如果 lo 比较多且简单，那么下面的方法会更高效（占用内存会更多）
-            from ..basis.symmetry.basis_class_nb import coodiaglists2csr
+            from ..basis.basis_class_nb import coodiaglists2csr
             row_result = []
             col_result = []
             ele_result = [] 

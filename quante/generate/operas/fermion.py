@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-03 17:21:59
+# @Last Modified time: 2025-08-04 20:21:05
 
 import numpy as np
 import scipy.sparse as sp
@@ -278,7 +278,7 @@ class FermionOper(Oper):
                 return np.zeros((basis.Ns, basis.Ns), dtype=float)
             return sp.csr_matrix((basis.Ns, basis.Ns), dtype=float)
         self._check_length(basis.L) 
-        from ..basis.symmetry.basis_class import FermionBasis
+        from ..basis.basis_class import FermionBasis
         if isinstance(basis, FermionBasis):
             eachterm, hascomplex = self._convert_to_quick_form()
             mat = basis._sparse_matrix(eachterm, hascomplex, savememory=False)
@@ -287,7 +287,7 @@ class FermionOper(Oper):
             else:
                 return mat.toarray()
         else:
-            from ..basis.quspin.quspin_basis.basis_1d.fermion import spinless_fermion_basis_1d
+            from ...bridge.quspin_utils.quspin_extension_wrap.basis.basis_1d.fermion import spinless_fermion_basis_1d
             if isinstance(basis, spinless_fermion_basis_1d):
                 if dtype is None:
                     dtype = np.complex128

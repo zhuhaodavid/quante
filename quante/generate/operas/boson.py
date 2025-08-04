@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-03 17:25:18
+# @Last Modified time: 2025-08-04 20:20:43
 import numpy as np
 from .general import Oper, _merge_poscoef, _single_term
 from .fermion import _sort_pm, _sort_posn
@@ -124,7 +124,7 @@ class BosonOper(Oper):
     def to_matrix(self, basis, dtype=np.complex128, sparse=False):
         self._check_length(basis.L)
         operator = self if self._has_expanded() else self.expandxy()
-        from ..basis.quspin.quspin_basis.basis_1d.boson import boson_basis_1d
+        from ...bridge.quspin_utils.quspin_extension_wrap.basis.basis_1d.boson import boson_basis_1d
         if isinstance(basis, boson_basis_1d):
             op_list = []
             for opstr, posn, coef in operator.each_term():

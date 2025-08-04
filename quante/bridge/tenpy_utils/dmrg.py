@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-26 17:28:00
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-06 12:53:23
+# @Last Modified time: 2025-08-04 20:33:39
 
 from typing import Literal
 from tenpy.algorithms.dmrg import SingleSiteDMRGEngine, TwoSiteDMRGEngine
@@ -16,7 +16,7 @@ def tenpy_dmrg_params(
     mixer: str | type | bool | None = None,
     **kwargs
 ):
-    """
+    r"""
     Parameters
     ----------
     chi_list : dict[int, int] | None, optional

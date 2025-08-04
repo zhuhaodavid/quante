@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-08 17:12:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 11:23:53
+# @Last Modified time: 2025-08-04 20:26:00
 
 import unittest
 import numpy as np
@@ -81,7 +81,7 @@ class TestSpinHalf(unittest.TestCase):
     
     def test_noblock(self):
         # 海森堡测试：
-        from quante.generate.basis.symmetry.spin_half.noblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.noblock.matrixele import heisenberg_matrix_element
 
         L = 10
         basis = gen.basis.spin_basis(L=L)
@@ -95,7 +95,8 @@ class TestSpinHalf(unittest.TestCase):
             self.assertTrue(np.allclose(mat1, mat2))
         
         ham = self._generate_random_hamiltonian(L)
-        quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0)
+        from quante.bridge.quspin_utils import spin_basis
+        quspin_basis = spin_basis(L=L, pauli=0)
         mat3 = ham.to_matrix(quspin_basis)
         mat4 = ham.to_matrix(basis)
         
@@ -103,8 +104,8 @@ class TestSpinHalf(unittest.TestCase):
 
     def test_Nup(self):
         # 海森堡测试：
-        from quante.generate.basis.symmetry.spin_half.Nup.matrixele import heisenberg_matrix_element
-        from quante.generate.basis.symmetry.spin_half.Nup.defbasis import construct_Nup_basis 
+        from quante.generate.basis.spin_half.Nup.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.Nup.defbasis import construct_Nup_basis 
 
         L = 10
         jxy = np.random.randn()
@@ -119,16 +120,17 @@ class TestSpinHalf(unittest.TestCase):
                 self.assertTrue(np.allclose(mat1, mat2))
 
         ham = self._generate_Nup_hamiltonian(L)
+        from quante.bridge.quspin_utils import spin_basis
         for Nup in range(1,L):
-            quspin_basis = gen.basis.quspin_spin_basis(L=L, Nup=Nup, pauli=0)
+            quspin_basis = spin_basis(L=L, Nup=Nup, pauli=0)
             mat3 = ham.to_matrix(quspin_basis)
             basis = gen.basis.spin_basis(L=L, Nup=Nup)
             mat4 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat3, mat4))
         
     def test_kblock(self):
-        from quante.generate.basis.symmetry.spin_half.kblock.defbasis import construct_kblock_basis
-        from quante.generate.basis.symmetry.spin_half.kblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.kblock.defbasis import construct_kblock_basis
+        from quante.generate.basis.spin_half.kblock.matrixele import heisenberg_matrix_element
 
         L = 10
         j = np.random.randn()
@@ -143,8 +145,9 @@ class TestSpinHalf(unittest.TestCase):
             self.assertTrue(np.allclose(mat1, mat2))
         
         ham = self._generate_kblock_hamiltonian(L)
+        from quante.bridge.quspin_utils import spin_basis
         for k in range(L):
-            quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, kblock=k)
+            quspin_basis = spin_basis(L=L, pauli=0, kblock=k)
             mat3 = ham.to_matrix(quspin_basis)
             basis = gen.basis.spin_basis(L=L, kblock=k)
             mat4 = ham.to_matrix(basis)
@@ -153,8 +156,8 @@ class TestSpinHalf(unittest.TestCase):
         
     def test_pblock(self):
         # 海森堡测试：
-        from quante.generate.basis.symmetry.spin_half.pblock.defbasis import construct_pblock_basis
-        from quante.generate.basis.symmetry.spin_half.pblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.pblock.defbasis import construct_pblock_basis
+        from quante.generate.basis.spin_half.pblock.matrixele import heisenberg_matrix_element
         
         L = 10
         j = np.random.randn()
@@ -170,16 +173,17 @@ class TestSpinHalf(unittest.TestCase):
             self.assertTrue(np.allclose(mat1, mat2))
         
         ham = self._generate_pblock_hamiltonian(L)
+        from quante.bridge.quspin_utils import spin_basis
         for p in [-1, 1]:
-            quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, pblock=p)
+            quspin_basis = spin_basis(L=L, pauli=0, pblock=p)
             mat3 = ham.to_matrix(quspin_basis)
             basis = gen.basis.spin_basis(L=L, pblock=p)
             mat4 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat3, mat4))
         
     def test_zblock(self):
-        from quante.generate.basis.symmetry.spin_half.zblock.defbasis import construct_zblock_basis
-        from quante.generate.basis.symmetry.spin_half.zblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.zblock.defbasis import construct_zblock_basis
+        from quante.generate.basis.spin_half.zblock.matrixele import heisenberg_matrix_element
         
         L = 10
         j = np.random.randn()
@@ -195,8 +199,9 @@ class TestSpinHalf(unittest.TestCase):
                 self.assertTrue(np.allclose(mat1, mat2))
         
         ham = self._generate_zblock_hamiltonian(L)
+        from quante.bridge.quspin_utils import spin_basis
         for z in [-1, 1]:
-            quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, zblock=z)
+            quspin_basis = spin_basis(L=L, pauli=0, zblock=z)
             mat3 = ham.to_matrix(quspin_basis)
             basis = gen.basis.spin_basis(L=L, zblock=z)
             mat4 = ham.to_matrix(basis)
@@ -204,8 +209,9 @@ class TestSpinHalf(unittest.TestCase):
 
     def test_pzblock(self):
         # 海森堡测试：
-        from quante.generate.basis.symmetry.spin_half.pzblock.defbasis import construct_pzblock_basis
-        from quante.generate.basis.symmetry.spin_half.pzblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.pzblock.defbasis import construct_pzblock_basis
+        from quante.generate.basis.spin_half.pzblock.matrixele import heisenberg_matrix_element
+        from quante.bridge.quspin_utils import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -223,7 +229,7 @@ class TestSpinHalf(unittest.TestCase):
         ham = self._generate_zblock_hamiltonian(L)
 
         for pz in [-1, 1]:
-            quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, pzblock=pz)
+            quspin_basis = spin_basis(L=L, pauli=0, pzblock=pz)
             mat3 = ham.to_matrix(quspin_basis)
             basis = gen.basis.spin_basis(L=L, pzblock=pz)
             mat4 = ham.to_matrix(basis)
@@ -231,8 +237,8 @@ class TestSpinHalf(unittest.TestCase):
 
     def test_Nup_kblock(self):
         # 海森堡测试：
-        from quante.generate.basis.symmetry.spin_half.Nup_kblock.defbasis import construct_Nup_kblock_basis
-        from quante.generate.basis.symmetry.spin_half.kblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.Nup_kblock.defbasis import construct_Nup_kblock_basis
+        from quante.generate.basis.spin_half.kblock.matrixele import heisenberg_matrix_element
         
         L = 10
         j = np.random.randn()
@@ -249,10 +255,11 @@ class TestSpinHalf(unittest.TestCase):
                 self.assertTrue(np.allclose(mat1, mat2))
         
         ham = self._generate_Nup_kblock_hamiltonian(L)
+        from quante.bridge.quspin_utils import spin_basis
         
         for Nup in range(L+1):
             for k in range(L):
-                quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=Nup, kblock=k)
+                quspin_basis = spin_basis(L=L, pauli=0, Nup=Nup, kblock=k)
                 mat3 = ham.to_matrix(quspin_basis)
                 basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k)
                 mat4 = ham.to_matrix(basis)
@@ -260,8 +267,8 @@ class TestSpinHalf(unittest.TestCase):
             
     def test_Nup_pblock(self):
         # 海森堡测试：
-        from quante.generate.basis.symmetry.spin_half.Nup_pblock.defbasis import construct_Nup_pblock_basis
-        from quante.generate.basis.symmetry.spin_half.pblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.Nup_pblock.defbasis import construct_Nup_pblock_basis
+        from quante.generate.basis.spin_half.pblock.matrixele import heisenberg_matrix_element
         
         L = 10
         j = np.random.randn()
@@ -281,10 +288,11 @@ class TestSpinHalf(unittest.TestCase):
         # from quspin.basis import spin_basis_1d  # type: ignore
         # from quspin.operators import hamiltonian  # type: ignore
         ham = self._generate_Nup_pblock_hamiltonian(L)
+        from quante.bridge.quspin_utils import spin_basis
         
         for Nup in range(L+1):
             for p in [-1,1]:
-                quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=Nup, pblock=p)
+                quspin_basis = spin_basis(L=L, pauli=0, Nup=Nup, pblock=p)
                 mat3 = ham.to_matrix(quspin_basis)
                 basis = gen.basis.spin_basis(L=L, Nup=Nup, pblock=p)
                 mat4 = ham.to_matrix(basis)
@@ -292,8 +300,9 @@ class TestSpinHalf(unittest.TestCase):
             
     def test_Nup_zblock(self):
         # 海森堡测试：
-        from quante.generate.basis.symmetry.spin_half.Nup_zblock.defbasis import construct_Nup_zblock_basis
-        from quante.generate.basis.symmetry.spin_half.zblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.Nup_zblock.defbasis import construct_Nup_zblock_basis
+        from quante.generate.basis.spin_half.zblock.matrixele import heisenberg_matrix_element
+        from quante.bridge.quspin_utils import spin_basis
         
         L = 10
         j = np.random.randn()
@@ -313,7 +322,7 @@ class TestSpinHalf(unittest.TestCase):
         
         Nup = L//2
         for z in [-1,1]:
-            quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=Nup, zblock=z)
+            quspin_basis = spin_basis(L=L, pauli=0, Nup=Nup, zblock=z)
             mat3 = ham.to_matrix(quspin_basis)
             basis = gen.basis.spin_basis(L=L, Nup=Nup, zblock=z)
             mat4 = ham.to_matrix(basis)
@@ -321,8 +330,8 @@ class TestSpinHalf(unittest.TestCase):
 
     def test_Nup_pzblock(self):
         # 海森堡测试：
-        from quante.generate.basis.symmetry.spin_half.Nup_pzblock.defbasis import construct_Nup_pzblock_basis
-        from quante.generate.basis.symmetry.spin_half.pzblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.Nup_pzblock.defbasis import construct_Nup_pzblock_basis
+        from quante.generate.basis.spin_half.pzblock.matrixele import heisenberg_matrix_element
         
         L = 10
         j = np.random.randn()
@@ -341,8 +350,9 @@ class TestSpinHalf(unittest.TestCase):
         ham = self._generate_zblock_hamiltonian(L)
         
         Nup = L//2
+        from quante.bridge.quspin_utils import spin_basis
         for pz in [-1,1]:
-            quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=Nup, pzblock=pz)
+            quspin_basis = spin_basis(L=L, pauli=0, Nup=Nup, pzblock=pz)
             mat3 = ham.to_matrix(quspin_basis)
             basis = gen.basis.spin_basis(L=L, Nup=Nup, pzblock=pz)
             mat4 = ham.to_matrix(basis)
@@ -350,8 +360,8 @@ class TestSpinHalf(unittest.TestCase):
 
     def test_Nup_kblock_pblock(self):
         # 海森堡测试：
-        from quante.generate.basis.symmetry.spin_half.Nup_kblock_pblock.defbasis import construct_Nup_kblock_pblock_basis
-        from quante.generate.basis.symmetry.spin_half.Nup_kblock_pblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.Nup_kblock_pblock.defbasis import construct_Nup_kblock_pblock_basis
+        from quante.generate.basis.spin_half.Nup_kblock_pblock.matrixele import heisenberg_matrix_element
         
         L = 10
         j = np.random.randn()
@@ -369,10 +379,11 @@ class TestSpinHalf(unittest.TestCase):
                     self.assertTrue(np.allclose(mat1, mat2))
         
         ham = self._generate_Nup_kblock_hamiltonian(L)
+        from quante.bridge.quspin_utils import spin_basis
         for Nup in range(L+1):
             for k in range(L//2+1):
                 for p in [-1, 1]:
-                    quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=Nup, kblock=k, pblock=p)
+                    quspin_basis = spin_basis(L=L, pauli=0, Nup=Nup, kblock=k, pblock=p)
                     mat3 = ham.to_matrix(quspin_basis)
                     engs3 = np.linalg.eigvalsh(mat3)
                     basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k, pblock=p)
@@ -382,8 +393,8 @@ class TestSpinHalf(unittest.TestCase):
         
     def test_Nup_kblock_pblock_zblock(self):
         # 海森堡测试：
-        from quante.generate.basis.symmetry.spin_half.Nup_kblock_pblock_zblock.defbasis import construct_Nup_kblock_pblock_zblock_basis
-        from quante.generate.basis.symmetry.spin_half.Nup_kblock_pblock_zblock.matrixele import heisenberg_matrix_element
+        from quante.generate.basis.spin_half.Nup_kblock_pblock_zblock.defbasis import construct_Nup_kblock_pblock_zblock_basis
+        from quante.generate.basis.spin_half.Nup_kblock_pblock_zblock.matrixele import heisenberg_matrix_element
         
         L = 10
         j = np.random.randn()
@@ -401,10 +412,11 @@ class TestSpinHalf(unittest.TestCase):
                     self.assertTrue(np.allclose(mat1, mat2))
         
         ham = self._generate_Nup_kblock_zblock_hamiltonian(L)
+        from quante.bridge.quspin_utils import spin_basis
         for k in range(L//2+1):
             for p in [-1, 1]:
                 for z in [-1, 1]:
-                    quspin_basis = gen.basis.quspin_spin_basis(L=L, pauli=0, Nup=L//2, kblock=k, pblock=p, zblock=z)
+                    quspin_basis = spin_basis(L=L, pauli=0, Nup=L//2, kblock=k, pblock=p, zblock=z)
                     mat3 = ham.to_matrix(quspin_basis)
                     engs3 = np.linalg.eigvalsh(mat3)
                     basis = gen.basis.spin_basis(L=L, Nup=L//2, kblock=k, pblock=p, zblock=z)

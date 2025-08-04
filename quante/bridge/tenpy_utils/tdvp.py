@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-07-06 10:06:06
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-06 12:52:46
+# @Last Modified time: 2025-08-04 20:33:45
 
 from tqdm import tqdm
 from tenpy.algorithms.tdvp import SingleSiteTDVPEngine, TwoSiteTDVPEngine
@@ -13,7 +13,7 @@ def tenpy_tdvp_params(
     svd_min: float = 1.e-14,
     **kwargs
 ):
-    """Create a dictionary of parameters for the TenPy TDVP algorithm.
+    r"""Create a dictionary of parameters for the TenPy TDVP algorithm.
     
     Parameters
     ----------

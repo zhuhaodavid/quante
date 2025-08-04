@@ -201,7 +201,7 @@ array([[-0.5       ,  0.5       , -0.5       , ...,  0.5       , -0.5       ,  0
 import quante as qt
 import numpy as np
 
-op = qt.generate.operas.boson
+op = qt.generate.operas.spin
 
 L = 30
 J = 1.
@@ -214,7 +214,7 @@ for i in range(L-1):
     ham += "+-", [i, i+1], -J
 ham = ham.build()
 
-basis = qt.generate.basis.quspin_boson_basis(L=L, Nb=1)
+basis = qt.generate.basis.spin_basis(L=L, Nup=1)
 hammat = ham.to_matrix(basis=basis, sparse=True)
 
 Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i).to_matrix(basis=basis, sparse=True) for i in range(L-1)]

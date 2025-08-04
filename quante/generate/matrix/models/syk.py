@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:42:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-12 11:03:34
+# @Last Modified time: 2025-08-04 20:20:13
 
 import numpy as _np
 import math
@@ -99,7 +99,7 @@ def syk4_dirac(L:int, Nf:int, J:float|_np.ndarray=1., sparse=False, basis=None) 
     >>> builder = qt.generate.operas.fermion.builder()
     >>> for i1, i2, j1, j2 in np.ndindex((L,)*4):
     >>>     builder += "++--", [i1, i2, j1, j2], Jmat[i1, i2, j1, j2]
-    >>> basis = qt.generate.basis.quspin_fermion_basis(L=L, Nf=L//2)
+    >>> basis = qt.generate.basis.fermion_basis(L=L, Nf=L//2)
     >>> mat = builder.build().to_matrix(basis)/(2*L)**(3/2)
 
     In this oper form, `Jmat` needs to be anti-symmetrized, so as
@@ -116,8 +116,8 @@ def syk4_dirac(L:int, Nf:int, J:float|_np.ndarray=1., sparse=False, basis=None) 
         If J is not a number or a numpy array.
     """
     if basis is None:
-        from ...basis import quspin_fermion_basis
-        basis = quspin_fermion_basis(L=L, Nf=Nf)
+        from ....bridge.quspin_utils import fermion_basis
+        basis = fermion_basis(L=L, Nf=Nf)
     else:
         assert basis._Np == Nf, "The number of fermions in the basis must match the input Nf."
     if isinstance(J, _np.ndarray):
@@ -176,7 +176,7 @@ def syk4_majorana(L:int, J:_np.ndarray, sparse=False):
         for k in range(j+1, L)
         for l in range(k+1, L)
     ]
-    from ...basis.quspin.quspin_basis.basis_general.fermion import spinless_fermion_basis_general
+    from ....bridge.quspin_utils.quspin_extension_wrap.basis.basis_general.fermion import spinless_fermion_basis_general
     basis = spinless_fermion_basis_general(L)
     mat = basis._make_matrix(op_list, dtype=J.dtype)/4
 

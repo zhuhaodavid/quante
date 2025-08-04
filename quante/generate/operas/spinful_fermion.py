@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:08:45
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-19 11:02:53
+# @Last Modified time: 2025-08-04 20:21:30
 
 import numpy as np
 from scipy.sparse import csr_array
@@ -33,7 +33,7 @@ class SpinfulFermionOper(Oper):
 
     def to_matrix(self, basis, dtype=np.complex128, sparse=False):
         self._check_length(basis.L)
-        from ..basis.quspin.quspin_basis.basis_1d.fermion import spinful_fermion_basis_1d
+        from ...bridge.quspin_utils.quspin_extension_wrap.basis.basis_1d.fermion import spinful_fermion_basis_1d
         if isinstance(basis, spinful_fermion_basis_1d):
             op_list = []
             for opstr, posn, coef in self.each_term():

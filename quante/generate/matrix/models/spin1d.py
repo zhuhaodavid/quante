@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:35:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-12 10:30:22
+# @Last Modified time: 2025-08-04 19:55:17
 
 import numpy as _np
 
-from ...basis.symmetry.basis_wrapped import _check_spin_number # type: ignore
+from ...basis.basis_wrapped import _check_spin_number # type: ignore
 from ..pauli import pauli_matrix
 
 from typing import Optional, Union, Literal, overload

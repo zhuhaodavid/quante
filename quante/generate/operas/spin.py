@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-26 20:18:54
+# @Last Modified time: 2025-08-04 20:06:26
 
 import numpy as np
 import scipy.sparse as sp
@@ -270,7 +270,7 @@ class SpinOper(Oper):
         
         expanded = self.expandxy(pauli=pauli) if not self._has_expanded() else self
 
-        from ..basis.symmetry.basis_class import SpinBasis
+        from ..basis.basis_class import SpinBasis
         # use SpinBasis
         if isinstance(basis, SpinBasis):
             if basis.S != 0.5 and pauli is True:
@@ -282,16 +282,12 @@ class SpinOper(Oper):
             return mat if sparse else mat.toarray()
         
         # use quspin_basis
-        from ..basis.quspin.quspin_basis.basis_1d.spin import spin_basis_1d
-        if isinstance(basis, spin_basis_1d):
-            qs_list = []
-            for opnm, posncoefs in expanded.to_quspin(pauli=pauli):
-                for posn in posncoefs:
-                    qs_list.append((opnm, posn[1:], posn[0]))
-            mat = basis._make_matrix(qs_list, dtype=np.complex128)
-            return mat if sparse else mat.toarray()
-        else:
-            raise NotImplementedError(f"Spin Oper 不支持的 {type(basis).__name__} 作为基矢")
+        qs_list = []
+        for opnm, posncoefs in expanded.to_quspin(pauli=pauli):
+            for posn in posncoefs:
+                qs_list.append((opnm, posn[1:], posn[0]))
+        mat = basis._make_matrix(qs_list, dtype=np.complex128)
+        return mat if sparse else mat.toarray()
     
     def _convert_to_quick_form(self):
         """这个函数专门为 to_matrix 写的，其他函数不需要"""

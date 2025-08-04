@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-24 00:25:07
+# @Last Modified time: 2025-08-04 19:56:05
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -32,7 +32,7 @@ from ...basicfun import (
 )
 
 import scipy.sparse as _sp
-from ...generate.basis.symmetry.basis_class_nb import(
+from ...generate.basis.basis_class_nb import(
     _get_index_type, addBp, addone, getBp, writeA2B, writediag, ajustBp, sum_duplicates   
 )
 from ...basicfun.utils_hdf5 import (_LOAD_FUNC, _default_load, _load_dia)

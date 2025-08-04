@@ -2,14 +2,14 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:29:20
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 20:45:52
+# @Last Modified time: 2025-08-04 20:16:23
 
 # this file saves some fast matrix generation functions
 # used for testing and debugging
 
 from typing import Optional
 import scipy.sparse as _sparse
-from .....linalg.operations import ikron
+from .....linalg.matops import ikron
 from ...pauli import pauli_matrix
 
 def parallel_build_matrix(hlocals, positions, coefficients, L, S, pauli=False, sparse=False, parallel=False, nthreads:Optional[int] =None):
