@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-06 12:53:33
+# @Last Modified time: 2025-08-10 17:22:50
 
 import numpy as np
 import torch as tc
@@ -150,6 +150,25 @@ class MPO(TensorTrain):
 
     @classmethod
     def from_matrix(cls, vec: tc.Tensor, phys_dim=2, trunc_para=(None, None, None)) -> 'MPS':
+        """Generate a Matrix Product Operator (MPO) from a given matrix.
+
+        Parameters
+        ----------
+        vec : tc.Tensor
+            The input tensor to be converted.
+        phys_dim : int, optional
+            The physical dimension of the tensor, by default 2.
+        trunc_para : tuple, optional
+            The truncation parameters, by default (None, None, None).
+            - chi_max: int, the maximum bond dimension
+            - svd_min: float, the minimum singular value
+            - trunc_cut: float, the truncation threshold
+        
+        Returns
+        -------
+        MPS
+            _description_
+        """
         tt, Ss, lognm = tt_decompose(vec, phys_dim, trunc_para=trunc_para)
         return MPO(Ws=tt, Ss=Ss, llim=0, rlim=0, lognm=lognm)
 
@@ -225,10 +244,11 @@ class MPO(TensorTrain):
 
     def _apply_1b_gate(self, pos, gate_1b):
         if isinstance(gate_1b, (tc.Tensor, np.ndarray)):
-            gate_1b = self._convert_gate(gate_1b, 1)
-            return tf._local_apply(self.data[pos], gate_1b)
+            gate = gate_1b
+            top_or_bottom = "top"
+        else:
+            gate, top_or_bottom = gate_1b
         
-        gate, top_or_bottom = gate_1b
         if top_or_bottom == "top":
             gate = self._convert_gate(gate, 1)
             return tf._local_apply(self.data[pos], gate)

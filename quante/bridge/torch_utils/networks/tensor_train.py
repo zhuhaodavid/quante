@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 11:15:27
+# @Last Modified time: 2025-08-11 16:37:44
 
 import copy
 import warnings
@@ -408,9 +408,9 @@ class TensorTrain:
             assert eigdirection is not None, "eigdirection 必须给定"
 
         if gate_range == 1:
-            if not unitary_gate:
-                self.move_llim_(pos)
-                self.move_rlim_(pos)
+            # if not unitary_gate:
+            #     self.move_llim_(pos)
+            #     self.move_rlim_(pos)
             
             # ------- main part -------
             W = self._apply_1b_gate(pos, gate)
@@ -461,9 +461,9 @@ class TensorTrain:
 
 
     def update_single_site_(self, pos, phi, normalize=False, unitary_gate=False):
-        if not unitary_gate:
-            self.move_llim_(pos)
-            self.move_rlim_(pos)
+        # if not unitary_gate:
+        #     self.move_llim_(pos)
+        #     self.move_rlim_(pos)
         
         assert self.data[pos].ndim == phi.ndim, "维度不匹配"
         phi, self.lognm = log_or_not_update(phi, self.lognm, use_log=normalize)
@@ -505,8 +505,8 @@ class TensorTrain:
                 pos, W, svd_alg=svd_alg, trunc_para=trunc_para, normalize=normalize,
             )
         
-        # self.move_llim_(pos)
-        # self.move_rlim_(pos+1)
+        self.move_llim_(pos)
+        self.move_rlim_(pos+1)
         
         # -------------- 使用 qr ------------
         if svd_alg == "qr":
@@ -898,5 +898,4 @@ class TensorTrain:
         else:
             contracted_tsr = contracted_tsr.permute(0, 3, 4, 1, 2, 5)
         
-        direction = kwargs.get('direction', 'right')
-        self.update_two_site_(i, contracted_tsr, direction=direction, **kwargs)
+        self.update_two_site_(i, contracted_tsr, **kwargs)
