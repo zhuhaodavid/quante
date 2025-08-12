@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-11 16:37:44
+# @Last Modified time: 2025-08-11 22:37:37
 
 import copy
 import warnings
@@ -301,8 +301,9 @@ class TensorTrain:
             oldnm = tc.norm(self.data[j])
             self.data[j] = self.data[j] / oldnm
             self.lognm = self.lognm + tc.log(oldnm)
+        
 
-    def canonicalize_(self, trunc_para:tuple[int,float,float]=(None,None,None), qrnormalize=False):
+    def canonicalize_(self, trunc_para:tuple[int,float,float]=(None,None,None), qrnormalize=False, canonicalform=True):
         """正则化，即：
         
         .. code-block:: text
@@ -332,7 +333,11 @@ class TensorTrain:
         
         """
         self.data, self.Ss, lognm, trunc_err = tf.canonicalize(self.data, trunc_para, qrnormalize)
-        self.llim = self.rlim = None
+        if canonicalform:
+            self.llim = self.rlim = None
+        else:
+            self.llim = 0
+            self.rlim = 0
         self.lognm = self.lognm + lognm
         return trunc_err
 
