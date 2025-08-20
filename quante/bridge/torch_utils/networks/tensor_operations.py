@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
-# @Last Modified by:   dzwang
-# @Last Modified time: 2025-06-18 13:00:24
+# @Last Modified by:   hzhu
+# @Last Modified time: 2025-08-13 17:07:54
 
 import torch as tc
 
@@ -502,7 +502,7 @@ def _left2right_QR_step(W1:tc.Tensor, W2:tc.Tensor)->tuple[tc.Tensor,tc.Tensor]:
 
 
 def _left2right_QR(Ws, L, qrnormalize=False)->tuple[tc.Tensor,tc.Tensor]:
-    As, lognm = [None] * L, tc.tensor(0.0, dtype=Ws[0].dtype, device=Ws[0].device)
+    As, lognm = [None] * L, tc.tensor(0.0, dtype=tc.float64, device=Ws[0].device)
     W1 = Ws[0]
     for i in range(L-1):
         # print(i)

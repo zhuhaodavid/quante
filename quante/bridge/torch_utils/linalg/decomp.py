@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 11:17:35
+# @Last Modified time: 2025-08-14 00:52:48
 
 
 import numpy as np
@@ -114,7 +114,6 @@ def svd(tsr:tc.Tensor, *, lr_indx=None, trunc_para=(None, None, None), full_matr
     # if True:
     #     U, S, V = U.cpu(), S.cpu(), V.cpu()
     #     tc.cuda.empty_cache()
-    
     U, S, V = tc.linalg.svd(mat, full_matrices=full_matrices)
 
     good, trunc_err = truncate(S, chi_max, svd_min, trunc_cut)

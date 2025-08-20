@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-11 22:37:37
+# @Last Modified time: 2025-08-13 16:52:37
 
 import copy
 import warnings
@@ -120,10 +120,11 @@ class TensorTrain:
         tensor(1., dtype=torch.float64)
         """
         try:
-            lognmber = tc.log(number) + self.lognm
+            lognmber = tc.log(abs(number)) + self.lognm
         except TypeError:  # when number is pure float form,
             import numpy as np
-            lognmber = np.log(number) + self.lognm
+            lognmber = np.log(abs(number)) + self.lognm
+        self.data[0] *= number/abs(number)
         return type(self)(self.data, lognm=lognmber)
 
     def maxbonddim(self):
