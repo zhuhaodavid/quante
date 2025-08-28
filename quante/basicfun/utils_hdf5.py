@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:14:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 21:51:20
+# @Last Modified time: 2025-08-12 21:33:42
 
 import os as _os
 import numpy as _np
@@ -130,7 +130,7 @@ def _default_save(h5group:_h5py.Group, key:str, value) -> None:
             h5group.create_dataset(key, data=value)
             if isinstance(value, list):
                 h5group[key].attrs["object_type"] = "pylist"
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, RuntimeError):
             # 如果失败，尝试序列化，但会失去可视化的能力
             import pickle as _pickle
                         

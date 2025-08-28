@@ -2,14 +2,14 @@
 # @Author: hzhu
 # @Date:   2024-09-09 18:07:00
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 11:15:22
+# @Last Modified time: 2025-08-28 19:28:45
 
 import torch as tc
 import numpy as np
 
 from typing import Callable
 from torch.autograd import Function
-from ..core_utils import real_if_close
+from ...core_utils import real_if_close
 
 class Lanczos(Function):
     """

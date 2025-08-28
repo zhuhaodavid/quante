@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:45:38
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 11:17:14
+# @Last Modified time: 2025-08-28 19:29:29
 
 import time  # type: ignore
 import torch as tc
@@ -12,7 +12,7 @@ from typing import Generator, Union
 from .mps import MPS
 from .projtt import ProjMPO
 from . import tensor_operations as tf
-from ..linalg import lanczos_evolve_state
+from ..linalg.krylov.grad_krylov import lanczos_evolve_state
 from ..linalg import svd, expm_multiply
 from ....linalg.decomp.svd_robust import TruncationError
 
