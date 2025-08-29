@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:37:49
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-28 18:51:08
+# @Last Modified time: 2025-08-29 02:29:03
 
 from scipy.linalg import get_lapack_funcs
 
@@ -10,6 +10,8 @@ def permuteschur(T, Q, order):
     """
     Reorder complex Schur decomposition (T, Q) according to `order`.
     Using LAPACK trexc directly (like Julia).
+
+    #todo: rewrite
     """
     trexc, = get_lapack_funcs(('trexc',), (T,))
 
@@ -33,3 +35,29 @@ def permuteschur(T, Q, order):
                     p[k] += 1
 
     return T_new, Q_new
+
+
+# function schur2eigvals(T::AbstractMatrix{<:BlasReal}, which::AbstractVector{Int})
+#     n = checksquare(T)
+#     which2 = unique(which)
+#     length(which2) == length(which) ||
+#         throw(ArgumentError("which should contain unique values"))
+#     D = zeros(Complex{eltype(T)}, length(which2))
+#     for k in 1:length(which)
+#         i = which[k]
+#         if i < n && !iszero(T[i + 1, i])
+#             halftr = (T[i, i] + T[i + 1, i + 1]) / 2
+#             diff = (T[i, i] - T[i + 1, i + 1]) / 2
+#             d = diff * diff + T[i, i + 1] * T[i + 1, i]  # = hafltr*halftr - det
+#             D[i] = halftr + im * sqrt(-d)
+#         elseif i > 1 && !iszero(T[i, i - 1])
+#             halftr = (T[i, i] + T[i - 1, i - 1]) / 2
+#             diff = -(T[i, i] - T[i - 1, i - 1]) / 2
+#             d = diff * diff + T[i, i - 1] * T[i - 1, i]  # = hafltr*halftr - det
+#             D[i] = halftr - im * sqrt(-d)
+#         else
+#             D[i] = T[i, i]
+#         end
+#     end
+#     return D
+# end
