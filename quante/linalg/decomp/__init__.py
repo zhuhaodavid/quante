@@ -7,3 +7,4 @@
 from .eig_modified import *
 from .svd_robust import *
 from .perturbation import *
+from .schur import *

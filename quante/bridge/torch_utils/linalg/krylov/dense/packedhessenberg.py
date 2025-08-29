@@ -2,16 +2,16 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:34:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-29 15:55:43
+# @Last Modified time: 2025-08-30 02:29:37
 
 import numpy as np
-from julia import Main
+# from julia import Main
 
 class PackedHessenberg:
-    def __init__(self, data):
+    def __init__(self, data, n):
         self.data = data
-        # self.n = n
-        # assert len(data) >= ((n * n + 3 * n - 2) >> 1)
+        self.n = n
+        assert len(data) >= ((n * n + 3 * n - 2) >> 1)
     
     @property
     def shape(self):
@@ -24,10 +24,6 @@ class PackedHessenberg:
         return self.n == 0
     
     def copyto_(self, dest):
-        Main.dest = dest
-        Main.eval("copyto!(dest, ph)")
-        dest[:] = np.array(Main.dest)
-        return dest
         if self.isempty():
             return dest
         

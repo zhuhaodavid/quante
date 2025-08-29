@@ -4,7 +4,6 @@ import numpy as np
 cimport numpy as np
 cimport scipy.linalg.cython_lapack as lapack  # 提供 zhseqr/chseqr
 ctypedef np.complex128_t cplx128
-ctypedef np.complex64_t  cplx64
 ctypedef np.float64_t    real64
 
 def zhseqr_(np.ndarray H_in, np.ndarray Z_in):
