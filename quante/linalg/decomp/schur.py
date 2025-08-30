@@ -2,10 +2,13 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:37:49
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 02:39:46
+# @Last Modified time: 2025-08-30 13:03:16
 
 from scipy.linalg import get_lapack_funcs, schur
 import numpy as np
+
+def is_fortran_format(x):
+    return x.strides[0] < x.strides[1]
 
 try:
     import pyximport
@@ -27,14 +30,16 @@ if has_cython:
     except ImportError:
         hseqr_available = False
 
+# hseqr_available = False
 if hseqr_available:
     def hschur_(H, Z):
-        H = np.asfortranarray(H)
-        Z = np.asfortranarray(Z)
-        if np.isrealobj(H):
-            return dhseqr_(H, Z)
+        if is_fortran_format(H) and is_fortran_format(Z):
+            if np.isrealobj(H):
+                return dhseqr_(H, Z)
+            else:
+                return zhseqr_(H, Z)
         else:
-            return zhseqr_(H, Z)
+            raise ValueError("Input arrays must be Fortran-contiguous")
 else:
     def hschur_(H, Z):
         H[:], Z[:] = schur(H, output='real')
@@ -63,6 +68,7 @@ def schur2eigvals(T):
                 D[i] = T[i,i]
         return D
         
+trevc_available = False
 if has_cython:
     try:
         from .src.trevc import dtrevc, ztrevc
@@ -101,12 +107,14 @@ def _normalizevecs_(VR):
     norms = np.linalg.norm(VR, axis=0)
     return VR / norms
 
-def permuteschur_(T, Q, order):
+def permuteschur_(T_in, Q_in, order):
     """
     Reorder complex Schur decomposition (T, Q) according to `order`.
     Using LAPACK trexc directly.
     """
-    trexc, = get_lapack_funcs(('trexc',), (T,))
+    T = np.asfortranarray(T_in)
+    Q = np.asfortranarray(Q_in)
+    trexc, = get_lapack_funcs(('trexc',), (T_in,))
     p = order + 1
     n = T.shape[0]
     i = 0
@@ -114,7 +122,7 @@ def permuteschur_(T, Q, order):
         ifirst = int(p[i])
         ilast = i + 1
         if ifirst == n or np.isclose(T[ifirst, ifirst - 1], 0.):
-            T, Q, info = trexc(T, Q, ifirst, ilast)
+            T, Q, info = trexc(T, Q, ifirst, ilast, overwrite_a=True, overwrite_q=True)
             if info != 0:
                 raise RuntimeError(f"trexc failed with info={info}")
             for k in range(i+1, len(p)):
@@ -124,11 +132,12 @@ def permuteschur_(T, Q, order):
         else:
             if p[i+1] != ifirst + 1:
                 raise ValueError("cannot split 2x2 blocks when permuting schur decomposition")
-            T, Q, info = trexc(T, Q, ifirst, ilast)
+            T, Q, info = trexc(T, Q, ifirst, ilast, overwrite_a=True, overwrite_q=True)
             if info != 0:
                 raise RuntimeError(f"trexc failed with info={info}")
             for k in range(i+2, len(p)):
                 if p[k] < p[i]:
                     p[k] += 2
             i += 2
-    return T, Q
+    T_in[:], Q_in[:] = T, Q
+    return T_in, Q_in

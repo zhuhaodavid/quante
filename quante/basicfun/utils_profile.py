@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:13:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-27 17:52:01
+# @Last Modified time: 2025-08-30 15:14:12
 
 import os as _os
 import gc as _gc
@@ -92,7 +92,7 @@ def profile(
 
 
 class Timer:
-    def __init__(self, *str_or_funcs, output_unit: float|None = None, save=False, level=1):
+    def __init__(self, *str_or_funcs, output_unit: float|None = None, save=False, level=1, use=True):
         """通过上下文管理器记录函数的执行时间.
 
         Parameters
@@ -118,6 +118,9 @@ class Timer:
         >>>     a = test()
         >>>     b = test2()
         """
+        self.use = use
+        if not use:
+            return
         if len(str_or_funcs) == 0:
             self.only_time = True
             self.string = "Time elapsed"
@@ -151,12 +154,18 @@ class Timer:
             logger.debug(message)
 
     def __enter__(self):
+        if not self.use:
+            return None
         self.start_time = _time.perf_counter()  # 记录开始时间
         if not self.only_time:
             self.profile.enable()  # 开始分析时间
             return self.profile
 
     def __exit__(self, exc_type, exc_value, traceback_obj):
+        if not self.use:
+            if exc_type is not None:  # 检查是否发生错误
+                _traceback.print_exc()  # 打印堆栈跟踪
+            return None
         elapsed_time = _time.perf_counter() - self.start_time  # 计算经过的时间
         if self.only_time:
             self.logging(f"{self.string}: {elapsed_time} seconds")

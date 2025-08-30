@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:34:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 02:29:37
+# @Last Modified time: 2025-08-30 13:19:39
 
 import numpy as np
 # from julia import Main
@@ -22,11 +22,10 @@ class PackedHessenberg:
     
     def isempty(self):
         return self.n == 0
-    
+
     def copyto_(self, dest):
         if self.isempty():
             return dest
-        
         for i in range(self.n):
             for j in range(self.n):
                 if i > j + 1:
@@ -35,7 +34,7 @@ class PackedHessenberg:
                     dest[i,j] = self.data[((j * j + 3 * j - 1) >> 1) + i + 1]
         
         return dest
-    
+
     def copy_from(self, src):
         for i in range(self.n):
             for j in range(self.n):

@@ -38,16 +38,14 @@ def zhseqr_(np.ndarray H_in, np.ndarray Z_in):
     return H_in, Z_in, w
 
 def dhseqr_(np.ndarray H_in, np.ndarray Z_in):
-    H_in = np.array(H_in, dtype=np.float64, order='F', copy=True)
-    Z_in = np.array(Z_in, dtype=np.float64, order='F', copy=True)
     cdef int n = <int>H_in.shape[0]
     if H_in.ndim != 2 or H_in.shape[0] != H_in.shape[1]:
         raise ValueError("H must be square")
     cdef char job = 'S'      # 求 Schur 形
     cdef char compz = 'V'          # 是否返回 Schur 向量
     cdef int ilo = 1, ihi = n
-    cdef int ldh = n
-    cdef int ldz = n
+    cdef int ldh = H_in.strides[1] // H_in.itemsize
+    cdef int ldz = Z_in.strides[1] // Z_in.itemsize
     cdef object dtype = H_in.dtype
     cdef np.ndarray WR = np.empty(n, dtype=np.float64, order="F")
     cdef np.ndarray WI = np.empty(n, dtype=np.float64, order="F")
