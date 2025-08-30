@@ -2,12 +2,18 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:20:07
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:21:08
+# @Last Modified time: 2025-08-30 23:36:09
 
 import numpy as _np
-from ....basicfun.utils_numba import njit, prange
+from ....basicfun.utils_numba import njit, prange, pnjit
 
 
+@pnjit
+def vdot(x, y):
+    res = 0
+    for i in prange(len(x)):
+        res += _np.conj(x[i]) * y[i]
+    return res
 
 def addself(a, b, coef):
     if _np.iscomplexobj(a):
@@ -15,13 +21,13 @@ def addself(a, b, coef):
     else:
         addself_float(a, b, coef)
 
-@njit('void(complex128[:], complex128[:], float64)')
+@pnjit('void(complex128[:], complex128[:], float64)')
 def addself_complex(a, b, coef):
     for i in prange(len(a)):
         bi = b[i]
         a[i] += coef * bi.real + (coef * bi.imag)*1j
             
-@njit('void(float64[:], float64[:], float64)')
+@pnjit('void(float64[:], float64[:], float64)')
 def addself_float(a, b, coef):
     for i in prange(len(a)):
         a[i] += coef * b[i]
@@ -32,18 +38,18 @@ def prodscale(a, coef):
     else:
         prodscale_float(a, coef)
 
-@njit('void(complex128[:], float64)')
+@pnjit('void(complex128[:], float64)')
 def prodscale_complex(a, coef):
     for i in prange(len(a)):
         ai = a[i]
         a[i] = coef * ai.real + (coef * ai.imag)*1j
 
-@njit('void(float64[:], float64)')
+@pnjit('void(float64[:], float64)')
 def prodscale_float(a, coef):
     for i in prange(len(a)):
         a[i] = coef * a[i]
 
-@njit
+@pnjit
 def addtwo(a, b):
     for i in prange(len(a)):
         a[i] += b[i]

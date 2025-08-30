@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:46:01
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 22:18:40
+# @Last Modified time: 2025-08-30 23:38:01
 
 import numpy as np
 import warnings
@@ -53,6 +53,8 @@ class ConvergenceInfo:
         msg += f" norms of residuals are given by {self.normres}."
         return msg
 
+from ..evolve.nbfuc.expm_mul_nb import addself, prodscale, vdot
+
 class NpLinearAlgebraUtils:
 
     @staticmethod
@@ -69,7 +71,8 @@ class NpLinearAlgebraUtils:
 
     @staticmethod
     def inner(x, y):
-        return np.vdot(x, y)
+        return vdot(x, y)
+        # return np.vdot(x, y)
 
     @staticmethod
     def zeros_like(x):
@@ -81,29 +84,37 @@ class NpLinearAlgebraUtils:
 
     @staticmethod
     def add_(x, y, alpha=None):
-        if alpha is None:
-            x[:] += y
-        else:
-            x[:] += y * alpha
+        addself(x, y, alpha)
         return x
+        # if alpha is None:
+        #     x[:] += y
+        # else:
+        #     x[:] += y * alpha
+        # return x
 
     @staticmethod
     def sub_(x, y, alpha=None):
-        if alpha is None:
-            x[:] -= y
-        else:
-            x[:] -= y * alpha
+        addself(x, y, -alpha)
         return x
+        # if alpha is None:
+        #     x[:] -= y
+        # else:
+        #     x[:] -= y * alpha
+        # return x
 
     @staticmethod
     def div_(x, alpha):
-        x[:] /= alpha
+        prodscale(x, 1/alpha)
         return x
+        # x[:] /= alpha
+        # return x
 
     @staticmethod
     def mul_(x, alpha):
-        x[:] *= alpha
+        prodscale(x, alpha)
         return x
+        # x[:] *= alpha
+        # return x
 
     @staticmethod
     def matmul(A, B):
