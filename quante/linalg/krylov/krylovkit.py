@@ -2,11 +2,19 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:46:01
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 14:37:49
+# @Last Modified time: 2025-08-30 22:18:40
 
-import torch as tc
 import numpy as np
 import warnings
+
+EIGSORT = {
+    # "name": (sortfunction,  if_revert)
+    "LM": (abs, True),
+    "LR": (np.real, True),
+    "SR": (np.real, False),
+    "LI": (np.imag, True),
+    "SI": (np.imag, False)
+}
 
 class KrylovDefault:
     def __init__(self):
@@ -45,68 +53,91 @@ class ConvergenceInfo:
         msg += f" norms of residuals are given by {self.normres}."
         return msg
 
-
-class LinearAlgebraUtils:
-    device = 'cpu'
+class NpLinearAlgebraUtils:
 
     @staticmethod
     def update_device(x0):
-        LinearAlgebraUtils.device = x0.device
-    
+        pass
+
     @staticmethod
     def apply(A, x):
-        return (A @ x).to(device=LinearAlgebraUtils.device)
+        return A @ x
 
     @staticmethod
     def norm(x):
-        return tc.linalg.norm(x).item()
+        return np.linalg.norm(x)
 
     @staticmethod
     def inner(x, y):
-        return tc.vdot(x, y).item()
-    
+        return np.vdot(x, y)
+
     @staticmethod
     def zeros_like(x):
-        return tc.zeros_like(x)
-    
+        return np.zeros_like(x)
+
     @staticmethod
     def zeros(shape, dtype=None):
-        return tc.zeros(shape, dtype=dtype, 
-                        device=LinearAlgebraUtils.device)
+        return np.zeros(shape, dtype=dtype)
 
     @staticmethod
     def add_(x, y, alpha=None):
         if alpha is None:
-            x.add_(y)
+            x[:] += y
         else:
-            x.add_(y, alpha=alpha)
+            x[:] += y * alpha
         return x
 
     @staticmethod
     def sub_(x, y, alpha=None):
         if alpha is None:
-            x.sub_(y)
+            x[:] -= y
         else:
-            x.sub_(y, alpha=alpha)
+            x[:] -= y * alpha
         return x
 
     @staticmethod
     def div_(x, alpha):
-        x.div_(alpha)
+        x[:] /= alpha
+        return x
+
+    @staticmethod
+    def mul_(x, alpha):
+        x[:] *= alpha
         return x
 
     @staticmethod
     def matmul(A, B):
-        """
-        假设 A 是 numpy array, B 是 torch tensor
-        最终要得到 torch tensor
-        """
-        if np.iscomplexobj(A) and not B.is_complex():
-            return tc.tensor(A, dtype=tc.complex128, device=B.device) @ B.to(dtype=tc.complex128)
-        else:
-            return tc.tensor(A, dtype=B.dtype, device=B.device) @ B
-    
+        return A @ B
+
     @staticmethod
     def isrealobj(x):
-        return not x.is_complex()
-    
+        return np.isrealobj(x)
+
+class LinearAlgebraUtils:
+    @staticmethod
+    def isrealobj(x):
+        if isinstance(x, np.ndarray):
+            return np.isrealobj(x)
+        else:
+            try:
+                return not x.is_complex()
+            except:
+                raise ValueError(f"type {type(x)} not supported")
+
+def overload_methods(x0):
+    lau = LinearAlgebraUtils
+    if isinstance(x0, np.ndarray):
+        newlau = NpLinearAlgebraUtils
+    else:
+        import torch as tc
+        if isinstance(x0, tc.Tensor):
+            from ...bridge.torch_utils.linalg.krylov import TcLinearAlgebraUtils
+            newlau = TcLinearAlgebraUtils
+        else:
+            raise ValueError(f"Unsupported tensor type: {type(x0)}")
+    for attr in dir(newlau):
+        if attr.startswith("__"):
+            continue
+        func = getattr(newlau, attr)
+        if callable(func):
+            setattr(lau, attr, staticmethod(func))

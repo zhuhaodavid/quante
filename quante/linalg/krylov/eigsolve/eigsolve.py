@@ -2,9 +2,11 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:19:37
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 15:03:41
+# @Last Modified time: 2025-08-30 23:01:08
 
-import numpy as np
+from .lanczos import Lanczos
+from .arnoldi import Arnoldi
+from ..krylovkit import EIGSORT
 from ..krylovkit import LinearAlgebraUtils as lau
 
 def eigsolve(
@@ -12,7 +14,6 @@ def eigsolve(
     x0,
     howmany=1,
     which='LM',
-    issymmetric=False,
     ishermitian=False,
     **kwargs
 ):
@@ -80,34 +81,19 @@ def eigsolve(
     Krylov-Schur algorithm, which can dynamically shrink and grow the Krylov subspace, i.e. the
     restarts are so-called thick restarts where a part of the current Krylov subspace is kept.
     """
-    alg = eigselector(
-        x0, issymmetric=issymmetric, ishermitian=ishermitian,
-        **kwargs
-    )
-    assert which in ['LM', 'LR', 'SR', 'LI', 'SI']
-    if lau.isrealobj(x0):
-        by, _ = EIGSORT[which]
-        if by(1j) != by(-1j):
-            raise ValueError(f"Eigenvalue selector which = {which} invalid because it does not treat"
-            f"'λ' and 'conj(λ)' equally: work in complex arithmetic by providing a complex starting vector 'x0'")
-    return alg.eigsolve(A, x0, howmany, which)
-
-
-def eigselector(x0, issymmetric=False, ishermitian=False, **kwargs):
-    # todo: lanczos, block lanczos
-    if (lau.isrealobj(x0) and issymmetric) or ishermitian:
-        raise NotImplementedError("Real symmetric or Hermitian matrix eigensolver not implemented yet.")
+    if x0.ndim == 2 and x0.shape[1] == 1:
+        x0 = x0.squeeze()
+    if ishermitian:
+        assert which in ['LM', 'LR', 'SR']
+        print("running Lanczos ...")
+        return Lanczos(**kwargs).eigsolve(A, x0, howmany, which)
     else:
-        from .arnoldi import Arnoldi
-        return Arnoldi(**kwargs)
-
-
-EIGSORT = {
-    # "name": (sortfunction,  if_revert)
-    "LM": (abs, True),
-    "LR": (np.real, True),
-    "SR": (np.real, False),
-    "LI": (np.imag, True),
-    "SI": (np.imag, False)
-}
-
+        assert which in ['LM', 'LR', 'SR', 'LI', 'SI']
+        if lau.isrealobj(x0):
+            by, _ = EIGSORT[which]
+            if by(1j) != by(-1j):
+                raise ValueError(f"Eigenvalue selector which = {which} invalid "
+                f"because it does not treat 'λ' and 'conj(λ)' equally: work in "
+                f"complex arithmetic by providing a complex starting vector 'x0'")
+        print("running Arnoldi ...")
+        return Arnoldi(**kwargs).eigsolve(A, x0, howmany, which)

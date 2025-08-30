@@ -86,7 +86,7 @@ a, b, c = qt.basicfun.isave("data.h5", group='test')
 a, b, c = qt.basicfun.iload("data.h5", group='test')
 ```
 
-### Exact Diagonalization
+### Generate Matrix
 
 生成一维自旋系统的哈密顿量和精确对角化。
 
@@ -148,6 +148,29 @@ array([[ 0.25,  0.5 ,  0.  ,  0.  ,  0.  ,  0.  ],
        [ 0.  ,  0.5 ,  0.  , -0.25,  0.5 ,  0.  ],
        [ 0.  ,  0.  ,  0.5 ,  0.5 , -0.75,  0.5 ],
        [ 0.  ,  0.  ,  0.  ,  0.  ,  0.5 ,  0.25]])
+```
+
+### Krylov
+
+`quante` 提供了基于 Krylov 子空间方法的线性代数工具，主要用于求解大规模稀疏矩阵的特征值问题。
+
+参考 [KrylovKit.jl](https://github.com/Jutho/KrylovKit.jl) 的代码实现了 Lanczos 和 Arnoldi 算法。
+
+同时支持 numpy, torch-cpu, torch-gpu 的数据格式。
+
+```python
+import quante as qt
+mat = qt.generate.matrix.heisenberg_matrix(L=10, sparse=True)
+x0 = qt.generate.state.random(mat.shape[0])
+val, vec , _ = qt.linalg.krylov.eigsolve(
+    mat, x0, howmany=1, which='LM', ishermitian=True
+)
+print(val)
+```
+
+```
+running Lanczos ...
+[-4.25803521 -3.93067359]
 ```
 
 ### Evolve

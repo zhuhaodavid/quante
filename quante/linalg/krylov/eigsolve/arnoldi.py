@@ -2,21 +2,17 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:18:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 14:45:15
+# @Last Modified time: 2025-08-30 22:53:45
 
-import numpy as np
-from ..factorizations.arnoldi import ArnoldiIterator
-from .eigsolve import EIGSORT
-from ......linalg.decomp.schur import permuteschur_, hschur_, schur2eigvals, schur2eigvecs
-from ..dense.reflector import householder, _householder_
-from ..krylovkit import ConvergenceInfo, KrylovDefault
 import warnings
+import numpy as np
 
-# usejulia = True
-# if usejulia:
-#     from julia import Main
-#     Main.eval("using KrylovKit, LinearAlgebra")
-#     Main.eval("using KrylovKit: hschur!, permuteschur!, basistransform!, scale!!, schur2eigvals, schur2eigvecs, cols, apply, eigselector, _schursolve, eigsort, householder, _householder!, Householder")
+from ..dense.reflector import householder
+from ..krylovkit import ConvergenceInfo, KrylovDefault, EIGSORT
+from ..factorizations.arnoldi import ArnoldiIterator
+from ...decomp.schur import permuteschur_, hschur_, schur2eigvals, schur2eigvecs
+
+from ..krylovkit import LinearAlgebraUtils as lau
 
 class Arnoldi(KrylovDefault):
     def __init__(self, **kwargs):
@@ -105,8 +101,7 @@ class Arnoldi(KrylovDefault):
                 f = ff[:K]
 
                 U[:] = 0.
-                for i in range(U.shape[0]):
-                    U[i,i] = 1.0
+                np.fill_diagonal(U, 1.0)
                 fact.rayleighquotient().copyto_(H)
 
                 # compute dense schur factorization
@@ -167,10 +162,10 @@ class Arnoldi(KrylovDefault):
                 fact.rayleighquotient().copy_from(H)
                 # Update the basis
                 fact.V.basistransform_(U[:, :keep])
-                fact.r.div_(fact.normres())
+                lau.div_(fact.r, fact.normres())
                 fact.V.set(keep, fact.r)
                 # Everything is set up to shrink Arnoldi factorization
-                fact.shrink_(keep)
+                fact.shrink_(keep, self.verbosity)
                 numiter += 1
 
         return T, U, fact, converged, numiter, numops

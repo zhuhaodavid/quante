@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:37:49
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 13:03:16
+# @Last Modified time: 2025-08-30 22:54:37
 
 from scipy.linalg import get_lapack_funcs, schur
 import numpy as np
@@ -21,6 +21,9 @@ try:
     has_cython = True
 except ImportError:
     has_cython = False
+
+# do not need the lapack version
+# has_cython = False
 
 hseqr_available = False
 if has_cython:
@@ -97,7 +100,7 @@ if trevc_available:
                         VR[k, i] = VRp[k, i] + 1j * VRp[k, i + 1]
                         VR[k, i + 1] = VRp[k, i] - 1j * VRp[k, i + 1]
                     i += 2
-            return _normalizevecs_(VR)
+            return np.real_if_close(_normalizevecs_(VR))
 else:
     def schur2eigvecs(T):
         return np.linalg.eig(T)[1]

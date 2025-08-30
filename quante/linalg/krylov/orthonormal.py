@@ -2,9 +2,8 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:27:31
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 14:23:27
+# @Last Modified time: 2025-08-30 22:09:41
 
-import torch as tc
 from .krylovkit import LinearAlgebraUtils as lau
 
 class OrthonormalBasis:
@@ -16,6 +15,10 @@ class OrthonormalBasis:
     def pop(self):
         self.num -= 1
         return self.data[self.num]
+    
+    def popfirst(self):
+        self.num -= 1
+        self.data[:self.num] = self.data[1:self.num+1]
    
     def append(self, v):
         self.data[self.num] = v
@@ -35,9 +38,6 @@ class OrthonormalBasis:
         m, n = U.shape
         self.data[:n, :] = lau.matmul(U.T, self.data[:m, :])
 
-    def combine(self, v):
-        return tc.tensor(v.reshape(1,-1), dtype=self.data.dtype) @ self.data[:self.num]
-    
     def basistransform(self, U):
         m, n = U.shape
         return lau.matmul(U.T, self.data[:m, :])

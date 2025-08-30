@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 19:56:05
+# @Last Modified time: 2025-08-30 20:40:27
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -1320,4 +1320,3 @@ class StreamingLinearOperator(LinearOperator):
                 del Ai
             future.result()  # 等待线程完成
         return result
- 

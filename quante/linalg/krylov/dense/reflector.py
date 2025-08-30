@@ -2,10 +2,9 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:41:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 02:36:32
+# @Last Modified time: 2025-08-30 22:09:04
 
 import numpy as np
-# from julia import Main
 
 class Householder:
     def __init__(self, beta, v, r):

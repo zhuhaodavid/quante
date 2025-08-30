@@ -2,10 +2,9 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:34:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 13:19:39
+# @Last Modified time: 2025-08-30 22:09:00
 
 import numpy as np
-# from julia import Main
 
 class PackedHessenberg:
     def __init__(self, data, n):

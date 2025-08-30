@@ -2,14 +2,14 @@
 # @Author: hzhu
 # @Date:   2024-09-09 18:07:00
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-28 19:28:45
+# @Last Modified time: 2025-08-30 22:18:17
 
 import torch as tc
 import numpy as np
 
 from typing import Callable
 from torch.autograd import Function
-from ...core_utils import real_if_close
+from ..core_utils import real_if_close
 
 class Lanczos(Function):
     """
@@ -1107,4 +1107,78 @@ def argsort(a, sort=None, refer=None, **kwargs):
                     arg[0], argdiff[0] = argdiff[0], arg[0]
                 break
     return arg
+
+
+# the following class is used for the overload 
+# method of LinearAlgebraUtils in quante/linalg/krylov/krylovkit.py
+
+
+class TcLinearAlgebraUtils:
+    device = 'cpu'
+
+    @staticmethod
+    def update_device(x0):
+        TcLinearAlgebraUtils.device = x0.device
+
+    @staticmethod
+    def apply(A, x):
+        return (A @ x).to(device=TcLinearAlgebraUtils.device)
+
+    @staticmethod
+    def norm(x):
+        return tc.linalg.norm(x).item()
+
+    @staticmethod
+    def inner(x, y):
+        return tc.vdot(x, y).item()
+
+    @staticmethod
+    def zeros_like(x):
+        return tc.zeros_like(x)
+
+    @staticmethod
+    def zeros(shape, dtype=None):
+        return tc.zeros(shape, dtype=dtype, 
+                        device=TcLinearAlgebraUtils.device)
+
+    @staticmethod
+    def add_(x, y, alpha=None):
+        if alpha is None:
+            x.add_(y)
+        else:
+            x.add_(y, alpha=alpha)
+        return x
+
+    @staticmethod
+    def sub_(x, y, alpha=None):
+        if alpha is None:
+            x.sub_(y)
+        else:
+            x.sub_(y, alpha=alpha)
+        return x
+
+    @staticmethod
+    def div_(x, alpha):
+        x.div_(alpha)
+        return x
+
+    @staticmethod
+    def mul_(x, alpha):
+        x.mul_(alpha)
+        return x
+
+    @staticmethod
+    def matmul(A, B):
+        """
+        假设 A 是 numpy array, B 是 torch tensor
+        最终要得到 torch tensor
+        """
+        if np.iscomplexobj(A) and not B.is_complex():
+            return tc.tensor(A, dtype=tc.complex128, device=B.device) @ B.to(dtype=tc.complex128)
+        else:
+            return tc.tensor(A, dtype=B.dtype, device=B.device) @ B
+
+    @staticmethod
+    def isrealobj(x):
+        return not x.is_complex()
 
