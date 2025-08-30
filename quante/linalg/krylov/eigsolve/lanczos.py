@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-30 19:06:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 21:42:23
+# @Last Modified time: 2025-08-31 00:28:34
 
 import warnings
 import numpy as np
@@ -19,8 +19,50 @@ class Lanczos(KrylovDefault):
         super().__init__()
         self.eager = kwargs.pop('eager', False)
         self.update_params(kwargs)
-    
+
     def eigsolve(self, A, x0, howmany, which):
+        D, U, fact, converged, numiter, numops = self._eigsolve(
+            A, x0, howmany, which
+        )
+             
+        howmany_p = howmany
+        if converged > howmany:
+            howmany_p = converged
+        elif len(D) < howmany:
+            howmany_p = len(D)
+        values = D[:howmany_p]
+
+        # Compute eigenvectors
+        V = U[:,:howmany_p]
+
+        # Compute convergence information
+        vectors = fact.V.basistransform(V)
+        # residuals = [fact.r * v for v in V[-1,:]]
+        # residuals is the list constaining
+        #     `residual[i] = f(vectors[i]) - values[i] * vectors[i]`
+        # however it is too large, we do not return it
+        normresiduals = [fact.normres() * abs(v) for v in V[-1,:]]
+
+        if (converged < howmany) and self.verbosity >= 1:
+            warnings.warn(
+                f"Lanczos eigsolve stopped without convergence after {numiter} iterations:"
+                f" * {converged} eigenvalues converged"
+                f" * norm of residuals = {fact.normres()}"
+                f" * number of operations = {numops}"
+            )
+        elif self.verbosity >= 2:
+            warnings.info(
+                f"Lanczos eigsolve finished after {numiter} iterations: "
+                f" * {converged} eigenvalues converged"
+                f" * norm of residuals = {fact.normres()}"
+                f" * number of operations = {numops}"
+            )
+        return values, vectors, ConvergenceInfo(
+            converged, normresiduals, numiter, numops
+        )
+
+    
+    def _eigsolve(self, A, x0, howmany, which):
         krylovdim = self.krylovdim
         maxiter = self.maxiter
         if howmany > krylovdim:
@@ -125,36 +167,4 @@ class Lanczos(KrylovDefault):
                 fact.V.set(keep, fact.r)
                 # Shrink Lanczos factorization
                 fact.shrink_(keep, self.verbosity)
-             
-        howmany_p = howmany
-        if converged > howmany:
-            howmany_p = converged
-        elif len(D) < howmany:
-            howmany_p = len(D)
-        values = D[:howmany_p]
-
-        # Compute eigenvectors
-        V = U[:,:howmany_p]
-
-        # Compute convergence information
-        vectors = fact.V.basistransform(V)
-        residuals = [fact.r * v for v in V[-1,:]]
-        normresiduals = [fact.normres() * abs(v) for v in V[-1,:]]
-
-        if (converged < howmany) and self.verbosity >= 1:
-            warnings.warn(
-                f"Lanczos eigsolve stopped without convergence after {numiter} iterations:"
-                f" * {converged} eigenvalues converged"
-                f" * norm of residuals = {fact.normres()}"
-                f" * number of operations = {numops}"
-            )
-        elif self.verbosity >= 2:
-            warnings.info(
-                f"Lanczos eigsolve finished after {numiter} iterations: "
-                f" * {converged} eigenvalues converged"
-                f" * norm of residuals = {fact.normres()}"
-                f" * number of operations = {numops}"
-            )
-        return values, vectors, ConvergenceInfo(
-            converged, residuals, normresiduals, numiter, numops
-        )
+        return D, U, fact, converged, numiter, numops

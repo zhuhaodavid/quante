@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:18:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 22:53:45
+# @Last Modified time: 2025-08-31 00:29:01
 
 import warnings
 import numpy as np
@@ -35,7 +35,10 @@ class Arnoldi(KrylovDefault):
         # Compute eigenvectors
         V = U[:, :howmany_p] @ schur2eigvecs(TT)
         vectors = fact.V.basistransform(V)
-        residuals = [fact.r * v for v in V[-1,:]]
+        # residuals = [fact.r * v for v in V[-1,:]]
+        # residuals is the list constaining
+        #     `residual[i] = f(vectors[i]) - values[i] * vectors[i]`
+        # however it is too large, we do not return it
         normresiduals = [fact.normres() * abs(v) for v in V[-1,:]]
         
         if (converged < howmany) and self.verbosity >= 1:
@@ -53,7 +56,7 @@ class Arnoldi(KrylovDefault):
                 f" * number of operations = {numops}"
             )
         return values, vectors, ConvergenceInfo(
-            converged, residuals, normresiduals, numiter, numops
+            converged, normresiduals, numiter, numops
         )
         
     def schursolve(self, A, x0, howmany, which):

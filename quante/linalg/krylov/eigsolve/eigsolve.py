@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:19:37
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 23:01:08
+# @Last Modified time: 2025-08-31 00:27:27
 
 from .lanczos import Lanczos
 from .arnoldi import Arnoldi
@@ -68,7 +68,7 @@ def eigsolve(
         - `info.residual`: list of tc.tensor, a list of the same length as `values` containing the
         residuals `info.residual[i] = f(vectors[i]) - values[i] * vectors[i]`
         - `info.normres`: list, list of the same length as `values` containing the
-        norm of the residual `info.normres[i] = norm(info.residual[i])`
+        norm of the residual `info.normres[i] = norm(f(vectors[i]) - values[i] * vectors[i])`
         - `info.numops`: number of times the linear map was applied
         - `info.numiter`: number of times the Krylov subspace was restarted
 

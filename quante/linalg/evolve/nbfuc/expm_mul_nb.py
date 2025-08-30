@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:20:07
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 23:36:09
+# @Last Modified time: 2025-08-31 00:31:51
 
 import numpy as _np
 from ....basicfun.utils_numba import njit, prange, pnjit
@@ -21,7 +21,7 @@ def addself(a, b, coef):
     else:
         addself_float(a, b, coef)
 
-@pnjit('void(complex128[:], complex128[:], float64)')
+@pnjit
 def addself_complex(a, b, coef):
     for i in prange(len(a)):
         bi = b[i]

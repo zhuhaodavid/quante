@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:46:01
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 23:38:01
+# @Last Modified time: 2025-08-31 00:29:59
 
 import numpy as np
 import warnings
@@ -33,9 +33,8 @@ class KrylovDefault:
                 warnings.warn(f"Unknown parameter: {key}", UserWarning)
 
 class ConvergenceInfo:
-    def __init__(self, converged, residual, normres, numiter, numops):
+    def __init__(self, converged, normres, numiter, numops):
         self.converged = converged
-        self.residual = residual
         self.normres = np.array(normres)
         self.numiter = numiter
         self.numops = numops
