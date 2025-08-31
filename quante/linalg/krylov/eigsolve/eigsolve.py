@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:19:37
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 18:21:50
+# @Last Modified time: 2025-08-31 19:23:32
 
 import numpy as np
 from typing import Literal
@@ -74,8 +74,6 @@ def eigsolve(
         has the following properties:
         - `info.converged`: int, how many eigenvalues and eigenvectors were actually
         converged to the specified tolerance `tol`
-        - `info.residual`: list of tc.tensor, a list of the same length as `values` containing the
-        residuals `info.residual[i] = f(vectors[i]) - values[i] * vectors[i]`
         - `info.normres`: list, list of the same length as `values` containing the
         norm of the residual `info.normres[i] = norm(f(vectors[i]) - values[i] * vectors[i])`
         - `info.numops`: number of times the linear map was applied
