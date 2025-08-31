@@ -320,3 +320,5 @@ Energy converged to -4.2580352068 after 4 sweeps.
 Parts of this package (quante/linalg/krylov/) are based on the Julia package KrylovKit.jl,
 which is licensed under the MIT License.
 The original license is included in quante/linalg/krylov/LICENSE.KrylovKit
+
+This project uses the QuSpin library, which is licensed under the BSD 3-Clause License. The license file can be found at quante/bridge/quspin_utils/quspin_extension_wrap/LICENSE.rst
