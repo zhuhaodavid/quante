@@ -150,7 +150,7 @@ array([[ 0.25,  0.5 ,  0.  ,  0.  ,  0.  ,  0.  ],
        [ 0.  ,  0.  ,  0.  ,  0.  ,  0.5 ,  0.25]])
 ```
 
-### Krylov
+### Krylov Eigsolve
 
 `quante` 提供了基于 Krylov 子空间方法的线性代数工具，主要用于求解大规模稀疏矩阵的特征值问题。
 
@@ -163,9 +163,9 @@ import quante as qt
 mat = qt.generate.matrix.heisenberg_matrix(L=10, sparse=True)
 x0 = qt.generate.state.random(mat.shape[0])
 val, vec , _ = qt.linalg.krylov.eigsolve(
-    mat, x0, howmany=1, which='LM', ishermitian=True
+    mat, x0, howmany=1, which='SR', isherm=True
 )
-print(val)
+val
 ```
 
 ```
