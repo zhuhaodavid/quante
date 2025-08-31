@@ -2,13 +2,39 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:17:43
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 21:34:25
+# @Last Modified time: 2025-08-31 19:04:01
 
 import numpy as _np
 from scipy.sparse import csr_array, csr_matrix, dia_array, dia_matrix, issparse
 
-def dot_parallel(A, v, Yx=None, a=None, overwrite=False):
+def dot_parallel(A, v, Yx=None, a=None, overwrite=True):
+    """parallel dot product for sparse matrix and dense vector/matrix.
+
+    if overwrite is True, calculate:
+        Yx = a * (A @ v)
+    else:
+        Yx += a * (A @ v)
+
+    Parameters
+    ----------
+    A : sparse matrix
+        sparse matrix in csr or dia format
+    v : array_like
+        dense vector or matrix
+    Yx : output array, optional
+        output array to store the result, by default None
+    a : float, optional
+        scalar multiplier, by default None
+    overwrite : bool, optional
+        whether to overwrite the output array, by default True
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
     if Yx is None:
+        assert overwrite is True
         if not isinstance(A, _np.ndarray) and not issparse(A):
             return A.dot(v)
         dtype = _np.complex128 if _np.iscomplexobj(A) or _np.iscomplexobj(v) else _np.float64

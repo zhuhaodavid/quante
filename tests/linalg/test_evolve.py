@@ -2,14 +2,14 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 18:31:52
+# @Last Modified time: 2025-08-31 19:08:57
 
 import unittest
 import scipy.sparse
 import quante as qt
 import numpy as np
 
-class TestTN(unittest.TestCase):
+class TestExpmMultiply(unittest.TestCase):
     def _gen_mat_state(self, L, dtype=np.complex128):
         # 拿到矩阵
         ham = qt.generate.operas.heisenberg_operator(L)
@@ -24,24 +24,24 @@ class TestTN(unittest.TestCase):
     
     def test_expm_multiply_numba(self):
         from quante.linalg.evolve.nbfuc.expm_mul_core import _expm_multiply_simple, _expm_multiply_interval
-        # mat, state = self._gen_mat_state(16)
-        # state = state.astype(np.complex128)
+        mat, state = self._gen_mat_state(16)
+        state = state.astype(np.complex128)
 
-        # # 验证 exp(-1j*mat) @ state
-        # # 一次性作用:
-        # res1 = scipy.sparse.linalg.expm_multiply((-1j*mat), state)
-        # res2, s = _expm_multiply_simple((-1j*mat), state, 1.)
-        # res3, s = _expm_multiply_simple(mat, state, -1j)
-        # self.assertTrue(np.allclose(res1, res2))
-        # self.assertTrue(np.allclose(res1, res3))
+        # 验证 exp(-1j*mat) @ state
+        # 一次性作用:
+        res1 = scipy.sparse.linalg.expm_multiply((-1j*mat), state)
+        res2, s = _expm_multiply_simple((-1j*mat), state, 1.)
+        res3, s = _expm_multiply_simple(mat, state, -1j)
+        self.assertTrue(np.allclose(res1, res2))
+        self.assertTrue(np.allclose(res1, res3))
         
-        # # 方法0:
-        # res1 = scipy.sparse.linalg.expm_multiply((-1j*mat), state, start=0, stop=10, num=10)
-        # res2, s1, s2 = _expm_multiply_interval((-1j*mat), state, 1., start=0, stop=10, num=10)
-        # res3, s1, s2 = _expm_multiply_interval(mat, state, -1j, start=0, stop=10, num=10)
-        # print(s1)
-        # self.assertTrue(np.allclose(res1, res2))
-        # self.assertTrue(np.allclose(res1, res3))
+        # 方法0:
+        res1 = scipy.sparse.linalg.expm_multiply((-1j*mat), state, start=0, stop=10, num=10)
+        res2, s1, s2 = _expm_multiply_interval((-1j*mat), state, 1., start=0, stop=10, num=10)
+        res3, s1, s2 = _expm_multiply_interval(mat, state, -1j, start=0, stop=10, num=10)
+        print(s1)
+        self.assertTrue(np.allclose(res1, res2))
+        self.assertTrue(np.allclose(res1, res3))
         
         # 方法1:
         L = 16
@@ -51,9 +51,7 @@ class TestTN(unittest.TestCase):
         mat = ham.to_matrix(basis, sparse=True)
         res1 = scipy.sparse.linalg.expm_multiply((-1j*mat), state, start=0, stop=10, num=19)
         res2, s1, s2 = _expm_multiply_interval((-1j*mat), state, 1., start=0, stop=10, num=19)
-        # res3, s1, s2 = _expm_multiply_interval(mat, state, -1j, start=0, stop=10, num=19)
-        print(res1 - res2)
-        return
+        res3, s1, s2 = _expm_multiply_interval(mat, state, -1j, start=0, stop=10, num=19)
         self.assertTrue(np.allclose(res1, res2))
         self.assertTrue(np.allclose(res1, res3))
         

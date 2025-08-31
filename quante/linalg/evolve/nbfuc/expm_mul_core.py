@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-05 10:43:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:46:52
+# @Last Modified time: 2025-08-31 19:13:07
 
 # 下面的代码来自 scipy.sparse.linalg._expm_multiple
 # 有一些改动
@@ -731,7 +731,7 @@ def _expm_multiply_interval_core_1(A, X, scale, h, mu, m_star, s, q, tol):
                 if p > high_p:
                     # K[p] = h * A.dot(K[p-1]) / float(p)   #!! main
                     
-                    dot_parallel(A,K[p-1],K[p])
+                    dot_parallel(A,K[p-1],K[p], overwrite=True)
                     K[p] *= h/float(p)*scale
                     
                     # tmpKp = K[p].reshape(-1)
@@ -778,7 +778,7 @@ def _expm_multiply_interval_core_2(A, X, scale, h, mu, m_star, s, q, tol):
             for p in range(1, m_star+1):
                 if p == high_p + 1:
                     # K[p] = h * A.dot(K[p-1]) / float(p)   #!! main
-                    dot_parallel(A,K[p-1],K[p])
+                    dot_parallel(A,K[p-1],K[p],overwrite=True)
                     K[p] *= h/float(p)*scale
                     
                     # tmpKp = K[p].reshape(-1)

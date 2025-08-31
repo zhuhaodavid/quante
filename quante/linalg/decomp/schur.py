@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:37:49
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 22:54:37
+# @Last Modified time: 2025-08-31 19:10:17
 
 from scipy.linalg import get_lapack_funcs, schur
 import numpy as np
@@ -23,7 +23,7 @@ except ImportError:
     has_cython = False
 
 # do not need the lapack version
-# has_cython = False
+has_cython = False
 
 hseqr_available = False
 if has_cython:

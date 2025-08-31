@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-07-04 19:45:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-06 13:25:22
+# @Last Modified time: 2025-08-31 19:14:41
 
 import unittest
 import quante as qt
@@ -10,7 +10,7 @@ import numpy as np
 
 try:
     import tenpy
-    from quante.generate.tenpy_bridge import (
+    from quante.bridge.tenpy_utils import (
         tenpy_model_tebd,
         tenpy_tebd_GS_,
         tenpy_tebd_params_imag_time, 
