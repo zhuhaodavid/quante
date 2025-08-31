@@ -2,9 +2,10 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:19:37
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 14:49:08
+# @Last Modified time: 2025-08-31 18:21:50
 
 import numpy as np
+from typing import Literal
 
 from .lanczos import Lanczos
 from .arnoldi import Arnoldi
@@ -15,7 +16,9 @@ def eigsolve(
     A,
     x0,
     howmany=1,
-    which='LM',
+    which:Literal[
+        'LM', 'LR', 'SR', 'LI', 'SI'
+    ] ='LM',
     isherm=None,
     lau=None,
     **kwargs

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:25:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 13:40:43
+# @Last Modified time: 2025-08-31 18:03:12
 
 import warnings
 import numpy as np
@@ -40,7 +40,7 @@ class ArnoldiIterator(LinearAlgebraUtils):
             self.lau.sub_(r, v, alpha=dalpha)
              # should we use real(dα) here?
             beta = self.lau.norm(r)
-        else:
+        elif self.orth in ['ClassicalGramSchmidtIR','ClassicalGramSchmidtIR']:
             raise NotImplementedError(f"orthogonalization method {self.orth} not implemented")
         V = OrthonormalBasis(v, krylovdim, self.lau)
         H = np.array([alpha, beta])

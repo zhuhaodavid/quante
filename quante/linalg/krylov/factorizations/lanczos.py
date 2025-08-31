@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-30 19:20:44
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 13:40:49
+# @Last Modified time: 2025-08-31 18:02:07
 
 import numpy as np
 import warnings
@@ -45,7 +45,7 @@ class LanczosIterator(LinearAlgebraUtils):
             alpha += dalpha
             self.lau.sub_(r, v, alpha=dalpha)
             beta = self.lau.norm(r)
-        else:
+        elif self.orth in ['ClassicalGramSchmidt2','ModifiedGramSchmidtIR']:
             raise NotImplementedError(f"orthogonalization method {self.orth} not implemented")
         if verbosity >= 1:
             warn_nonhermitian(alpha, 0., beta)
@@ -120,6 +120,14 @@ class LanczosFactorization:
             for q in self.V.basis:
                 w, s = self.orthogonalize_(w, q, orth)
             alpha += s
+            beta = self.lau.norm(w)
+            return w, alpha, beta
+        elif orth == "ModifiedGramSchmidt":
+            v = V.basis[-1]
+            w = self.lau.apply(operator, v)
+            w = self.lau.add_(w, V.basis[-2], -beta)
+            alpha = self.lau.inner(v, w)
+            w = self.lau.add_(w, v, -alpha)
             beta = self.lau.norm(w)
             return w, alpha, beta
         else:

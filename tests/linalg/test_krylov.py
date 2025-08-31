@@ -2,12 +2,13 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 13:58:54
+# @Last Modified time: 2025-08-31 18:20:04
 
 import unittest
 
 import quante as qt
 import numpy as np
+from quante.linalg.krylov import eigsolve
 
 eps = 1e-10
 
@@ -24,7 +25,9 @@ try:
 except ImportError:
     torch_installed = False
 
-class TestTN(unittest.TestCase):
+orths = ['ModifiedGramSchmidt2', 'ModifiedGramSchmidt']
+
+class TestKrylov(unittest.TestCase):
     
     @unittest.skipIf(not tenpy_installed, "tenpy is not installed")
     def test_lanczos_ground(self):
@@ -67,208 +70,70 @@ class TestTN(unittest.TestCase):
         psi0 = npc.Array.from_ndarray(psi0,[legcharges2])
         res0, res1 = LanczosEvolution(H, psi0, {}).run(0.1)
         self.assertTrue(np.allclose(vec, res0.to_ndarray()))
-
-
-    def test_eigsolve_np_dense_real_arnoldi(self):
-        from quante.linalg.krylov import eigsolve
-        d = 100
-        mat = np.random.randn(d, d)
-        x0 = np.random.randn(d)
-        k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
-
-
-    def test_eigsolve_np_dense_complex_arnoldi(self):
-        from quante.linalg.krylov import eigsolve
-        d = 100
-        mat = np.random.randn(d, d) + 1j * np.random.randn(d, d)
-        x0 = np.random.randn(d) + 1j * np.random.randn(d)
-        k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
-
-    def test_eigsolve_np_sparse_real_arnoldi(self):
-        from quante.linalg.krylov import eigsolve
-        mat = qt.generate.matrix.heisenberg_matrix(L=10, sparse=True)
-        d = mat.shape[0]
-        x0 = np.random.randn(d)
-        k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
- 
-    def test_eigsolve_np_sparse_complex_arnoldi(self):
-        from quante.linalg.krylov import eigsolve
-        mat = qt.generate.matrix.heisenberg_matrix(L=10, j=(1j, 1, 1), sparse=True)
-        d = mat.shape[0]
-        x0 = np.random.randn(d) + 1j * np.random.randn(d)
-        k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
     
-    def test_eigsolve_np_dense_real_lanczos(self):
-        from quante.linalg.krylov import eigsolve
-        d = 100
-        mat = np.random.randn(d, d)
-        mat = (mat + mat.T) / 2
-        x0 = np.random.randn(d)
+    def _main_eigsolve(self, mat, x0, orth, isherm):
         k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=isherm, orth=orth)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
 
-    def test_eigsolve_np_dense_complex_lanczos(self):
-        from quante.linalg.krylov import eigsolve
-        d = 100
-        mat = np.random.randn(d, d) + 1j * np.random.randn(d, d)
-        mat = (mat + mat.T.conj()) / 2
-        x0 = np.random.randn(d) + 1j * np.random.randn(d)
-        k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
-
-    def test_eigsolve_np_sparse_real_lanczos(self):
-        from quante.linalg.krylov import eigsolve
-        mat = qt.generate.matrix.heisenberg_matrix(L=10, sparse=True)
-        d = mat.shape[0]
-        x0 = np.random.randn(d)
-        k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
-
-    def test_eigsolve_np_sparse_complex_lanczos(self):
-        from quante.linalg.krylov import eigsolve
-        mat = qt.generate.matrix.heisenberg_matrix(L=10, h=(0,1,0), sparse=True)
-        d = mat.shape[0]
-        x0 = np.random.randn(d) + 1j * np.random.randn(d)
-        k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
-
-
-    @unittest.skipIf(not torch_installed, "torch is not installed")
-    def test_eigsolve_tc_dense_real_arnoldi(self):
-        from quante.linalg.krylov import eigsolve
-        d = 100
-        mat = np.random.randn(d, d)
-        x0 = np.random.randn(d)
-        k = 3
         mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=isherm, orth=orth)
         val = val[:k]
         for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat.numpy() @ vec[i].numpy() - val[i] * vec[i].numpy()))
+            self.assertGreater(eps, tc.linalg.norm(mat.to(tc.complex128) @ vec[i].to(tc.complex128) - val[i] * vec[i].to(tc.complex128)).item())
+        
+        if tc.cuda.is_available():
+            mat, x0 = mat.cuda(), x0.cuda()
+            val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=isherm, orth=orth)
+            val = val[:k]
+            for i in range(k):
+                self.assertGreater(eps, tc.linalg.norm(mat.to(tc.complex128) @ vec[i].to(tc.complex128) - val[i] * vec[i].to(tc.complex128)).item())
         
 
-    @unittest.skipIf(not torch_installed, "torch is not installed")
-    def test_eigsolve_tc_dense_complex_arnoldi(self):
-        from quante.linalg.krylov import eigsolve
+    def test_eigsolve_dense_arnoldi(self):
         d = 100
-        mat = np.random.randn(d, d) + 1j * np.random.randn(d, d)
-        x0 = np.random.randn(d) + 1j * np.random.randn(d)
-        k = 3
-        mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat.numpy() @ vec[i].numpy() - val[i] * vec[i].numpy()))
+        for dtype in [np.float64, np.complex128]:
+            for orth in orths:
+                mat = np.random.randn(d, d) + 1j * np.random.randn(d, d)
+                mat = mat.astype(dtype)
+                x0 = np.random.randn(d) + 1j * np.random.randn(d)
+                x0 = x0.astype(dtype)
+                self._main_eigsolve(mat, x0, orth, isherm=False)
+                
 
-    @unittest.skipIf(not torch_installed, "torch is not installed")
-    def test_eigsolve_tc_sparse_real_arnoldi(self):
-        from quante.linalg.krylov import eigsolve
-        mat = qt.generate.matrix.heisenberg_matrix(L=10, sparse=True)
-        d = mat.shape[0]
-        x0 = np.random.randn(d)
-        k = 3
-        mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, tc.linalg.norm(mat @ vec[i] - val[i] * vec[i]).item())
- 
-    @unittest.skipIf(not torch_installed, "torch is not installed")
-    def test_eigsolve_tc_sparse_complex_arnoldi(self):
-        from quante.linalg.krylov import eigsolve
-        mat = qt.generate.matrix.heisenberg_matrix(L=10, j=(1j, 1, 1), sparse=True)
-        d = mat.shape[0]
-        x0 = np.random.randn(d) + 1j * np.random.randn(d)
-        k = 3
-        mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, tc.linalg.norm(mat @ vec[i] - val[i] * vec[i]).item())
-    
-    @unittest.skipIf(not torch_installed, "torch is not installed")
-    def test_eigsolve_tc_dense_real_lanczos(self):
-        from quante.linalg.krylov import eigsolve
+    def test_eigsolve_sparse_arnoldi(self):
         d = 100
-        mat = np.random.randn(d, d)
-        mat = (mat + mat.T) / 2
-        x0 = np.random.randn(d)
-        k = 3
-        mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat.numpy() @ vec[i].numpy() - val[i] * vec[i].numpy()))
+        for dtype in [np.float64, np.complex128]:
+            for orth in orths:
+                mat = qt.generate.matrix.heisenberg_matrix(L=10, sparse=True)
+                mat = mat.astype(dtype)
+                d = mat.shape[0]
+                x0 = np.random.randn(d) + 1j * np.random.randn(d)
+                x0 = x0.astype(dtype)
+                self._main_eigsolve(mat, x0, orth, isherm=False)
 
-    @unittest.skipIf(not torch_installed, "torch is not installed")
-    def test_eigsolve_tc_dense_complex_lanczos(self):
-        from quante.linalg.krylov import eigsolve
+
+    def test_eigsolve_dense_lanczos(self):
         d = 100
-        mat = np.random.randn(d, d) + 1j * np.random.randn(d, d)
-        mat = (mat + mat.T.conj()) / 2
-        x0 = np.random.randn(d) + 1j * np.random.randn(d)
-        k = 3
-        mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, np.linalg.norm(mat.numpy() @ vec[i].numpy() - val[i] * vec[i].numpy()))
+        for dtype in [np.float64, np.complex128]:
+            for orth in orths:
+                mat = np.random.randn(d, d) + 1j * np.random.randn(d, d)
+                mat = (mat + mat.T.conj()) / 2
+                mat = mat.astype(dtype)
+                x0 = np.random.randn(d) + 1j * np.random.randn(d)
+                x0 = x0.astype(dtype)
+                self._main_eigsolve(mat, x0, orth, isherm=True)
+                
 
-    @unittest.skipIf(not torch_installed, "torch is not installed")
-    def test_eigsolve_tc_sparse_real_lanczos(self):
-        from quante.linalg.krylov import eigsolve
-        mat = qt.generate.matrix.heisenberg_matrix(L=10, sparse=True)
-        d = mat.shape[0]
-        x0 = np.random.randn(d)
-        k = 3
-        mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, tc.linalg.norm(mat @ vec[i] - val[i] * vec[i]).item())
-
-    @unittest.skipIf(not torch_installed, "torch is not installed")
-    def test_eigsolve_tc_sparse_complex_lanczos(self):
-        from quante.linalg.krylov import eigsolve
-        mat = qt.generate.matrix.heisenberg_matrix(L=10, h=(0,1,0), sparse=True)
-        d = mat.shape[0]
-        x0 = np.random.randn(d) + 1j*np.random.randn(d)
-        k = 3
-        mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
-        val = val[:k]
-        for i in range(k):
-            self.assertGreater(eps, tc.linalg.norm(mat @ vec[i] - val[i] * vec[i]).item())
-
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_eigsolve_sparse_lanczos(self):
+        d = 100
+        for dtype in [np.float64, np.complex128]:
+            for orth in orths:
+                mat = qt.generate.matrix.heisenberg_matrix(L=10, sparse=True)
+                mat = mat.astype(dtype)
+                d = mat.shape[0]
+                x0 = np.random.randn(d)
+                x0 = x0.astype(dtype)
+                self._main_eigsolve(mat, x0, orth, isherm=True)
