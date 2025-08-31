@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 20:40:27
+# @Last Modified time: 2025-08-31 17:11:42
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -32,9 +32,7 @@ from ...basicfun import (
 )
 
 import scipy.sparse as _sp
-from ...generate.basis.basis_class_nb import(
-    _get_index_type, addBp, addone, getBp, writeA2B, writediag, ajustBp, sum_duplicates   
-)
+
 from ...basicfun.utils_hdf5 import (_LOAD_FUNC, _default_load, _load_dia)
 from ..matops.sparse_mul import dot_parallel
 
@@ -1213,6 +1211,9 @@ def save_matrices(oper_dict, basis, filename):
 
 
 def assemble_sparse_matrix(filename):
+    from ...generate.basis.basis_class_nb import(
+        _get_index_type, addBp, addone, getBp, writeA2B, writediag, ajustBp, sum_duplicates   
+    )
     csr_nnz = 0
     diag = None
     with _h5py.File(filename, 'r') as f:

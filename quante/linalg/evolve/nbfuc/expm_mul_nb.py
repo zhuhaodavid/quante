@@ -2,10 +2,69 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:20:07
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 00:31:51
+# @Last Modified time: 2025-08-31 17:15:24
 
 import numpy as _np
 from ....basicfun.utils_numba import njit, prange, pnjit
+
+from ...matops.sparse_mul import dot_parallel
+
+class NpLinearAlgebraUtils:
+
+    @staticmethod
+    def update_device(x0):
+        pass
+
+    @staticmethod
+    def apply(A, x):
+        return dot_parallel(A, x)
+        return A @ x
+
+    @staticmethod
+    def norm(x):
+        return _np.linalg.norm(x)
+
+    @staticmethod
+    def inner(x, y):
+        return vdot(x, y)
+        # return np.vdot(x, y)
+
+    @staticmethod
+    def zeros_like(x):
+        return _np.zeros_like(x)
+
+    @staticmethod
+    def zeros(shape, dtype=None):
+        return _np.zeros(shape, dtype=dtype)
+
+    @staticmethod
+    def add_(x, y, alpha=None):
+        addself(x, y, alpha)
+        return x
+
+    @staticmethod
+    def sub_(x, y, alpha=None):
+        addself(x, y, -alpha)
+        return x
+
+    @staticmethod
+    def div_(x, alpha):
+        prodscale(x, 1/alpha)
+        return x
+
+    @staticmethod
+    def mul_(x, alpha):
+        prodscale(x, alpha)
+        return x
+
+    @staticmethod
+    def matmul(A, B):
+        return A @ B
+
+    @staticmethod
+    def isrealobj(x):
+        return _np.isrealobj(x)
+
 
 
 @pnjit
