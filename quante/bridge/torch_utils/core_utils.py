@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-25 22:20:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-27 09:41:10
+# @Last Modified time: 2025-08-31 15:42:52
 
 # 梯度下降的工具
 
@@ -136,6 +136,9 @@ def tonp(tensors: list | tc.Tensor | np.ndarray) -> list | np.ndarray:
         # 如果输入已经是 NumPy 数组，则直接返回
         return tensors
     elif isinstance(tensors, tc.Tensor):
+        if str(tensors.layout).startswith("torch.sparse_"):
+            from .linalg.sparse import to_scipy
+            return to_scipy(tensors)
         # 如果输入是 PyTorch 张量，则将其转换为 NumPy 数组
         if tensors.is_cuda:
             # 如果张量在 GPU 上，则先将其移动到 CPU
@@ -188,8 +191,8 @@ def totc(data: list | np.ndarray | tc.Tensor, dtype=None, device=None) -> list |
     elif isinstance(data, list):
         return [totc(x, dtype=dtype, device=device) for x in data]
     elif issparse(data):
-        from .linalg.sparse import to_csr
-        return to_csr(data, device=device, dtype=dtype)
+        from .linalg.sparse import to_sparse
+        return to_sparse(data, device=device, dtype=dtype)
     elif isinstance(data, (int, float, complex)):
         return tc.tensor(data, dtype=dtype, device=device)
     else:

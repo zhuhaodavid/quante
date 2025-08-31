@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 22:55:44
+# @Last Modified time: 2025-08-31 13:58:54
 
 import unittest
 
@@ -75,7 +75,7 @@ class TestTN(unittest.TestCase):
         mat = np.random.randn(d, d)
         x0 = np.random.randn(d)
         k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=False)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
@@ -87,7 +87,7 @@ class TestTN(unittest.TestCase):
         mat = np.random.randn(d, d) + 1j * np.random.randn(d, d)
         x0 = np.random.randn(d) + 1j * np.random.randn(d)
         k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=False)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
@@ -98,7 +98,7 @@ class TestTN(unittest.TestCase):
         d = mat.shape[0]
         x0 = np.random.randn(d)
         k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=False)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
@@ -109,7 +109,7 @@ class TestTN(unittest.TestCase):
         d = mat.shape[0]
         x0 = np.random.randn(d) + 1j * np.random.randn(d)
         k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=False)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
@@ -121,7 +121,7 @@ class TestTN(unittest.TestCase):
         mat = (mat + mat.T) / 2
         x0 = np.random.randn(d)
         k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=True)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
@@ -133,7 +133,7 @@ class TestTN(unittest.TestCase):
         mat = (mat + mat.T.conj()) / 2
         x0 = np.random.randn(d) + 1j * np.random.randn(d)
         k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=True)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
@@ -144,7 +144,7 @@ class TestTN(unittest.TestCase):
         d = mat.shape[0]
         x0 = np.random.randn(d)
         k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=True)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
@@ -155,7 +155,7 @@ class TestTN(unittest.TestCase):
         d = mat.shape[0]
         x0 = np.random.randn(d) + 1j * np.random.randn(d)
         k = 3
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=True)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat @ vec[i] - val[i] * vec[i]))
@@ -169,7 +169,7 @@ class TestTN(unittest.TestCase):
         x0 = np.random.randn(d)
         k = 3
         mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=False)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat.numpy() @ vec[i].numpy() - val[i] * vec[i].numpy()))
@@ -183,7 +183,7 @@ class TestTN(unittest.TestCase):
         x0 = np.random.randn(d) + 1j * np.random.randn(d)
         k = 3
         mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=False)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat.numpy() @ vec[i].numpy() - val[i] * vec[i].numpy()))
@@ -196,7 +196,7 @@ class TestTN(unittest.TestCase):
         x0 = np.random.randn(d)
         k = 3
         mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=False)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, tc.linalg.norm(mat @ vec[i] - val[i] * vec[i]).item())
@@ -209,7 +209,7 @@ class TestTN(unittest.TestCase):
         x0 = np.random.randn(d) + 1j * np.random.randn(d)
         k = 3
         mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=False)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=False)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, tc.linalg.norm(mat @ vec[i] - val[i] * vec[i]).item())
@@ -223,7 +223,7 @@ class TestTN(unittest.TestCase):
         x0 = np.random.randn(d)
         k = 3
         mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=True)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat.numpy() @ vec[i].numpy() - val[i] * vec[i].numpy()))
@@ -237,7 +237,7 @@ class TestTN(unittest.TestCase):
         x0 = np.random.randn(d) + 1j * np.random.randn(d)
         k = 3
         mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=True)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, np.linalg.norm(mat.numpy() @ vec[i].numpy() - val[i] * vec[i].numpy()))
@@ -250,7 +250,7 @@ class TestTN(unittest.TestCase):
         x0 = np.random.randn(d)
         k = 3
         mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=True)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, tc.linalg.norm(mat @ vec[i] - val[i] * vec[i]).item())
@@ -263,7 +263,7 @@ class TestTN(unittest.TestCase):
         x0 = np.random.randn(d) + 1j*np.random.randn(d)
         k = 3
         mat, x0 = totc(mat), totc(x0)
-        val, vec, _ = eigsolve(mat, x0, howmany=3, ishermitian=True)
+        val, vec, _ = eigsolve(mat, x0, howmany=3, isherm=True)
         val = val[:k]
         for i in range(k):
             self.assertGreater(eps, tc.linalg.norm(mat @ vec[i] - val[i] * vec[i]).item())

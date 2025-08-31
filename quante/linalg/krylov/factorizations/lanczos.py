@@ -2,17 +2,16 @@
 # @Author: hzhu
 # @Date:   2025-08-30 19:20:44
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 22:05:00
+# @Last Modified time: 2025-08-31 13:40:49
 
 import numpy as np
 import warnings
 
-from ..krylovkit import overload_methods
-from ..orthonormal import OrthonormalBasis
-from ..krylovkit import LinearAlgebraUtils as lau
+from ..dense.orthonormal import OrthonormalBasis
+from ..krylovkit import LinearAlgebraUtils
 
-class LanczosIterator:
-    def __init__(self, A, x0, orth, keepvecs=True):
+class LanczosIterator(LinearAlgebraUtils):
+    def __init__(self, A, x0, orth, keepvecs=True, lau=None):
         self.operator = A
         self.x0 = x0
         if (not keepvecs and orth in [
@@ -24,34 +23,34 @@ class LanczosIterator:
             raise ValueError("Cannot use reorthogonalization without keeping all Krylov vectors.")
         self.orth = orth
         self.keepvecs = keepvecs
-        overload_methods(x0)
-        lau.update_device(x0)
+        super().__init__(x0, lau)
+        self.lau.update_device(x0)
     
     def initialize(self, krylovdim, verbosity):
         x0 = self.x0
-        beta0 = lau.norm(x0)
+        beta0 = self.lau.norm(x0)
         if np.isclose(beta0, 0):
             raise ValueError("initial vector should not have norm zero.")
-        Ax0 = lau.apply(self.operator, x0)
-        alpha = lau.inner(x0, Ax0) / (beta0 * beta0)
-        v = lau.zeros_like(Ax0)
-        lau.add_(v, x0, alpha=1/beta0)
-        r = lau.div_(Ax0, beta0)
-        beta_old = lau.norm(r)
-        lau.sub_(r, v, alpha=alpha)
-        beta = lau.norm(r)
+        Ax0 = self.lau.apply(self.operator, x0)
+        alpha = self.lau.inner(x0, Ax0) / (beta0 * beta0)
+        v = self.lau.zeros_like(Ax0)
+        self.lau.add_(v, x0, alpha=1/beta0)
+        r = self.lau.div_(Ax0, beta0)
+        beta_old = self.lau.norm(r)
+        self.lau.sub_(r, v, alpha=alpha)
+        beta = self.lau.norm(r)
         # possibly reorthogonalize
         if self.orth in ['ClassicalGramSchmidt2','ModifiedGramSchmidt2']:
-            dalpha = lau.inner(v, r)
+            dalpha = self.lau.inner(v, r)
             alpha += dalpha
-            lau.sub_(r, v, alpha=dalpha)
-            beta = lau.norm(r)
+            self.lau.sub_(r, v, alpha=dalpha)
+            beta = self.lau.norm(r)
         else:
             raise NotImplementedError(f"orthogonalization method {self.orth} not implemented")
         if verbosity >= 1:
             warn_nonhermitian(alpha, 0., beta)
         basis_num = krylovdim if self.keepvecs else 2
-        V = OrthonormalBasis(v, basis_num)
+        V = OrthonormalBasis(v, basis_num, self.lau)
         alphas = [np.real(alpha)]
         betas = [beta]
         if verbosity > 3:
@@ -59,15 +58,16 @@ class LanczosIterator:
                 f"Lanczos initiation at dimension 1: "
                 f"subspace normres = {beta}"
             )
-        return LanczosFactorization(1, V, alphas, betas, r)
+        return LanczosFactorization(1, V, alphas, betas, r, lau=self.lau)
 
 class LanczosFactorization:
-    def __init__(self, k, V, alphas, betas, r):
+    def __init__(self, k, V, alphas, betas, r, lau):
         self.k = k  # current Krylov dimension
         self.V = V  # basis of length k
         self.alphas = alphas
         self.betas = betas
         self.r = r  # residual
+        self.lau = lau
     
     def __len__(self):
         return self.k
@@ -85,7 +85,7 @@ class LanczosFactorization:
     def expand_(self, iterator, verbosity=0):
         betaold = self.normres()
         r = self.r
-        lau.div_(r, betaold)
+        self.lau.div_(r, betaold)
         self.V.append(r)
         r, alpha, beta = self.lanczosrecurrence(
             iterator.operator, self.V, 
@@ -112,15 +112,15 @@ class LanczosFactorization:
     def lanczosrecurrence(self, operator, V, beta, orth):
         if orth == "ModifiedGramSchmidt2":
             v = V.basis[-1]
-            w = lau.apply(operator, v)
-            w = lau.add_(w, V.basis[-2], -beta)
-            w, alpha = orthogonalize_(w, v, orth)
+            w = self.lau.apply(operator, v)
+            w = self.lau.add_(w, V.basis[-2], -beta)
+            w, alpha = self.orthogonalize_(w, v, orth)
             
             s = alpha
             for q in self.V.basis:
-                w, s = orthogonalize_(w, q, orth)
+                w, s = self.orthogonalize_(w, q, orth)
             alpha += s
-            beta = lau.norm(w)
+            beta = self.lau.norm(w)
             return w, alpha, beta
         else:
             raise NotImplementedError(f"orthogonalization method {orth} not implemented")
@@ -143,17 +143,17 @@ class LanczosFactorization:
             warnings.info(
                 f"Arnoldi reduction to dimension {k}: subspace normres = {beta}"
             )
-        lau.mul_(r, self.normres())
+        self.lau.mul_(r, self.normres())
         self.r = r
 
 
-def orthogonalize_(v, q, orth):
-    if orth == "ModifiedGramSchmidt2":
-        s = lau.inner(q, v)
-        v = lau.add_(v, q, -s)
-        return v, s
-    else:
-        raise NotImplementedError(f"reorthogonalization method {orth} not implemented")
+    def orthogonalize_(self, v, q, orth):
+        if orth == "ModifiedGramSchmidt2":
+            s = self.lau.inner(q, v)
+            v = self.lau.add_(v, q, -s)
+            return v, s
+        else:
+            raise NotImplementedError(f"reorthogonalization method {orth} not implemented")
 
 def warn_nonhermitian(alpha, beta1, beta2):
     n = np.linalg.norm([alpha, beta1, beta2])

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:18:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 00:29:01
+# @Last Modified time: 2025-08-31 13:42:50
 
 import warnings
 import numpy as np
@@ -12,16 +12,16 @@ from ..krylovkit import ConvergenceInfo, KrylovDefault, EIGSORT
 from ..factorizations.arnoldi import ArnoldiIterator
 from ...decomp.schur import permuteschur_, hschur_, schur2eigvals, schur2eigvecs
 
-from ..krylovkit import LinearAlgebraUtils as lau
-
 class Arnoldi(KrylovDefault):
     def __init__(self, **kwargs):
         super().__init__()
         self.eager = kwargs.pop('eager', False)
         self.update_params(kwargs)
 
-    def eigsolve(self, A, x0, howmany, which):
-        T, U, fact, converged, numiter, numops = self.schursolve(A, x0, howmany, which)
+    def eigsolve(self, A, x0, howmany, which, lau=None):
+        T, U, fact, converged, numiter, numops = self.schursolve(
+            A, x0, howmany, which, lau
+        )
         howmany_p = howmany
         if np.isrealobj(T) and howmany < fact.length() and T[howmany, howmany-1] != 0:
             howmany_p += 1
@@ -59,7 +59,7 @@ class Arnoldi(KrylovDefault):
             converged, normresiduals, numiter, numops
         )
         
-    def schursolve(self, A, x0, howmany, which):
+    def schursolve(self, A, x0, howmany, which, lau=None):
         krylovdim = self.krylovdim
         maxiter = self.maxiter
         
@@ -71,7 +71,7 @@ class Arnoldi(KrylovDefault):
         ## FIRST ITERATION: setting up
         numiter = 1
         # initialize arnoldi factorization
-        Aiter = ArnoldiIterator(A, x0, orth=self.orth)
+        Aiter = ArnoldiIterator(A, x0, self.orth, lau)
         fact = Aiter.initialize(krylovdim, verbosity=self.verbosity-2)
         numops = 1
         beta = fact.normres()
@@ -165,7 +165,7 @@ class Arnoldi(KrylovDefault):
                 fact.rayleighquotient().copy_from(H)
                 # Update the basis
                 fact.V.basistransform_(U[:, :keep])
-                lau.div_(fact.r, fact.normres())
+                fact.lau.div_(fact.r, fact.normres())
                 fact.V.set(keep, fact.r)
                 # Everything is set up to shrink Arnoldi factorization
                 fact.shrink_(keep, self.verbosity)

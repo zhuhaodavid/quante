@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:40:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-05-17 17:55:51
+# @Last Modified time: 2025-08-31 15:35:13
 
 
 import numpy as np
@@ -10,6 +10,43 @@ import scipy.sparse
 import scipy.sparse.linalg
 import torch as tc
 from warnings import warn
+sp = scipy.sparse
+
+def to_sparse(tsr, *, device=None, dtype=None) -> tc.Tensor:
+    assert tsr.ndim == 2, "只能处理二维张量"
+    if dtype is None:
+        dtype = tc.complex128 if np.iscomplexobj(tsr) else tc.float64
+        
+    if isinstance(tsr, (sp.csr_array, sp.csr_matrix)):
+        return tc.sparse_csr_tensor(tsr.indptr, tsr.indices, tsr.data, tsr.shape, dtype=dtype, device=device)
+    elif isinstance(tsr, (sp.coo_array, sp.coo_matrix)):
+        return tc.sparse_coo_tensor([tsr.row, tsr.col], tsr.data, tsr.shape, dtype=dtype, device=device)
+    elif isinstance(tsr, (sp.csc_array, sp.csc_matrix)):
+        return tc.sparse_csc_tensor(tsr.indptr, tsr.indices, tsr.data, tsr.shape, dtype=dtype, device=device)
+    else:
+        raise NotImplementedError(
+            f"converting {type(tsr)} to torch.Tensor not supported yet."
+        )
+
+def to_scipy(tsr):
+    if tsr.is_sparse_csr:  # csr
+        return sp.csr_array((tsr.values().cpu().numpy(), 
+                    tsr.col_indices().cpu().numpy(),
+                    tsr.crow_indices().cpu().numpy(), 
+        ), shape=tsr.shape)
+    elif tsr.is_sparse:
+        rowcol = tsr._indices().cpu().numpy()
+        data = tsr._values().cpu().numpy()
+        return sp.coo_array((data, rowcol), shape=tsr.shape)
+    elif tsr.layout == tc.sparse_csc:
+        return sp.csc_array((tsr.values().cpu().numpy(),
+                tsr.row_indices().cpu().numpy(),
+                tsr.ccol_indices().cpu().numpy()),
+            shape=tsr.shape)
+    else:
+        raise NotImplementedError(
+            f"Sparse layout {type(tsr)} not supported yet."
+        )
 
 def to_csr(tsr:scipy.sparse.csr_array, *, device=None, dtype=None) -> tc.Tensor:
     """

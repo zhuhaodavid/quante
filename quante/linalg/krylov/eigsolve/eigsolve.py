@@ -2,19 +2,22 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:19:37
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 00:27:27
+# @Last Modified time: 2025-08-31 14:49:08
+
+import numpy as np
 
 from .lanczos import Lanczos
 from .arnoldi import Arnoldi
 from ..krylovkit import EIGSORT
-from ..krylovkit import LinearAlgebraUtils as lau
+from ...matops import isherm as fuc_isherm
 
 def eigsolve(
     A,
     x0,
     howmany=1,
     which='LM',
-    ishermitian=False,
+    isherm=None,
+    lau=None,
     **kwargs
 ):
     """Compute at least `howmany` eigenvalues from the linear map encoded in the matrix `A` or by
@@ -39,10 +42,13 @@ def eigsolve(
         - `SR`: eigenvalues with smallest (most negative) real part
         - `LI`: eigenvalues with largest (most positive) imaginary part, only if x0 is complex
         - `SI`: eigenvalues with smallest (most negative) imaginary part, only if x0 is complex
-    issymmetric : bool, optional
-        if the linear map is symmetric, only meaningful if x0 is real, by default False
-    ishermitian : bool, optional
+    isherm : bool, optional
         if the linear map is Hermitian, by default False
+        For large matrix, this keyword should be input for best performence (!!!)
+    lau : class, optional
+        linear algera utils, a class that contain method as the one
+        "NpLinearAlgebraUtils" in "../krylovkit.py".
+        by default None, i.e., interally determined by type of x0
     **kwargs : optional
         The extra parameters defined in `KrylovDefault`.
         - `verbosity`: level of verbosity, by default 1
@@ -81,19 +87,31 @@ def eigsolve(
     Krylov-Schur algorithm, which can dynamically shrink and grow the Krylov subspace, i.e. the
     restarts are so-called thick restarts where a part of the current Krylov subspace is kept.
     """
+    if isherm is None:
+        try:
+            isherm = fuc_isherm(A)
+        except:
+            raise Exception("Failed to determine if matrix is Hermitian")
+
     if x0.ndim == 2 and x0.shape[1] == 1:
         x0 = x0.squeeze()
-    if ishermitian:
+    if isherm:
         assert which in ['LM', 'LR', 'SR']
         print("running Lanczos ...")
-        return Lanczos(**kwargs).eigsolve(A, x0, howmany, which)
+        return Lanczos(**kwargs).eigsolve(A, x0, howmany, which, lau)
     else:
         assert which in ['LM', 'LR', 'SR', 'LI', 'SI']
-        if lau.isrealobj(x0):
+        if isrealobj(x0):
             by, _ = EIGSORT[which]
             if by(1j) != by(-1j):
                 raise ValueError(f"Eigenvalue selector which = {which} invalid "
                 f"because it does not treat 'λ' and 'conj(λ)' equally: work in "
                 f"complex arithmetic by providing a complex starting vector 'x0'")
         print("running Arnoldi ...")
-        return Arnoldi(**kwargs).eigsolve(A, x0, howmany, which)
+        return Arnoldi(**kwargs).eigsolve(A, x0, howmany, which, lau)
+
+def isrealobj(x0):
+    if isinstance(x0 ,np.ndarray):
+        return np.isrealobj(x0)
+    else:
+        return not x0.is_complex()

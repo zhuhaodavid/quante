@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 21:15:53
+# @Last Modified time: 2025-08-31 15:38:18
 
 
 from scipy import sparse as sps
@@ -118,11 +118,11 @@ class EvolveEngine:
         else:
             # first move the data to the device
             # assert sps.issparse(ham), "ham should be sparse array"
-            from ...bridge.torch_utils.core_utils import totc
+            from ...bridge.torch_utils.linalg.sparse import to_csr
             import torch as tc
             dtype = tc.complex128 if dtype is None else dtype
-            self.csr_mt = totc(ham, device=device)
-            self.psi = totc(init_state, device=device, dtype=dtype).reshape(-1, 1)
+            self.csr_mt = to_csr(ham, device=device)
+            self.psi = to_csr(init_state, device=device, dtype=dtype).reshape(-1, 1)
             self.pkg = tc
 
         self.cur_state = self.psi
@@ -226,8 +226,8 @@ class EvolveEngine:
             return lambda t, state: state.reshape(self.state_shape)
         elif isinstance(obs, (sps.sparray, sps.spmatrix, list, _np.ndarray)):
             if self.device != 'cpu':
-                from ...bridge.torch_utils import totc
-                obs = totc(obs, device=self.device)
+                from ...bridge.torch_utils.linalg.sparse import to_csr
+                obs = to_csr(obs, device=self.device)
             return lambda t, state: expect(obs, state.reshape(self.state_shape), isdm=self.isdm)
         elif callable(obs):
             return obs
@@ -380,8 +380,8 @@ class EvolveEngine:
         try:
             if isinstance(measure, (sps.sparray, sps.spmatrix, list, _np.ndarray)):
                 if self.device != 'cpu':
-                    from ...bridge.torch_utils import totc
-                    measure = totc(measure, device=self.device)
+                    from ...bridge.torch_utils.linalg.sparse import to_csr
+                    measure = to_csr(measure, device=self.device)
                 return expect(measure, states.reshape(*self.state_shape,-1), isdm=self.isdm).T
             else:
                 return _np.array([

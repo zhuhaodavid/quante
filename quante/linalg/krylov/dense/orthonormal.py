@@ -2,15 +2,14 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:27:31
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 22:09:41
-
-from .krylovkit import LinearAlgebraUtils as lau
+# @Last Modified time: 2025-08-31 13:37:46
 
 class OrthonormalBasis:
-    def __init__(self, basis, maxdim):
+    def __init__(self, basis, maxdim, lau):
         self.data = lau.zeros((maxdim, len(basis)), dtype=basis.dtype)
         self.data[0] = basis
         self.num = 1
+        self.lau = lau
    
     def pop(self):
         self.num -= 1
@@ -36,8 +35,8 @@ class OrthonormalBasis:
 
     def basistransform_(self, U):
         m, n = U.shape
-        self.data[:n, :] = lau.matmul(U.T, self.data[:m, :])
+        self.data[:n, :] = self.lau.matmul(U.T, self.data[:m, :])
 
     def basistransform(self, U):
         m, n = U.shape
-        return lau.matmul(U.T, self.data[:m, :])
+        return self.lau.matmul(U.T, self.data[:m, :])

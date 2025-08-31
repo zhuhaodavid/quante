@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-13 16:52:37
+# @Last Modified time: 2025-08-31 15:57:17
 
 import copy
 import warnings
@@ -511,9 +511,6 @@ class TensorTrain:
                 pos, W, svd_alg=svd_alg, trunc_para=trunc_para, normalize=normalize,
             )
         
-        self.move_llim_(pos)
-        self.move_rlim_(pos+1)
-        
         # -------------- 使用 qr ------------
         if svd_alg == "qr":
             assert trunc_para == (None, None, None) and pertube is None, 'qr method do not need trunc_para, normalize and pertube'
@@ -887,16 +884,20 @@ class TensorTrain:
         self.rlim = subtt.rlim + startpos
         self.lognm += subtt.lognm
 
-    def swapsite_(self, i, j, **kwargs):
+    def swapsite_(self, i, j, direction='right', move_center=False, **kwargs):
         assert 0 <= i < self.L-1 and 0 < j < self.L, "超出范围"
         assert i < j
         
         if i != j - 1:
             for a in range(i, j-1):
-                self.swapsite_(a, a+1, **kwargs)
+                self.swapsite_(a, a+1, direction='right', **kwargs)
             for a in range(j-1, i-1, -1):
-                self.swapsite_(a, a+1, **kwargs)
+                self.swapsite_(a, a+1, direction='left', **kwargs)
             return
+        
+        if move_center:
+            self.move_llim_(i)
+            self.move_rlim_(i+1)
 
         contracted_tsr = tf._full_contract_two(self.data[i], self.data[i+1])
         if contracted_tsr.ndim == 4:
@@ -904,4 +905,4 @@ class TensorTrain:
         else:
             contracted_tsr = contracted_tsr.permute(0, 3, 4, 1, 2, 5)
         
-        self.update_two_site_(i, contracted_tsr, **kwargs)
+        self.update_two_site_(i, contracted_tsr, direction=direction, **kwargs)

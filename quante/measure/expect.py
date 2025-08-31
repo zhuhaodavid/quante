@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:50:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-26 19:20:57
+# @Last Modified time: 2025-08-31 16:40:22
 
 import numpy as _np
 import scipy.sparse as _sparse
@@ -49,12 +49,10 @@ def _matmat(mat, state):
         if (matcomplex and statecomplex) or (not matcomplex and not statecomplex):
             return mat @ state
         if mat.is_complex():
-            if mat.is_sparse:
+            if str(mat.layout).startswith("torch.sparse_"):
                 return mat @ state.to(mat.dtype)
             return mat.real @ state + 1j * (mat.imag @ state)
         elif state.is_complex():
-            if mat.is_sparse:
-                return mat.to(mat.dtype) @ state
             return mat @ state.real + 1j * (mat @ state.imag)
         else:
             raise ValueError("mat and state must be the same type")
@@ -106,9 +104,9 @@ def expect(mat, state, isdm=False) -> _np.ndarray:
             state = state.reshape(-1)
             if _isdiagonal(mat):
                 matdiag = mat.diagonal()
-                res = state.conj() @ (matdiag * state)
+                res = _matmat(state.conj(), (matdiag * state))
             else:
-                res = state.conj() @ (mat @ state)
+                res = _matmat(state.conj(), _matmat(mat, state))
             return real_if_close(res).item()
         elif state.ndim == 2:
             if _isdiagonal(mat):

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:46:01
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 00:29:59
+# @Last Modified time: 2025-08-31 14:40:05
 
 import numpy as np
 import warnings
@@ -53,6 +53,7 @@ class ConvergenceInfo:
         return msg
 
 from ..evolve.nbfuc.expm_mul_nb import addself, prodscale, vdot
+from ..matops.sparse_mul import dot_parallel
 
 class NpLinearAlgebraUtils:
 
@@ -62,6 +63,7 @@ class NpLinearAlgebraUtils:
 
     @staticmethod
     def apply(A, x):
+        return dot_parallel(A, x)
         return A @ x
 
     @staticmethod
@@ -124,30 +126,14 @@ class NpLinearAlgebraUtils:
         return np.isrealobj(x)
 
 class LinearAlgebraUtils:
-    @staticmethod
-    def isrealobj(x):
-        if isinstance(x, np.ndarray):
-            return np.isrealobj(x)
+    def __init__(self, x0, lau):
+        if lau is None:
+            if isinstance(x0, np.ndarray):
+                self.lau = NpLinearAlgebraUtils
+            else:
+                import torch as tc
+                from ...bridge.torch_utils.linalg.krylov import TcLinearAlgebraUtils
+                self.lau = TcLinearAlgebraUtils
         else:
-            try:
-                return not x.is_complex()
-            except:
-                raise ValueError(f"type {type(x)} not supported")
+            self.lau = NpLinearAlgebraUtils
 
-def overload_methods(x0):
-    lau = LinearAlgebraUtils
-    if isinstance(x0, np.ndarray):
-        newlau = NpLinearAlgebraUtils
-    else:
-        import torch as tc
-        if isinstance(x0, tc.Tensor):
-            from ...bridge.torch_utils.linalg.krylov import TcLinearAlgebraUtils
-            newlau = TcLinearAlgebraUtils
-        else:
-            raise ValueError(f"Unsupported tensor type: {type(x0)}")
-    for attr in dir(newlau):
-        if attr.startswith("__"):
-            continue
-        func = getattr(newlau, attr)
-        if callable(func):
-            setattr(lau, attr, staticmethod(func))

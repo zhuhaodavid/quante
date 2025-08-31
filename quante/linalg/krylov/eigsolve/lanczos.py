@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-30 19:06:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 00:28:34
+# @Last Modified time: 2025-08-31 13:56:18
 
 import warnings
 import numpy as np
@@ -12,17 +12,15 @@ from ..krylovkit import KrylovDefault, ConvergenceInfo, EIGSORT
 from ..factorizations.lanczos import LanczosIterator
 from ..dense.reflector import householder
 
-from ..krylovkit import LinearAlgebraUtils as lau
-
 class Lanczos(KrylovDefault):
     def __init__(self, **kwargs):
         super().__init__()
         self.eager = kwargs.pop('eager', False)
         self.update_params(kwargs)
 
-    def eigsolve(self, A, x0, howmany, which):
+    def eigsolve(self, A, x0, howmany, which, lau):
         D, U, fact, converged, numiter, numops = self._eigsolve(
-            A, x0, howmany, which
+            A, x0, howmany, which, lau
         )
              
         howmany_p = howmany
@@ -62,7 +60,7 @@ class Lanczos(KrylovDefault):
         )
 
     
-    def _eigsolve(self, A, x0, howmany, which):
+    def _eigsolve(self, A, x0, howmany, which, lau=None):
         krylovdim = self.krylovdim
         maxiter = self.maxiter
         if howmany > krylovdim:
@@ -72,7 +70,7 @@ class Lanczos(KrylovDefault):
         
         ## FIRST ITERATION: setting up
         # Initialize Lanczos factorization
-        Liter = LanczosIterator(A, x0, self.orth)
+        Liter = LanczosIterator(A, x0, self.orth, lau=lau)
         fact = Liter.initialize(krylovdim, verbosity=self.verbosity)
         numops = 1
         numiter = 1
@@ -163,7 +161,7 @@ class Lanczos(KrylovDefault):
                    
                 # Update B by applying U using Householder reflections
                 fact.V.basistransform_(U[:, :keep])
-                lau.div_(fact.r, fact.normres())
+                fact.lau.div_(fact.r, fact.normres())
                 fact.V.set(keep, fact.r)
                 # Shrink Lanczos factorization
                 fact.shrink_(keep, self.verbosity)

@@ -2,62 +2,62 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:25:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 22:04:23
+# @Last Modified time: 2025-08-31 13:40:43
 
 import warnings
 import numpy as np
 
-from ..orthonormal import OrthonormalBasis
+from ..dense.orthonormal import OrthonormalBasis
 from ..dense.packedhessenberg import PackedHessenberg
-from ..krylovkit import LinearAlgebraUtils as lau
-from ..krylovkit import overload_methods
+from ..krylovkit import LinearAlgebraUtils
 
-class ArnoldiIterator:
-    def __init__(self, A, x0, orth):
+class ArnoldiIterator(LinearAlgebraUtils):
+    def __init__(self, A, x0, orth, lau=None):
         self.operator = A
         self.x0 = x0
         self.orth = orth
-        overload_methods(x0)
-        lau.update_device(x0)
+        super().__init__(x0, lau)
+        self.lau.update_device(x0)
     
     def initialize(self, krylovdim, verbosity=0):
         x0 = self.x0
-        beta0 = lau.norm(x0)
+        beta0 = self.lau.norm(x0)
         if np.isclose(beta0, 0):
             raise ValueError("initial vector should not have norm zero")
-        Ax0 = lau.apply(self.operator, x0)
-        alpha = lau.inner(x0, Ax0) / (beta0 * beta0)
-        v = lau.zeros_like(Ax0)
-        lau.add_(v, x0, alpha=1/beta0)
-        r = lau.div_(Ax0, beta0)
-        beta_old = lau.norm(r)
-        lau.sub_(r, v, alpha=alpha)
+        Ax0 = self.lau.apply(self.operator, x0)
+        alpha = self.lau.inner(x0, Ax0) / (beta0 * beta0)
+        v = self.lau.zeros_like(Ax0)
+        self.lau.add_(v, x0, alpha=1/beta0)
+        r = self.lau.div_(Ax0, beta0)
+        beta_old = self.lau.norm(r)
+        self.lau.sub_(r, v, alpha=alpha)
         # should we use real(dα) here?
-        beta = lau.norm(r)
+        beta = self.lau.norm(r)
         # possibly reorthogonalize
         if self.orth in ['ClassicalGramSchmidt2','ModifiedGramSchmidt2']:
-            dalpha = lau.inner(v, r)
+            dalpha = self.lau.inner(v, r)
             alpha += dalpha
-            lau.sub_(r, v, alpha=dalpha)
+            self.lau.sub_(r, v, alpha=dalpha)
              # should we use real(dα) here?
-            beta = lau.norm(r)
+            beta = self.lau.norm(r)
         else:
             raise NotImplementedError(f"orthogonalization method {self.orth} not implemented")
-        V = OrthonormalBasis(v, krylovdim)
+        V = OrthonormalBasis(v, krylovdim, self.lau)
         H = np.array([alpha, beta])
         if verbosity > 3:
             warnings.info(
                 f"Arnoldi iteration step 1: normres = {beta}"
             )
-        return ArnoldiFactorization(1, V, H, r)
+        return ArnoldiFactorization(1, V, H, r, lau=self.lau)
     
 
 class ArnoldiFactorization:
-    def __init__(self, k, V, H, r):
+    def __init__(self, k, V, H, r, lau):
         self.k = k  # current Krylov dimension
         self.V = V  # basis of length k
         self.H = H  # stores the Hessenberg matrix in packed form
         self.r = r  # residual
+        self.lau = lau
     
     def __len__(self):
         return self.k
@@ -95,9 +95,9 @@ class ArnoldiFactorization:
         return self
 
     def recurrence_(self, operator, h, orth):
-        w = lau.apply(operator, self.V.basis[-1])
+        w = self.lau.apply(operator, self.V.basis[-1])
         r, h = self.orthogonalize_(w, h, orth)
-        return r, lau.norm(r)
+        return r, self.lau.norm(r)
      
     def orthogonalize_(self, v, x, orth):
         b = self.V.basis
@@ -107,8 +107,8 @@ class ArnoldiFactorization:
         elif orth == 'ModifiedGramSchmidt':
             # # !! main consumption
             for i, q in enumerate(b):
-                s = lau.inner(q, v)
-                lau.sub_(v, q, alpha=s)
+                s = self.lau.inner(q, v)
+                self.lau.sub_(v, q, alpha=s)
                 x[i] = s
             return v, x
             # tmp = (b.conj() @ v)
@@ -123,8 +123,8 @@ class ArnoldiFactorization:
         if orth == 'ModifiedGramSchmidt':
             # !! main consumption
             for i, q in enumerate(b):
-                s = lau.inner(q, v)
-                lau.sub_(v, q, alpha=s)
+                s = self.lau.inner(q, v)
+                self.lau.sub_(v, q, alpha=s)
                 x[i] += s
             return v, x
             # ?? why this is slower ??
@@ -157,7 +157,7 @@ class ArnoldiFactorization:
             warnings.info(
                 f"Arnoldi reduction to dimension {k}: subspace normres = {beta}"
             )
-        lau.mul_(r, self.normres())
+        self.lau.mul_(r, self.normres())
         self.r = r
 
 

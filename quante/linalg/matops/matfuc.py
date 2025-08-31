@@ -2,16 +2,11 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:05:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:07:06
+# @Last Modified time: 2025-08-31 15:42:00
 
-import math
 import numpy as _np
 import scipy.linalg as _sla
 import scipy.sparse as _sparse
-import itertools
-from numbers import Integral
-from typing import Union, Optional
-import functools
 
 
 def norm(v: _np.ndarray) -> float:
@@ -153,3 +148,19 @@ def logm(A:_np.ndarray, isherm = None) -> _np.ndarray:
     else:
         return _sla.logm(A)
 
+
+def isherm(A: _np.ndarray, tol=1e-10) -> bool:
+    """Check if a matrix is Hermitian.
+
+    Args:
+        A (np.ndarray): Matrix
+
+    Returns:
+        bool: True if Hermitian, False otherwise
+    """
+    if (type(A).__module__.startswith("torch") 
+        and str(A.layout).startswith("torch.sparse_")):
+        from ...bridge.torch_utils import tonp
+        A = tonp(A)
+    diff = A - A.T.conj()
+    return abs(diff).max().item() < tol
