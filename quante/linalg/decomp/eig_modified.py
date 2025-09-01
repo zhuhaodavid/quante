@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 17:11:42
+# @Last Modified time: 2025-09-01 13:41:48
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -309,10 +309,10 @@ def eigensolve(
     # if backend is not matlab, save here
     if save and backend != "matlab":
         if return_vecs:
-            save_hdf5(path_save_to + "E_" + file_name, res[0])
-            save_hdf5(path_save_to + "psi_" + file_name, res[1])
+            save_hdf5(path_save_to + "E_" + file_name, data={"data":res[0]})
+            save_hdf5(path_save_to + "psi_" + file_name, data={"data":res[1]})
         else:
-            save_hdf5(path_save_to + "E_" + file_name, res)
+            save_hdf5(path_save_to + "E_" + file_name, data={"data":res})
 
     if reload:
         return res
@@ -667,10 +667,10 @@ def eigensolve_partial(
     # if backend is not matlab, save here
     if save and backend != "matlab":
         if return_vecs:
-            save_hdf5(path_save_to + "E_" + file_name, res[0])
-            save_hdf5(path_save_to + "psi_" + file_name, res[1])
+            save_hdf5(path_save_to + "E_" + file_name, data={"data":res[0]})
+            save_hdf5(path_save_to + "psi_" + file_name, data={"data":res[1]})
         else:
-            save_hdf5(path_save_to + "E_" + file_name, res)
+            save_hdf5(path_save_to + "E_" + file_name, data={"data":res})
 
     if reload:
         return res
@@ -1001,7 +1001,7 @@ def matlabeig_pre(H, file_name=None, path_save_to="EigData/"):
             if _os.path.exists(mat_file):
                 _os.remove(mat_file)
             # 改为保存为 .h5 文件
-            save_hdf5(tempPath + file_name + ".h5", "", {"H": H, "dim": H.shape[0]})
+            save_hdf5(tempPath + file_name + ".h5", data={"H": H, "dim": H.shape[0]})
     else:
         row, col, data, dim = coo2list(H)
         assert (
@@ -1020,8 +1020,7 @@ def matlabeig_pre(H, file_name=None, path_save_to="EigData/"):
             # 改为保存为 .h5 文件
             save_hdf5(
                 tempPath + file_name + ".h5",
-                "",
-                {"row": row, "col": col, "data": data, "dim": dim},
+                data={"row": row, "col": col, "data": data, "dim": dim},
             )
         spaceRequired = data.itemsize * dim * (dim + 1) / 1024 / 1024 / 1024
     return spaceRequired
@@ -1201,7 +1200,7 @@ def save_matrices(oper_dict, basis, filename):
                 mat = mat.real
             else:
                 dtype = _np.complex128
-        save_hdf5(f"data/hamiltonian.h5", {f'{key}': mat})
+        save_hdf5(f"data/hamiltonian.h5", data={f'{key}': mat})
         logger.info(f"Saved matrix {key} with shape {mat.shape} and dtype {dtype}")
     
     if addany:
