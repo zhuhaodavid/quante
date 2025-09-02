@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-01 13:41:48
+# @Last Modified time: 2025-09-01 22:29:15
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -118,8 +118,11 @@ def eigensolve_core(
     file_name="tmp",
     reload=True,
     return_vecs=True,
+    usegpu=0
 ):
     """return eigenvalue and eigenvector based on different backend"""
+    if usegpu == 1:
+        assert backend == "matlab", "only matlab support gpu"
     if backend == "matlab":
         path_save_to = create_folder(path_save_to)
         E_file = path_save_to + "E_" + file_name + ".h5"
@@ -142,6 +145,7 @@ def eigensolve_core(
             file_name=file_name,
             reload=reload,
             return_vecs=return_vecs,
+            usegpu=usegpu
         )
 
     if H.shape[0] > 32766:
@@ -228,7 +232,8 @@ def eigensolve(
     reload=True,
     return_vecs=True,
     autoblock=False,
-    path_save="EigData/"
+    path_save="EigData/",
+    usegpu=0
 ):
     """
     本征值分解，自动判断 backend，<32766 numpy else matlab>
@@ -304,6 +309,7 @@ def eigensolve(
             file_name=file_name,
             reload=reload,
             return_vecs=return_vecs,
+            usegpu=usegpu
         )
 
     # if backend is not matlab, save here
@@ -698,6 +704,7 @@ def eig(
     sort: bool = True,
     fallback_to_scipy: bool = False,
     P=None,
+    usegpu=0,
     **backend_opts,
 ) -> tuple[_np.ndarray, _np.ndarray]:
     """查找非厄米矩阵的算子的所有或部分特征对。
@@ -768,6 +775,7 @@ def eig(
             reload=reload,
             return_vecs=True,
             autoblock=autoblock,
+            usegpu=usegpu,
         )
 
     return eigensolve_partial(
@@ -805,6 +813,7 @@ def eigh(A: Union[_np.ndarray, _sparse.spmatrix],
          sort: bool = True,
          fallback_to_scipy: bool = False,
          P: Optional[_np.ndarray] = None,
+         usegpu: int = 0,
          **backend_opts
          ) -> tuple[_np.ndarray, _np.ndarray]:
     """计算本征值厄米矩阵的算子的所有或部分特征对，与 `eig` 参数相同"""
@@ -817,6 +826,7 @@ def eigh(A: Union[_np.ndarray, _sparse.spmatrix],
             reload=reload,
             return_vecs=True,
             autoblock=autoblock,
+            usegpu=usegpu
         )
 
     return eigensolve_partial(A, k=k, isherm=True, backend=backend, save=save, reload=reload, return_vecs=True, which=which, sigma=sigma, ncv=ncv, tol=tol, v0=v0, sort=sort, fallback_to_scipy=fallback_to_scipy, P=P, **backend_opts,)
@@ -840,6 +850,7 @@ def eigvals(
     sort: bool = True,
     fallback_to_scipy: bool = False,
     P: Optional[_np.ndarray] = None,
+    usegpu: int = 0,
     **backend_opts,
 ) -> _np.ndarray:
     """查找非厄米矩阵的算子的所有或部分特征值。与 `eig` 的参数基本相同。"""
@@ -859,6 +870,7 @@ def eigvals(
             reload=reload,
             return_vecs=False,
             autoblock=autoblock,
+            usegpu=usegpu
         )
 
 
@@ -898,6 +910,7 @@ def eigvalsh(
     sort: bool = True,
     fallback_to_scipy: bool = False,
     P: Optional[_np.ndarray] = None,
+    usegpu: int = 0,
     **backend_opts,
 ) -> _np.ndarray:
     """查找厄米矩阵的算子的所有或部分特征对。与 `eigvals` 参数基本相同。"""
@@ -910,6 +923,7 @@ def eigvalsh(
             reload=reload,
             return_vecs=False,
             autoblock=autoblock,
+            usegpu=usegpu,
             **backend_opts
         )
 
@@ -939,7 +953,7 @@ def eigvalsh(
 
 
 def matlabeig(
-    H, path_save_to="EigData/", file_name=None, reload=False, return_vecs=True
+    H, path_save_to="EigData/", file_name=None, reload=False, return_vecs=True, usegpu=0
 ):
     """调用 matlab eig
     
@@ -959,7 +973,7 @@ def matlabeig(
     spaceRequired = matlabeig_pre(H=H, path_save_to=path_save_to, file_name=file_name)
     assert spaceRequired < get_free_space(path_save_to)
     matlabeig_list(
-        path_save_to=path_save_to, file_names=[file_name], return_vecs=return_vecs
+        path_save_to=path_save_to, file_names=[file_name], return_vecs=return_vecs, usegpu=usegpu
     )
     if reload:
         if return_vecs:

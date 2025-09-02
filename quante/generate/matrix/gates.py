@@ -2,10 +2,10 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:34:11
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 20:34:59
+# @Last Modified time: 2025-09-02 18:31:09
 
 import numpy as _np
-from ..pauli import pauli_matrix
+from .pauli import pauli_matrix
 
 def hadamard_gate(dtype=complex):
     """The Hadamard gate."""

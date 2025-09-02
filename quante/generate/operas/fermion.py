@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 20:21:05
+# @Last Modified time: 2025-09-02 17:44:43
 
 import numpy as np
 import scipy.sparse as sp
@@ -223,10 +223,10 @@ class FermionOper(Oper):
                     H11[*posn] = coeflist[i]
                     if posn[0] == posn[1]:
                         coef_I += coeflist[i]/2
-            elif name == '++':
+            elif name == '--':
                 for i, posn in enumerate(posnlist):
                     H21[*posn] = coeflist[i]
-            elif name == '--':
+            elif name == '++':
                 for i, posn in enumerate(posnlist):
                     H12[*posn] = coeflist[i]
             elif name == 'I':
@@ -235,8 +235,8 @@ class FermionOper(Oper):
                 raise ValueError("Normal ordering not done")
             else:
                 raise ValueError(f"not BdG fermion due to: {name}")
-        H12 = H12.T - H12
-        H21 = H21.T - H21
+        H12 = (H12 - H12.T)
+        H21 = (H21 - H21.T)
         BdG = np.block([
             [H11, H12], 
             [H21, -H11.T]

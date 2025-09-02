@@ -83,7 +83,7 @@ class SlaterState:
             if i not in ['up', 'dn']:
                 raise ValueError(f"state must be a list of 'up' and 'dn', got {i}")
         L = len(state)
-        inds = np.flatnonzero(np.array(list(state)) == 'dn')
+        inds = np.flatnonzero(np.array(list(state)) == 'up')
         M = len(inds)
         assert 0 < M < L, "vacuum state or full state is not allowed"
         U = np.zeros((L, M), dtype=complex)

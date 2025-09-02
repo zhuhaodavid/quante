@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:46:01
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 17:16:03
+# @Last Modified time: 2025-09-02 15:16:36
 
 import numpy as np
 import warnings
@@ -54,14 +54,11 @@ class ConvergenceInfo:
 
 class LinearAlgebraUtils:
     def __init__(self, x0, lau):
-        from ..evolve.nbfuc.expm_mul_nb import NpLinearAlgebraUtils
         if lau is None:
             if isinstance(x0, np.ndarray):
+                from ..evolve.nbfuc.expm_mul_nb import NpLinearAlgebraUtils
                 self.lau = NpLinearAlgebraUtils
             else:
-                import torch as tc
                 from ...bridge.torch_utils.linalg.krylov import TcLinearAlgebraUtils
                 self.lau = TcLinearAlgebraUtils
-        else:
-            self.lau = NpLinearAlgebraUtils
 

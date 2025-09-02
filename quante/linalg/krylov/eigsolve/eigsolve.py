@@ -2,9 +2,10 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:19:37
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 19:23:32
+# @Last Modified time: 2025-09-02 15:20:58
 
 import numpy as np
+from scipy.sparse import issparse
 from typing import Literal
 
 from .lanczos import Lanczos
@@ -14,7 +15,7 @@ from ...matops import isherm as fuc_isherm
 
 def eigsolve(
     A,
-    x0,
+    x0=None,
     howmany=1,
     which:Literal[
         'LM', 'LR', 'SR', 'LI', 'SI'
@@ -88,6 +89,18 @@ def eigsolve(
     Krylov-Schur algorithm, which can dynamically shrink and grow the Krylov subspace, i.e. the
     restarts are so-called thick restarts where a part of the current Krylov subspace is kept.
     """
+    if x0 is None:
+        if isinstance(A, np.ndarray) or issparse(A):
+            if isrealobj(A):
+                x0 = np.random.randn(A.shape[0])
+            else:
+                x0 = np.random.randn(A.shape[0]) + 1j * np.random.randn(A.shape[0])
+        elif str(type(A)).startswith("torch."):
+            import torch as tc
+            if A.is_complex:
+                x0 = tc.randn(A.shape[0], dtype=tc.complex128)
+            else:
+                x0 = tc.randn(A.shape[0], dtype=tc.float64)
     if isherm is None:
         try:
             isherm = fuc_isherm(A)
@@ -112,7 +125,7 @@ def eigsolve(
         return Arnoldi(**kwargs).eigsolve(A, x0, howmany, which, lau)
 
 def isrealobj(x0):
-    if isinstance(x0 ,np.ndarray):
+    if isinstance(x0 ,np.ndarray) or issparse(x0):
         return np.isrealobj(x0)
     else:
         return not x0.is_complex()

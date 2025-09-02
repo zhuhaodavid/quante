@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 20:06:26
+# @Last Modified time: 2025-09-02 15:09:21
 
 import numpy as np
 import scipy.sparse as sp
@@ -1137,144 +1137,17 @@ class SpinBuilder:
 def builder() -> SpinBuilder:
     return SpinBuilder()
 
-class HeisenbergOper(SpinOper):
-    def __init__(self, L, j, h, cyclic):
-        self._L = L
-        self.cyclic = cyclic
-        try:
-            jx, jy, jz = j # type: ignore
-        except TypeError:
-            jx = jy = jz = j
-        try:
-            hx, hy, hz = h # type: ignore
-        except TypeError:
-            hz = h
-            hx = hy = 0.0
-        self.jx = jx
-        self.jy = jy
-        self.jz = jz
-        self.hx = hx
-        self.hy = hy
-        self.hz = hz
-        self._pauli = None
-        
-    def _make_spinoper(self):
-        if not np.isinf(self._L):
-            L, cyclic = self._L, self.cyclic
-            data = {}
-            posn1 = np.arange(0,L, dtype=np.int32).reshape(L,1)
-            coef1 = np.ones(L, dtype=np.float64)
-            if cyclic:
-                posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=np.int32)
-                coef2 = np.ones(L, dtype=np.float64)
-            else:
-                posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
-                coef2 = np.ones(L-1, dtype=np.float64)
-            if self.jx != 0:
-                data["xx"] = (posn2, self.jx*coef2)
-            if self.jy != 0:
-                data["yy"] = (posn2, self.jy*coef2)
-            if self.jz != 0:
-                data["zz"] = (posn2, self.jz*coef2)
-            if self.hx != 0:
-                data["x"] = (posn1, self.hx*coef1)
-            if self.hy != 0:
-                data["y"] = (posn1, self.hy*coef1)
-            if self.hz != 0:
-                data["z"] = (posn1, self.hz*coef1)
-            pauli = self._pauli
-            super().__init__(data, type='s')
-            self._pauli = pauli
-        return self
     
-    def table_form(self, maxlen=90) -> str:
-        if hasattr(self, 'data'):
-            return super().table_form(maxlen=maxlen)
-        else:
-            res = f"{self.__class__.__name__} at {hex(id(self))}, with\n"
-            res += f"    L={self._L}, \n    j={(self.jx,self.jy,self.jz)}, \n    h={(self.hx,self.hy,self.hz)}, \n    cyclic={self.cyclic}\n"
-            return res
-    
-    def table_form2(self, maxlen=90) -> str:
-        if hasattr(self, 'data'):
-            return super().table_form2(maxlen=maxlen)
-        else:
-            res = f"{self.__class__.__name__} at {hex(id(self))}, with\n"
-            res += f"  L={self._L}, j={(self.jx,self.jy,self.jz)}, h={(self.hx,self.hy,self.hz)}, cyclic={self.cyclic}\n"
-            return res
-
-    def energies(self, pauli=False):
-        from ..solvable.free_fermion import spectrum as ff
-        L = self._L
-        self._check_pauli(pauli)
-        if self.jz == self.hx == self.hy == 0 and not self.cyclic:
-            # xy model
-            return ff.XY_energies(L=L, jxx=self.jx, jyy=self.jy, hz=self.hz, pauli=pauli)
-        
-            # todo 其它的结论？
-            
-        if np.isinf(L):
-            raise ValueError("Infinite system size is not supported")
-        return super().energies(pauli=pauli)
-        
-
-    def gdenergy(self, pauli=False, *, k=1, return_eigenvectors=False, basis=None):
-        """The ground state energy of the Heisenberg model.
-
-        This function computes the ground state energy of the Heisenberg model.
-        It uses analytical solutions for specific cases (k=1, without eigenvector), 
-        - infinite XY model (including the Ising model)
-        - infinite XXX model
-        - finite XY model with obc (including the Ising model)
-        - finite XXX model with pbc
-
-        Parameters
-        ----------
-        pauli : bool, optional
-            If True, the energy is computed in terms of Pauli matrices, by default False
-        k : int, optional
-            The number of lowest eigenvalues to return, by default 1
-        return_eigenvectors : bool, optional
-            If True, the function returns the eigenvectors as well, by default False
-
-        Returns
-        -------
-        float or tuple
-            The ground state energy of the Heisenberg model. If `return_eigenvectors` is True,
-
-        Raises
-        ------
-        ValueError
-            If the system size is infinite and the parameters do not match the known analytical solutions.
-        """
-        self._check_pauli(pauli)
-        L = self._L
-        if not return_eigenvectors:
-            from ..solvable.free_fermion import spectrum as ff
-            if self.hx == self.hy == self.hz == 0 and self.jx == self.jy == self.jz and not np.isinf(L) and self.cyclic and k == 1:
-                print("approximate: ", end='')
-                return ff.XXX_gdenergy_pbc_approx(L) * (4 if pauli else 1)
-            if self.jz == self.hx == self.hy == 0 and not self.cyclic and k == 1:
-                # xy model
-                return ff.XY_gdenergy(L=L, jxx=self.jx, jyy=self.jy, hz=self.hz, pauli=pauli)
-            
-            # todo 其它的结论？
-            
-        if np.isinf(L):
-            if self.hx == self.hy == self.hz == 0 and self.jx == self.jy == self.jz and k == 1:
-                return (0.5 - 2 * np.log(2))/2 * (4 if pauli else 1)
-            raise ValueError("Analytic solution is not known for infinite system size with such parameters")
-        return super().gdenergy(pauli=pauli, k=k, return_eigenvectors=return_eigenvectors, basis=basis)
-    
-
-def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> HeisenbergOper:
+def heisenberg_operator(L, j=1.0, *, hx=0.0, hy=0.0, hz=0.0, jxy=0.0, jyx=0.0, cyclic=False):
     r"""
     生成 heisenberg 模型的哈密顿量，返回一个 'Oper' 的实例
-    
-    这个实例可以 automata, local_matrix, to_matrix 等方法
 
     .. math::
-        \sum_{i=1}^{N-1} j * (s^x_i s^x_{i+1} + s^y_i s^y_{i+1} + s^z_i s^z_{i+1}) + \sum_i^N h * s^z_i
+        H = \sum_{i} \left( J_x S_i^x S_{i+1}^x + J_y S_i^y S_{i+1}^y + J_z S_i^z S_{i+1}^z \right)
+            + \sum{i} \left( J_{xy} S_i^x S_{i+1}^y + J_{yx} S_i^y S_{i+1}^x \right)
+            + \sum_{i} \left( h_x S_i^x + h_y S_i^y + h_z S_i^z \right)
+    
+    note: j = (jx, jy, jz) or jx = jy = jz = j
     
     Parameters
     ----------
@@ -1287,10 +1160,48 @@ def heisenberg_operator(L, j=1.0, h=0.0, cyclic=False) -> HeisenbergOper:
     cyclic : bool
         是否是周期性模型，默认是 False
     
-    Examples
-    --------
-    >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=1.0, h=0.0) # heisenberg model
-    >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(1.0, 1.0, 0.0), h=0.0)  # xy model
-    >>> ham = qt.generate.operas.heisenberg_operator(L=10, j=(0.0, 0.0, 1.0), h=(1.0, 0.0, 0.0))  # ising model
     """
-    return HeisenbergOper(L=L, j=j, h=h, cyclic=cyclic)._make_spinoper()
+    # return HeisenbergOper(L=L, j=j, h=h, jxy=jxy, jyx=jyx, cyclic=cyclic)._make_spinoper()
+    try:
+        jx, jy, jz = j # type: ignore
+    except TypeError:
+        jx = jy = jz = j
+
+    data = {}
+    posn1 = np.arange(0, L, dtype=int).reshape(L,1)
+    if not np.allclose(hx, 0):
+        data["x"] = (posn1, _to_array(hx, L))
+    if not np.allclose(hy, 0):
+        data["y"] = (posn1, _to_array(hy, L))
+    if not np.allclose(hz, 0):
+        data["z"] = (posn1, _to_array(hz, L))
+    
+    if cyclic:
+        posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=int)
+        Lp = L
+    else:
+        posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
+        Lp = L-1
+    
+    if not np.allclose(jx, 0.):
+        data["xx"] = (posn2, _to_array(jx, Lp))
+    if not np.allclose(jy, 0.):
+        data["yy"] = (posn2, _to_array(jy, Lp))
+    if not np.allclose(jz, 0.):
+        data["zz"] = (posn2, _to_array(jz, Lp))
+    if not np.allclose(jxy, 0.):
+        data["xy"] = (posn2, _to_array(jxy, Lp))
+    if not np.allclose(jyx, 0.):
+        data["yx"] = (posn2, _to_array(jyx, Lp))
+   
+    return SpinOper(data)
+
+def _to_array(param: float|np.ndarray, size: int) -> np.ndarray:
+    """
+    将标量参数转换为数组，以便统一处理
+    """
+    if np.isscalar(param):
+        return np.full(size, param)
+    assert len(param) == size, "Array length must match system size L or L-1."
+    return np.array(param)
+

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-04-19 17:58:24
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:53:31
+# @Last Modified time: 2025-09-02 17:59:04
 
 import numpy as np
 from functools import lru_cache
@@ -153,9 +153,12 @@ class PairingState:
         for dt in dtlist:
             if dt != 0:
                 U = exph(round(dt, 12))  # 增加缓存命中率
-                cur_state.Gamma =  U @ cur_state.Gamma @ U.conj().T
-                if not isherm:
-                    pass # todo 如何归一
+                if isherm:
+                    cur_state.Gamma =  U @ cur_state.Gamma @ U.conj().T
+                else:  # why is this true?
+                    raise NotImplementedError("如何处理非厄密的情形？")
+                    # cur_state.Gamma =  U @ cur_state.Gamma @ np.linalg.inv(U)
+                    cur_state.Gamma =  U @ cur_state.Gamma @ U.conj().T
             yield cur_state
 
     def particle_number(self, pos:int|list=None):

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:35:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 09:49:04
+# @Last Modified time: 2025-09-02 15:52:10
 
 import numpy as _np
 import math
@@ -49,7 +49,7 @@ def entanglement_spectrum(
         D = state.shape[0] if state.ndim == 1 else state.shape[1]
         L = int(math.log2(D))
         assert D == 1 << L, "The dimension of the state is not 2^L"
-    matrix = state.T.reshape(-1,1<<left_number,1<<L-left_number)
+    matrix = state.T.reshape(-1,1<<left_number,1<<(L-left_number))
     return _np.linalg.svd(matrix, compute_uv=False) # type: ignore
 
 def entanglement_entropy(
