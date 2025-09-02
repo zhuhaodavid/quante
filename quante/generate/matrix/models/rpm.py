@@ -7,7 +7,7 @@
 import numpy as _np
 
 from ....linalg.matops import kron
-from ..random import _random_unitary_matrix_cue, _random_simple_matrix
+from ..random import _cue, _rand_simple_complex
 
 def random_phase_model(L, q, ε, seed=None):
     """随机相位模型，
@@ -16,11 +16,11 @@ def random_phase_model(L, q, ε, seed=None):
     
     """
     # get W1
-    Ui = [_random_unitary_matrix_cue(q, seed=seed) for _ in range(L)]
+    Ui = [_cue(q, seed=seed) for _ in range(L)]
     W1 = kron(*Ui)
     
     # get W2
-    phi = [ε**2*_random_simple_matrix(q, seed) for _ in range(L-1)]
+    phi = [ε**2*_rand_simple_complex(q, seed) for _ in range(L-1)]
     dim = q**L
     W2 = _np.zeros((dim, dim), dtype=complex)
     

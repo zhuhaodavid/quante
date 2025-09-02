@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 20:19:19
+# @Last Modified time: 2025-09-02 21:12:41
 
 import numpy as _np
 import scipy.sparse as _sparse
@@ -15,10 +15,11 @@ __all__ = [
     "random_orthorgonal_matrix_close_I",
     "random_unitary_matrix_close_I",
     "random_sparse_matrix",
+    "random_twosite_conserve"
 ]
 
 # @njit
-def _random_simple_matrix(dim, seed=None):
+def _rand_simple_complex(dim, seed=None):
     if seed is not None:
         _np.random.seed(seed)
     real_part = _np.random.randn(dim, dim)
@@ -26,39 +27,39 @@ def _random_simple_matrix(dim, seed=None):
     return real_part + 1.0j * imag_part
 
 # @njit
-def _random_simple_real_matrix(dim, seed):
+def _rand_simple_real(dim, seed):
     if seed is not None:
         _np.random.seed(seed)
     return _np.random.randn(dim, dim)
 
 # @njit
-def _random_symmetric_matrix_goe(dim, seed):
-    real_matrix = _random_simple_real_matrix(dim, seed)
+def _goe(dim, seed):
+    real_matrix = _rand_simple_real(dim, seed)
     return 0.5 * (real_matrix + real_matrix.T)
 
 # @njit
-def _random_hermition_matrix_gue(dim, seed):
-    complex_matrix = _random_simple_matrix(dim, seed)
+def _gue(dim, seed):
+    complex_matrix = _rand_simple_complex(dim, seed)
     return (complex_matrix + complex_matrix.T.conj()) * 0.5
 
 # @njit
-def _random_hermition_matrix_gse(dim, seed):
+def _gse(dim, seed):
     """Class AII: Gaussian Symplectic Ensemble
     (N x N complex Hermitian with symplectic symmetry)"""
     assert dim % 2 == 0, "Dimension must be even for GSE."
     N = dim // 2
-    A = _random_hermition_matrix_gue(N, seed)  # Complex part
-    B = _random_simple_matrix(N, seed)  # Symplectic part
+    A = _gue(N, seed)  # Complex part
+    B = _rand_simple_complex(N, seed)  # Symplectic part
     B = (B - B.T) / 2  # Skew-symmetric
     upper = _np.hstack((A, B))
     lower = _np.hstack((-B.conj(), A.conj()))
     return _np.vstack((upper, lower))
 
 # @njit
-def _random_unitary_matrix_cue(dim, seed):
+def _cue(dim, seed):
     # rng = _np.random.default_rng(seed=seed)
     # A = rng.standard_normal((dim, dim)) + 1.j * rng.standard_normal((dim, dim))
-    A = _random_simple_matrix(dim, seed)
+    A = _rand_simple_complex(dim, seed)
     Q, R = _np.linalg.qr(A)
     # Q-R is not unique; to make it unique ensure that the diagonal of R is positive
     # Q' = Q*L; R' = L^{-1} *R, where L = diag(phase(diagonal(R)))
@@ -68,14 +69,14 @@ def _random_unitary_matrix_cue(dim, seed):
     return Q
 
 # @njit
-def _randomize_orthogonal_coe(dim, seed):
-    U = _random_unitary_matrix_cue(dim, seed)
+def _coe(dim, seed):
+    U = _cue(dim, seed)
     U_contiguous = _np.ascontiguousarray(U)
     return _np.dot(U_contiguous.T, U_contiguous)
 
 # @njit
-def _random_orthogonal_matrix_cre(dim, seed):
-    A = _random_simple_real_matrix(dim, seed)
+def _cre(dim, seed):
+    A = _rand_simple_real(dim, seed)
     Q, R = _np.linalg.qr(A)
     # Q-R is not unique; to make it unique ensure that the diagonal of R is positive
     # Q' = Q*L; R' = L^{-1} *R, where L = diag(phase(diagonal(R)))
@@ -84,7 +85,7 @@ def _random_orthogonal_matrix_cre(dim, seed):
     return Q
 
 # @njit
-def _random_singular_matrix(dim, seed=None):
+def _rand_singular(dim, seed=None):
     if seed is not None:
         _np.random.seed(seed)
     n1 = _np.random.randint(low=0, high=2, size=dim - 1)
@@ -99,15 +100,15 @@ def _random_singular_matrix(dim, seed=None):
     return _np.linalg.inv(u) @ a @ u
 
 # @njit
-def _random_normal_matrix(dim, seed=None):
-    v = _random_simple_matrix(dim, seed)
-    u = _random_unitary_matrix_cue(dim, seed=seed)
+def _rand_normal(dim, seed=None):
+    v = _rand_simple_complex(dim, seed)
+    u = _cue(dim, seed=seed)
     u_contiguous = _np.ascontiguousarray(u)
     v_contiguous = _np.ascontiguousarray(_np.diag(v))
     return u_contiguous @ v_contiguous @ u_contiguous.conj().T
 
 # @njit
-def _random_noninv_matrix(dim, seed=None):
+def _rand_noninv(dim, seed=None):
     if seed is not None:
         _np.random.seed(seed)
     n = _np.random.randint(1, dim)
@@ -121,38 +122,38 @@ def _random_noninv_matrix(dim, seed=None):
     return _np.linalg.inv(u_contiguous) @ v_contiguous @ u_contiguous
 
 # @njit
-def _random_real_eigen_matrix(dim, seed):
-    v = _random_simple_real_matrix(dim, seed)
-    u = _random_simple_matrix(dim, seed)
+def _rand_real_eigen(dim, seed):
+    v = _rand_simple_real(dim, seed)
+    u = _rand_simple_complex(dim, seed)
     return (_np.linalg.inv(u) * v) @ u
 
 # @njit
-def _random_positive_matrix(dim, seed):
-    mat = _random_simple_matrix(dim, seed)
+def _rand_positive(dim, seed):
+    mat = _rand_simple_complex(dim, seed)
     return mat @ mat.conjugate().transpose()
 
 # @njit
-def _random_density_matrix(dim, seed):
-    res = _random_positive_matrix(dim=dim, seed=seed)
+def _rand_density_mat(dim, seed):
+    res = _rand_positive(dim=dim, seed=seed)
     trace = _np.sum(_np.diag(res))
     res[:] /= trace
     return res
 
 type_to_function = {
-    "GinUE": _random_simple_matrix,
-    "GinOE": _random_simple_real_matrix,
-    "GOE": _random_symmetric_matrix_goe,
-    "GUE": _random_hermition_matrix_gue,
-    "GSE": _random_hermition_matrix_gse,
-    "CUE": _random_unitary_matrix_cue,
-    "COE": _randomize_orthogonal_coe,
-    "CRE": _random_orthogonal_matrix_cre,
-    "singular": _random_singular_matrix,
-    "normal": _random_normal_matrix,
-    "noninv": _random_noninv_matrix,
-    "realeig": _random_real_eigen_matrix,
-    "positive": _random_positive_matrix,
-    "rho": _random_density_matrix,
+    "GinUE": _rand_simple_complex,
+    "GinOE": _rand_simple_real,
+    "GOE": _goe,
+    "GUE": _gue,
+    "GSE": _gse,
+    "CUE": _cue,
+    "COE": _coe,
+    "CRE": _cre,
+    "singular": _rand_singular,
+    "normal": _rand_normal,
+    "noninv": _rand_noninv,
+    "realeig": _rand_real_eigen,
+    "positive": _rand_positive,
+    "rho": _rand_density_mat,
 }
 
 
@@ -315,7 +316,7 @@ def random_orthorgonal_matrix_close_I(dim, a=0.01, seed=None):
     
     当 :math:`a \rightarrow 0` 时，:math:`<|O-E|>_a = 0``（其中 `E` 是单位矩阵）。
     """
-    A = _random_symmetric_matrix_goe(dim, seed=seed) / (2. * dim)**0.5  # scale such that eigenvalues are in [-1, 1]
+    A = _goe(dim, seed=seed) / (2. * dim)**0.5  # scale such that eigenvalues are in [-1, 1]
     E = _np.eye(dim)
     Q, R = _np.linalg.qr(E + a * A)
     L = _np.diagonal(R)  # make QR decomposition unique & ensure Q is close to one for small `a`
@@ -329,7 +330,7 @@ def random_unitary_matrix_close_I(dim, a=0.01, seed=None):
     接近单位矩阵的正交矩阵（对于小的 `a`）。
     特征值是独立同分布的，形式为 ``exp(1.j*a*x)``，其中 `x` 在 [-1, 1] 区间内均匀分布。
     """
-    U = _random_unitary_matrix_cue(dim, seed=seed)
+    U = _cue(dim, seed=seed)
     E = _np.exp(1.j * a * (_np.random.rand(dim) * 2. - 1.))
     return _np.dot(U * E, U.T.conj())
 
@@ -343,4 +344,38 @@ def random_sparse_matrix(dim, density=0.1, seed=None):
     i, j = _np.divmod(ijs, dim)
     data = rng.standard_normal(nnz) + 1.j * rng.standard_normal(nnz)
     return _sparse.coo_matrix((data, (i, j)), shape=(dim, dim)).asformat("csr")
+
+
+def random_twosite_conserve(q=2, seed=None):
+    r"""Generate a random two site gate which commute with Q
+    
+    The generated matrix is block diagonal:
+    
+    .. math::
+        U_{r,r+1} = \oplus_{q=0}^{2(q-1)} U_Q
+    
+    where U_Q is a Haar-random unitary acting on \mathbb{H}_Q,
+    the d_Q = dim (\mathbb{H}_Q) = q - |Q + 1 - q| dimensional 
+    space of states on sites r, r + 1 that have total charge Q.
+
+    Parameters
+    ----------
+    q : int 
+        local dimension, by default 2
+    seed : int
+        random seed, by default None
+
+    Returns
+    -------
+    U : np.ndarray
+        random two-site gate which conserve charge
+    """
+    U = _np.zeros((q*q, q*q), dtype=complex)
+    c = 0
+    for Q in range(2*(q-1)+1):
+        d_Q = q - abs(Q + 1 - q)
+        nc = c + d_Q
+        U[c:nc, c:nc] = _cue(d_Q, seed=seed)
+        c = nc
+    return U
 
