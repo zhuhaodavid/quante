@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-02 13:20:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-02 18:17:27
+# @Last Modified time: 2025-09-02 18:39:30
 
 import numpy as np
 from typing import Optional, Union, Literal
@@ -83,7 +83,7 @@ def xxx_finite_approx_ground_energy(L, j, pauli=False):
     of the spin-½ isotropic anti-ferromagnetic Heisenberg chain." Journal of
     Physics Communications 1.5 (2017): 055021
     """
-    from ..solvable.free_fermion import spectrum as ff
+    from .free_fermion import spectrum as ff
     return j * ff.XXX_gdenergy_pbc_approx(L) * (4 if pauli else 1)
 
 def xy_infinite_ground_energy(jx, jy, jxy, jyx, hz, pauli=False):
@@ -94,7 +94,7 @@ def xy_infinite_ground_energy(jx, jy, jxy, jyx, hz, pauli=False):
                     J_{xy} S_i^x S_{i+1}^y + J_{yx} S_i^y S_{i+1}^x)
             + h_z \sum_i S_i^z
     """
-    from ..solvable.free_fermion.spectrum import _XY_gdenergy_inf
+    from .free_fermion.spectrum import _XY_gdenergy_inf
     return _XY_gdenergy_inf(jxx=jx, jyy=jy, jxy=jxy, jyx=jyx, hz=hz, pauli=pauli)
 
 def xy_finite_ground_energy(L, jx, jy, jxy, jyx, hz, pauli=False):
@@ -116,7 +116,7 @@ def xy_finite_ground_energy(L, jx, jy, jxy, jyx, hz, pauli=False):
     - if `jxy == jyx == 0` and `jx == jy`, this function is efficient.
         otherwise, it involves an eigen decomposition of a dim-L matrix.
     """
-    from ..solvable.free_fermion.spectrum import _XY_omega
+    from .free_fermion.spectrum import _XY_omega
     omega = _XY_omega(L, jxx=jx, jyy=jy, jxy=jxy, jyx=jyx, hz=hz, pauli=pauli)
     return - np.sum(omega)
     
@@ -140,7 +140,7 @@ def xy_spectrum(L, jx, jy, jxy, jyx, hz, pauli=False):
         otherwise, it involves an eigen decomposition of a dim-L matrix.
     - since it returns the full spectrum, `L` can not be too large (e.g. L < 20)
     """
-    from ..solvable.free_fermion.spectrum import XY_energies
+    from .free_fermion.spectrum import XY_energies
     return XY_energies(L=L, jxx=jx, jyy=jy, jxy=jxy, jyx=jyx, hz=hz, pauli=pauli)
 
 def xy_evolve(L, jx, jy, jxy, jyx, hz, init_state, tlist, 
@@ -166,7 +166,7 @@ def xy_evolve(L, jx, jy, jxy, jyx, hz, init_state, tlist,
     model = heisenberg_operator(L=L, j=(jx,jy,0), hz=hz, jxy=jxy, jyx=jyx)
     model = model.jw_transfer(pauli=pauli)
 
-    from ..solvable.gaussian_state.pairing import PairingState
+    from .gaussian_state.pairing import PairingState
     
     h, coef_I = model.BdG_ham()
     state = PairingState.from_product_state(init_state)
@@ -192,7 +192,7 @@ def xx_evolve(L, j, h, init_state, tlist,
     model = heisenberg_operator(L=L, j=(j,j,0), hz=h)
     model = model.jw_transfer(pauli=pauli)
 
-    from ..solvable.gaussian_state.slater import SlaterState
+    from .gaussian_state.slater import SlaterState
     
     h, coef_I = model.single_particle_ham()
     state = SlaterState.from_product_state(init_state)

@@ -5,7 +5,7 @@
 # @Last Modified time: 2025-09-02 18:31:09
 
 import numpy as _np
-from .pauli import pauli_matrix
+from ..pauli import pauli_matrix
 
 def hadamard_gate(dtype=complex):
     """The Hadamard gate."""

@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:37:42
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-02 18:31:22
+# @Last Modified time: 2025-09-02 18:41:35
 
 import numpy as _np
 
-from ...linalg.matops import kron_power, exp
+from ....linalg.matops import kron_power, exp
 
 def KIM_Hk(b:float, L:int):
     cosb, sinb = _np.cos(b), _np.sin(b)

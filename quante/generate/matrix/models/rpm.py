@@ -2,12 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:42:42
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-02 18:31:30
+# @Last Modified time: 2025-09-02 18:41:40
 
 import numpy as _np
 
-from ...linalg.matops import kron
-from .random import _random_unitary_matrix_cue, _random_simple_matrix
+from ....linalg.matops import kron
+from ..random import _random_unitary_matrix_cue, _random_simple_matrix
 
 def random_phase_model(L, q, ε, seed=None):
     """随机相位模型，

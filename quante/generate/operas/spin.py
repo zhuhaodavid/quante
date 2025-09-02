@@ -2,9 +2,10 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-02 15:09:21
+# @Last Modified time: 2025-09-02 18:35:46
 
 import numpy as np
+import warnings
 import scipy.sparse as sp
 from typing import overload, TYPE_CHECKING, Literal
 from .general import Oper, _single_term, _merge_poscoef
@@ -1164,6 +1165,9 @@ def heisenberg_operator(L, j=1.0, *, hx=0.0, hy=0.0, hz=0.0, jxy=0.0, jyx=0.0, c
     # return HeisenbergOper(L=L, j=j, h=h, jxy=jxy, jyx=jyx, cyclic=cyclic)._make_spinoper()
     try:
         jx, jy, jz = j # type: ignore
+        if L == 3:
+            warnings.warn("ambiguous coupling constants for 3-site model"
+                          "we are using jx, jy, jz = j")
     except TypeError:
         jx = jy = jz = j
 
