@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-01 22:29:15
+# @Last Modified time: 2025-09-03 18:24:18
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -247,7 +247,7 @@ def eigensolve(
     # determine which backend to use
     backend = "auto" if backend is None else backend.lower()
     if backend == "auto":
-        if H.shape[0] > 32766:
+        if H.shape[0] > 32766 and return_vecs:
             backend = "matlab"
         else:
             backend = "numpy"
@@ -1080,13 +1080,15 @@ def matlabeig_list(path_save_to="EigData/", file_names=None, return_vecs=True, u
 
     # create a temp script file to avoid long command line
     script_file = _os.path.join(tempPath, "matlab_script.m")
+    int_usegpu = 1 if usegpu else 0
     with open(script_file, "w") as f:
         f.write(f"cd '{curfilename}/matlab4py';\n")
         f.write("try\n")
+
         if return_vecs:
-            f.write(f"    matlabeig('{tempPath}', '{path_save_to}', '{usegpu}', {para});\n")
+            f.write(f"    matlabeig('{tempPath}', '{path_save_to}', '{int_usegpu}', {para});\n")
         else:
-            f.write(f"    matlabeigvals('{tempPath}', '{path_save_to}', '{usegpu}', {para});\n")
+            f.write(f"    matlabeigvals('{tempPath}', '{path_save_to}', '{int_usegpu}', {para});\n")
         f.write("catch ME\n")
         f.write("    fprintf('%s\\n', string(getReport(ME, 'extended', 'hyperlinks', 'off')));\n")
         f.write("end\n")
