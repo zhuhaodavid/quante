@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-04 17:40:33
+# @Last Modified time: 2025-09-04 17:45:04
 
 import warnings
 import traceback as tb
@@ -168,6 +168,8 @@ class Oper:
             return self
         elif isinstance(oper, Oper):
             return self.__matmul__(oper)
+        else:
+            raise NotImplementedError(f"oper type {type(oper)} not supported")
     
     def __mul__(self, scale):
         """ oper * num """
@@ -187,6 +189,7 @@ class Oper:
         """oper - self"""
         self_copy = self.copy()
         self_copy *= -1
+        # self_copy.__imul__(-1)
         self_copy.__iadd__(oper)
         return self_copy
     
