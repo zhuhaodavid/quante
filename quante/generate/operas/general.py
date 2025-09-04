@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-04 16:33:33
+# @Last Modified time: 2025-09-04 17:40:33
 
 import warnings
 import traceback as tb
@@ -181,7 +181,7 @@ class Oper:
         """ num * oper """
         if isinstance(scale, Oper):
             return self.__matmul__(scale)
-        return self * scale
+        return self.__mul__(scale)
 
     def __rsub__(self, oper):
         """oper - self"""
@@ -192,11 +192,11 @@ class Oper:
     
     def __neg__(self):
         """- self"""
-        return (-1) * self
+        return self.__mul__(-1)
     
     def __truediv__(self, num):
         """self / num"""
-        return (1 / num) * self
+        return self.__mul__(1/num)
 
     def __matmul__(self, oper:'Oper'):
         """ self * oper """
@@ -205,15 +205,15 @@ class Oper:
             newoper = cls({}, self.type)
             for opnm1, (posn1, coef1) in self.data.items():
                 if opnm1 == "I":
-                    newoper += np.sum(coef1) * oper
+                    newoper.__iadd__(np.sum(coef1) * oper)
                     continue
                 for opnm2, (posn2, coef2) in oper.data.items():
                     if opnm2 == "I":
-                        newoper += np.sum(coef2) * cls({opnm1: (posn1, coef1)}, self.type)
+                        newoper.__iadd__(np.sum(coef2) * cls({opnm1: (posn1, coef1)}, self.type))
                         continue
                     newopnm = opnm1 + opnm2
                     newposn, newcoef = catposcoef(posn1, coef1, posn2, coef2)
-                    newoper += cls({newopnm : (newposn, newcoef)}, self.type)
+                    newoper.__iadd__(cls({newopnm : (newposn, newcoef)}, self.type))
             return newoper
         else:
             raise NotImplementedError("不同基矢相加")
