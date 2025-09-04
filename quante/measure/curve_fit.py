@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:13:29
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-26 17:53:47
+# @Last Modified time: 2025-09-04 16:31:50
 
 import numpy as _np
 
@@ -131,9 +131,9 @@ def hist_gaussian(data, ax=None, bins=None, plot=False, **kwargs):
     
     hist, bin_edges = _np.histogram(data, bins=bins, density=True)
     if plot:
+        plot_hist(hist, bin_edges, ax=ax, **kwargs)
         plot_gaussian(mean, std, ax=ax, xrange=(min(bin_edges), max(bin_edges)), 
                       color='k', linestyle='--', linewidth=1.5)  
-        plot_hist(hist, bin_edges, ax=ax, **kwargs)
     return hist, bin_edges, mean, std
 
 

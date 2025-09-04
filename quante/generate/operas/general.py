@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 11:43:39
+# @Last Modified time: 2025-09-04 16:33:33
 
 import warnings
 import traceback as tb
@@ -104,7 +104,7 @@ class Oper:
     def L(self):
         return max([np.max(posn) for posn, _ in self.data.values()]) + 1 
     
-    def __iadd__(self, oper, add_or_minus=1) -> 'Oper':
+    def __iadd__(self, oper, add_or_minus=1):
         """ self += oper """
         if isinstance(oper, (int, float, complex)) and oper == 0:  # a + 0 = a
             return self
@@ -131,18 +131,18 @@ class Oper:
         else:
             raise NotImplementedError(f"oper type {type(oper)} not supported")
     
-    def __add__(self, oper) -> 'Oper':
+    def __add__(self, oper):
         """ self + a * oper """
         self_copy = self.copy()
         self_copy.__iadd__(oper)
         return self_copy
 
-    def copy(self) -> 'Oper':
+    def copy(self):
         return copy.deepcopy(self)
         # cls = self.__class__
         # return cls(copy.deepcopy(self.data), self.type)
     
-    def __radd__(self, oper) -> 'Oper':
+    def __radd__(self, oper):
         """ num + oper """
         return self.__add__(oper)  # a + b = b + a
     
@@ -151,7 +151,7 @@ class Oper:
         self.__iadd__(oper, add_or_minus=-1.)
         return self
     
-    def __sub__(self, oper) -> 'Oper':
+    def __sub__(self, oper):
         """self - oper"""
         self_copy = self.copy()
         self_copy.__iadd__(oper, add_or_minus=-1.)
@@ -169,7 +169,7 @@ class Oper:
         elif isinstance(oper, Oper):
             return self.__matmul__(oper)
     
-    def __mul__(self, scale) -> 'Oper':
+    def __mul__(self, scale):
         """ oper * num """
         if isinstance(scale, (int, float, complex)):
             self_copy = self.copy()
@@ -177,28 +177,28 @@ class Oper:
             return self_copy
         return self.__matmul__(scale)
         
-    def __rmul__(self, scale) -> 'Oper':
+    def __rmul__(self, scale):
         """ num * oper """
         if isinstance(scale, Oper):
             return self.__matmul__(scale)
         return self * scale
 
-    def __rsub__(self, oper) -> 'Oper':
+    def __rsub__(self, oper):
         """oper - self"""
         self_copy = self.copy()
         self_copy *= -1
         self_copy.__iadd__(oper)
         return self_copy
     
-    def __neg__(self) -> 'Oper':
+    def __neg__(self):
         """- self"""
         return (-1) * self
     
-    def __truediv__(self, num) -> 'Oper':
+    def __truediv__(self, num):
         """self / num"""
         return (1 / num) * self
 
-    def __matmul__(self, oper:'Oper') -> 'Oper':
+    def __matmul__(self, oper:'Oper'):
         """ self * oper """
         if self.type == oper.type and len(oper.type) == 1:  # 相同类型
             cls = self.__class__
@@ -218,7 +218,7 @@ class Oper:
         else:
             raise NotImplementedError("不同基矢相加")
     
-    def __pow__(self, n, m=None) -> 'Oper':
+    def __pow__(self, n, m=None):
         """ self ** n """
         if m is not None:
             raise NotImplementedError("modulo is not implemented")
@@ -229,10 +229,10 @@ class Oper:
             newoper = self * newoper
         return newoper
     
-    def _check_length(self, L:int) -> None:
+    def _check_length(self, L:int):
         assert L >= self.L
     
-    def show_string_form(self, maxlen=80, form='v') -> None:
+    def show_string_form(self, maxlen=80, form='v'):
         """打印算符的字符串形式"""
         if form == 'v':
             print(self.table_form(maxlen=maxlen))
@@ -430,7 +430,7 @@ class Oper:
         save_hdf5(filename, "/", data_dict)
         
     @classmethod
-    def load(cls, filename:str) -> 'Oper':
+    def load(cls, filename:str):
         from ...basicfun import load_hdf5
         data = load_hdf5(filename, '/', '/')
         dic = {}
