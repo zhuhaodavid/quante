@@ -33,7 +33,7 @@ def heisenberg_matrix(
     pzblock:Optional[int]=None,
     jmblock:Optional[Union[int, tuple[int, int]]]=None,
     sparse: bool = False
-) -> np.ndarray:
+):
     r"""Generate Heisenberg model Hamiltonian matrix.
 
     ..math::

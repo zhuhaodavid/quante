@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:50:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-02 21:12:41
+# @Last Modified time: 2025-09-05 13:36:23
 
 import numpy as _np
 import scipy.sparse as _sparse
@@ -335,15 +335,19 @@ def random_unitary_matrix_close_I(dim, a=0.01, seed=None):
     return _np.dot(U * E, U.T.conj())
 
 
-def random_sparse_matrix(dim, density=0.1, seed=None):
+def random_sparse_matrix(shape: int | tuple, density=0.1, seed=None):
     """生成一个稀疏矩阵
     """
     rng = _np.random.default_rng(seed=seed)
-    nnz = round(density * dim * dim)
-    ijs = rng.choice(range(0, dim**2), size=nnz, replace=False)
-    i, j = _np.divmod(ijs, dim)
+    if isinstance(shape, int):
+        shape = (shape, 1)
+    assert len(shape) == 2
+    num = _np.prod(shape)
+    nnz = round(density * num)
+    ijs = rng.choice(range(0, num), size=nnz, replace=False)
+    i, j = _np.divmod(ijs, shape[1])
     data = rng.standard_normal(nnz) + 1.j * rng.standard_normal(nnz)
-    return _sparse.coo_matrix((data, (i, j)), shape=(dim, dim)).asformat("csr")
+    return _sparse.coo_matrix((data, (i, j)), shape=shape).asformat("csr")
 
 
 def random_twosite_conserve(q=2, seed=None):
