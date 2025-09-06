@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 20:20:43
+# @Last Modified time: 2025-09-07 01:42:08
 import numpy as np
 from .general import Oper, _merge_poscoef, _single_term
 from .fermion import _sort_pm, _sort_posn
@@ -136,6 +136,10 @@ class BosonOper(Oper):
                 return mat.toarray()
         else:
             raise NotImplementedError("不支持的基矢类型")
+    
+    @classmethod
+    def builder(cls) -> 'BosonBuilder':
+        return BosonBuilder()
 
 def _make_oper(name: str, posn: tuple[int], coef: float, L:None|int) -> BosonOper:
     """Helper function to create a BosonOper with a single term."""

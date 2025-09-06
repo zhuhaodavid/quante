@@ -28,4 +28,3 @@ def _quick_merge(res_pos, res_coef):
     res_coef[cur_pos] = cur_coef
     mask = res_coef[:cur_pos + 1] != 0  # Remove zero coefficients
     return res_pos[:cur_pos+1][mask], res_coef[:cur_pos+1][mask]
-

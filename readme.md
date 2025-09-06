@@ -105,7 +105,7 @@ op = qt.generate.operas.spin
 ```python
 L = 4
 ham = op.heisenberg_operator(L)
-ham
+ham.show_string_form(form='v')
 ```
 
 ```
@@ -149,6 +149,43 @@ array([[ 0.25,  0.5 ,  0.  ,  0.  ,  0.  ,  0.  ],
        [ 0.  ,  0.  ,  0.5 ,  0.5 , -0.75,  0.5 ],
        [ 0.  ,  0.  ,  0.  ,  0.  ,  0.5 ,  0.25]])
 ```
+
+`Oper` 支持一些简单的算符运算，例如: 加、减、数乘、算符乘法、求和、取厄密、展开等。
+
+可以利用 `sympy` 进行一些简单的化简，例如
+$$
+    H = c \vec{S}_i \cdot (\vec{S}_{m} \times \vec{S}_{n})
+$$
+
+```python
+c = sy.Symbol('c', real=True)
+i,m,n = 0,1,2
+si = [op.x(i), op.y(i), op.z(i)]
+smxsn = [
+    op.y(m) * op.z(n) - op.z(m) * op.y(n),
+    op.z(m) * op.x(n) - op.x(m) * op.z(n),
+    op.x(m) * op.y(n) - op.y(m) * op.x(n),
+]
+ham = c * op.sum(si[p] * smxsn[p] for p in range(3))
+ham = ham.expandxy(pauli=False)
+print(ham)
+```
+
+得到：
+```
+pmZ, (0, 1, 2), I*c/4
+mpZ, (0, 1, 2), -I*c/4
+pZm, (0, 1, 2), -I*c/4
+mZp, (0, 1, 2), I*c/4
+Zpm, (0, 1, 2), I*c/4
+Zmp, (0, 1, 2), -I*c/4
+```
+
+这里 `p,m,Z` 分别表示 $\sigma^-, \sigma^{ +}, \sigma^{z}$
+`I` 表示虚数单位。
+
+可以进一步利用 `ham.subs({c:1})` 将符号变量 `c` 替换为数值 `1`。
+
 
 ### Krylov Eigsolve
 
@@ -236,17 +273,15 @@ for i in range(L-1):
     ham += "+-", [i+1, i], -J
     ham += "+-", [i, i+1], -J
 ham = ham.build()
+Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i) for i in range(L-1)]
+Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1) for i in range(L-1)]
 
 basis = qt.generate.basis.spin_basis(L=L, Nup=1)
-hammat = ham.to_matrix(basis=basis, sparse=True)
+lvn = qt.generate.superoper.make_Liouvillian(ham, Lindblad_R + Lindblad_L, basis)
 
-Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i).to_matrix(basis=basis, sparse=True) for i in range(L-1)]
-Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1).to_matrix(basis=basis, sparse=True) for i in range(L-1)]
-particle_number = [op.n(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
-
-lvn = qt.generate.superoper.Liouvillian(hammat, Lindblad_R + Lindblad_L)
 state = qt.generate.state.product_state(['up']+['dn']*(L-1), Nup=1)
 rhoinit = np.outer(state, state)
+particle_number = [op.n(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
 
 res = qt.linalg.evolve_and_measure(
     lvn, rhoinit, [10, 20, 30, 40, 50], 

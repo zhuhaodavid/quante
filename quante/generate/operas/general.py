@@ -2,13 +2,13 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-06 23:00:28
+# @Last Modified time: 2025-09-07 00:13:03
 
-import warnings
-import traceback as tb
 import numpy as np
-import scipy.sparse as sp
 import copy 
+
+def _isscale(i):
+    return np.isscalar(i) or i.__class__.__module__.startswith('sympy.')
 
 def _single_term(i, coef):
     return (np.array([list(i)], dtype=int), np.array([coef]))
@@ -71,9 +71,33 @@ def _merge_poscoef(poss, coefs):
     res_pos = res_pos[sorted_indices]
     res_coef = res_coef[sorted_indices]
 
-    from .nbfuc.general_nb import _quick_merge
-    return _quick_merge(res_pos, res_coef)
+    return _quick_merge_batch(res_pos, res_coef)
 
+def _quick_merge_batch(res_pos, res_coef):
+    # 如果 res_coef 是数字而不是 object 那么就可以调用 numba
+    if res_coef.dtype != object:
+        from .nbfuc.general_nb import _quick_merge
+        return _quick_merge(res_pos, res_coef)
+
+    total_len = len(res_pos)
+    cur_coef = res_coef[0]
+    cur_pos = 0
+    prev_pos = res_pos[0]  # 引入局部变量存储上一个位置
+    for i in range(1, total_len):
+        tmp = res_pos[i]
+        if (tmp == prev_pos).all():
+            cur_coef += res_coef[i]
+        else:
+            res_pos[cur_pos] = prev_pos
+            res_coef[cur_pos] = cur_coef
+            cur_pos += 1
+            cur_coef = res_coef[i]
+            prev_pos = tmp
+            
+    res_pos[cur_pos] = res_pos[total_len-1]
+    res_coef[cur_pos] = cur_coef
+    mask = res_coef[:cur_pos + 1] != 0  # Remove zero coefficients
+    return res_pos[:cur_pos+1][mask], res_coef[:cur_pos+1][mask]
 
 class Oper:
     """
@@ -105,15 +129,16 @@ class Oper:
     
     def __iadd__(self, oper, add_or_minus=1):
         """ self += oper """
-        if isinstance(oper, (int, float, complex)) and oper == 0:  # a + 0 = a
-            return self
-        elif isinstance(oper, (int, float, complex)):  # 加单位阵
-            old_pos, old_coef = self.data.get('I', (None,None))
-            if old_coef is None and old_pos is None:
-                self.data['I'] = (np.array([[0]],dtype=int), np.array([oper]))
+        if _isscale(oper):
+            if oper == 0:
+                return self
             else:
-                old_coef[0] += add_or_minus*1.
-            return self
+                old_pos, old_coef = self.data.get('I', (None,None))
+                if old_coef is None and old_pos is None:
+                    self.data['I'] = (np.array([[0]],dtype=int), np.array([oper]))
+                else:
+                    old_coef[0] += add_or_minus*1
+                return self
         elif isinstance(oper, Oper):  # 两个算符相加
             assert self.type == oper.type, NotImplementedError("算符类型不相同")
             for name, (pos, coef) in oper.data.items():
@@ -147,23 +172,24 @@ class Oper:
     
     def __isub__(self, oper):
         """self -= oper"""
-        self.__iadd__(oper, add_or_minus=-1.)
+        self.__iadd__(oper, add_or_minus=-1)
         return self
     
     def __sub__(self, oper):
         """self - oper"""
         self_copy = self.copy()
-        self_copy.__iadd__(oper, add_or_minus=-1.)
+        self_copy.__iadd__(oper, add_or_minus=-1)
         return self_copy
     
     def __imul__(self, oper):
         """self *= oper"""
-        if isinstance(oper, (int, float, complex)):
+        if _isscale(oper):
+            scale = oper
             for name, (posn, coef) in self.data.items():
                 try:
-                    coef *= oper
+                    coef *= scale
                 except TypeError:
-                    self.data[name] = (posn, coef * oper)
+                    self.data[name] = (posn, coef * scale)
             return self
         elif isinstance(oper, Oper):
             return self.__matmul__(oper)
@@ -172,7 +198,7 @@ class Oper:
     
     def __mul__(self, scale):
         """ oper * num """
-        if isinstance(scale, (int, float, complex)):
+        if _isscale(scale):
             self_copy = self.copy()
             self_copy.__imul__(scale)
             return self_copy
@@ -202,6 +228,7 @@ class Oper:
 
     def __matmul__(self, oper:'Oper'):
         """ self * oper """
+        assert isinstance(oper, Oper), NotImplementedError(f"oper type {type(oper)} not supported")
         if self.type == oper.type and len(oper.type) == 1:  # 相同类型
             cls = self.__class__
             newoper = cls({}, self.type)
@@ -234,12 +261,14 @@ class Oper:
     def _check_length(self, L:int):
         assert L >= self.L
     
-    def show_string_form(self, maxlen=80, form='v'):
+    def show_string_form(self, maxlen=80, form='h'):
         """打印算符的字符串形式"""
         if form == 'v':
             print(self.table_form(maxlen=maxlen))
         elif form == 'h':
             print(self.table_form2(maxlen=maxlen))
+        else:
+            raise NotImplementedError("form should be 'v' or 'h'")
     
     def table_form(self, maxlen=90) -> str:
         _seperate_notion = self._seperate_notion()
@@ -276,7 +305,10 @@ class Oper:
                 for j in range(oper_len):
                     data_line += f"   {posn[i][j]:<3}"
 
-                if np.iscomplexobj(coef):
+                if coef.dtype == object:
+                    from sympy import nsimplify
+                    tmp = f"{nsimplify(coef[i])}".rjust(10) + " |"
+                elif np.iscomplexobj(coef):
                     if max(np.abs(coef)) < 1e3 and min(np.abs(coef)) > -1e3:
                         tmp = f"{coef[i]:.3f}".rjust(16) + " |"  # 普通浮点数格式
                     else:
@@ -328,19 +360,34 @@ class Oper:
         lines = []
         for operator, (posn, coef) in self.data.items():
             oper_len = len(operator) - operator.count('|')
-            line = f"{operator}: "
             for i in range(len(coef)):
-                if i > 0:
-                    line += " + "
-                line += f"{coef[i]:.3f} * " + " * ".join([f"({posn[i][j]})" for j in range(oper_len)])
-            lines.append(line)
-        print('\n'.join(lines))
+                # if i > 0:
+                #     line += " + "
+                line = f"{operator}, "
+                if coef.dtype == object:
+                    from sympy import nsimplify
+                    coefstr = f"{nsimplify(coef[i])}"
+                elif np.iscomplexobj(coef):
+                    if max(np.abs(coef)) < 1e3 and min(np.abs(coef)) > -1e3:
+                        coefstr = f"{coef[i]:.3f}"
+                    else:
+                        coefstr = f"{coef[i]:.2e}"
+                else:
+                    if max(coef) < 1e3 and min(coef) > -1e3:
+                        coefstr = f"{coef[i]:.3f}"
+                    else:
+                        coefstr = f"{coef[i]:.2e}"
+
+                line += "(" + ", ".join([f"{posn[i][j]}" for j in range(oper_len)]) + "), " + coefstr
+                lines.append(line)
+        return '\n'.join(lines)
+        # print('\n'.join(lines))
     
     def __str__(self) -> str:
         """
         返回算符的字符串形式
         """
-        return self.table_form(maxlen=80)
+        return self.table_form2(maxlen=80)
     
     def each_term(self):
         """
@@ -464,4 +511,13 @@ class Oper:
                 newoper = oper
                 posnlist_ = posnlist.copy()
             res[newoper] = (posnlist_, coeflist.copy())
+        return type(self)(res)
+
+    def subs(self, dic):
+        res = {}
+        for oper, (posnlist, coeflist) in self.data.items():
+            newcoeflist = np.array([
+                coef.subs(dic).evalf() for coef in coeflist
+            ])
+            res[oper] = (posnlist, newcoeflist)
         return type(self)(res)

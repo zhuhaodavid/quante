@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-02 18:35:46
+# @Last Modified time: 2025-09-07 01:40:42
 
 import numpy as np
 import warnings
@@ -833,6 +833,10 @@ class SpinOper(Oper):
                 res = sp.linalg.eigs(mat, k=k, which='LM', return_eigenvectors=False)
                 return res[0] if k == 1 else res
                 
+    @classmethod
+    def builder(cls) -> 'SpinBuilder':
+        return SpinBuilder()
+
 
 def _make_oper(name: str, posn: tuple[int], coef: float, L:None|int) -> "SpinOper":
     """Helper function to create a SpinOper with a single term."""
@@ -1086,6 +1090,7 @@ def _merge_terms(opnm: str, posn: np.ndarray, coef: float) -> tuple[str, np.ndar
     return final
 
 
+
 class SpinBuilder:
     def __init__(self):
         """
@@ -1173,12 +1178,17 @@ def heisenberg_operator(L, j=1.0, *, hx=0.0, hy=0.0, hz=0.0, jxy=0.0, jyx=0.0, c
 
     data = {}
     posn1 = np.arange(0, L, dtype=int).reshape(L,1)
-    if not np.allclose(hx, 0):
-        data["x"] = (posn1, _to_array(hx, L))
-    if not np.allclose(hy, 0):
-        data["y"] = (posn1, _to_array(hy, L))
-    if not np.allclose(hz, 0):
-        data["z"] = (posn1, _to_array(hz, L))
+    notcloseset(data, "x", posn1, hx, L)
+    notcloseset(data, "y", posn1, hy, L)
+    notcloseset(data, "z", posn1, hz, L)
+
+
+    # if not np.allclose(hx, 0):
+    #     data["x"] = (posn1, _to_array(hx, L))
+    # if not np.allclose(hy, 0):
+    #     data["y"] = (posn1, _to_array(hy, L))
+    # if not np.allclose(hz, 0):
+    #     data["z"] = (posn1, _to_array(hz, L))
     
     if cyclic:
         posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=int)
@@ -1187,16 +1197,21 @@ def heisenberg_operator(L, j=1.0, *, hx=0.0, hy=0.0, hz=0.0, jxy=0.0, jyx=0.0, c
         posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
         Lp = L-1
     
-    if not np.allclose(jx, 0.):
-        data["xx"] = (posn2, _to_array(jx, Lp))
-    if not np.allclose(jy, 0.):
-        data["yy"] = (posn2, _to_array(jy, Lp))
-    if not np.allclose(jz, 0.):
-        data["zz"] = (posn2, _to_array(jz, Lp))
-    if not np.allclose(jxy, 0.):
-        data["xy"] = (posn2, _to_array(jxy, Lp))
-    if not np.allclose(jyx, 0.):
-        data["yx"] = (posn2, _to_array(jyx, Lp))
+    notcloseset(data, "xx", posn2, jx, Lp)
+    notcloseset(data, "yy", posn2, jy, Lp)
+    notcloseset(data, "zz", posn2, jz, Lp)
+    notcloseset(data, "xy", posn2, jxy, Lp)
+    notcloseset(data, "yx", posn2, jyx, Lp)
+    # if not np.allclose(jx, 0.):
+    #     data["xx"] = (posn2, _to_array(jx, Lp))
+    # if not np.allclose(jy, 0.):
+    #     data["yy"] = (posn2, _to_array(jy, Lp))
+    # if not np.allclose(jz, 0.):
+    #     data["zz"] = (posn2, _to_array(jz, Lp))
+    # if not np.allclose(jxy, 0.):
+    #     data["xy"] = (posn2, _to_array(jxy, Lp))
+    # if not np.allclose(jyx, 0.):
+    #     data["yx"] = (posn2, _to_array(jyx, Lp))
    
     return SpinOper(data)
 
@@ -1204,8 +1219,12 @@ def _to_array(param: float|np.ndarray, size: int) -> np.ndarray:
     """
     将标量参数转换为数组，以便统一处理
     """
-    if np.isscalar(param):
+    if np.isscalar(param) or param.__class__.__module__.startswith('sympy.'):
         return np.full(size, param)
     assert len(param) == size, "Array length must match system size L or L-1."
     return np.array(param)
 
+def notcloseset(data, opnm, posn, param, size):
+    paramarr = np.array(param)
+    if paramarr.dtype == object or not np.allclose(paramarr, 0.):
+        data[opnm] = (posn, _to_array(param, size))

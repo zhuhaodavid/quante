@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-02 17:44:43
+# @Last Modified time: 2025-09-07 01:41:03
 
 import numpy as np
 import scipy.sparse as sp
@@ -446,6 +446,10 @@ class FermionOper(Oper):
         data['+-'] =  (posn1, -coef1)
         data['n'] = (posn2, coef2)
         return cls(data)
+    
+    @classmethod
+    def builder(cls) -> 'FermionBuilder':
+        return FermionBuilder()
     
 
 class FermionBuilder:

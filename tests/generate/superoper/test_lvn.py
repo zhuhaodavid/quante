@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-23 21:21:03
+# @Last Modified time: 2025-09-07 02:46:18
 
 import unittest
 import quante as qt
@@ -83,6 +83,43 @@ class TestLiouvillian(unittest.TestCase):
             method='RK45'
         )
 
+class TestmakeLiouvillianOper(unittest.TestCase):
+    def test_make_LiouvillianOper(self):
+        op = qt.generate.operas.spin
+
+        L = 8
+        J = 1.
+        gamma_R = 1.0
+        gamma_L = 0.7
+
+        ham = op.builder()
+        for i in range(L-1):
+            ham += "+-", [i+1, i], -J
+            ham += "+-", [i, i+1], -J
+            ham += "xx", [i, i+1], -J
+            ham += "yy", [i, i+1], J/2
+        ham = ham.build()
+
+        basis = qt.generate.basis.spin_basis(L=L)
+        Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i) for i in range(L-1)]
+        Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1) for i in range(L-1)]
+
+        lo = Lindblad_R[0].to_matrix(basis, sparse=True)
+        lvn = qt.generate.superoper.make_Liouvillian(ham, Lindblad_R + Lindblad_L, basis).matrix
+
+
+        lvnOper = qt.generate.superoper.make_LiouvillianOper(L, ham, Lindblad_R + Lindblad_L)
+        # print(lvnOper)
+        basis = qt.generate.basis.spin_basis(L=2*L)
+        lvn2 = lvnOper.to_matrix(basis, sparse=True)
+        self.assertAlmostEqual(np.linalg.norm((lvn - lvn2).data), 0.)
+
+        lvnOper = qt.generate.superoper.make_LiouvillianOper(L, ham, Lindblad_R + Lindblad_L, format='ladder')
+        basis = qt.generate.basis.spin_basis(L=2*L)
+        lvn3 = lvnOper.to_matrix(basis, sparse=True)
+
+        lvn = lvn.reshape(*[2]*(4*L)).transpose([i if j == 0 else i+L for i in range(L) for j in range(2)] + [i if j == 0 else i+L for i in range(2*L,3*L) for j in range(2)]).reshape(2**(2*L), 2**(2*L))
+        self.assertAlmostEqual(np.linalg.norm((lvn - lvn3).data), 0)
 
 if __name__ == "__main__":
     unittest.main()

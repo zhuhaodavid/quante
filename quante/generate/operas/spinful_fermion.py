@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:08:45
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 20:21:30
+# @Last Modified time: 2025-09-07 01:41:47
 
 import numpy as np
 from scipy.sparse import csr_array
@@ -96,6 +96,19 @@ class SpinfulFermionOper(Oper):
             else:
                 data[newname] = _merge_poscoef([oldpos, newposnlist], [oldcoef, newcoeflist])
         return FermionOper(data)
+    
+    def builder(self) -> 'SpinfulFermionBuilder':
+        r"""返回一个 `SpinfulFermionBuilder` 实例
+        
+        该方法用于创建一个 `SpinfulFermionBuilder` 实例，方便构建自旋算符。
+        
+        Returns
+        -------
+        SpinfulFermionBuilder
+            一个新的 `SpinfulFermionBuilder` 实例。
+        """
+        return SpinfulFermionBuilder()
+
 
 def p(i:int=0, sigma='up') -> SpinfulFermionOper:
     if sigma in [0, 'u', '+', 'up']:
