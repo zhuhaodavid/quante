@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-07 01:40:42
+# @Last Modified time: 2025-09-08 16:41:59
 
 import numpy as np
 import warnings
@@ -111,7 +111,15 @@ class SpinOper(Oper):
                 else:
                     newoper = oper
                     posnlist_ = posnlist.copy()
-                res[newoper] = (posnlist_, coeflist.copy())
+                old_pos, old_coef = res.get(newoper, (None, None))
+                if old_coef is None and old_pos is None:
+                    res[newoper] = (posnlist_, coeflist.copy())
+                else:
+                    newpos,newcoef = _merge_poscoef((old_pos, posnlist_), (old_coef, coeflist))
+                    if len(newpos) > 0:
+                        res[newoper] = (newpos, np.real_if_close(newcoef))
+                    else:
+                        del res[newoper]
             return SpinOper(res)
         elif to == 'z':
             res = SpinOper({})
@@ -193,9 +201,10 @@ class SpinOper(Oper):
         """
         self._check_pauli(pauli)
         cf = 0 if pauli is True else 1
+        tmp = self.expandn(to='pm')
 
         static = []
-        for opnm, (posn, coef) in self.data.items():
+        for opnm, (posn, coef) in tmp.data.items():
             static_bond = []
             c = opnm.count('Z') * cf
             for i in range(len(coef)):
@@ -282,13 +291,8 @@ class SpinOper(Oper):
                 savememory=savememory)
             return mat if sparse else mat.toarray()
         
-        # use quspin_basis
-        qs_list = []
-        for opnm, posncoefs in expanded.to_quspin(pauli=pauli):
-            for posn in posncoefs:
-                qs_list.append((opnm, posn[1:], posn[0]))
-        mat = basis._make_matrix(qs_list, dtype=np.complex128)
-        return mat if sparse else mat.toarray()
+        from ...bridge.quspin_utils import hamiltonian
+        return hamiltonian(self, basis, dtype=np.complex128, sparse=sparse)       
     
     def _convert_to_quick_form(self):
         """这个函数专门为 to_matrix 写的，其他函数不需要"""

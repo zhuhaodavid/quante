@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-08 17:12:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 20:26:00
+# @Last Modified time: 2025-09-08 16:43:56
 
 import unittest
 import numpy as np
@@ -80,7 +80,7 @@ class TestSpinHalf(unittest.TestCase):
         return op.sum(jx[i] * (op.xx(i,(i+1)%L) + op.yy(i,(i+1)%L)) + jz[i] * op.zz(i,(i+1)%L) for i in range(L-1)) + op.sum(hz[i] * op.z(i) for i in range(L))
     
     def test_noblock(self):
-        # 海森堡测试：
+        # # 海森堡测试：
         from quante.generate.basis.spin_half.noblock.matrixele import heisenberg_matrix_element
 
         L = 10
@@ -90,7 +90,7 @@ class TestSpinHalf(unittest.TestCase):
             jz = np.random.randn()
             mat1 = heisenberg_matrix_element(L, jxy, jz, cyclic=cyclic)
             
-            ham = op.heisenberg_operator(L, (jxy, jxy, jz), 0., cyclic=cyclic)
+            ham = op.heisenberg_operator(L, (jxy, jxy, jz), cyclic=cyclic)
             mat2 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat1, mat2))
         
@@ -99,7 +99,6 @@ class TestSpinHalf(unittest.TestCase):
         quspin_basis = spin_basis(L=L, pauli=0)
         mat3 = ham.to_matrix(quspin_basis)
         mat4 = ham.to_matrix(basis)
-        
         self.assertTrue(np.allclose(mat3, mat4))
 
     def test_Nup(self):
@@ -114,7 +113,7 @@ class TestSpinHalf(unittest.TestCase):
             for Nup in range(L+1):
                 M, s_list = construct_Nup_basis(L, Nup)
                 mat1 = heisenberg_matrix_element(L, M, s_list, jxy, jz, cyclic=cyclic)
-                ham = op.heisenberg_operator(L, (jxy, jxy, jz), 0., cyclic=cyclic)
+                ham = op.heisenberg_operator(L, (jxy, jxy, jz), cyclic=cyclic)
                 basis = gen.basis.spin_basis(L=L, Nup=Nup)
                 mat2 = ham.to_matrix(basis, sparse=True).toarray()
                 self.assertTrue(np.allclose(mat1, mat2))
@@ -140,7 +139,7 @@ class TestSpinHalf(unittest.TestCase):
             M, s_list, R_list = construct_kblock_basis(L, k)
             mat1 = heisenberg_matrix_element(L, M, k, jxy=j, jz=h, s_list=s_list, R_list=R_list)
             basis = gen.basis.spin_basis(L=L, kblock=k)
-            ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=True)
+            ham = op.heisenberg_operator(L, (j, j, h), cyclic=True)
             mat2 = ham.to_matrix(basis)
             self.assertTrue(np.allclose(mat1, mat2))
         
@@ -168,7 +167,7 @@ class TestSpinHalf(unittest.TestCase):
             M, s_list = construct_pblock_basis(L, p)
             mat1 = heisenberg_matrix_element(L, M, p, jxy=j, jz=h, s_list=s_list, cyclic=cyclic)
             basis = gen.basis.spin_basis(L=L, pblock=p)
-            ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
+            ham = op.heisenberg_operator(L, (j, j, h), cyclic=cyclic)
             mat2 = ham.to_matrix(basis, sparse=True).toarray()
             self.assertTrue(np.allclose(mat1, mat2))
         
@@ -194,7 +193,7 @@ class TestSpinHalf(unittest.TestCase):
                 M, s_list = construct_zblock_basis(L, z)
                 mat1 = heisenberg_matrix_element(L, M, z, jxy=j, jz=h, s_list=s_list, cyclic = cyclic)
                 basis = gen.basis.spin_basis(L=L, zblock=z)
-                ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
+                ham = op.heisenberg_operator(L, (j, j, h), cyclic=cyclic)
                 mat2 = ham.to_matrix(basis, sparse=True).toarray()
                 self.assertTrue(np.allclose(mat1, mat2))
         
@@ -222,7 +221,7 @@ class TestSpinHalf(unittest.TestCase):
                 M, s_list = construct_pzblock_basis(L, pz)
                 mat1 = heisenberg_matrix_element(L, M, pz, jxy=j, jz=h, s_list=s_list, cyclic = cyclic)
                 basis = gen.basis.spin_basis(L=L, pzblock=pz)
-                ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
+                ham = op.heisenberg_operator(L, (j, j, h), cyclic=cyclic)
                 mat2 = ham.to_matrix(basis, sparse=True).toarray()
                 self.assertTrue(np.allclose(mat1, mat2))
         
@@ -250,7 +249,7 @@ class TestSpinHalf(unittest.TestCase):
                 M, s_list, R_list = construct_Nup_kblock_basis(L=L,Nup=Nup,k=k)
                 mat1 = heisenberg_matrix_element(L, M, k, jxy=j, jz=h, s_list=s_list, R_list=R_list)
                 basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k)
-                ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
+                ham = op.heisenberg_operator(L, (j, j, h), cyclic=cyclic)
                 mat2 = ham.to_matrix(basis, sparse=True).toarray()
                 self.assertTrue(np.allclose(mat1, mat2))
         
@@ -280,7 +279,7 @@ class TestSpinHalf(unittest.TestCase):
                     M, s_list = construct_Nup_pblock_basis(L, Nup, p)
                     mat1 = heisenberg_matrix_element(L, M, p, jxy=j, jz=h, s_list=s_list, cyclic=cyclic)
                     basis = gen.basis.spin_basis(L=L, Nup=Nup, pblock=p)
-                    ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
+                    ham = op.heisenberg_operator(L, (j, j, h), cyclic=cyclic)
                     mat2 = ham.to_matrix(basis, sparse=True).toarray()
                     self.assertTrue(np.allclose(mat1, mat2))
         
@@ -314,7 +313,7 @@ class TestSpinHalf(unittest.TestCase):
                     M, s_list = construct_Nup_zblock_basis(L, Nup, z)
                     mat1 = heisenberg_matrix_element(L, M, z, jxy=j, jz=h, s_list=s_list, cyclic=cyclic)
                     basis = gen.basis.spin_basis(L=L, Nup=Nup, zblock=z)
-                    ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
+                    ham = op.heisenberg_operator(L, (j, j, h), cyclic=cyclic)
                     mat2 = ham.to_matrix(basis, sparse=True).toarray()
                     self.assertTrue(np.allclose(mat1, mat2))
         
@@ -343,7 +342,7 @@ class TestSpinHalf(unittest.TestCase):
                     M, s_list = construct_Nup_pzblock_basis(L, Nup, pz)
                     mat1 = heisenberg_matrix_element(L, M, pz, jxy=j, jz=h, s_list=s_list, cyclic=cyclic)
                     basis = gen.basis.spin_basis(L=L, Nup=Nup, pzblock=pz)
-                    ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
+                    ham = op.heisenberg_operator(L, (j, j, h), cyclic=cyclic)
                     mat2 = ham.to_matrix(basis, sparse=True).toarray()
                     self.assertTrue(np.allclose(mat1, mat2))
         
@@ -374,7 +373,7 @@ class TestSpinHalf(unittest.TestCase):
                     M, s_list, R_list, m_list = construct_Nup_kblock_pblock_basis(L=L, Nup=Nup, k=k, p=p)
                     mat1 = heisenberg_matrix_element(L, M, k, p, jxy=j, jz=h, s_list=s_list, R_list=R_list, m_list=m_list)
                     basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k, pblock=p)
-                    ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
+                    ham = op.heisenberg_operator(L, (j, j, h), cyclic=cyclic)
                     mat2 = ham.to_matrix(basis, sparse=True).toarray()
                     self.assertTrue(np.allclose(mat1, mat2))
         
@@ -407,7 +406,7 @@ class TestSpinHalf(unittest.TestCase):
                     M, s_list, R_list, m_list, c_list = construct_Nup_kblock_pblock_zblock_basis(L=L, k=k, p=p, z=z)
                     mat1 = heisenberg_matrix_element(L, M, k, p, z, jxy=j, jz=h, s_list=s_list, R_list=R_list, m_list=m_list, c_list=c_list)
                     basis = gen.basis.spin_basis(L=L, Nup=L//2, kblock=k, pblock=p, zblock=z)
-                    ham = op.heisenberg_operator(L, (j, j, h), 0., cyclic=cyclic)
+                    ham = op.heisenberg_operator(L, (j, j, h), cyclic=cyclic)
                     mat2 = ham.to_matrix(basis, sparse=True).toarray()
                     self.assertTrue(np.allclose(mat1, mat2))
         

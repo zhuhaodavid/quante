@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-07-04 19:45:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 19:14:41
+# @Last Modified time: 2025-09-08 16:19:07
 
 import unittest
 import quante as qt
@@ -48,7 +48,7 @@ class TestSpinHalfProj(unittest.TestCase):
         )
         eng = tenpy_tebd_GS_(psi, M, tebd_params)
         E = np.sum(M.bond_energies(psi))  # M.bond_energies() works only a for NearestNeighborModel
-        E_exact = qt.generate.operas.heisenberg_operator(L=L, j=(-1,0,0), h=-1.0).gdenergy(pauli=True)
+        E_exact = qt.generate.operas.heisenberg_operator(L=L, j=(-1,0,0), hz=-1.0).gdenergy(pauli=True)
         self.assertAlmostEqual(E, E_exact, places=5)
 
 
@@ -80,6 +80,6 @@ class TestSpinHalfProj(unittest.TestCase):
         
         # expectation values
         E = np.mean(M.bond_energies(psi))  # M.bond_energies() works only a for NearestNeighborModel
-        E_exact = qt.generate.operas.heisenberg_operator(L=np.inf, j=(-1,0,0), h=-1.0).gdenergy(pauli=True)
+        E_exact = qt.generate.solvable.heisenberg.xy_infinite_ground_energy(jx=-1, jy=0.0, jxy=0.0, jyx=0.0, hz=-1.0, pauli=True)
         self.assertAlmostEqual(E, E_exact, places=4)
 

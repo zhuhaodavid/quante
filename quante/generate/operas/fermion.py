@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-07 01:41:03
+# @Last Modified time: 2025-09-08 16:21:56
 
 import numpy as np
 import scipy.sparse as sp
@@ -251,17 +251,9 @@ class FermionOper(Oper):
         return float
 
 
-    def quspin_form(self):
+    def to_quspin(self):
         """
         返回 quspin 可以接受的格式
-        
-        Examples
-        --------
-        >>> from quspin.operators import hamiltonian
-        >>> from quspin.basis import spin_basis_1d
-        >>> ham = sum(xx(i,i+1) + yy(i,i+1) for i in range(5))
-        >>> basis = spin_basis_1d(L=6)
-        >>> mat = hamiltonian(ham.quspin_form(), [], basis=basis)
         """
         static = []
         for opnm, (posn, coef) in self.data.items():
@@ -287,20 +279,8 @@ class FermionOper(Oper):
             else:
                 return mat.toarray()
         else:
-            from ...bridge.quspin_utils.quspin_extension_wrap.basis.basis_1d.fermion import spinless_fermion_basis_1d
-            if isinstance(basis, spinless_fermion_basis_1d):
-                if dtype is None:
-                    dtype = np.complex128
-                op_list = []
-                for opstr, posn, coef in self.each_term():
-                    op_list.append([opstr, posn, coef])
-                mat = basis._make_matrix(op_list, dtype=dtype)
-                if sparse:
-                    return mat
-                else:
-                    return mat.toarray()
-            else:
-                raise NotImplementedError("不支持的基矢类型")
+            from ...bridge.quspin_utils import hamiltonian
+            return hamiltonian(self, basis, dtype=np.complex128 if dtype is None else dtype, sparse=sparse)
 
 
     def _convert_to_quick_form(self):

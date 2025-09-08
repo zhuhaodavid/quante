@@ -2,9 +2,11 @@
 # @Author: hzhu
 # @Date:   2024-12-15 18:08:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 20:10:11
+# @Last Modified time: 2025-09-08 15:20:51
 
 # quspin_basis 是 quspin 库中的源码，这里提供一个简单的封装，使得用户可以更方便地使用 quspin_basis 中的 basis 类。
+
+import numpy as np
 
 def fermion_basis(L:int, Nf:int|list|None = None, nf:float|None = None, a:int|None = None, kblock:int|None=None, pblock:int|None=None):
     """使用 quspin 生成无自旋费米子基组。
@@ -24,7 +26,7 @@ def fermion_basis(L:int, Nf:int|list|None = None, nf:float|None = None, a:int|No
     pblock : int | None, optional
         宇称子空间，反射对称性, by default None, by default None
     """
-    from .basis.basis_1d.fermion import spinless_fermion_basis_1d
+    from quspin.basis import spinless_fermion_basis_1d
     blocks = {'a': a, "kblock": kblock, "pblock": pblock}
     blocks = {k: v for k, v in blocks.items() if v is not None}
     return spinless_fermion_basis_1d(L=L, Nf=Nf, nf=nf, **blocks)
@@ -53,7 +55,7 @@ def spinful_fermion_basis(L:int, Nf:tuple[int, list]|None = None, nf: tuple[floa
     psblock : int | None, optional
         同时考虑自旋交换和反射对称性, by default None
     """
-    from .basis.basis_1d.fermion import spinful_fermion_basis_1d
+    from quspin.basis import spinful_fermion_basis_1d
     blocks = {'a': a, "kblock": kblock, "pblock": pblock, "sblock": sblock, "psblock": psblock}
     blocks = {k: v for k, v in blocks.items() if v is not None}
     return spinful_fermion_basis_1d(L=L, Nf=Nf, nf=nf, double_occupancy=double_occupancy, **blocks)
@@ -86,7 +88,7 @@ def boson_basis(L:int, Nb:int|list|None = None, nb:float|None = None, sps:int|No
     cBblock : int | None, optional
         奇数格点上的粒子空穴对称性
     """
-    from .basis.basis_1d.boson import boson_basis_1d
+    from quspin.basis import boson_basis_1d
     blocks = {'a': a, "kblock": kblock, "pblock": pblock, "cblock":cblock, "pcblock":pcblock, "cAblock": cAblock, "cBblock": cBblock}
     blocks = {k: v for k, v in blocks.items() if v is not None}
     return boson_basis_1d(L=L, Nb=Nb, nb=nb, sps=sps, **blocks)
@@ -119,7 +121,7 @@ def spin_basis(L:int, Nup:int=None, pauli=0, S:str="1/2", m:float|None = None, a
     zBblock : int | None, optional
         B 子格点上的自旋翻转对称性, by default None
     """
-    from .basis.basis_1d.spin import spin_basis_1d
+    from quspin.basis import spin_basis_1d
     blocks = {'a': a,
               "kblock": kblock, 
               "pblock": pblock, 
@@ -128,3 +130,81 @@ def spin_basis(L:int, Nup:int=None, pauli=0, S:str="1/2", m:float|None = None, a
               "zAblock": zAblock, 
               "zBblock": zBblock}
     return spin_basis_1d(L=L, S=S, Nup=Nup, m=m, pauli=pauli, **blocks)
+
+
+def spin_basis_2d(Lx, Ly, pauli=0, Nup=None, kxblock=None, kyblock=None, pxblock=None, pyblock=None, zblock=None):
+    """使用 quspin 生成自旋梯子基组。
+
+    采用编号方案：
+    .. code-block:: text
+        |    ---> y
+        |   |
+        | x V  1     3      5               2L-1
+        |      o --- o  --- o  ---  ...  --- o
+        |      o --- o  --- o  ---  ...  --- o
+        |      2     4      6                2L
+
+    Parameters
+    ----------
+    L : int
+        梯子的长度
+    pauli : int, optional
+        保留的泡利矩阵, by default 0
+    Nup : int, optional
+        自旋向上的粒子数, by default None
+    kxblock : int, optional
+        动量子空间，x方向, by default None
+    kyblock : int, optional
+        动量子空间，y方向, by default None
+    pxblock : int, optional
+        宇称子空间，x方向, by default None
+    pyblock : int, optional
+        宇称子空间，y方向, by default None
+    zblock : int, optional
+        自旋翻转对称性, by default None
+    """
+    from quspin.basis import spin_basis_general
+    N_2d = Lx * Ly  # total number of sites
+    s = np.arange(N_2d)  # sites [0,1,2,..]
+    x = s % Lx  # x positions for sites
+    y = s // Lx  # y positions for sites
+    
+    _kxblock = None
+    if kxblock is not None:
+        T_x = (x + 1) % Lx + Lx * y  # translation along x-direction
+        _kxblock = (T_x, kxblock)
+    
+    _kyblock = None
+    if kyblock is not None:
+        T_y = x + Lx * ((y + 1) % Ly)  # translation along y-direction
+        _kyblock = (T_y, kyblock)
+    
+    _pxblock = None
+    if pxblock is not None:
+        P_x = (Lx - x - 1) + Lx * y
+        _pxblock = (P_x, pxblock)
+    
+    _pyblock = None
+    if pyblock is not None:
+        P_y = x + Lx * (Ly - y - 1)
+        print(P_y)
+        _pyblock = (P_y, pyblock)
+    
+    _zblock = None
+    if zblock is not None:
+        Z = -(s + 1)
+        _zblock = (Z, zblock)
+    
+    basis = spin_basis_general(
+        N_2d,
+        S='1/2',
+        pauli=pauli,
+        Nup=Nup,
+        kxblock=_kxblock,
+        kyblock=_kyblock,
+        pxblock=_pxblock,
+        pyblock=_pyblock,
+        zblock=_zblock,
+    )
+    return basis
+

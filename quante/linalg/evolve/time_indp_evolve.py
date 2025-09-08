@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 15:38:18
+# @Last Modified time: 2025-09-08 16:02:02
 
 
 from scipy import sparse as sps
@@ -17,11 +17,11 @@ from typing import Literal
 from tqdm import tqdm
 
 from ...measure.expect import expect
-from ...generate.superoper import Liouvillian
+from ...generate.superoper import Liouvillian, make_Liouvillian
 from .EDevolve import _in_CPU, _in_GPU, Uinvpsi, Uexp
 
 __all__ = [
-    'EvolveEngine', 'evolve_and_measure'
+    'EvolveEngine', 'evolve_and_measure', 'make_Liouvillian'
 ]
 
 class EvolveEngine:

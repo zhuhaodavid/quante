@@ -2,11 +2,17 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:05:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 15:42:00
+# @Last Modified time: 2025-09-08 16:05:04
 
 import numpy as _np
 import scipy.linalg as _sla
 import scipy.sparse as _sparse
+
+def sort(arr):
+    if not _np.iscomplexobj(arr):
+        return _np.sort(arr)
+    idx = _np.lexsort((arr.imag, _np.round(arr.real, 10)))
+    return arr[idx]
 
 
 def norm(v: _np.ndarray) -> float:

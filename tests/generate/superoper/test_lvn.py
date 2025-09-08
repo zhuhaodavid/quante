@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-07 02:46:18
+# @Last Modified time: 2025-09-08 16:05:45
 
 import unittest
 import quante as qt
@@ -83,6 +83,13 @@ class TestLiouvillian(unittest.TestCase):
             method='RK45'
         )
 
+try:
+    import quspin
+    quspin_available = True
+except:
+    quspin_available = False
+
+
 class TestmakeLiouvillianOper(unittest.TestCase):
     def test_make_LiouvillianOper(self):
         op = qt.generate.operas.spin
@@ -120,6 +127,55 @@ class TestmakeLiouvillianOper(unittest.TestCase):
 
         lvn = lvn.reshape(*[2]*(4*L)).transpose([i if j == 0 else i+L for i in range(L) for j in range(2)] + [i if j == 0 else i+L for i in range(2*L,3*L) for j in range(2)]).reshape(2**(2*L), 2**(2*L))
         self.assertAlmostEqual(np.linalg.norm((lvn - lvn3).data), 0)
+    
+
+    @unittest.skipIf(not quspin_available, "quspin not available")
+    def test_make_LiouvillianOper_kblock(self):
+        import quante.bridge.quspin_utils as qs
+        op = qt.generate.operas.spin
+
+        L = 4
+        gamma = 1.0
+
+        ham = op.heisenberg_operator(L=L, cyclic=True)
+        Lindblad = [gamma**0.5 * op.p(i) for i in range(L)]
+
+        lvn = qt.generate.superoper.make_LiouvillianOper(
+            L, ham, Lindblad, format='ladder'
+        )
+
+        def sort(arr):
+            idx = np.lexsort((arr.imag, np.round(arr.real, 10)))
+            return arr[idx]
+
+        basis = qs.spin_basis_2d(Lx=L, Ly=2)
+        mat1 = qs.hamiltonian(lvn, basis, dtype=np.complex128, sparse=False)
+        engs1 = np.linalg.eigvals(mat1)
+        engs1 = sort(engs1)
+
+        res = []
+        for kblock in range(L):
+            basis = qs.spin_basis_2d(Lx=2, Ly=L, kyblock=kblock)
+            mat1 = qs.hamiltonian(lvn, basis, dtype=np.complex128, sparse=False, check_symm=True)
+            engs_block = np.linalg.eigvals(mat1)
+            res.append(engs_block)
+        engs2 = np.concatenate(res)
+        engs2 = sort(engs2)
+        self.assertTrue(np.allclose(engs1, engs2))
+
+        res = []
+        for pblock in [0,1]:
+            basis = qs.spin_basis_2d(Lx=2, Ly=L, pyblock=pblock)
+            mat1 = qs.hamiltonian(lvn, basis, dtype=np.complex128, sparse=False, check_symm=True)
+            engs_block = np.linalg.eigvals(mat1)
+            res.append(engs_block)
+        engs2 = np.concatenate(res)
+        engs2 = sort(engs2)
+        self.assertTrue(np.allclose(engs1, engs2))
+
+
+
+    
 
 if __name__ == "__main__":
     unittest.main()

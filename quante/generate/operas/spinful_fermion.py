@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:08:45
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-07 01:41:47
+# @Last Modified time: 2025-09-08 16:22:09
 
 import numpy as np
 from scipy.sparse import csr_array
@@ -22,7 +22,7 @@ class SpinfulFermionOper(Oper):
     def _seperate_notion(self) -> str:
         return "|" #⇅
     
-    def quspin_form(self):
+    def to_quspin(self):
         static = []
         for opnm, (posn, coef) in self.data.items():
             static_bond = []
@@ -33,19 +33,8 @@ class SpinfulFermionOper(Oper):
 
     def to_matrix(self, basis, dtype=np.complex128, sparse=False):
         self._check_length(basis.L)
-        from ...bridge.quspin_utils.quspin_extension_wrap.basis.basis_1d.fermion import spinful_fermion_basis_1d
-        if isinstance(basis, spinful_fermion_basis_1d):
-            op_list = []
-            for opstr, posn, coef in self.each_term():
-                op_list.append([opstr, posn, coef])
-            mat = basis._make_matrix(op_list, dtype=dtype)
-            if sparse:
-                return csr_array(mat)
-            else:
-                return mat.toarray()
-        else:
-            raise NotImplementedError("不支持的基矢类型")
-
+        from ...bridge.quspin_utils import hamiltonian
+        return hamiltonian(self, basis, dtype=dtype, sparse=sparse)       
     
     def to_spinless(self, mode:Literal['near', 'extend']='near'):
         r"""将自旋算符转换为无自旋算符

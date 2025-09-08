@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-07 01:42:08
+# @Last Modified time: 2025-09-08 16:22:33
 import numpy as np
 from .general import Oper, _merge_poscoef, _single_term
 from .fermion import _sort_pm, _sort_posn
@@ -101,17 +101,9 @@ class BosonOper(Oper):
                 return complex
         return float
     
-    def quspin_form(self):
+    def to_quspin(self):
         """
         返回 quspin 可以接受的格式
-        
-        Examples
-        --------
-        >>> from quspin.operators import hamiltonian
-        >>> from quspin.basis import spin_basis_1d
-        >>> ham = sum(xx(i,i+1) + yy(i,i+1) for i in range(5))
-        >>> basis = spin_basis_1d(L=6)
-        >>> mat = hamiltonian(ham.quspin_form(), [], basis=basis)
         """
         static = []
         for opnm, (posn, coef) in self.data.items():
@@ -124,18 +116,21 @@ class BosonOper(Oper):
     def to_matrix(self, basis, dtype=np.complex128, sparse=False):
         self._check_length(basis.L)
         operator = self if self._has_expanded() else self.expandxy()
-        from ...bridge.quspin_utils.quspin_extension_wrap.basis.basis_1d.boson import boson_basis_1d
-        if isinstance(basis, boson_basis_1d):
-            op_list = []
-            for opstr, posn, coef in operator.each_term():
-                op_list.append([opstr, posn, coef])
-            mat = basis._make_matrix(op_list, dtype=dtype)
-            if sparse:
-                return mat
-            else:
-                return mat.toarray()
-        else:
-            raise NotImplementedError("不支持的基矢类型")
+        from ...bridge.quspin_utils import hamiltonian
+        return hamiltonian(self, basis, dtype=np.complex128, sparse=sparse)       
+
+        # from ...bridge.quspin_utils.quspin_extension_wrap.basis.basis_1d.boson import boson_basis_1d
+        # if isinstance(basis, boson_basis_1d):
+        #     op_list = []
+        #     for opstr, posn, coef in operator.each_term():
+        #         op_list.append([opstr, posn, coef])
+        #     mat = basis._make_matrix(op_list, dtype=dtype)
+        #     if sparse:
+        #         return mat
+        #     else:
+        #         return mat.toarray()
+        # else:
+        #     raise NotImplementedError("不支持的基矢类型")
     
     @classmethod
     def builder(cls) -> 'BosonBuilder':
