@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-07-14 15:28:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 19:47:03
+# @Last Modified time: 2025-09-09 00:30:56
 from ....linalg import eigvalsh
 import numpy as _np
 import scipy as _sp
@@ -16,6 +16,7 @@ __all__ = [
     "XY_internal_energy",
     "XY_specific_heat",
     "XY_magnetization",
+    "ising_block_spectrum",
 ]
 
 
@@ -491,33 +492,60 @@ def XY_magnetization(
         return -_np.sum(_np.tanh(beta * omega1) * beta * domega_dhz) / beta / L
     
 
-#todo: how to return eigenstates?
-# def ising_pblock_spectrum(L, j, h, pauli):
-#     jxxlist = _to_array(j, L-1)
-#     hzlist = _to_array(h, L)
+def ising_block_spectrum(L, j, h, pauli):
+    jxxlist = _to_array(j, L-1)
+    hzlist = _to_array(h, L)
 
-#     jyylist = _to_array(0., L-1)
-#     jxylist = _to_array(0., L-1)
-#     jyxlist = _to_array(0., L-1)
+    jyylist = _to_array(0., L-1)
+    jxylist = _to_array(0., L-1)
+    jyxlist = _to_array(0., L-1)
 
-#     if pauli == -1 or pauli == 1:
-#         jxxlist, jyylist, jxylist, jyxlist, hzlist = jxxlist * 4, jyylist * 4, jxylist * 4, jyxlist * 4, hzlist * 2
+    if pauli == -1 or pauli == 1:
+        jxxlist, jyylist, jxylist, jyxlist, hzlist = jxxlist * 4, jyylist * 4, jxylist * 4, jyxlist * 4, hzlist * 2
 
-#     H = _get_spin_BdG_mat(
-#         L, jxx=jxxlist, jyy=jyylist, jxy=jxylist, jyx=jyxlist, hz=hzlist, reduce=False
-#     )
-#     val, vec = _np.linalg.eigh(H)
-#     assert (_np.diff(val) > 1e-9).all(), "degeneracy detected"
+    H = _get_spin_BdG_mat(
+        L, jxx=jxxlist, jyy=jyylist, jxy=jxylist, jyx=jyxlist, hz=hzlist, reduce=False
+    )
+    # print(_get_spin_BdG_mat(
+    #     L, jxx=jxxlist, jyy=jyylist, jxy=jxylist, jyx=jyxlist, hz=hzlist, reduce=True
+    # ))
+    val, vec = _np.linalg.eigh(H)
+    # print(val[:L])
+    # print(_np.sum(val[:L]))
+    # return None
+    assert (_np.diff(val) > 1e-9).all(), "degeneracy detected"
 
-#     from ...operas import fermion as op
-#     from ...basis import spin_basis
-#     basis = spin_basis(L)
-#     res = []
-#     for i in range(L):
-#         f = op.sum(vec[p,i] * op.fdag(p) for p in range(L)) + op.sum(vec[p+L,i] * op.f(p) for p in range(L))
-#         f = f.jw_transfer()
-#         res.append(f.to_matrix(basis))
+    tag = _np.zeros(L, dtype=int)
+    for i in range(L):
+        s = vec[:L,i]
+        if _np.allclose(s, s[::-1]):
+            tag[i] = 1
+        elif _np.allclose(s, -s[::-1]):
+            tag[i] = -1
+        else:
+            raise Exception
 
+    omega = val[L:]
+    # print(omega)
+    gdeng = -_np.sum(omega)
 
-
-
+    # from .spectrum_numba import _decimal
+    # reslist = _np.zeros(2**L, dtype=omega.dtype)
+    # ptag = _np.ones(2**L, dtype=_np.int32)
+    # vtag = _np.ones(2**L, dtype=_np.int32)
+    # tmp3 = 1 - L % 2
+    # for i in range(2**L):
+    #     tmp2 = _decimal(i, L) == 1
+    #     res = gdeng + 2 * _np.sum(omega[tmp2])
+    #     ii = sum(tmp2)
+    #     if _np.prod(tag[tmp2]) == -(-1)**((ii+1)//2):
+    #         ptag[i] = -1
+    #     if ii % 2 == tmp3:
+    #         vtag[i] = -1
+    #     reslist[i] = res
+    #     for jj in range(i):
+    #         if ptag[i] == ptag[jj] == 1 and vtag[i] == vtag[jj] == 1 and abs(res - reslist[jj]) < 1e-9:
+    #             print(f"degeneracy {res} detected: {_decimal(jj, L) == 1} vs {tmp2}")
+    # return reslist, ptag, vtag, omega
+    from .spectrum_numba import get_full_sprem_pblock
+    return get_full_sprem_pblock(gdeng, omega, L, tag)
