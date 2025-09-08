@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-07-14 15:28:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 19:10:08
+# @Last Modified time: 2025-09-08 19:47:03
 from ....linalg import eigvalsh
 import numpy as _np
 import scipy as _sp
@@ -16,8 +16,6 @@ __all__ = [
     "XY_internal_energy",
     "XY_specific_heat",
     "XY_magnetization",
-    "XXX_gdenergy_pbc_approx",
-    # "XXZ_gdenergy_inf",
 ]
 
 
@@ -492,116 +490,34 @@ def XY_magnetization(
         domega_dhz = (omega1 - omega2) / 0.0001
         return -_np.sum(_np.tanh(beta * omega1) * beta * domega_dhz) / beta / L
     
-#######################################
-# XXX 通过自由费米子解
-######################################
 
-def XXX_gdenergy_pbc_approx(L):
-    """
-    Assumes the heisenberg model is defined with spin
-    operators not pauli matrices (overall factor of 2 smaller). Taken from [1].
+#todo: how to return eigenstates?
+# def ising_pblock_spectrum(L, j, h, pauli):
+#     jxxlist = _to_array(j, L-1)
+#     hzlist = _to_array(h, L)
 
-    [1] Nickel, Bernie. "Scaling corrections to the ground state energy
-    of the spin-½ isotropic anti-ferromagnetic Heisenberg chain." Journal of
-    Physics Communications 1.5 (2017): 055021
+#     jyylist = _to_array(0., L-1)
+#     jxylist = _to_array(0., L-1)
+#     jyxlist = _to_array(0., L-1)
 
-    Returns
-    -------
-    energy : float
-        The ground state energy. 误差在 o( 1/ln^3(L) )
-    """
-    Einf = (0.5 - 2 * _np.log(2)) * L
-    Efinite = _np.pi**2 / (6 * L)
-    correction = 1 + 0.375 / _np.log(L) ** 3
-    return (Einf - Efinite * correction) / 2
+#     if pauli == -1 or pauli == 1:
+#         jxxlist, jyylist, jxylist, jyxlist, hzlist = jxxlist * 4, jyylist * 4, jxylist * 4, jyxlist * 4, hzlist * 2
 
+#     H = _get_spin_BdG_mat(
+#         L, jxx=jxxlist, jyy=jyylist, jxy=jxylist, jyx=jyxlist, hz=hzlist, reduce=False
+#     )
+#     val, vec = _np.linalg.eigh(H)
+#     assert (_np.diff(val) > 1e-9).all(), "degeneracy detected"
 
-# def XXZ_gdenergy_inf(J=1, Δ=0):
-#     # todo M. Takahashi, "Thermodynamics of One-Dimensional Solvable Models," Cambridge University Press, 1999.
-#     # 但是只能给出 L->∞ 的近似结果? 并且需要 J < 0???
-#     ####################################################
-#     Δ = 3
-#     L = 10
-#     M = 0
-#     J = -1
-#     ham = qt.generate.operas.heisenberg_operator(L=L, j=(-J,-J,-J*Δ), cyclic=True)
-#     basis = qt.generate.basis.spin_basis(L=L)
-#     mat = ham.to_matrix(basis, pauli=False)
-#     eigvals = np.linalg.eigvalsh(mat)
-#     print(eigvals[0])
-
-#     ϕ = np.arccosh(Δ)
-#     print(-L*Δ/4)
-
-    # from quimb import *
-    # from quimb.tensor import *
-    # H = MPO_ham_heis(1000, j=(-J,-J,-J*Δ), cyclic=False)
-    # dmrg = DMRG2(H)
-    # dmrg.solve(max_sweeps=10, verbosity=1, cutoffs=1e-6)
-
-    ####################################################
-    # Δ = -2
-    # L = 12
-    # M = L//2
-    # J = 1
-    # ham = qt.generate.operas.heisenberg_operator(L=L, j=(-J,-J,-J*Δ), cyclic=True)
-    # basis = qt.generate.basis.spin_basis(L=L, Nup=M)
-    # mat = ham.to_matrix(basis, pauli=False)
-    # eigvals = np.linalg.eigvalsh(mat)
-    # print(eigvals[0]/L)
-
-    ϕ = np.arccosh(-Δ)
-    c = 2*sum(1/(np.exp(2*n*ϕ) + 1) for n in range(1,10))
-    print(-J*Δ/4 - J*np.sinh(ϕ) * (1/2 + c))
-
-    # from quimb import *
-    # from quimb.tensor import *
-    # H = MPO_ham_heis(1000, j=(-J,-J,-J*Δ), cyclic=False)
-    # dmrg = DMRG2(H)
-    # dmrg.solve(max_sweeps=10, verbosity=1, cutoffs=1e-6)
+#     from ...operas import fermion as op
+#     from ...basis import spin_basis
+#     basis = spin_basis(L)
+#     res = []
+#     for i in range(L):
+#         f = op.sum(vec[p,i] * op.fdag(p) for p in range(L)) + op.sum(vec[p+L,i] * op.f(p) for p in range(L))
+#         f = f.jw_transfer()
+#         res.append(f.to_matrix(basis))
 
 
-    ####################################################
-
-    # Δ = 0.1
-    # J = 1
-    # ham = qt.generate.operas.heisenberg_operator(L=L, j=(-J,-J,-J*Δ), cyclic=True)
-    # basis = qt.generate.basis.spin_basis(L=L)
-    # mat = ham.to_matrix(basis, pauli=False)
-    # eigvals = np.linalg.eigvalsh(mat)
-    # print(eigvals[0]/L)
-
-    # γ = np.arccos(-Δ)
-    # from scipy.integrate import quad
-
-    # p0 = np.pi / γ
-    # print((-J*Δ/4 - J * np.sin(γ)/γ * quad(lambda w: np.sinh((p0-1)*w)/np.cosh(w)/np.sinh(p0*w), 1e-10, 100)[0])*1000)
-
-    # from quimb import *
-    # from quimb.tensor import *
-    # H = MPO_ham_heis(1000, j=(-J,-J,-J*Δ), cyclic=False)
-    # dmrg = DMRG2(H)
-    # dmrg.solve(max_sweeps=10, verbosity=1, cutoffs=1e-6)
 
 
-    # if Δ < -1:
-    #     e = - J * Δ / 4 - J * _np.sinh(ϕ) * (1/2 + 2 * sum(1/(_np.exp(2*n*ϕ) + 1) for n in range(1, 200)))
-    #     return e
-    # γ = _np.arccos(Delta)
-    # E0 = - J*Delta / 4
-    # E0 -= _np.sin(γ)/2/_np.pi * quad(
-    #     lambda u: _np.log(1 + _np.exp(-2*_np.pi*u)) / _np.cosh(γ * u),
-    #     -100,
-    #     100
-    # )[0]
-    # return E0
-
-    # from scipy.integrate import quad
-    # η = - _np.arccos(-Delta)/2
-    # E1 = Delta / 4 * j
-    # E2 = 1/4 * _np.sin(2*η)**2 / (_np.pi - 2*η) * quad(
-    #         lambda λ: 1/(_np.cosh(_np.pi*λ/(_np.pi - 2*η)) * _np.cosh(λ + 1j*η) * _np.cosh(λ - 1j*η)),
-    #         -10,
-    #         10,
-    #     )[0]
-    # return E1 - E2

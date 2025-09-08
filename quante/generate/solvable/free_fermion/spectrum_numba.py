@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-12 15:55:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-16 19:08:16
+# @Last Modified time: 2025-09-08 19:47:13
 
 from ....basicfun.utils_numba import njit, vectorize
 
@@ -34,3 +34,4 @@ def _logcosh(x):
         return _np.log(_np.cosh(x))
     else:
         return x - _np.log(2)
+

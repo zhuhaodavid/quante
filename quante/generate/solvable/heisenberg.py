@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-02 13:20:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-02 18:39:30
+# @Last Modified time: 2025-09-08 17:49:42
 
 import numpy as np
 from typing import Optional, Union, Literal
@@ -61,7 +61,12 @@ def heisenberg_matrix(
     from ..operas.spin import heisenberg_operator
     ham = heisenberg_operator(L, j, hx=hx, hy=hy, hz=hz, jxy=jxy, jyx=jyx, cyclic=cyclic)
     return ham.to_matrix(basis, pauli=pauli, sparse=sparse)
-    
+
+def ising_matrix(L, j=1.0, h=1.0, cyclic=False, pauli=False, sparse=False):
+    return heisenberg_matrix(L, j=(j,0,0), hz=h, cyclic=cyclic, pauli=pauli, sparse=sparse)
+
+def xxz_matrix(L, j=1., delta=1.0, cyclic=False, pauli=False, sparse=False):
+    return heisenberg_matrix(L, j=(j,j,j*delta), cyclic=cyclic, pauli=pauli, sparse=sparse)
 
 def xxx_infinite_ground_energy(j, pauli=False):
     r"""Ground state energy for the infinite Heisenberg model.
@@ -83,8 +88,15 @@ def xxx_finite_approx_ground_energy(L, j, pauli=False):
     of the spin-½ isotropic anti-ferromagnetic Heisenberg chain." Journal of
     Physics Communications 1.5 (2017): 055021
     """
-    from .free_fermion import spectrum as ff
-    return j * ff.XXX_gdenergy_pbc_approx(L) * (4 if pauli else 1)
+    Einf = (0.5 - 2 * _np.log(2)) * L
+    Efinite = _np.pi**2 / (6 * L)
+    correction = 1 + 0.375 / _np.log(L) ** 3
+    return j * (Einf - Efinite * correction) / 2 * (4 if pauli else 1)
+
+# def xxz_gdenergy_inf(J=1, Δ=0):
+#     # todo M. Takahashi, "Thermodynamics of One-Dimensional Solvable Models," Cambridge University Press, 1999.
+#     # 但是只能给出 L->∞ 的近似结果? 并且需要 J < 0???
+
 
 def xy_infinite_ground_energy(jx, jy, jxy, jyx, hz, pauli=False):
     r"""Ground state energy for the infinite XY model.
@@ -207,4 +219,13 @@ def xx_evolve(L, j, h, init_state, tlist,
             yield s.reduced_density_matrix(*obs_para)
     else:
         raise NotImplementedError(f"Observable {obs_name} not implemented yet.")
+
+def ising_ground_energy(L, j=1.0, h=1.0, cyclic=False, pauli=False):
+    assert not cyclic, "should be not cyclic"
+    return xy_finite_ground_energy(L=L, jx=j, jy=0, jxy=0, jyx=0, hz=h, pauli=pauli)
+
+def ising_spectrum(L, j=1.0, h=1.0, cyclic=False, pauli=False):
+    assert not cyclic, "should be not cyclic"
+    return xy_spectrum(L=L, jx=j, jy=0, jxy=0, jyx=0, hz=h, pauli=pauli)
+
 

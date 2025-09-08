@@ -197,17 +197,16 @@ Zmp, (0, 1, 2), -I*c/4
 
 ```python
 import quante as qt
-mat = qt.generate.matrix.heisenberg_matrix(L=10, sparse=True)
-x0 = qt.generate.state.random(mat.shape[0])
-val, vec , _ = qt.linalg.krylov.eigsolve(
-    mat, x0, howmany=1, which='SR', isherm=True
-)
-val
+L = 10
+mat = qt.generate.matrix.ising_matrix(L, sparse=True)
+print(qt.linalg.krylov.eigsolve(mat, which='SR')[0])
+print(qt.generate.solvable.heisenberg.ising_ground_energy(L))
 ```
 
 ```
 running Lanczos ...
-[-4.25803521 -3.93067359]
+[-5.28482978]
+-5.2848297789078
 ```
 
 ### Evolve

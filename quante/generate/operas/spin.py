@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 16:41:59
+# @Last Modified time: 2025-09-08 17:36:06
 
 import numpy as np
 import warnings
@@ -212,15 +212,15 @@ class SpinOper(Oper):
             static.append([opnm.replace('m', '-').replace('p', '+').replace('Z', 'z'), static_bond])
         return static
     
-    @overload
-    def to_matrix(self, basis, pauli=False, sparse:Literal[True]=True) -> sp.csr_array:
-        ...
+    # @overload
+    # def to_matrix(self, basis, pauli=False, sparse:Literal[True]=True) -> sp.csr_array:
+    #     ...
     
-    @overload
-    def to_matrix(self, basis, pauli=False, sparse:Literal[False]=False) -> np.ndarray:
-        ...
+    # @overload
+    # def to_matrix(self, basis, pauli=False, sparse:Literal[False]=False) -> np.ndarray:
+    #     ...
 
-    def to_matrix(self, basis, pauli=False, sparse=False, savememory=False):
+    def to_matrix(self, basis, pauli=False, sparse=False):
         """
         生成哈密顿量在给定基矢下的矩阵，对于自旋 1/2 默认使用 symmetrize 的方法计算矩阵元
         
@@ -288,7 +288,7 @@ class SpinOper(Oper):
             
             mat = basis._sparse_matrix(
                 *expanded._convert_to_quick_form(),
-                savememory=savememory)
+                savememory=False)
             return mat if sparse else mat.toarray()
         
         from ...bridge.quspin_utils import hamiltonian
@@ -1147,7 +1147,7 @@ class SpinBuilder:
 def builder() -> SpinBuilder:
     return SpinBuilder()
 
-    
+
 def heisenberg_operator(L, j=1.0, *, hx=0.0, hy=0.0, hz=0.0, jxy=0.0, jyx=0.0, cyclic=False):
     r"""
     生成 heisenberg 模型的哈密顿量，返回一个 'Oper' 的实例
@@ -1218,6 +1218,12 @@ def heisenberg_operator(L, j=1.0, *, hx=0.0, hy=0.0, hz=0.0, jxy=0.0, jyx=0.0, c
     #     data["yx"] = (posn2, _to_array(jyx, Lp))
    
     return SpinOper(data)
+
+def ising_operator(L, j=1.0, h=1.0, cyclic=False):
+    return heisenberg_operator(L=L, j=(j,0,0), hx=0, hy=0, hz=h, jxy=0, jyx=0, cyclic=cyclic)
+
+def xxz_operator(L, j=1.0, delta=1.0, cyclic=False):
+    return heisenberg_operator(L=L, j=(j,j,j*delta), hx=0, hy=0, hz=0, jxy=0, jyx=0, cyclic=cyclic)
 
 def _to_array(param: float|np.ndarray, size: int) -> np.ndarray:
     """

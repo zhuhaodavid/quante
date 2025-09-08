@@ -2,12 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-06-11 20:35:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-02 18:41:14
+# @Last Modified time: 2025-09-08 17:24:01
 
 import numpy as _np
 
 from ..pauli import pauli_matrix
-from ...solvable.heisenberg import heisenberg_matrix
+from ...solvable.heisenberg import heisenberg_matrix, ising_matrix, xxz_matrix
 
 from typing import Union, Literal, overload
 number = Union[int, float, complex]
@@ -15,6 +15,8 @@ number = Union[int, float, complex]
 __all__ = [
     "local_hamiltonian_spin_1D",
     "heisenberg_matrix",
+    "ising_matrix",
+    "xxz_matrix",
 ]
 
 # ================================
