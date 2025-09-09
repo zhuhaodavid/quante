@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 17:36:06
+# @Last Modified time: 2025-09-09 14:15:01
 
 import numpy as np
 import warnings
@@ -290,10 +290,10 @@ class SpinOper(Oper):
                 *expanded._convert_to_quick_form(),
                 savememory=False)
             return mat if sparse else mat.toarray()
+        else:
+            raise TypeError(f"basis should be SpinBasis, but got {type(basis)}")      
         
-        from ...bridge.quspin_utils import hamiltonian
-        return hamiltonian(self, basis, dtype=np.complex128, sparse=sparse)       
-    
+   
     def _convert_to_quick_form(self):
         """这个函数专门为 to_matrix 写的，其他函数不需要"""
         eachterm = []

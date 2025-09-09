@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:08:45
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 16:22:09
+# @Last Modified time: 2025-09-09 14:16:22
 
 import numpy as np
 from scipy.sparse import csr_array
@@ -31,10 +31,11 @@ class SpinfulFermionOper(Oper):
             static.append([opnm, static_bond])
         return static
 
-    def to_matrix(self, basis, dtype=np.complex128, sparse=False):
-        self._check_length(basis.L)
-        from ...bridge.quspin_utils import hamiltonian
-        return hamiltonian(self, basis, dtype=dtype, sparse=sparse)       
+    def to_matrix(self, basis, sparse=False):
+        raise NotImplementedError("SpinfulFermionOper.to_matrix 方法未实现")
+        # self._check_length(basis.L)
+        # from ...bridge.quspin_utils import hamiltonian
+        # return hamiltonian(self, basis, dtype=dtype, sparse=sparse)       
     
     def to_spinless(self, mode:Literal['near', 'extend']='near'):
         r"""将自旋算符转换为无自旋算符

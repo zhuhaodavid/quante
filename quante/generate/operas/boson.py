@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 22:14:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 16:22:33
+# @Last Modified time: 2025-09-09 14:16:30
 import numpy as np
 from .general import Oper, _merge_poscoef, _single_term
 from .fermion import _sort_pm, _sort_posn
@@ -113,11 +113,12 @@ class BosonOper(Oper):
             static.append([opnm, static_bond])
         return static
 
-    def to_matrix(self, basis, dtype=np.complex128, sparse=False):
-        self._check_length(basis.L)
-        operator = self if self._has_expanded() else self.expandxy()
-        from ...bridge.quspin_utils import hamiltonian
-        return hamiltonian(self, basis, dtype=np.complex128, sparse=sparse)       
+    def to_matrix(self, basis, sparse=False):
+        raise NotImplementedError("BosonOper.to_matrix 方法未实现")
+        # self._check_length(basis.L)
+        # operator = self if self._has_expanded() else self.expandxy()
+        # from ...bridge.quspin_utils import hamiltonian
+        # return hamiltonian(self, basis, dtype=np.complex128, sparse=sparse)       
 
         # from ...bridge.quspin_utils.quspin_extension_wrap.basis.basis_1d.boson import boson_basis_1d
         # if isinstance(basis, boson_basis_1d):

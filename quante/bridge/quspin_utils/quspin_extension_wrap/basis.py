@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 18:08:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 15:20:51
+# @Last Modified time: 2025-09-09 00:41:30
 
 # quspin_basis 是 quspin 库中的源码，这里提供一个简单的封装，使得用户可以更方便地使用 quspin_basis 中的 basis 类。
 
@@ -93,7 +93,7 @@ def boson_basis(L:int, Nb:int|list|None = None, nb:float|None = None, sps:int|No
     blocks = {k: v for k, v in blocks.items() if v is not None}
     return boson_basis_1d(L=L, Nb=Nb, nb=nb, sps=sps, **blocks)
 
-def spin_basis(L:int, Nup:int=None, pauli=0, S:str="1/2", m:float|None = None, a:int|None = None, 
+def spin_basis(L:int, pauli, Nup:int=None, S:str="1/2", m:float|None = None, a:int|None = None, 
                       kblock:int|None=None, pblock:int|None=None, zblock:int|None=None, 
                       pzblock:int|None=None, zAblock:int|None=None, zBblock:int|None=None):
     """使用 quspin 生成自旋基组。

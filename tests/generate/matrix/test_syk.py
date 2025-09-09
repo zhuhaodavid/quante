@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-30 19:59:42
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 16:09:05
+# @Last Modified time: 2025-09-09 14:33:21
 
 import unittest
 import numpy as np
@@ -11,6 +11,7 @@ import quante as qt
 try:
     import quspin
     quspin_available = True
+    import quante.bridge.quspin_utils as qs
 except ImportError:
     quspin_available = False
 
@@ -29,7 +30,8 @@ class TestSYK(unittest.TestCase):
         for i1, i2, j1, j2 in np.ndindex((L,)*4):
             builder += "++--", [i1, i2, j1, j2], Jmat[i1, i2, j1, j2]
         ham = builder.build()
-        mat1 = ham.to_matrix(basis)/(2*L)**(3/2)
+        # mat1 = ham.to_matrix(basis)/(2*L)**(3/2)
+        mat1 = qs.hamiltonian(ham, basis, dtype=np.complex128, sparse=False)/(2*L)**(3/2)
         np.testing.assert_allclose(mat1, mat2, rtol=1e-5, atol=1e-8)
 
            

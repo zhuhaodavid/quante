@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 16:21:56
+# @Last Modified time: 2025-09-09 14:16:00
 
 import numpy as np
 import scipy.sparse as sp
@@ -264,7 +264,7 @@ class FermionOper(Oper):
         return static
 
 
-    def to_matrix(self, basis, dtype=None, sparse=False):
+    def to_matrix(self, basis, sparse=False):
         if self.data == {}:
             if not sparse:
                 return np.zeros((basis.Ns, basis.Ns), dtype=float)
@@ -279,8 +279,7 @@ class FermionOper(Oper):
             else:
                 return mat.toarray()
         else:
-            from ...bridge.quspin_utils import hamiltonian
-            return hamiltonian(self, basis, dtype=np.complex128 if dtype is None else dtype, sparse=sparse)
+            raise NotImplementedError(f"basis should be FermionBasis, but got {type(basis)}")
 
 
     def _convert_to_quick_form(self):
