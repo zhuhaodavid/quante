@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-08 17:12:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-09 14:32:33
+# @Last Modified time: 2025-09-09 16:34:59
 
 import unittest
 import numpy as np
@@ -447,6 +447,8 @@ class TestSpinHalf(unittest.TestCase):
         for k in range(L//2+1):
             for p in [-1, 1]:
                 for z in [-1, 1]:
+
+                    
                     basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k, pblock=p, zblock=z)
                     mat4 = ham.to_matrix(basis)
                     engs4 = np.linalg.eigvalsh(mat4)

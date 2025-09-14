@@ -35,17 +35,6 @@ show(a, b)
 a: 1; b: [1, 2, 3]
 ```
 
-可以寻找上一个赋值语句 (10 行以内) 的左值并输出。
-
-```python
-a, b = 1, [1, 2, 3]
-show()
-```
-
-```
-a: 1; b: [1, 2, 3]
-```
-
 `show` 通过 `logging` 模块输出，可以调整输出内容和位置
 
 ```python
@@ -60,7 +49,7 @@ qt.basicfun.set_logging(savelog=False, logtime=True)
 import numpy as np
 qt.basicfun.save_hdf5(
     "data.h5", 
-    {
+    data = {
         "a": np.random.randn(2,2),
         "b": [1,2,3],
         "c": {"d": 1, "e": 2}
@@ -76,15 +65,6 @@ a, b, c = qt.basicfun.load_hdf5("data.h5", ['a', 'b', 'c'], group='test')
 ```
 
 将会加载 `data.h5` 文件中 `test` 组下的 `a`, `b`, `c` 数据集。
-
-同时提供了 `isave` 和 `iload` 函数可以更加方便的保存和加载数据。
-
-通过 `isave` 和 `iload` 函数可以加载数据。
-
-```python
-a, b, c = qt.basicfun.isave("data.h5", group='test')
-a, b, c = qt.basicfun.iload("data.h5", group='test')
-```
 
 ### Generate Matrix
 
@@ -105,7 +85,7 @@ op = qt.generate.operas.spin
 ```python
 L = 4
 ham = op.heisenberg_operator(L)
-ham.show_string_form(form='v')
+ham.show_string_form()
 ```
 
 ```

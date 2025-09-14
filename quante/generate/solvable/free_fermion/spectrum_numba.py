@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-08-12 15:55:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 21:43:11
+# @Last Modified time: 2025-09-09 17:21:17
 
 from ....basicfun.utils_numba import njit, vectorize
 
@@ -37,10 +37,12 @@ def _logcosh(x):
 
 
 @njit(parallel=True)
-def get_full_sprem_pblock(gdeng, omega, L, tag):
+def get_full_sprem_pblock(gdeng, omega, L, tag, h):
     reslist = _np.zeros(2**L, dtype=omega.dtype)
     ptag = _np.ones(2**L, dtype=_np.int32)
     vtag = _np.ones(2**L, dtype=_np.int32)
+    if h < 0:
+        vtag *= -1
     tmp3 = 1 - L % 2
     for i in prange(2**L):
         tmp2 = _decimal(i, L) == 1
@@ -49,7 +51,7 @@ def get_full_sprem_pblock(gdeng, omega, L, tag):
         if _np.prod(tag[tmp2]) == -(-1)**((ii+1)//2):
             ptag[i] = -1
         if ii % 2 == tmp3:
-            vtag[i] = -1
+            vtag[i] *= -1
         reslist[i] = res
     return reslist, ptag, vtag
 

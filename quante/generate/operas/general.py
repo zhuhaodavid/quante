@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-07 00:13:03
+# @Last Modified time: 2025-09-10 12:20:38
 
 import numpy as np
 import copy 
@@ -147,10 +147,10 @@ class Oper:
                     self.data[name] = (pos, add_or_minus*coef)
                 else:
                     newpos,newcoef = _merge_poscoef((old_pos, pos), (old_coef, add_or_minus*coef))
-                    if len(newpos) > 0:
-                        self.data[name] = (newpos, np.real_if_close(newcoef))
-                    else:
+                    if len(newpos) == 0 or np.allclose(newcoef, 0):
                         del self.data[name]
+                    else:
+                        self.data[name] = (newpos, np.real_if_close(newcoef))
             return self
         else:
             raise NotImplementedError(f"oper type {type(oper)} not supported")
@@ -261,7 +261,7 @@ class Oper:
     def _check_length(self, L:int):
         assert L >= self.L
     
-    def show_string_form(self, maxlen=80, form='h'):
+    def show_string_form(self, maxlen=80, form='v'):
         """打印算符的字符串形式"""
         if form == 'v':
             print(self.table_form(maxlen=maxlen))
@@ -363,7 +363,7 @@ class Oper:
             for i in range(len(coef)):
                 # if i > 0:
                 #     line += " + "
-                line = f"{operator}, "
+                line = f"'{operator}', "
                 if coef.dtype == object:
                     from sympy import nsimplify
                     coefstr = f"{nsimplify(coef[i])}"

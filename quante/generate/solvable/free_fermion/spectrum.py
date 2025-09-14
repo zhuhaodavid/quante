@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-07-14 15:28:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-09 00:30:56
+# @Last Modified time: 2025-09-09 17:20:02
 from ....linalg import eigvalsh
 import numpy as _np
 import scipy as _sp
@@ -528,6 +528,7 @@ def ising_block_spectrum(L, j, h, pauli):
     omega = val[L:]
     # print(omega)
     gdeng = -_np.sum(omega)
+    tag = _np.sign(h) * tag  # ? why
 
     # from .spectrum_numba import _decimal
     # reslist = _np.zeros(2**L, dtype=omega.dtype)
@@ -548,4 +549,4 @@ def ising_block_spectrum(L, j, h, pauli):
     #             print(f"degeneracy {res} detected: {_decimal(jj, L) == 1} vs {tmp2}")
     # return reslist, ptag, vtag, omega
     from .spectrum_numba import get_full_sprem_pblock
-    return get_full_sprem_pblock(gdeng, omega, L, tag)
+    return get_full_sprem_pblock(gdeng, omega, L, tag, h)

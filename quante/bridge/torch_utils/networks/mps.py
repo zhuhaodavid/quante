@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 11:33:28
+# @Last Modified time: 2025-09-11 14:39:50
 
 import numpy as np
 import torch as tc
@@ -195,6 +195,14 @@ class MPS(TensorTrain):
                 Ws[i][0, 1, 0].add_(1.)
             else:
                 raise ValueError(f"state {s} is not defined")
+        return cls(Ws)
+    
+    @classmethod
+    def from_product_state2(cls, state: list[tc.Tensor], dtype=tc.float64, device=None) -> 'MPS':
+        Ws = [
+            tc.tensor(i.reshape(1,-1,1), dtype=dtype, device=device) 
+            for i in state
+        ]
         return cls(Ws)
     
     @classmethod

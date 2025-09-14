@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-02 13:20:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 17:49:42
+# @Last Modified time: 2025-09-09 16:37:37
 
 import numpy as np
 from typing import Optional, Union, Literal
@@ -228,4 +228,18 @@ def ising_spectrum(L, j=1.0, h=1.0, cyclic=False, pauli=False):
     assert not cyclic, "should be not cyclic"
     return xy_spectrum(L=L, jx=j, jy=0, jxy=0, jyx=0, hz=h, pauli=pauli)
 
+def ising_spectrum_block(L, j=1.0, h=1.0, pauli=False):
+    r"""Spectrum of the obc finite Ising model in blocks.
 
+    .. math::
+        H = \sum_{i = 1}^{L - 1} J_i S_i^x S_{i+1}^x + \sum_{i = 1}^{L} h^z_i S^z_i
+    """
+    from .free_fermion.spectrum import ising_block_spectrum
+    return ising_block_spectrum(L=L, j=j, h=h, pauli=pauli) 
+
+    # from ..basis import spin_basis
+    # basis = spin_basis(L=L, pblock=pblock, pauli=-1)
+    # from ..operas.spin import heisenberg_operator
+    # ham = heisenberg_operator(L=L, j=(j,0,0), hz=h)
+    # mat = ham.to_matrix(basis, pauli=pauli, sparse=False)
+    # return np.linalg.eigvalsh(mat)
