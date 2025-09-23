@@ -614,7 +614,7 @@ class SpinOper(Oper):
             local_hamiltonians.append(local_hamiltonian)
         return site_positions, local_hamiltonians
 
-    def local(self, site_position:int, L:int | None = None) -> np.ndarray:
+    def local(self, site_position:int, L:int | None = None) -> tuple[np.ndarray, bool]:
         """
         根据 Oper 的实例得到作用在 position 和 position+1 这两个格点上的局域哈密顿量
         
@@ -623,7 +623,8 @@ class SpinOper(Oper):
         if L is None:
             L = self.L
         else:
-            assert L >= self.L
+            # assert L >= self.L
+            warnings.warn(f"L is set to be {L}, but the length of the operator is {self.L}", UserWarning)
         assert site_position < L-1, "site_position should be less than L-1"
         from ..matrix.pauli import PAULI_MAT
         

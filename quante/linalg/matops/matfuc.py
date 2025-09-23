@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:05:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 16:05:04
+# @Last Modified time: 2025-09-16 18:12:26
 
 import numpy as _np
 import scipy.linalg as _sla
@@ -61,16 +61,16 @@ def exp(A:_np.ndarray, c: float | complex | int | None = None) -> _np.ndarray:
             from .nbfuc.matfuc_nb import parallel_exp_real
             return parallel_exp_real(A)
     else:
-        if not _np.iscomplexobj(A) and not _np.iscomplex(c):
+        if not _np.iscomplexobj(A) and not _np.iscomplexobj(c):
             from .nbfuc.matfuc_nb import parallel_expmul_rr
             return parallel_expmul_rr(A, c)
-        elif not _np.iscomplexobj(A) and _np.iscomplex(c):
+        elif not _np.iscomplexobj(A) and _np.iscomplexobj(c):
             from .nbfuc.matfuc_nb import parallel_expmul_rc
             return parallel_expmul_rc(A, c)
-        elif _np.iscomplexobj(A) and not _np.iscomplex(c):
+        elif _np.iscomplexobj(A) and not _np.iscomplexobj(c):
             from .nbfuc.matfuc_nb import parallel_expmul_cr
             return parallel_expmul_cr(A, c)
-        elif _np.iscomplexobj(A) and _np.iscomplex(c):
+        elif _np.iscomplexobj(A) and _np.iscomplexobj(c):
             from .nbfuc.matfuc_nb import parallel_expmul_cc
             return parallel_expmul_cc(A, c)
 

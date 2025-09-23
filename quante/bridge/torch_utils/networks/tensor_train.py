@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 15:57:17
+# @Last Modified time: 2025-09-16 15:37:40
 
 import copy
 import warnings
@@ -17,7 +17,7 @@ from ..linalg.decomp import eigh, qr, rq, svd, truncate, log_or_not_update, Trun
 
 
 class TensorTrain:
-    def __init__(self, Ws: list[tc.Tensor], Ss: Optional[list[tc.Tensor]] = None, llim: Optional[int] = None, rlim: Optional[int] = None, lognm: Optional[float] = None, L:Optional[int] = None) -> None:
+    def __init__(self, Ws: list[tc.Tensor], Ss: Optional[list[tc.Tensor]] = None, llim: Optional[int] = None, rlim: Optional[int] = None, lognm: Optional[float] = None, L:Optional[int] = None, workdevice='cpu') -> None:
         """
         .. code-block:: text
             
@@ -47,6 +47,7 @@ class TensorTrain:
         self.Ss = Ss if Ss is not None else [None] * (len(Ws) + 1)
         self.dtype = Ws[0].dtype
         self.device = Ws[0].device
+        self.workdevice = workdevice
         self.lognm = lognm if lognm is not None else tc.tensor(0.0, dtype=tc.float64,device=self.device)
     
     def __len__(self):
@@ -141,6 +142,7 @@ class TensorTrain:
                 self.Ss[i] = self.Ss[i].to(device=device)
         self.device = self.data[0].device
         self.dtype = dtype
+        return self
         
     def save(self, path:str):
         data_dic = dict()
@@ -179,7 +181,7 @@ class TensorTrain:
         tc.Tensor
             计算结果
         """
-        assert isinstance(anotherTT, type(self))
+        assert isinstance(anotherTT, type(self)), f"wrong type: {type(anotherTT)}"
         if conj:
             conjdata = [i.conj() for i in self.data]
         else:
@@ -450,19 +452,19 @@ class TensorTrain:
                 raise ValueError(f"gate shape error: {gate.shape}, site_num={site_num}")
         if isinstance(gate, np.ndarray):
             if np.iscomplexobj(gate):
-                gate = tc.tensor(gate, dtype=tc.complex128, device=self.device)
+                gate = tc.tensor(gate, dtype=tc.complex128, device=self.workdevice)
                 if not self.dtype.is_complex:
-                    self.to(dtype=tc.complex128, device=self.device)
+                    self.to(dtype=tc.complex128, device=self.workdevice)
             else:
                 if self.dtype.is_complex:
-                    gate = tc.tensor(gate, dtype=tc.complex128, device=self.device)
+                    gate = tc.tensor(gate, dtype=tc.complex128, device=self.workdevice)
                 else:
-                    gate = tc.tensor(gate, dtype=tc.float64, device=self.device)
+                    gate = tc.tensor(gate, dtype=tc.float64, device=self.workdevice)
         else:
             if gate.dtype.is_complex and not self.dtype.is_complex:
-                self.to(dtype=tc.complex128, device=self.device)
+                self.to(dtype=tc.complex128, device=self.workdevice)
             elif not gate.dtype.is_complex and self.dtype.is_complex:
-                gate = gate.to(dtype=tc.complex128, device=self.device)
+                gate = gate.to(dtype=tc.complex128, device=self.workdevice)
         return gate
 
 
@@ -482,7 +484,7 @@ class TensorTrain:
                    normalize=False,
                    eigdirection=None,
                    pertube=None,
-                   updateS=True
+                   updateS=True,
                    ) -> TruncationError:
         """
         将两格点上的张量还原到 self.data 中
@@ -520,14 +522,14 @@ class TensorTrain:
             if direction == "right":
                 U, A = qr(W.reshape(*Wshape[:halfdim],-1))
                 A, self.lognm = log_or_not_update(A, self.lognm, use_log=normalize)
-                self.data[pos] = U
-                self.data[pos + 1] = A.reshape(-1,*Wshape[halfdim:])
+                self.data[pos] = U.to(self.device)
+                self.data[pos + 1] = A.reshape(-1,*Wshape[halfdim:]).to(self.device)
                 self.llim = self.rlim = pos + 1
             elif direction == "left":
                 B, U = rq(W.reshape(-1,*Wshape[halfdim:]))
                 B, self.lognm = log_or_not_update(B, self.lognm, use_log=normalize)
-                self.data[pos] = B.reshape(*Wshape[:halfdim],-1)
-                self.data[pos + 1] = U
+                self.data[pos] = B.reshape(*Wshape[:halfdim],-1).to(self.device)
+                self.data[pos + 1] = U.to(self.device)
                 self.llim = self.rlim = pos
             else:
                 raise ValueError(f"not defined direction (left or right): {direction}")
@@ -541,17 +543,17 @@ class TensorTrain:
                 
             direction = "right" if direction is None else direction
             if direction == "right":
-                self.data[pos] = W1
-                self.data[pos + 1] = S.reshape(-1, *([1]*(W2.ndim-1))) * W2
+                self.data[pos] = W1.to(self.device)
+                self.data[pos + 1] = (S.reshape(-1, *([1]*(W2.ndim-1))) * W2).to(self.device)
                 self.llim = self.rlim = pos + 1
             elif direction == "left":
-                self.data[pos] = W1 * S
-                self.data[pos + 1] = W2
+                self.data[pos] = (W1 * S).to(self.device)
+                self.data[pos + 1] = W2.to(self.device)
                 self.llim = self.rlim = pos
             elif direction == "center":
                 sqrtS = tc.sqrt(S)
-                self.data[pos] = W1 * sqrtS
-                self.data[pos + 1] = sqrtS.reshape(-1, *([1]*(W2.ndim-1))) * W2
+                self.data[pos] = (W1 * sqrtS).to(self.device)
+                self.data[pos + 1] = (sqrtS.reshape(-1, *([1]*(W2.ndim-1))) * W2).to(self.device)
                 self.llim, self.rlim = pos, pos + 1
             else:
                 raise ValueError(f"not defined direction (left or right): {direction}")
@@ -577,8 +579,8 @@ class TensorTrain:
                 L, W2 = rq(W2)
                 W1 = (W1.reshape(-1, W1.shape[-1]) @ L).reshape(*W1.shape)
             
-            self.data[pos] = W1
-            self.data[pos + 1] = W2
+            self.data[pos] = W1.to(device=self.device)
+            self.data[pos + 1] = W2.to(device=self.device)
             if direction == "right":
                 self.llim = self.rlim = pos + 1
                 self.data[pos + 1], self.lognm = log_or_not_update(
@@ -591,7 +593,7 @@ class TensorTrain:
                 raise ValueError(f"not defined direction (left or right): {direction}")
             
             if updateS:
-                self.Ss[pos + 1] = S if not normalize else S / tc.norm(S)
+                self.Ss[pos + 1] = (S if not normalize else S / tc.norm(S)).to(device=self.device)
                 
             return trunc_err
 

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-13 17:07:54
+# @Last Modified time: 2025-09-16 16:41:06
 
 import torch as tc
 
@@ -379,8 +379,21 @@ def _inner_init(Ws1i: tc.Tensor, Ws2i: tc.Tensor):
     tsrMat2 = tsrMat2.swapaxes(0,1).reshape(-1, d*e)
 
     # (ac,b)@(b,de) -> (ac,de) -> (a,c,d,e) -> (a,d,c,e)
-    return (tsrMat1 @ tsrMat2).reshape(a, c, d, e).swapaxes(1,2)
+    return _mul(tsrMat1, tsrMat2).reshape(a, c, d, e).swapaxes(1,2)
 
+def _mul(tsr1, tsr2):
+    if tsr1.is_complex() is tsr2.is_complex():
+        return tsr1 @ tsr2
+    elif tsr1.is_complex():
+        res = tc.zeros((tsr1.shape[0],tsr2.shape[1]), dtype=tsr1.dtype, device=tsr1.device)
+        tc.matmul(tsr1.real, tsr2, out=res.real)
+        tc.matmul(tsr1.imag, tsr2, out=res.imag)
+        return res
+    else:
+        res = tc.zeros((tsr1.shape[0],tsr2.shape[1]), dtype=tsr2.dtype, device=tsr2.device)
+        tc.matmul(tsr1, tsr2.real, out=res.real)
+        tc.matmul(tsr1, tsr2.imag, out=res.imag)
+        return res
 
 def _inner_step(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor):
     """
@@ -399,11 +412,11 @@ def _inner_step(Lenv: tc.Tensor, Ws1i: tc.Tensor, Ws2i: tc.Tensor):
     a, d, c, e = Lenv.shape
 
     # (adc,e) @ (e,bg) -> (adc,bg)
-    Lenv = Lenv.reshape(-1, e) @ Ws2i.reshape(e, -1)
+    Lenv = _mul(Lenv.reshape(-1, e), Ws2i.reshape(e, -1))
     # (adc,bg) -> (ad,cb,g) -> (ad,g,cb) -> (adg,cb)
     Lenv = Lenv.reshape(a*d, -1, g).swapaxes(1,2).reshape(a*d*g, -1)
     # (adg,cb) @ (cb,f) -> (adg,f)
-    Lenv = Lenv @ Ws1i.reshape(-1, f)
+    Lenv = _mul(Lenv, Ws1i.reshape(-1, f))
     # (adg,f) -> (a,d,g,f) -> (a,d,f,g)
     return Lenv.reshape(a, d, g, f).swapaxes(2,3)
 
