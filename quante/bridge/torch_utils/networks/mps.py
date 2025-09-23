@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-11 14:39:50
+# @Last Modified time: 2025-09-18 17:15:15
 
 import numpy as np
 import torch as tc
@@ -513,4 +513,35 @@ class MPS(TensorTrain):
         next_pos = pos + 1 if self.L != tc.inf else (pos + 1) % len(self.data)
         W1, W2 = self.data[pos], self.data[next_pos]
         return tf._apply_2b_gate_mps(W1, W2, gate_2b)
+    
+    def density_matrix(self, pos):
+        ldim = self.data[0].shape[0]
+        Lenv = tc.eye(ldim**2, dtype=self.dtype, device=self.device).reshape(ldim,ldim,ldim,ldim)
+
+        i = 0
+        while i < pos:
+            Lenv = tf._inner_step(Lenv, self.data[i].conj(), self.data[i])
+            i += 1
+        
+        rdim = self.data[-1].shape[-1]
+        Renv = tc.eye(rdim**2, dtype=self.dtype, device=self.device).reshape(rdim,rdim,rdim,rdim)
+        i = self.L-1
+        while i > pos:
+            Renv = tf._inner_step(
+                Renv, self.data[i].conj().swapaxes(0,-1), self.data[i].swapaxes(0,-1)
+            )
+            i -= 1
+        
+        W = self.data[pos]
+        return tc.einsum('abcd,cge,dhf,abef->gh', Lenv, W.conj(), W, Renv)
+
+            
+
+        
+        
+
+
+
+
+        pass
 

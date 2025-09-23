@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-09 18:01:22
+# @Last Modified time: 2025-09-22 13:05:45
 
 import numpy as np
 import warnings
@@ -1148,7 +1148,7 @@ def builder() -> SpinBuilder:
     return SpinBuilder()
 
 
-def heisenberg_operator(L, j=1.0, *, hx=0.0, hy=0.0, hz=0.0, jxy=0.0, jyx=0.0, cyclic=False):
+def heisenberg_operator(L, j=1., *, hx=0.0, hy=0.0, hz=0.0, jxy=0.0, jyx=0.0, cyclic=False):
     r"""
     生成 heisenberg 模型的哈密顿量，返回一个 'Oper' 的实例
 
@@ -1172,7 +1172,10 @@ def heisenberg_operator(L, j=1.0, *, hx=0.0, hy=0.0, hz=0.0, jxy=0.0, jyx=0.0, c
     
     """
     # return HeisenbergOper(L=L, j=j, h=h, jxy=jxy, jyx=jyx, cyclic=cyclic)._make_spinoper()
-    jx, jy, jz = j # type: ignore
+    if np.isscalar(j) or j.__class__.__module__.startswith('sympy.'):
+        jx = jy = jz = j
+    else:
+        jx, jy, jz = j # type: ignore
 
     data = {}
     posn1 = np.arange(0, L, dtype=int).reshape(L,1)

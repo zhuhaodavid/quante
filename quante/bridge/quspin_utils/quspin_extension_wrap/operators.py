@@ -16,8 +16,10 @@ def hamiltonian(
         "dynamic_list": []
     }
     _kwargs.update(kwargs)
+    if not isinstance(oper, list):
+        oper = oper.to_quspin()
     ham = hamiltonian(
-        static_list=oper.to_quspin(),
+        static_list=oper,
         basis=basis,
         dtype=dtype,
         check_symm=check_symm,
