@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:13:41
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-07 17:19:15
+# @Last Modified time: 2025-09-19 14:33:00
  
 import os as _os
 import ast as _ast
@@ -26,7 +26,6 @@ __all__ = [
     "check_file_exists",
     "set_logging",
     "println",
-    "info",
     "send_email",
     "clear_numba_cache",
     "logger",
@@ -618,14 +617,13 @@ class Show:
             return [prefix + lines[0]] + [" " * prefixlen + line for line in lines[1:]]
 
 println = show = Show()
-def set_show(use_color=None, arg_name=None) -> None:
+show.arg_name = False
+def set_show(use_color=None, arg_name=False) -> None:
     if use_color is not None:
         println.use_color = use_color
     if arg_name is not None:
         println.arg_name = arg_name
 
-info = Show()
-info.arg_name = False # 不显示参数名称
 
 def send_email(
     subject: str, 
