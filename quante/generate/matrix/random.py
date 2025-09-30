@@ -101,11 +101,10 @@ def _rand_singular(dim, seed=None):
 
 # @njit
 def _rand_normal(dim, seed=None):
-    v = _rand_simple_complex(dim, seed)
+    D = _np.random.randn(dim) + 1.j * _np.random.randn(dim)
     u = _cue(dim, seed=seed)
     u_contiguous = _np.ascontiguousarray(u)
-    v_contiguous = _np.ascontiguousarray(_np.diag(v))
-    return u_contiguous @ v_contiguous @ u_contiguous.conj().T
+    return (u_contiguous * D) @ u_contiguous.conj().T
 
 # @njit
 def _rand_noninv(dim, seed=None):

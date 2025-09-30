@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:40:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 15:35:13
+# @Last Modified time: 2025-09-27 18:28:30
 
 
 import numpy as np
@@ -17,6 +17,9 @@ def to_sparse(tsr, *, device=None, dtype=None) -> tc.Tensor:
     if dtype is None:
         dtype = tc.complex128 if np.iscomplexobj(tsr) else tc.float64
         
+    if isinstance(tsr, (sp.dia_array, sp.dia_matrix)):
+        tsr = tsr.tocsr()
+
     if isinstance(tsr, (sp.csr_array, sp.csr_matrix)):
         return tc.sparse_csr_tensor(tsr.indptr, tsr.indices, tsr.data, tsr.shape, dtype=dtype, device=device)
     elif isinstance(tsr, (sp.coo_array, sp.coo_matrix)):

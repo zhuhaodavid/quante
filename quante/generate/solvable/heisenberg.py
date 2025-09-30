@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-02 13:20:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-09 16:37:37
+# @Last Modified time: 2025-09-30 18:41:42
 
 import numpy as np
 from typing import Optional, Union, Literal
@@ -88,9 +88,9 @@ def xxx_finite_approx_ground_energy(L, j, pauli=False):
     of the spin-½ isotropic anti-ferromagnetic Heisenberg chain." Journal of
     Physics Communications 1.5 (2017): 055021
     """
-    Einf = (0.5 - 2 * _np.log(2)) * L
-    Efinite = _np.pi**2 / (6 * L)
-    correction = 1 + 0.375 / _np.log(L) ** 3
+    Einf = (0.5 - 2 * np.log(2)) * L
+    Efinite = np.pi**2 / (6 * L)
+    correction = 1 + 0.375 / np.log(L) ** 3
     return j * (Einf - Efinite * correction) / 2 * (4 if pauli else 1)
 
 # def xxz_gdenergy_inf(J=1, Δ=0):

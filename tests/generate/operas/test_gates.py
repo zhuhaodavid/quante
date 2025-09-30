@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-09 19:48:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-02-02 15:32:35
+# @Last Modified time: 2025-09-27 18:03:46
 
 import unittest
 
@@ -47,7 +47,7 @@ class TestOperas(unittest.TestCase):
                 U_tau.apply_gate_(gates[0][i], local_evolve, svd_alg='svd')
             
             basis = qt.generate.basis.spin_basis(L=L)
-            mat = ham.to_matrix(basis, sparse=False)
+            mat = ham.to_matrix(basis, sparse=False, pauli=False)
             evolve_operator = qt.linalg.expm( -1j*tau*mat)
             diff = np.linalg.norm(evolve_operator - U_tau.to_matrix().numpy())
             # print(diff, diff2)
@@ -96,7 +96,7 @@ class TestOperas(unittest.TestCase):
             
             # 验证程序
             basis = qt.generate.basis.spin_basis(L=L)
-            mat = ham.to_matrix(basis, sparse=False)
+            mat = ham.to_matrix(basis, sparse=False, pauli=False)
             evolve_operator = qt.linalg.expm( -1j*tau*mat)
             diff = np.linalg.norm(evolve_operator - U_tau.to_matrix().numpy())
             self.assertAlmostEqual(diff, res[i])
@@ -115,7 +115,7 @@ class TestOperas(unittest.TestCase):
             
             # 验证程序
             basis = qt.generate.basis.spin_basis(L=L)
-            mat = ham.to_matrix(basis, sparse=False)
+            mat = ham.to_matrix(basis, sparse=False, pauli=False)
             evolve_operator = qt.linalg.expm( -1j*tau*3*mat)
             diff = np.linalg.norm(evolve_operator - U_tau.to_matrix().numpy())
             self.assertAlmostEqual(diff, res[i])

@@ -2,13 +2,14 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-22 13:05:45
+# @Last Modified time: 2025-09-30 18:45:36
 
 import numpy as np
 import warnings
 import scipy.sparse as sp
-from typing import overload, TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal
 from .general import Oper, _single_term, _merge_poscoef
+from ...basicfun.utils_logging import println
 
 if TYPE_CHECKING:
     from .fermion import FermionOper
@@ -31,17 +32,80 @@ class SpinOper(Oper):
         return b.build()
     
     def _check_pauli(self, pauli:bool):
+        assert pauli in [True, False], f"pauli should be True or False, but got {pauli}"
         if self._pauli is not None:
             assert pauli == self._pauli, f"pauli has been set to be {self._pauli} before, but now we are using {pauli}"
         
-    def clean(self, pauli:bool = False) -> 'SpinOper':
+    def clean(self, pauli:bool) -> 'SpinOper':
         opr = self.expandxy(pauli=pauli).expandn(to='z')
         res = builder()
         for opstr, posn, coef in opr.each_term():
             lis = _merge_terms(opstr, posn, coef)
             for opstr1, posn1, coef1 in lis:
                 res += opstr1, posn1, coef1
+        self._pauli = pauli
         return res.build()
+    
+    def transform(self, perm, flip_dict=None) -> 'SpinOper':
+        return _transform_op(self, perm, flip_dict=flip_dict)
+    
+    def _check_perm(self, key, perm, pauli, flip_dict=None):
+        if key == 'Nup':
+            self.check_pcon(perm, pauli)
+        else:
+            transformed = _transform_op(self, perm, flip_dict=flip_dict)
+            transformed -= self
+            transformed = transformed.clean(pauli=pauli)
+            if transformed.data != {}:
+                raise ValueError(f"the operator is not invariant under the permutation {perm}, the difference PHP-H is:\n{transformed}")
+            println(f"{key} check passed")
+
+    def check_symm(self, 
+                   L:int, 
+                   pauli:bool,
+                   *,
+                   basis = None,
+                   blocks:Literal['k', 'p', 'z', 'Nup']|None = None,
+                   maps:dict[str, np.ndarray]|None = None
+    ):
+        if basis is not None:
+            _maps_dic = basis._maps_dict.copy()
+            Nup = basis._pcon_args.get('Nup', None)
+            _maps_dic['Nup'] = Nup
+        elif blocks is not None:
+            if isinstance(blocks, str):
+                blocks = [blocks]
+            _maps_dic = {}
+            for m in blocks:
+                if m == 'k':
+                    _maps_dic[m] = (np.arange(L) + 1) % L
+                elif m == 'p':
+                    _maps_dic[m] = np.arange(L-1, -1, -1)
+                elif m == 'z':
+                    _maps_dic[m] = -(np.arange(L) + 1)
+                elif m == 'Nup':
+                    _maps_dic[m] = 1
+                else:
+                    raise ValueError(f"blocks should be 'kblock', 'pblock', 'zblock', but got {m}")
+            Nup = None
+            if 'Nup' in _maps_dic:
+                Nup = _maps_dic['Nup']
+        elif maps is not None:
+            _maps_dic = maps
+        else:
+            raise ValueError("either basis or blocks or maps should be provided")
+        for key, m in _maps_dic.items():
+            self._check_perm(key, m, pauli)
+    
+    def check_pcon(self, Nup, pauli):
+        if Nup is not None:
+            expand = self.expandxy(pauli=pauli)
+            for opstr, _ in expand.data.items():
+                if opstr.count('p') != opstr.count('m'):
+                    raise ValueError(f"the operator does not conserve Nup due to the term {opstr}")
+        println(f"U(1) check passed")
+
+        
 
     def hc(self):
         """ 返回自旋算符的厄米共轭算符
@@ -187,7 +251,7 @@ class SpinOper(Oper):
                 return complex
         return float
     
-    def to_quspin(self, pauli=False):
+    def to_quspin(self, pauli:bool):
         """
         返回 quspin 可以接受的格式
         
@@ -208,7 +272,7 @@ class SpinOper(Oper):
             static_bond = []
             c = opnm.count('Z') * cf
             for i in range(len(coef)):
-                static_bond.append([coef[i]*2**c] + list(posn[i]))
+                static_bond.append([(coef[i]*2**c).item()] + [int(a) for a in posn[i]])
             static.append([opnm.replace('m', '-').replace('p', '+').replace('Z', 'z'), static_bond])
         return static
     
@@ -220,7 +284,7 @@ class SpinOper(Oper):
     # def to_matrix(self, basis, pauli=False, sparse:Literal[False]=False) -> np.ndarray:
     #     ...
 
-    def to_matrix(self, basis, pauli=False, sparse=False):
+    def to_matrix(self, basis, pauli:bool, sparse=False):
         """
         生成哈密顿量在给定基矢下的矩阵，对于自旋 1/2 默认使用 symmetrize 的方法计算矩阵元
         
@@ -231,8 +295,8 @@ class SpinOper(Oper):
         ----------
         basis : Basis
             基矢。
-        pauli : bool, optional
-            是否使用 Pauli 矩阵作为局部矩阵。默认为 False，即使用常规矩阵。如果哈密顿量已经用 expandxy 展开过，那么这个参数无效，同时给出警告。
+        pauli : bool
+            是否使用 Pauli 矩阵作为局部矩阵。
         sparse : bool, optional
             是否返回稀疏矩阵。默认为 False，即返回 numpy 数组。
 
@@ -271,27 +335,21 @@ class SpinOper(Oper):
         
         可以反复使用 `basis._sparse_matrix(eachterm, hascomplex)`
         """
+        from ..basis.basis_class import SpinBasis
+        assert isinstance(basis, SpinBasis), f"basis should be SpinBasis, but got {type(basis)}"
         if self.data == {}:
             if not sparse:
                 return np.zeros((basis.Ns, basis.Ns), dtype=float)
             return sp.csr_matrix((basis.Ns, basis.Ns), dtype=float)
         self._check_pauli(pauli)
         self._check_length(basis.L)
-        
         expanded = self.expandxy(pauli=pauli) if not self._has_expanded() else self
-
-        from ..basis.basis_class import SpinBasis
-        # use SpinBasis
-        if isinstance(basis, SpinBasis):
-            if basis.S != 0.5 and pauli is True:
-                raise KeyError("自旋不是 1/2，不能使用 Pauli 矩阵")
-            
-            mat = basis._sparse_matrix(
-                *expanded._convert_to_quick_form(),
-                savememory=False)
-            return mat if sparse else mat.toarray()
-        else:
-            raise TypeError(f"basis should be SpinBasis, but got {type(basis)}")      
+        if basis.S != 0.5 and pauli is True:
+            raise KeyError("自旋不是 1/2，不能使用 Pauli 矩阵")
+        mat = basis._sparse_matrix(
+            *expanded._convert_to_quick_form(),
+            savememory=False)
+        return mat if sparse else mat.toarray()
         
    
     def _convert_to_quick_form(self):
@@ -622,7 +680,7 @@ class SpinOper(Oper):
         """
         if L is None:
             L = self.L
-        else:
+        if L < self.L:
             # assert L >= self.L
             warnings.warn(f"L is set to be {L}, but the length of the operator is {self.L}", UserWarning)
         assert site_position < L-1, "site_position should be less than L-1"
@@ -804,7 +862,7 @@ class SpinOper(Oper):
         return {True: np.linalg.eigvalsh,
                     False: np.linalg.eigvals}[isherm](mat)
 
-    def gdenergy(self, pauli=None, k=1, return_eigenvectors=False, basis=None, L=None):
+    def gdenergy(self, pauli, k=1, return_eigenvectors=False, basis=None, L=None):
         L = L if L is not None else self.L
         self._check_pauli(pauli)
         self._check_length(L)
@@ -849,8 +907,8 @@ def _make_oper(name: str, posn: tuple[int], coef: float, L:None|int) -> "SpinOpe
         posn = [i % L for i in posn]  # Ensure positions are within bounds
     return SpinOper({name: _single_term(posn, coef)})
 
-def I(i:int=0) -> "SpinOper":
-    return _make_oper('I', (0,), 1.)
+def I(i:int=0, L=None) -> "SpinOper":
+    return _make_oper('I', (0,), 1., L)
 
 def p(i:int=0, L=None) -> "SpinOper":
     return _make_oper('p', (i,), 1., L)
@@ -1137,12 +1195,16 @@ class SpinBuilder:
         else:
             return super().__iadd__(term)
    
-    def build(self):
+    def _build_dict(self):
         data = {}
         for name, (posnlist, coeflist) in self.terms.items():
             posn, coef = _merge_poscoef(posnlist, coeflist)
             if len(posn) > 0:
                 data[name] = (posn, coef)
+        return data 
+        
+    def build(self):
+        data = self._build_dict()
         return SpinOper(data, 's')
 
 def builder() -> SpinBuilder:
@@ -1236,3 +1298,31 @@ def notcloseset(data, opnm, posn, param, size):
     paramarr = np.array(param)
     if paramarr.dtype == object or not np.allclose(paramarr, 0.):
         data[opnm] = (posn, _to_array(param, size))
+
+_default_flip_dict = {
+    'x': ('x', 1.),
+    'y': ('y', -1.),
+    'z': ('z', -1.),
+    'p': ('m', 1.),
+    'm': ('p', 1.),
+    'I': ('I', 1.),
+}
+
+def _transform_op(ham, perm, flip_dict=None):
+    if flip_dict is None:
+        flip_dict = _default_flip_dict
+    flip_list = np.array([p < 0 for p in perm])
+    perm_list = np.array([-p-1 if p < 0 else p for p in perm])
+    builder = SpinBuilder()
+    for opstr, posn, coef in ham.each_term():
+        newopstr = []
+        newposn = []
+        newcoef = 1.0 * coef
+        for o, p in zip(opstr, posn):
+            newposn.append(perm_list[p])
+            no, c = flip_dict[o] if flip_list[p] else (o, 1.)
+            newcoef *= c
+            newopstr.append(no)
+        builder += ''.join(newopstr), newposn, newcoef
+    return builder.build()
+

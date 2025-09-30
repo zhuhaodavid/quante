@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-16 23:25:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 16:55:33
+# @Last Modified time: 2025-09-27 18:18:01
 
 import quante as qt
 import numpy as np
@@ -41,7 +41,7 @@ class TestQuantity(unittest.TestCase):
         ham = builder.build()
 
         basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)
-        mat = ham.to_matrix(basis=basis)
+        mat = ham.to_matrix(basis=basis, pauli=False)
         eng = np.linalg.eigvalsh(mat)
 
         eng_unfold = qt.measure.unfolding_diff(eng)
@@ -74,7 +74,7 @@ class TestExpect(unittest.TestCase):
                 self.assertAlmostEqual(res, res1)
 
                 if tc.cuda.is_available():
-                    device = tc.cuda.device(0)
+                    device = tc.device(0)
                     mat = totc(mat, device=device)
                     state = totc(state, device=device)
                     res = qt.measure.expect(mat, state)
@@ -104,7 +104,7 @@ class TestExpect(unittest.TestCase):
                     self.assertAlmostEqual(res, res1)
 
                     if tc.cuda.is_available():
-                        device = tc.cuda.device(0)
+                        device = tc.device(0)
                         mat = totc(mat, device=device)
                         state = totc(state, device=device)
                         res = qt.measure.expect(mat, state)
@@ -143,7 +143,7 @@ class TestExpect(unittest.TestCase):
                 self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
 
                 if tc.cuda.is_available():
-                    device = tc.cuda.device(0)
+                    device = tc.device(0)
                     mat = totc(mat, device=device)
                     states = totc(states, device=device)
                     res = qt.measure.expect(mat, states)
@@ -174,7 +174,7 @@ class TestExpect(unittest.TestCase):
                     self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
 
                     if tc.cuda.is_available():
-                        device = tc.cuda.device(0)
+                        device = tc.device(0)
                         mat = totc(mat, device=device)
                         states = totc(states, device=device)
                         res = qt.measure.expect(mat, states)
@@ -212,7 +212,7 @@ class TestExpect(unittest.TestCase):
                 self.assertAlmostEqual(res, res1)
 
                 if tc.cuda.is_available():
-                    device = tc.cuda.device(0)
+                    device = 'cuda:0'
                     mat = tc.tensor(mat, device=device)
                     states = tc.tensor(states, device=device)
                     res = qt.measure.expect(mat, states, isdm=True)
@@ -242,7 +242,7 @@ class TestExpect(unittest.TestCase):
                     self.assertAlmostEqual(res, res1)
 
                     if tc.cuda.is_available():
-                        device = tc.cuda.device(0)
+                        device = tc.device(0)
                         mat = totc(mat, device=device)
                         states = totc(states, device=device)
                         res = qt.measure.expect(mat, states, isdm=True)
@@ -282,7 +282,7 @@ class TestExpect(unittest.TestCase):
                 self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
 
                 if tc.cuda.is_available():
-                    device = tc.cuda.device(0)
+                    device = tc.device(0)
                     mat = totc(mat, device=device)
                     states = np.random.randn(d,d,n) + 1j * np.random.randn(d,d,n)
                     states = totc(states, device=device)
@@ -314,7 +314,7 @@ class TestExpect(unittest.TestCase):
                     self.assertAlmostEqual(np.linalg.norm(res - res1), 0)
 
                     if tc.cuda.is_available():
-                        device = tc.cuda.device(0)
+                        device = tc.device(0)
                         mat = totc(mat, device=device)
                         states = np.random.randn(d,d,n) + 1j * np.random.randn(d,d,n)
                         states = totc(states, device=device)

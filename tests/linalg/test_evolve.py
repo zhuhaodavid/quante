@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 19:08:57
+# @Last Modified time: 2025-09-27 17:52:31
 
 import unittest
 import scipy.sparse
@@ -15,7 +15,7 @@ class TestExpmMultiply(unittest.TestCase):
         ham = qt.generate.operas.heisenberg_operator(L)
         basis = qt.generate.basis.spin_basis(L)
         state = qt.generate.state.random(basis.Ns, seed=42, dtype=dtype)
-        return ham.to_matrix(basis, sparse=True), state
+        return ham.to_matrix(basis, pauli=False, sparse=True), state
 
         # np.random.seed(42)
         # mat = np.random.randn(10, 10) #+ np.random.randn(100, 100)*1j
@@ -48,7 +48,7 @@ class TestExpmMultiply(unittest.TestCase):
         ham = qt.generate.operas.heisenberg_operator(L)
         basis = qt.generate.basis.spin_basis(L)
         state = qt.generate.state.random(basis.Ns, dtype=np.complex128)
-        mat = ham.to_matrix(basis, sparse=True)
+        mat = ham.to_matrix(basis, sparse=True, pauli=False)
         res1 = scipy.sparse.linalg.expm_multiply((-1j*mat), state, start=0, stop=10, num=19)
         res2, s1, s2 = _expm_multiply_interval((-1j*mat), state, 1., start=0, stop=10, num=19)
         res3, s1, s2 = _expm_multiply_interval(mat, state, -1j, start=0, stop=10, num=19)

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-04-19 10:10:28
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:55:35
+# @Last Modified time: 2025-09-30 18:42:28
 
 import numpy as np
 from functools import lru_cache
@@ -416,7 +416,7 @@ class SlaterState:
             basis = spin_basis(Lsub)
             cs = [SpinOper({  # jordan-wigner string
                 'Z'*i + 'm': ([list(range(i+1))], [1.])
-                }).to_matrix(basis,sparse=True) 
+                }).to_matrix(basis,pauli=False,sparse=True) 
                   for i in range(Lsub)]
         CA = self._reduced_cormat(pos)
         H = SlaterState.cor2cov(CA)

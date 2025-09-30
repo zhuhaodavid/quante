@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-05 09:31:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 23:32:07
+# @Last Modified time: 2025-09-30 17:40:22
 
 from typing import Union
 import inspect
@@ -270,7 +270,7 @@ class SpinHalfBasis(SpinBasis):
         assert L < 63, "N should be less than 63, otherwise the int type will overflow"
         super().__init__(L, S=0.5)
         self.Ns = 1 << L
-
+        self.L = L
 
 class SpinHighBasis(SpinBasis):
     """

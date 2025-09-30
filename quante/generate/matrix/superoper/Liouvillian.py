@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-14 22:03:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-22 13:24:59
+# @Last Modified time: 2025-09-30 18:37:18
 
 import numpy as np
 import scipy.sparse as sps
@@ -86,7 +86,7 @@ class Liouvillian(LinearOperator):
                 return None
             # self._sum_jump = sum(sps.kron(lo, lo.conj()) for lo in self.lindblad_ops)
             # 如果 lo 比较多且简单，那么下面的方法会更高效（占用内存会更多）
-            from ..basis.basis_class_nb import coodiaglists2csr
+            from ...basis.basis_class_nb import coodiaglists2csr
             row_result = []
             col_result = []
             ele_result = [] 
@@ -221,8 +221,8 @@ class Liouvillian(LinearOperator):
             raise ValueError("method should be 'direct' or 'eig' or 'svd'")
 
 
-def make_Liouvillian(ham, lindblad_ops, basis):
-    hammat = ham.to_matrix(basis, sparse=True)
-    lindmat = [lo.to_matrix(basis, sparse=True) for lo in lindblad_ops]
+def make_Liouvillian(ham, lindblad_ops, basis, pauli):
+    hammat = ham.to_matrix(basis, sparse=True, pauli=pauli)
+    lindmat = [lo.to_matrix(basis, sparse=True, pauli=pauli) for lo in lindblad_ops]
     return Liouvillian(hammat, lindmat)
 

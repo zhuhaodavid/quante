@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-30 19:59:42
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:59:30
+# @Last Modified time: 2025-09-27 17:53:22
 
 import unittest
 import numpy as np
@@ -26,7 +26,7 @@ class TestKIM(unittest.TestCase):
         mat2 = qt.linalg.expm(-1j*mat2)
         
         mat = mat1 @ mat2
-        self.assertTrue(np.allclose(mat, qt.generate.matrix.KIM_matrix(b, J, h, L)))
+        self.assertTrue(np.allclose(mat, qt.generate.matrix.kim.KIM_matrix(b, J, h, L)))
                    
 if __name__ == "__main__":
    unittest.main()

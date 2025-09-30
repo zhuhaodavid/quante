@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 16:05:45
+# @Last Modified time: 2025-09-30 19:45:12
 
 import unittest
 import quante as qt
@@ -18,13 +18,13 @@ class TestLiouvillian(unittest.TestCase):
 
         ham = op.heisenberg_operator(L=L)
         basis = qt.generate.basis.spin_basis(L=L,Nup=1)
-        hammat = ham.to_matrix(basis=basis, sparse=True)
+        hammat = ham.to_matrix(basis=basis, sparse=True, pauli=False)
 
-        Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i).to_matrix(basis=basis, sparse=True) for i in range(L-1)]
-        Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1).to_matrix(basis=basis, sparse=True) for i in range(L-1)]
-        particle_number = [op.n(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
+        Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i).to_matrix(basis=basis, pauli=False, sparse=True) for i in range(L-1)]
+        Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1).to_matrix(basis=basis, pauli=False, sparse=True) for i in range(L-1)]
+        particle_number = [op.n(i).to_matrix(basis=basis, pauli=False, sparse=True) for i in range(L)]
 
-        lvn = qt.generate.superoper.Liouvillian(hammat, Lindblad_R + Lindblad_L)
+        lvn = qt.generate.matrix.superoper.Liouvillian(hammat, Lindblad_R + Lindblad_L)
         state = qt.generate.state.product_state(['up']+['dn']*(L-1), Nup=1)
         rhoinit = np.outer(state, state)
 
@@ -111,19 +111,21 @@ class TestmakeLiouvillianOper(unittest.TestCase):
         Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i) for i in range(L-1)]
         Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1) for i in range(L-1)]
 
-        lo = Lindblad_R[0].to_matrix(basis, sparse=True)
-        lvn = qt.generate.superoper.make_Liouvillian(ham, Lindblad_R + Lindblad_L, basis).matrix
+        lo = Lindblad_R[0].to_matrix(basis, sparse=True, pauli=False)
+        lvn = qt.generate.matrix.superoper.make_Liouvillian(ham, Lindblad_R + Lindblad_L, basis, pauli=False).matrix
 
 
-        lvnOper = qt.generate.superoper.make_LiouvillianOper(L, ham, Lindblad_R + Lindblad_L)
+        # lvnOper = qt.generate.matrix.superoper.make_LiouvillianOper(L, ham, Lindblad_R + Lindblad_L)
+        lvnOper = qt.generate.operas.super_oper.LiouvilleOper(L, ham, Lindblad_R + Lindblad_L, indx_order='stacked')
         # print(lvnOper)
         basis = qt.generate.basis.spin_basis(L=2*L)
-        lvn2 = lvnOper.to_matrix(basis, sparse=True)
+        lvn2 = lvnOper.to_matrix(basis, sparse=True, pauli=False)
         self.assertAlmostEqual(np.linalg.norm((lvn - lvn2).data), 0.)
 
-        lvnOper = qt.generate.superoper.make_LiouvillianOper(L, ham, Lindblad_R + Lindblad_L, format='ladder')
+        # lvnOper = qt.generate.matrix.superoper.make_LiouvillianOper(L, ham, Lindblad_R + Lindblad_L, format='ladder')
+        lvnOper = qt.generate.operas.super_oper.LiouvilleOper(L, ham, Lindblad_R + Lindblad_L, indx_order='snake')
         basis = qt.generate.basis.spin_basis(L=2*L)
-        lvn3 = lvnOper.to_matrix(basis, sparse=True)
+        lvn3 = lvnOper.to_matrix(basis, sparse=True, pauli=False)
 
         lvn = lvn.reshape(*[2]*(4*L)).transpose([i if j == 0 else i+L for i in range(L) for j in range(2)] + [i if j == 0 else i+L for i in range(2*L,3*L) for j in range(2)]).reshape(2**(2*L), 2**(2*L))
         self.assertAlmostEqual(np.linalg.norm((lvn - lvn3).data), 0)
@@ -140,22 +142,25 @@ class TestmakeLiouvillianOper(unittest.TestCase):
         ham = op.heisenberg_operator(L=L, cyclic=True)
         Lindblad = [gamma**0.5 * op.p(i) for i in range(L)]
 
-        lvn = qt.generate.superoper.make_LiouvillianOper(
-            L, ham, Lindblad, format='ladder'
+        # lvn = qt.generate.matrix.superoper.make_LiouvillianOper(
+        #     L, ham, Lindblad, format='ladder'
+        # )
+        lvn = qt.generate.operas.super_oper.LiouvilleOper(
+            L, ham, Lindblad, indx_order='snake'
         )
 
         def sort(arr):
             idx = np.lexsort((arr.imag, np.round(arr.real, 10)))
             return arr[idx]
 
-        basis = qs.spin_basis_2d(Lx=L, Ly=2)
+        basis = qs.spin_basis_2d(Lx=L, Ly=2, pauli=True)
         mat1 = qs.hamiltonian(lvn, basis, dtype=np.complex128, sparse=False)
         engs1 = np.linalg.eigvals(mat1)
         engs1 = sort(engs1)
 
         res = []
         for kblock in range(L):
-            basis = qs.spin_basis_2d(Lx=2, Ly=L, kyblock=kblock)
+            basis = qs.spin_basis_2d(Lx=2, Ly=L, kyblock=kblock, pauli=True)
             mat1 = qs.hamiltonian(lvn, basis, dtype=np.complex128, sparse=False, check_symm=True)
             engs_block = np.linalg.eigvals(mat1)
             res.append(engs_block)
@@ -165,7 +170,7 @@ class TestmakeLiouvillianOper(unittest.TestCase):
 
         res = []
         for pblock in [0,1]:
-            basis = qs.spin_basis_2d(Lx=2, Ly=L, pyblock=pblock)
+            basis = qs.spin_basis_2d(Lx=2, Ly=L, pyblock=pblock, pauli=True)
             mat1 = qs.hamiltonian(lvn, basis, dtype=np.complex128, sparse=False, check_symm=True)
             engs_block = np.linalg.eigvals(mat1)
             res.append(engs_block)

@@ -2,10 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-10 12:20:38
+# @Last Modified time: 2025-09-28 15:23:53
 
 import numpy as np
 import copy 
+from typing import Literal
+from ...basicfun import deprecated
 
 def _isscale(i):
     return np.isscalar(i) or i.__class__.__module__.startswith('sympy.')
@@ -98,6 +100,87 @@ def _quick_merge_batch(res_pos, res_coef):
     res_coef[cur_pos] = cur_coef
     mask = res_coef[:cur_pos + 1] != 0  # Remove zero coefficients
     return res_pos[:cur_pos+1][mask], res_coef[:cur_pos+1][mask]
+
+def make_fancy_string(data, seperate_notion, prefix, maxlen) -> str:
+    pages = []
+    first_line = "|"
+    second_line = "|"
+    data_list = []
+    last_len = 0
+    for i, (operator, (posn, coef)) in enumerate(data):
+        
+        oper_len = len(operator) - operator.count('|')
+        
+        if (len(first_line) + 6 * oper_len  > maxlen 
+            and i != 0):
+            pages.append(first_line)
+            pages.append(second_line)
+            pages += data_list
+            pages.append("="*len(first_line))
+            first_line = "|"
+            second_line = "|"
+            data_list = []
+            last_len = 0
+        
+        ml = 12 # max length
+        for i in range(len(coef)):
+            if len(data_list) <= i:
+                data_list.append("|")
+            
+            data_line = data_list[i]
+            if len(data_line) < last_len:
+                data_line += " " * (last_len - len(data_line)-1) + "|"
+            for j in range(oper_len):
+                data_line += f"   {posn[i][j]:<3}"
+
+            if coef.dtype == object:
+                from sympy import nsimplify
+                tmp = f"{nsimplify(coef[i])}".rjust(10) + " |"
+            elif np.iscomplexobj(coef):
+                if max(np.abs(coef)) < 1e3 and min(np.abs(coef)) > -1e3:
+                    if np.isclose(coef[i].real, 0):
+                        tmp = f"{coef[i].imag:.3f}j".rjust(10) + " |"
+                    else:
+                        tmp = f"{coef[i]:.3f}".rjust(16) + " |"  # 普通浮点数格式
+                else:
+                    tmp = f"{coef[i]:.2e}".rjust(20) +" |"  # 科学计数法格式
+            else:
+                if max(coef) < 1e3 and min(coef) > -1e3:
+                    tmp = f"{coef[i]:.3f}".rjust(10) + " |"
+                else:
+                    tmp = f"{coef[i]:.2e}".rjust(12) +" |"  # 科学计数法格式
+            
+            data_line += tmp
+            if len(tmp) > ml:
+                ml = len(tmp)
+            data_list[i] = data_line
+        
+        last_len = len(data_line)
+    
+        hasvbar = False
+        for i in operator:
+            if i == '|':
+                hasvbar = True
+                continue
+            first_line += f" {seperate_notion} {i:<3}" if hasvbar else f"   {i:<3}"
+            hasvbar = True
+            second_line += "-"*6
+            hasvbar = False
+        makeup = ml - 12
+        if hasvbar:
+            first_line += f" {seperate_notion}" + " "*makeup + "   coef. |"
+        else:
+            first_line += "  " + " "*makeup + "   coef. |"
+        second_line += "-"*(11+makeup) + "|"
+        
+    pages.append(first_line)
+    pages.append(second_line)
+    pages += data_list
+
+    # 增加 self 的名字和地址
+    return prefix + '\n'.join(pages) + '\n'
+    
+
 
 class Oper:
     """
@@ -261,103 +344,45 @@ class Oper:
     def _check_length(self, L:int):
         assert L >= self.L
     
-    def show_string_form(self, maxlen=80, form='v'):
-        """打印算符的字符串形式"""
-        if form == 'v':
+    def show(
+        self, maxlen=90, 
+        form: Literal['table', 'list'] = 'table'
+    ):
+        """print the operator in a readable format."""
+        if form == 'table':
             print(self.table_form(maxlen=maxlen))
-        elif form == 'h':
-            print(self.table_form2(maxlen=maxlen))
+        elif form == 'list':
+            print(self.table_form2())
         else:
-            raise NotImplementedError("form should be 'v' or 'h'")
+            raise NotImplementedError("form should be 'table' or 'list'")
+        
+    @deprecated("show_string_form is deprecated, use show instead")
+    def show_string_form(
+            self, maxlen=90, 
+            form: Literal['table', 'list'] = 'table'
+        ):
+        self.show(maxlen=maxlen, form=form)
     
     def table_form(self, maxlen=90) -> str:
-        _seperate_notion = self._seperate_notion()
         if len(self.data) == 0:
-            return "0"
-        pages = []
-        first_line = "|"
-        second_line = "|"
-        data_list = []
-        last_len = 0
-        for i, (operator, (posn, coef)) in enumerate(self.data.items()):
-            
-            oper_len = len(operator) - operator.count('|')
-            
-            if (len(first_line) + 6 * oper_len  > maxlen 
-                and i != 0):
-                pages.append(first_line)
-                pages.append(second_line)
-                pages += data_list
-                pages.append("="*len(first_line))
-                first_line = "|"
-                second_line = "|"
-                data_list = []
-                last_len = 0
-            
-            ml = 12 # max length
-            for i in range(len(coef)):
-                if len(data_list) <= i:
-                    data_list.append("|")
-                
-                data_line = data_list[i]
-                if len(data_line) < last_len:
-                    data_line += " " * (last_len - len(data_line)-1) + "|"
-                for j in range(oper_len):
-                    data_line += f"   {posn[i][j]:<3}"
+            data = [('I', (['-'], np.array([0]))), ]
+        else:
+            data = self.data.items()
+        return make_fancy_string(
+            data, self._seperate_notion(), self._prefix(), maxlen
+        )
 
-                if coef.dtype == object:
-                    from sympy import nsimplify
-                    tmp = f"{nsimplify(coef[i])}".rjust(10) + " |"
-                elif np.iscomplexobj(coef):
-                    if max(np.abs(coef)) < 1e3 and min(np.abs(coef)) > -1e3:
-                        tmp = f"{coef[i]:.3f}".rjust(16) + " |"  # 普通浮点数格式
-                    else:
-                        tmp = f"{coef[i]:.2e}".rjust(20) +" |"  # 科学计数法格式
-                else:
-                    if max(coef) < 1e3 and min(coef) > -1e3:
-                        tmp = f"{coef[i]:.3f}".rjust(10) + " |"
-                    else:
-                        tmp = f"{coef[i]:.2e}".rjust(12) +" |"  # 科学计数法格式
-                
-                data_line += tmp
-                if len(tmp) > ml:
-                    ml = len(tmp)
-                data_list[i] = data_line
-            
-            last_len = len(data_line)
-        
-            hasvbar = False
-            for i in operator:
-                if i == '|':
-                    hasvbar = True
-                    continue
-                first_line += f" {_seperate_notion} {i:<3}" if hasvbar else f"   {i:<3}"
-                hasvbar = True
-                second_line += "-"*6
-                hasvbar = False
-            makeup = ml - 12
-            if hasvbar:
-                first_line += f" {_seperate_notion}" + " "*makeup + "   coef. |"
-            else:
-                first_line += "  " + " "*makeup + "   coef. |"
-            second_line += "-"*(11+makeup) + "|"
-            
-        pages.append(first_line)
-        pages.append(second_line)
-        pages += data_list
-
-        # 增加 self 的名字和地址
-        prefix = self._prefix()
-        return prefix + '\n'.join(pages) + '\n'
-    
     def _prefix(self) -> str:
         return f"{self.__class__.__name__} at {hex(id(self))}, \n"
     
     def _seperate_notion(self) -> str:
         return "|"
     
-    def table_form2(self, maxlen=90) -> str:
+    def table_form2(self) -> str:
         lines = []
+        if len(self.data) == 0:
+            lines.append("'I', (-,), 0")
+            return '\n'.join(lines)
         for operator, (posn, coef) in self.data.items():
             oper_len = len(operator) - operator.count('|')
             for i in range(len(coef)):
@@ -369,7 +394,10 @@ class Oper:
                     coefstr = f"{nsimplify(coef[i])}"
                 elif np.iscomplexobj(coef):
                     if max(np.abs(coef)) < 1e3 and min(np.abs(coef)) > -1e3:
-                        coefstr = f"{coef[i]:.3f}"
+                        if np.isclose(coef[i].real, 0):
+                            coefstr = f"{coef[i].imag:.3f}j"
+                        else:
+                            coefstr = f"{coef[i]:.3f}"
                     else:
                         coefstr = f"{coef[i]:.2e}"
                 else:
@@ -377,17 +405,18 @@ class Oper:
                         coefstr = f"{coef[i]:.3f}"
                     else:
                         coefstr = f"{coef[i]:.2e}"
+                if coefstr[0] != '-':
+                    coefstr = ' ' + coefstr
 
                 line += "(" + ", ".join([f"{posn[i][j]}" for j in range(oper_len)]) + "), " + coefstr
                 lines.append(line)
         return '\n'.join(lines)
-        # print('\n'.join(lines))
     
     def __str__(self) -> str:
         """
         返回算符的字符串形式
         """
-        return self.table_form2(maxlen=80)
+        return self.table_form2()
     
     def each_term(self):
         """
@@ -410,7 +439,7 @@ class Oper:
             for i in range(len(coef)):
                 yield operator, tuple(posn[i]), coef[i]
 
-    def show(self, whichonm=None) -> None:
+    def show_igraph(self, whichonm=None) -> None:
         """
         使用 igraph 画出算符的图形表示
 
@@ -521,3 +550,14 @@ class Oper:
             ])
             res[oper] = (posnlist, newcoeflist)
         return type(self)(res)
+    
+    def __eq__(self, value):
+        if value == 0:
+            if len(self.data) == 0:
+                return True
+            return False 
+        elif isinstance(value, Oper):
+            diffOper = self - value
+            if len(diffOper.data) == 0:
+                return True
+            return False

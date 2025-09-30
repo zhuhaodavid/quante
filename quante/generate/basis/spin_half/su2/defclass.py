@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-06 10:23:56
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-04-16 19:18:11
+# @Last Modified time: 2025-09-30 18:14:41
 
 from typing import Union, Optional
 from ...basis_class import SpinHalfBasis
@@ -79,7 +79,7 @@ class SpinHalfBasisSU2(SpinHalfBasis):
         self.Ns = 1 if 2*J == L else math.comb(L, int(L/2-J)) - math.comb(L, int(L/2-J-1))
         from .defbasis import get_jlist
         self.s_list = get_jlist(L, J)
-        from ..Nup.defbasis import construct_Nup_basis
+        from ..spin_1d.basis_core import construct_Nup_basis
         self.other_params["m_list"] = construct_Nup_basis(L, self.Nup)[1]
         self.default_complex = False
     
@@ -93,7 +93,7 @@ class SpinHalfBasisSU2(SpinHalfBasis):
         assert int(tmp) == tmp and -J <= m <= J, "m should be -J, -J+1, ..., J-1, J"
     
     def _sparse_matrix(self, op_list, hascomplex, savememory=None):
-        from ..Nup.defclass import SpinHalfBasisNup
+        from ..spin_1d.basis import SpinHalfBasisNup
         basis_Nup = SpinHalfBasisNup(self.L, self.Nup)
         matrix_Nup = basis_Nup._sparse_matrix(op_list, hascomplex)
         proj = _sp.csr_array(self.projection_matrix())

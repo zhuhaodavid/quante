@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-04 20:55:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 20:13:27
+# @Last Modified time: 2025-09-28 15:12:37
 
 from ....basicfun.utils_numba import njit, types, config, numba_cache_dir
 import numpy as _np
@@ -158,4 +158,34 @@ def findstate(s_list:_np.ndarray, sb:int) -> int:
         else:
             return b
     return -1
+
+
+config.CACHE_DIR = numba_cache_dir
+@njit('i8(i8,i8)')
+def comb(n:int, k:int) -> int:
+    """组合数，等价于 math.comb，但只能计算 int64 以内"""
+    if k > n:
+        return 0
+    if (k == 0) or (k == n):
+        return 1
+    binom_ = 1
+    keff = n - k if k > n // 2 else k
+    for i in range(1, keff + 1):
+        binom_ *= n - keff + i
+        binom_ //= i
+    return binom_
+
+
+config.CACHE_DIR = numba_cache_dir
+@njit(inline='always')
+def perm_operation(s:int, perm:_np.ndarray) -> int:
+    """对整数 s 的二进制表示进行置换，置换规则由 perm 给出"""
+    res = 0
+    for src, dst, flip in perm:
+        bit = (s >> src) & 1
+        if flip:
+            bit = 1 - bit
+        res |= bit << dst
+    return res
+
 

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-19 20:46:34
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-20 15:00:33
+# @Last Modified time: 2025-09-26 21:20:41
 
 import numpy as np
 from tqdm import tqdm
@@ -27,7 +27,10 @@ def contract(transfer_matrix, lognm, localtsr, tsr):
     chi1 = transfer_matrix.shape[0]
     tsr = tsr.reshape(-1, chi1)
     # (chi2 * LOCAL_DIM, chi1) @ (chi1,) -> (chi2 * LOCAL_DIM,)
-    transfer_matrix = (tsr @ transfer_matrix.real + 1j*(tsr @ transfer_matrix.imag))
+    transfer_matrix = (
+        np.ascontiguousarray(tsr) @ np.ascontiguousarray(transfer_matrix.real)
+        + 1j * (np.ascontiguousarray(tsr) @ np.ascontiguousarray(transfer_matrix.imag))
+    )
     # (chi2 * LOCAL_DIM,) @ (LOCAL_DIM,) -> (chi2,)
     transfer_matrix = transfer_matrix.reshape(-1, 4) @ localtsr
     each_nm = np.linalg.norm(transfer_matrix)
@@ -114,13 +117,13 @@ def exact_avg(n, alpha=0.5, tau=0.01, trunc=1e-10):
     tensortrain = []
     endtensor = []
     lognm_list = []
-    Ss = []
+    Ss = {}
     chi = 1
     for i in tqdm(range(0, n-1), ascii=True):
         lognm, wv, rdm = fft_integrate(tensortrain, alpha, tau)
         s, v = np.linalg.eigh(rdm)
         s, v, chi = truncate_eig(s, v, trunc)
-        Ss.append(lognm + np.log(s))
+        Ss[f'n={i}'] = s/s[0]
         tensortrain.append((v.T.conj().reshape(chi, 2, 2, -1)))
         if i > 0:
             endtensor.append(wv.reshape(1, 2, 2, -1))
@@ -131,10 +134,12 @@ def exact_avg(n, alpha=0.5, tau=0.01, trunc=1e-10):
 def todict(tensortrain, endtensor, lognm_list, Ss):
     Vs_out = {}
     for i in range(len(tensortrain)):
-        Vs_out[f"n={i+1}"] = tensortrain[i]
+        a, *_, b = tensortrain[i].shape
+        Vs_out[f"n={i+1}"] = tensortrain[i].reshape(a,-1,b)
     end_tensors = {}
     for i in range(len(endtensor)):
-        end_tensors[f"n={i+2}"] = endtensor[i]
+        a, *_, b = endtensor[i].shape
+        end_tensors[f"n={i+2}"] = endtensor[i].reshape(a,-1,b)
     lognms = lognm_list[::-1]
     return Vs_out, end_tensors, lognms, Ss
 

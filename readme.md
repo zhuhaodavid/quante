@@ -85,7 +85,7 @@ op = qt.generate.operas.spin
 ```python
 L = 4
 ham = op.heisenberg_operator(L)
-ham.show_string_form()
+ham.show()
 ```
 
 ```
@@ -117,7 +117,7 @@ ham = op.sum(op.xx(i,i+1) + op.yy(i,i+1) + op.zz(i,i+1) for i in range(L-1))
 
 ```python
 basis = qt.generate.basis.spin_basis(L=L, Nup=L//2)
-hammat = ham.to_matrix(basis=basis)
+hammat = ham.to_matrix(basis=basis, pauli=False)
 hammat
 ```
 
@@ -209,11 +209,11 @@ for l in range(L-1):
     builder += '+-', [l+1, l], 1/2 * (J + γ),
     builder += '+-', [l, l+1], 1/2 * (J - γ),
 ham = builder.build()
-hammat = ham.to_matrix(basis=basis, sparse=True)
+hammat = ham.to_matrix(basis=basis, pauli=False, sparse=True)
 
 tlist = np.linspace(0, 10, 200)
 init_state = qt.generate.state.neel(L=L, down_first=True, Nup=L//2)
-obsoper = [op.z(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
+obsoper = [op.z(i).to_matrix(basis=basis, pauli=False, sparse=True) for i in range(L)]
 
 qt.linalg.evolve_and_measure(
     hammat, init_state, tlist,
@@ -256,11 +256,14 @@ Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i) for i in range(L-1)]
 Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1) for i in range(L-1)]
 
 basis = qt.generate.basis.spin_basis(L=L, Nup=1)
-lvn = qt.generate.superoper.make_Liouvillian(ham, Lindblad_R + Lindblad_L, basis)
+lvn = qt.generate.matrix.superoper.make_Liouvillian(
+    ham, Lindblad_R + Lindblad_L, basis, pauli=False
+)
 
 state = qt.generate.state.product_state(['up']+['dn']*(L-1), Nup=1)
 rhoinit = np.outer(state, state)
-particle_number = [op.n(i).to_matrix(basis=basis, sparse=True) for i in range(L)]
+particle_number = [op.n(i).to_matrix(basis=basis, pauli=False, sparse=True) for i in range(L)]
+
 
 res = qt.linalg.evolve_and_measure(
     lvn, rhoinit, [10, 20, 30, 40, 50], 
@@ -318,7 +321,7 @@ L = 10
 ham = op.heisenberg_operator(L)
 H = ham.to_mpo(pauli=False)
 eng, vec = H.dmrg(nsweep=10)
-ham.gdenergy()
+ham.gdenergy(pauli=False)
 ```
 
 ```
@@ -333,4 +336,8 @@ Energy converged to -4.2580352068 after 4 sweeps.
 
 Parts of this package (quante/linalg/krylov/) are based on the Julia package KrylovKit.jl,
 which is licensed under the MIT License.
-The original license is included in quante/linalg/krylov/LICENSE.KrylovKit
+The original license is included in quante/linalg/krylov/LICENSE.KrylovKit.
+
+Parts of this package (quante/bridge/torch_utils/networks) are based on the Julia package ITensors.jl,
+which is licensed under the Apache License 2.0.
+The original license is included in quante/bridge/torch_utils/networks/LICENSE.ITensors.

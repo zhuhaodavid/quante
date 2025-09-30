@@ -6,7 +6,6 @@
 
 from . import basis
 from . import operas
-from . import superoper
 
 from . import matrix
 from . import state

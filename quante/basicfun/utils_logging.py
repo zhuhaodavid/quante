@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:13:41
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-19 14:33:00
+# @Last Modified time: 2025-09-24 13:37:08
  
 import os as _os
 import ast as _ast
@@ -20,6 +20,10 @@ import ctypes as _ctypes
 import platform as _platform
 import difflib
 
+import warnings
+from functools import wraps
+
+
 __all__ = [
     "get_free_space",
     "create_folder",
@@ -30,6 +34,7 @@ __all__ = [
     "clear_numba_cache",
     "logger",
     "set_show",
+    "deprecated",
 ]
 
 # ===================================
@@ -616,13 +621,15 @@ class Show:
         else:
             return [prefix + lines[0]] + [" " * prefixlen + line for line in lines[1:]]
 
-println = show = Show()
-show.arg_name = False
+show = Show()
+show.arg_name = True
 def set_show(use_color=None, arg_name=False) -> None:
     if use_color is not None:
-        println.use_color = use_color
+        show.use_color = use_color
     if arg_name is not None:
-        println.arg_name = arg_name
+        show.arg_name = arg_name
+println = Show()
+println.arg_name = False
 
 
 def send_email(
@@ -705,3 +712,15 @@ def send_email(
         print("发送邮件时发生错误：")
         traceback.print_exc()
 
+def deprecated(reason):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            warnings.warn(
+                f"{func.__name__} is deprecated: {reason}",
+                category=DeprecationWarning,
+                stacklevel=2
+            )
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator

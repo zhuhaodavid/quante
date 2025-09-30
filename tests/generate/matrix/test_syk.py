@@ -20,9 +20,9 @@ class TestSYK(unittest.TestCase):
     def test_syk4_dirac(self):
         L = 10
         Jmat = np.random.randn(L,L,L,L) + 1j * np.random.randn(L,L,L,L)
-        mat2 = qt.generate.matrix.syk4_dirac(L, L//2, J=Jmat)
+        mat2 = qt.generate.matrix.syk.syk4_dirac(L, L//2, J=Jmat)
 
-        qt.generate.matrix.sky_anti_symmetrize(Jmat, hermitize=False)
+        qt.generate.matrix.syk.sky_anti_symmetrize(Jmat, hermitize=False)
         # from quante.bridge.quspin_utils.quspin_extension_wrap.basis.basis_1d.fermion import spinless_fermion_basis_1d
         from quante.bridge.quspin_utils import fermion_basis
         basis = fermion_basis(L=L, Nf=L//2)

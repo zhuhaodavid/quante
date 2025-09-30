@@ -2,21 +2,21 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 19:51:23
+# @Last Modified time: 2025-09-30 18:21:26
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
 - `spin_basis`
-- `show_spin_basis`
 """
 
-from typing import Union, Optional
+import numpy as np
+from typing import Union, Optional, Literal
 
 # !! 这个文件提供到 symmetry 中给个基矢的接口，涉及的 basis 类都在 symmetry 中
 
 __all__ = [
     "spin_basis",
-    "show_spin_basis"
+    "spin_ladder_basis"
 ]
 
 
@@ -202,55 +202,68 @@ def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, k
 
 # 处理不同block的函数部分
 def _process_spin_half_full_basis(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.noblock.defclass import SpinHalfBasisNoBlock
+    # from .spin_half.noblock.defclass import SpinHalfBasisNoBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisNoBlock
     return SpinHalfBasisNoBlock(L)
 
 def _process_spin_half_Nup_block(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.Nup.defclass import SpinHalfBasisNup
+    # from .spin_half.Nup.defclass import SpinHalfBasisNup
+    from .spin_half.spin_1d.basis import SpinHalfBasisNup
     return SpinHalfBasisNup(L, block_dic['Nup'])
 
 def _process_spin_half_kblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.kblock.defclass import SpinHalfBasisKBlock
+    # from .spin_half.kblock.defclass import SpinHalfBasisKBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisKBlock
     return SpinHalfBasisKBlock(L, block_dic['kblock'])
     
 def _process_spin_half_pblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.pblock.defclass import SpinHalfBasisPBlock
+    # from .spin_half.pblock.defclass import SpinHalfBasisPBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisPBlock
     return SpinHalfBasisPBlock(L, block_dic['pblock'])
 
 def _process_spin_half_zblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.zblock.defclass import SpinHalfBasisZBlock
+    # from .spin_half.zblock.defclass import SpinHalfBasisZBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisZBlock
     return SpinHalfBasisZBlock(L, block_dic['zblock'])
 
 def _process_spin_half_pzblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.pzblock.defclass import SpinHalfBasisPZBlock
+    # from .spin_half.pzblock.defclass import SpinHalfBasisPZBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisPZBlock
     return SpinHalfBasisPZBlock(L, block_dic['pzblock'])
 
 def _process_spin_half_kpblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.kblock_pblock.defclass import SpinHalfBasisKPBlock
+    # from .spin_half.kblock_pblock.defclass import SpinHalfBasisKPBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisKPBlock
     return SpinHalfBasisKPBlock(L, block_dic['kblock'], block_dic['pblock'])
 
 def _process_spin_half_Nup_kblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.Nup_kblock.defclass import SpinHalfBasisNupKBlock
+    # from .spin_half.Nup_kblock.defclass import SpinHalfBasisNupKBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisNupKBlock
     return SpinHalfBasisNupKBlock(L, block_dic['Nup'], block_dic['kblock'])
 
 def _process_spin_half_Nup_pblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.Nup_pblock.defclass import SpinHalfBasisNupPBlock
+    # from .spin_half.Nup_pblock.defclass import SpinHalfBasisNupPBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisNupPBlock
     return SpinHalfBasisNupPBlock(L, block_dic['Nup'], block_dic['pblock'])
 
 def _process_spin_half_Nup_zblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.Nup_zblock.defclass import SpinHalfBasisNupZBlock
+    # from .spin_half.Nup_zblock.defclass import SpinHalfBasisNupZBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisNupZBlock
     return SpinHalfBasisNupZBlock(L, block_dic['Nup'], block_dic['zblock'])
 
 def _process_spin_half_Nup_pzblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.Nup_pzblock.defclass import SpinHalfBasisNupPZBlock
+    # from .spin_half.Nup_pzblock.defclass import SpinHalfBasisNupPZBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisNupPZBlock
     return SpinHalfBasisNupPZBlock(L, block_dic['Nup'], block_dic['pzblock'])
 
 def _process_spin_half_Nup_kblock_pblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.Nup_kblock_pblock.defclass import SpinHalfBasisNupKPBlock
+    # from .spin_half.Nup_kblock_pblock.defclass import SpinHalfBasisNupKPBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisNupKPBlock
     return SpinHalfBasisNupKPBlock(L, block_dic['Nup'], block_dic['kblock'], block_dic['pblock'])
 
 def _process_spin_half_Nup_kblock_pblock_zblock(L:int, block_dic:dict) -> SpinBasis:
-    from .spin_half.Nup_kblock_pblock_zblock.defclass import SpinHalfBasisNupKPZBlock
+    # from .spin_half.Nup_kblock_pblock_zblock.defclass import SpinHalfBasisNupKPZBlock
+    from .spin_half.spin_1d.basis import SpinHalfBasisNupKPZBlock
     return SpinHalfBasisNupKPZBlock(L, block_dic['Nup'], block_dic['kblock'], block_dic['pblock'], block_dic['zblock'])
 
 def _process_spin_half_jmblock(L:int, block_dic:dict) -> SpinBasis:
@@ -324,3 +337,87 @@ def _process_fermionbit_full_basis(L:int, block_dic:dict) -> FermionBasis:
 def _process_fermionbit_Nf_block(L:int, block_dic:dict) -> FermionBasis:
     from .fermion.Nup.defclass import FermionBitBasisNup
     return FermionBitBasisNup(L, block_dic['Nf'])
+
+
+def spin_basis_general(
+    L, S:Union[str, int, float]="1/2", 
+    flipset=None, Ndiff=None, **blocks
+):
+    """General spin-1/2 basis constructor with optional Z2 symmetries and Ndiff constraint.
+
+    Parameters
+    ----------
+    L : int
+        Number of sites.
+    S : str|int|float, default '1/2'
+        Spin quantum number (only 1/2 supported currently).
+    flipset : sequence|None
+        Optional flip-site set used in Ndiff-related bases.
+    Ndiff : int|None
+        Particle number difference (or magnetization style) constraint.
+    **blocks : dict[str, tuple[array_like,int]]
+        Z2 symmetry specification(s). Each value must be a tuple ``(perm, sector)``.
+
+    Notes
+    -----
+    Current implementation only supports spin-1/2 and Z2-type symmetries. The original
+    large if/elif chain is collapsed into a dynamic class name resolution to ease
+    maintenance. Behaviour is preserved.
+    """
+    S = _check_spin_number(S)
+    if S != 0.5:
+        raise NotImplementedError("spin_basis_general is only implemented for spin-1/2 now.")
+
+    from .spin_half.spin_general.basis import get_permute_number as _get_perm_num
+    # Validate each provided symmetry block is Z2
+    for _name, (_perm, _sector) in blocks.items():  # type: ignore
+        _perm = np.array([
+                [L+i, L-a-1, 1] if i < 0 else [L-i-1, L-a-1, 0]
+                for a,i in enumerate(_perm)
+        ])
+        n = _get_perm_num(L, _perm)
+        blocks[_name] = (_perm, _sector)
+        assert n == 2, "only Z2 symmetry is supported for spin_basis_general now."
+
+    n_blocks = len(blocks)
+
+    # Fast path: no Ndiff / flipset involvement and no symmetry blocks
+    if flipset is None and Ndiff is None and n_blocks == 0:
+        return spin_basis(L, S)
+
+    # Determine base class name components
+    use_ndiff = not (flipset is None and Ndiff is None)
+    if use_ndiff and n_blocks == 0:
+        # Special solitary class name
+        from .spin_half.spin_general.basis import BasisNdiff
+        return BasisNdiff(L, flipset, Ndiff)
+
+    # Map number of blocks to suffix; >=4 collapses to 'N'
+    if n_blocks in (1, 2, 3):
+        suffix = f"Z2{n_blocks}"
+    else:  # n_blocks >= 4
+        suffix = "Z2N"
+
+    class_name = ("BasisNdiff" if use_ndiff else "Basis") + suffix
+
+    # Import module once then getattr
+    from .spin_half.spin_general import basis as _basis_mod  # type: ignore
+    try:
+        BasisCls = getattr(_basis_mod, class_name)
+    except AttributeError as exc:  # pragma: no cover - defensive
+        raise RuntimeError(f"Expected basis class '{class_name}' not found.") from exc
+
+    return BasisCls(L, flipset, Ndiff, **blocks)
+
+
+# todo: realize spin_basis_general with numba
+def spin_super_basis(
+    L, flipset=None, Nup=None, pblock=None, zblock=None
+):
+    # from ...bridge.quspin_utils import spin_super_basis as qs_basis
+    # return qs_basis()
+    raise NotImplementedError("spin_super_basis is not implemented yet.")
+
+
+
+

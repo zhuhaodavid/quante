@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:05:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-16 18:12:26
+# @Last Modified time: 2025-09-26 17:28:31
 
 import numpy as _np
 import scipy.linalg as _sla
@@ -170,3 +170,8 @@ def isherm(A: _np.ndarray, tol=1e-10) -> bool:
         A = tonp(A)
     diff = A - A.T.conj()
     return abs(diff).max().item() < tol
+
+def sortcomplex(eng):
+    tmp = _np.round(eng, 8)
+    indx = _np.lexsort((tmp.imag, _np.abs(tmp), tmp.real))  # Sort by real part first, then by imaginary part
+    return eng[indx]

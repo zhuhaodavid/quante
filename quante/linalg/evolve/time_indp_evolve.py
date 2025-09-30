@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-08 16:02:02
+# @Last Modified time: 2025-09-30 18:35:46
 
 
 from scipy import sparse as sps
@@ -17,11 +17,10 @@ from typing import Literal
 from tqdm import tqdm
 
 from ...measure.expect import expect
-from ...generate.superoper import Liouvillian, make_Liouvillian
 from .EDevolve import _in_CPU, _in_GPU, Uinvpsi, Uexp
 
 __all__ = [
-    'EvolveEngine', 'evolve_and_measure', 'make_Liouvillian'
+    'EvolveEngine', 'evolve_and_measure'
 ]
 
 class EvolveEngine:
@@ -92,6 +91,7 @@ class EvolveEngine:
         """
         device = method[4:] if method[:3] in ['eig', 'mul'] else 'cpu'
         
+        from ...generate.matrix import Liouvillian, make_Liouvillian
         if isinstance(ham, Liouvillian):
             isdm = True
             # convert the Liouvillian to a csr sparse matrix if needed
@@ -118,11 +118,13 @@ class EvolveEngine:
         else:
             # first move the data to the device
             # assert sps.issparse(ham), "ham should be sparse array"
-            from ...bridge.torch_utils.linalg.sparse import to_csr
+            # from ...bridge.torch_utils.linalg.sparse import to_csr
+            from ...bridge.torch_utils import totc
             import torch as tc
             dtype = tc.complex128 if dtype is None else dtype
-            self.csr_mt = to_csr(ham, device=device)
-            self.psi = to_csr(init_state, device=device, dtype=dtype).reshape(-1, 1)
+            self.csr_mt = totc(ham, device=device)
+            # self.psi = to_csr(init_state, device=device, dtype=dtype).reshape(-1, 1)
+            self.psi = totc(init_state.reshape(-1, 1), device=device, dtype=dtype)
             self.pkg = tc
 
         self.cur_state = self.psi
@@ -226,8 +228,8 @@ class EvolveEngine:
             return lambda t, state: state.reshape(self.state_shape)
         elif isinstance(obs, (sps.sparray, sps.spmatrix, list, _np.ndarray)):
             if self.device != 'cpu':
-                from ...bridge.torch_utils.linalg.sparse import to_csr
-                obs = to_csr(obs, device=self.device)
+                from ...bridge.torch_utils import totc
+                obs = totc(obs, device=self.device)
             return lambda t, state: expect(obs, state.reshape(self.state_shape), isdm=self.isdm)
         elif callable(obs):
             return obs
@@ -380,8 +382,8 @@ class EvolveEngine:
         try:
             if isinstance(measure, (sps.sparray, sps.spmatrix, list, _np.ndarray)):
                 if self.device != 'cpu':
-                    from ...bridge.torch_utils.linalg.sparse import to_csr
-                    measure = to_csr(measure, device=self.device)
+                    from ...bridge.torch_utils import totc
+                    measure = totc(measure, device=self.device)
                 return expect(measure, states.reshape(*self.state_shape,-1), isdm=self.isdm).T
             else:
                 return _np.array([
@@ -400,7 +402,7 @@ class MeasureError(Exception):
     pass
 
 def evolve_and_measure(
-    matrix: _np.ndarray | sps.csr_array | Liouvillian,
+    matrix: _np.ndarray | sps.csr_array,
     inistate: _np.ndarray,
     tlist: _np.ndarray,
     *,
@@ -483,6 +485,7 @@ def evolve_and_measure(
     ndarray
         return a multi-dimensional array, the first dimension is the time point, and the subsequent dimensions are determined by `measure`
     """
+    from ...generate.matrix import Liouvillian
     tlist = _np.asarray(tlist)
     ttype = 'imag-time' if isinstance(matrix, Liouvillian) else 'real-time'
 

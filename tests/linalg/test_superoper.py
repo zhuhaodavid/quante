@@ -2,13 +2,13 @@
 # @Author: hzhu
 # @Date:   2025-05-14 22:23:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 17:58:15
+# @Last Modified time: 2025-09-30 18:56:56
 
 
 import unittest
 import quante as qt
 import numpy as np
-from quante.generate.superoper import SuperOperator
+from quante.generate.matrix import SuperOperator
 
 class TestSuperOper(unittest.TestCase):
     def setUp(self):
