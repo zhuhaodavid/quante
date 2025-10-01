@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 18:45:36
+# @Last Modified time: 2025-09-30 19:55:27
 
 import numpy as np
 import warnings
@@ -103,7 +103,7 @@ class SpinOper(Oper):
             for opstr, _ in expand.data.items():
                 if opstr.count('p') != opstr.count('m'):
                     raise ValueError(f"the operator does not conserve Nup due to the term {opstr}")
-        println(f"U(1) check passed")
+            println(f"U(1) check passed")
 
         
 

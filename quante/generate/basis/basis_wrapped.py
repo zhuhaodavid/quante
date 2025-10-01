@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 18:21:26
+# @Last Modified time: 2025-10-01 16:37:40
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -341,7 +341,7 @@ def _process_fermionbit_Nf_block(L:int, block_dic:dict) -> FermionBasis:
 
 def spin_basis_general(
     L, S:Union[str, int, float]="1/2", 
-    flipset=None, Ndiff=None, **blocks
+    Nup=None, Ndiff=None, **blocks
 ):
     """General spin-1/2 basis constructor with optional Z2 symmetries and Ndiff constraint.
 
@@ -353,7 +353,7 @@ def spin_basis_general(
         Spin quantum number (only 1/2 supported currently).
     flipset : sequence|None
         Optional flip-site set used in Ndiff-related bases.
-    Ndiff : int|None
+    Nup : int|None
         Particle number difference (or magnetization style) constraint.
     **blocks : dict[str, tuple[array_like,int]]
         Z2 symmetry specification(s). Each value must be a tuple ``(perm, sector)``.
@@ -382,23 +382,53 @@ def spin_basis_general(
     n_blocks = len(blocks)
 
     # Fast path: no Ndiff / flipset involvement and no symmetry blocks
-    if flipset is None and Ndiff is None and n_blocks == 0:
-        return spin_basis(L, S)
-
-    # Determine base class name components
-    use_ndiff = not (flipset is None and Ndiff is None)
-    if use_ndiff and n_blocks == 0:
-        # Special solitary class name
-        from .spin_half.spin_general.basis import BasisNdiff
-        return BasisNdiff(L, flipset, Ndiff)
+    if Ndiff is None:
+        if Nup is None:
+            if n_blocks == 0:
+                from .spin_half.spin_1d.basis import SpinHalfBasisNoBlock
+                return SpinHalfBasisNoBlock(L)
+        flipset, _Ndiff, _Nup2 = [], Nup, None
+    else:
+        flipset, _Ndiff = Ndiff
+        if isinstance(_Ndiff, int):
+            _Ndiff = [_Ndiff]
+        assert isinstance(_Ndiff, list), f"Ndiff must be a list, not {type(_Ndiff)}."
+        assert isinstance(flipset, (list, np.ndarray)), f"flipset must be a list or array, not {type(flipset)}."
+        if Nup is None:
+            _Nup2 = None
+        else:
+            if isinstance(Nup, int):
+                Nup = [Nup]
+            if len(flipset) == 0:
+                assert set(_Ndiff) == set(Nup), "When flipset is empty, Ndiff must equal Nup."
+                flipset, _Ndiff = [], Nup
+                _Nup2 = None
+            else:
+                _Nup2 = []
+                for i in Nup:
+                    for j in _Ndiff:
+                        assert (i+j)%2 == 0, f"Nup + Ndiff must be even, but got Nup={i}, Ndiff={j}."
+                        _Nup2.append(((i+j)//2, (i-j)//2))
+                _Nup2 = np.array(_Nup2)
 
     # Map number of blocks to suffix; >=4 collapses to 'N'
     if n_blocks in (1, 2, 3):
-        suffix = f"Z2{n_blocks}"
+        class_name = f"BasisZ2{n_blocks}"
     else:  # n_blocks >= 4
-        suffix = "Z2N"
+        class_name = "BasisZ2N"
 
-    class_name = ("BasisNdiff" if use_ndiff else "Basis") + suffix
+    if n_blocks == 0:
+        # Special solitary class name
+        from .spin_half.spin_general.basis import BasisNdiff
+        return BasisNdiff(L, flipset, _Ndiff, _Nup2)
+
+    # Map number of blocks to suffix; >=4 collapses to 'N'
+    if n_blocks in (1, 2, 3):
+        class_name = f"BasisZ2{n_blocks}"
+    else:  # n_blocks >= 4
+        class_name = "BasisZ2N"
+
+    # class_name = ("BasisNdiff" if use_ndiff else "Basis") + suffix
 
     # Import module once then getattr
     from .spin_half.spin_general import basis as _basis_mod  # type: ignore
@@ -407,7 +437,7 @@ def spin_basis_general(
     except AttributeError as exc:  # pragma: no cover - defensive
         raise RuntimeError(f"Expected basis class '{class_name}' not found.") from exc
 
-    return BasisCls(L, flipset, Ndiff, **blocks)
+    return BasisCls(L, flipset, _Ndiff, _Nup2, **blocks)
 
 
 # todo: realize spin_basis_general with numba

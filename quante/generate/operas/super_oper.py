@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-22 13:10:02
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 17:31:30
+# @Last Modified time: 2025-09-30 19:51:19
 
 import numpy as np
 from typing import Literal
@@ -106,7 +106,7 @@ class LiouvilleOper(SpinOper):
         elif self.indx_order == 'snake':
             return self._build_liouvillian_snake()
         else:
-            raise ValueError(f"indx_order should be 'stacked' or 'snake', but not {indx_order}")
+            raise ValueError(f"indx_order should be 'stacked' or 'snake', but not {self.indx_order}")
 
     def _build_liouvillian_stacked(self):
         L = self.L

@@ -2,14 +2,14 @@
 # @Author: hzhu
 # @Date:   2025-09-24 12:28:43
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 19:06:36
+# @Last Modified time: 2025-09-30 20:46:14
 
 from typing import Literal
 import numpy as np
 # from quspin.operators import hamiltonian
 import scipy.sparse as sp
 
-from ..quspin_extension_wrap import spin_basis_2d, hamiltonian
+from ..quspin_extension_wrap import spin_basis_2d, hamiltonian, spin_basis_general
 from ....generate.operas.spin import SpinOper
 from ....generate.operas.super_oper import LiouvilleOper
 
@@ -20,7 +20,7 @@ def real_if_close(mat):
         mat.data = np.real_if_close(mat.data)
         return mat
 
-class spin_super_basis:
+class spin_super_basis(spin_basis_2d):
     """spin super basis for the Liouvillian (super operator) in master equation.
 
     ctype = 'chain' or 'ladder'
@@ -101,28 +101,43 @@ class spin_super_basis:
 
         assert _real_block not in blocks, f"{_real_block} should not in blocks {blocks}"
         blocks.update(_blocks)
-        self.full_basis = spin_basis_2d(
-            Lx=Lx, Ly=Ly, pauli=pauli, Nup=Nup, **blocks
-        )
-        blocks[_real_block] = 0
-        self.sym_basis = spin_basis_2d(
-            Lx=Lx, Ly=Ly, pauli=pauli, Nup=Nup, **blocks
-        )
-        blocks[_real_block] = 1
-        self.asym_basis = spin_basis_2d(
-            Lx=Lx, Ly=Ly, pauli=pauli, Nup=Nup, **blocks
-        )
+        self._real_block = _real_block
+        self._superblock = blocks.copy()
+        super().__init__(Lx=Lx, Ly=Ly, pauli=pauli, Nup=Nup, **blocks)
+        self._sym_basis = None
+        self._asym_basis = None
         self._P = None
-        self._maps_dict = self.full_basis._maps_dict.copy()
-        self._pauli = self.full_basis._pauli
+    
+    
+    @property
+    def sym_basis(self):
+        blocks = self._superblock.copy()
+        if self._sym_basis is None:
+            blocks[self._real_block] = 0
+            self._sym_basis = spin_basis_2d(
+                Lx=self.Lx, Ly=self.Ly, pauli=self._pauli, 
+                Nup=self._pcon_args['Nup'], **blocks
+            )
+        return self._sym_basis
+    
+    @property
+    def asym_basis(self):
+        blocks = self._superblock.copy()
+        if self._asym_basis is None:
+            blocks[self._real_block] = 1
+            self._asym_basis = spin_basis_2d(
+                Lx=self.Lx, Ly=self.Ly, pauli=self._pauli, 
+                Nup=self._pcon_args['Nup'], **blocks
+            )
+        return self._asym_basis
     
     def project_matrix(self):
         if self._P is None:
-            if self.full_basis.Ns == 2**(2*self.L):
+            if self.Ns == 2**(2*self.L):
                 P_sym = self.sym_basis.get_proj(np.complex128)
                 P_antisym = 1j*self.asym_basis.get_proj(np.complex128)
             else:
-                P0 = self.full_basis.get_proj(np.complex128)
+                P0 = self.get_proj(np.complex128)
                 P_sym = P0.conj().T @ self.sym_basis.get_proj(np.complex128)
                 P_antisym = 1j*(P0.conj().T @ self.asym_basis.get_proj(np.complex128))
             
@@ -134,13 +149,6 @@ class spin_super_basis:
         res = P.conj().T @ liou_mat @ P
         return real_if_close(res)
 
-    def proj_from_dm(self, dm):
-        pass
-
-    def recover_dm(self, vec):
-        pass
-
-
 def liouvillian(
     L:int, 
     ham:SpinOper, 
@@ -148,14 +156,16 @@ def liouvillian(
     basis:spin_super_basis,
     indx_order:Literal['stacked', 'snake']='stacked',
     flip:bool=False,
-    check_symm:bool=True
+    check_symm:bool=False
 ):
+    assert isinstance(basis, spin_basis_general), "basis must be an instance of spin_super_basis"
     liou = LiouvilleOper(L=L, ham=ham, lindblad_ops=lindblad_ops, indx_order=indx_order, flip=flip)
+
     if isinstance(basis, spin_super_basis):
         assert flip == basis.flip, "flip must be the same as basis.flip"
         if basis.indx_order != indx_order:
             raise ValueError(f"basis.indx_order: {basis.indx_order} not the same as indx_order: {indx_order}")
-        liou_mat = hamiltonian(liou, basis=basis.full_basis, dtype=np.complex128, check_symm=check_symm).tocsr()
+        liou_mat = hamiltonian(liou, basis=basis, dtype=np.complex128, check_symm=check_symm).tocsr()
         return basis.realify(liou_mat)
     else:
         return hamiltonian(liou, basis=basis, dtype=np.complex128, check_symm=check_symm).tocsr()

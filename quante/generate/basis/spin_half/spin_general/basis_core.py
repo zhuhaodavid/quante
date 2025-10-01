@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2025-09-28 14:30:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-28 19:08:51
+# @Last Modified time: 2025-10-01 17:51:05
 
 
 import numpy as np
-from .....basicfun.utils_numba import njit, config, numba_cache_dir, pnjit, prange
+from .....basicfun.utils_numba import njit, config, numba_cache_dir
 from ..bitsoperation import perm_operation, count_tot_down, next_combination
 
 ###########################################
@@ -78,9 +78,76 @@ def construct_Ndiff_basis(L: int, flipmask: int, Ndiff: np.ndarray) -> tuple[int
     s_list = np.array(np.sort(s_list))
     return len(s_list), s_list
 
+config.CACHE_DIR = numba_cache_dir
+@njit
+def make_state(flipmask, s1, s2, l1, l2):
+    state = 0
+    p1 = 0
+    p2 = 0
+    for i in range(l1+l2):
+        if (flipmask >> i) & 1:
+            if (s2 >> p2) & 1:
+                state |= (1 << i)
+            p2 += 1
+        else:
+            if (s1 >> p1) & 1:
+                state |= (1 << i)
+            p1 += 1
+    return state
+
+
+
+config.CACHE_DIR = numba_cache_dir
+@njit
+def construct_Nup2_basis(L: int, flipmask: int, Nup2: np.ndarray) -> tuple[int, np.ndarray]:
+    s_list = []
+    l2 = count_tot_down(flipmask)
+    l1 = L - l2
+    for n1, n2 in Nup2:
+        if l1 == n1:
+            s1 = 0
+            if l2 == n2:
+                s2 = 0
+                s = make_state(flipmask, s1, s2, l1, l2)
+                s_list.append(s)
+            else:
+                s2 = (1 << (l2 - n2)) - 1
+                while s2 < (1 << l2):
+                    s = make_state(flipmask, s1, s2, l1, l2)
+                    s_list.append(s)
+                    s2 = next_combination(s2)
+            continue
+        s1 = (1 << (l1 - n1)) - 1
+        while s1 < (1 << l1):
+            if l2 == n2:
+                s2 = 0
+                s = make_state(flipmask, s1, s2, l1, l2)
+                s_list.append(s)
+            else:
+                s2 = (1 << (l2 - n2)) - 1
+                while s2 < (1 << l2):
+                    s = make_state(flipmask, s1, s2, l1, l2)
+                    s_list.append(s)
+                    s2 = next_combination(s2)
+            s1 = next_combination(s1)
+    s_list = np.array(np.sort(s_list))
+    return len(s_list), s_list
+
+
+
 ############################################
 # Ndiff Z21
 #############################################
+config.CACHE_DIR = numba_cache_dir
+@njit
+def is_repr_Z21(s, perm, block):
+    s_prime = perm_operation(s, perm)
+    if (s_prime < s) or (block==1 and s_prime == s):
+        return False
+    return True
+
+
+
 config.CACHE_DIR = numba_cache_dir
 @njit
 def construct_Ndiff_Z21_basis(L: int, flipmask: int, Ndiff: np.ndarray, perm, block) -> tuple[int, np.ndarray]:
@@ -92,32 +159,65 @@ def construct_Ndiff_Z21_basis(L: int, flipmask: int, Ndiff: np.ndarray, perm, bl
 
         if L == Nup:
             real_s = 0 ^ flipmask
-
-            real_s_prime = perm_operation(real_s, perm)
-            if real_s_prime < real_s:
-                continue
-            if block==1 and real_s_prime == real_s:
-                continue
-            s_list.append(real_s)
-            continue
-        
+            if is_repr_Z21(real_s, perm, block):
+                s_list.append(real_s)
+       
         s = (1 << (L - Nup)) - 1
-
-        # 在 N 个位置内生成具有 Nup 个1的所有可能组合
         while s < (1 << L):
             real_s = s ^ flipmask
             s = next_combination(s)
             
-            real_s_prime = perm_operation(real_s, perm)
-            if real_s_prime < real_s:
-                continue
-            if block==1 and real_s_prime == real_s:
-                continue
-            s_list.append(real_s)
-
+            if is_repr_Z21(real_s, perm, block):
+                s_list.append(real_s)
         
     s_list = np.array(np.sort(s_list))
     return len(s_list), s_list
+
+
+
+############################################
+# Nup2 Z21
+#############################################
+config.CACHE_DIR = numba_cache_dir
+@njit
+def construct_Nup2_Z21_basis(L: int, flipmask: int, Nup2: np.ndarray, perm, block) -> tuple[int, np.ndarray]:
+    s_list = []
+    l2 = count_tot_down(flipmask)
+    l1 = L - l2
+    for n1, n2 in Nup2:
+        if l1 == n1:
+            s1 = 0
+            if l2 == n2:
+                s2 = 0
+                s = make_state(flipmask, s1, s2, l1, l2)
+                if is_repr_Z21(s, perm, block):
+                    s_list.append(s)
+            else:
+                s2 = (1 << (l2 - n2)) - 1
+                while s2 < (1 << l2):
+                    s = make_state(flipmask, s1, s2, l1, l2)
+                    if is_repr_Z21(s, perm, block):
+                        s_list.append(s)
+                    s2 = next_combination(s2)
+            continue
+        s1 = (1 << (l1 - n1)) - 1
+        while s1 < (1 << l1):
+            if l2 == n2:
+                s2 = 0
+                s = make_state(flipmask, s1, s2, l1, l2)
+                if is_repr_Z21(s, perm, block):
+                    s_list.append(s)
+            else:
+                s2 = (1 << (l2 - n2)) - 1
+                while s2 < (1 << l2):
+                    s = make_state(flipmask, s1, s2, l1, l2)
+                    if is_repr_Z21(s, perm, block):
+                        s_list.append(s)
+                    s2 = next_combination(s2)
+            s1 = next_combination(s1)
+    s_list = np.array(np.sort(s_list))
+    return len(s_list), s_list
+
 
 ###########################################
 # Z22
@@ -177,7 +277,7 @@ def representative_Z22(s, perm0, perm1):
 
 
 ###########################################
-# Nup Z22
+# Ndiff Z22
 ##############################################
 config.CACHE_DIR = numba_cache_dir
 @njit
@@ -215,6 +315,64 @@ def construct_Ndiff_Z22_basis(L: int, flipmask: int, Ndiff: np.ndarray, perm0, b
     s_list = s_list[indx]
     R_list = np.array(R_list)[indx]
     return len(s_list), s_list, R_list
+
+############################################
+# Nup2 Z22
+#############################################
+config.CACHE_DIR = numba_cache_dir
+@njit
+def construct_Nup2_Z22_basis(L: int, flipmask: int, Nup2: np.ndarray, perm0, block0, perm1, block1) -> tuple[int, np.ndarray]:
+    s_list = []
+    R_list = []
+    l2 = count_tot_down(flipmask)
+    l1 = L - l2
+    for n1, n2 in Nup2:
+        if l1 == n1:
+            s1 = 0
+            if l2 == n2:
+                s2 = 0
+                s = make_state(flipmask, s1, s2, l1, l2)
+                is_repr_s, r = is_repr_Z22(s, perm0, perm1, block0, block1)
+                if is_repr_s:
+                    s_list.append(s)
+                    R_list.append(r)
+            else:
+                s2 = (1 << (l2 - n2)) - 1
+                while s2 < (1 << l2):
+                    s = make_state(flipmask, s1, s2, l1, l2)
+                    is_repr_s, r = is_repr_Z22(s, perm0, perm1, block0, block1)
+                    if is_repr_s:
+                        s_list.append(s)
+                        R_list.append(r)
+                    s2 = next_combination(s2)
+            continue
+        s1 = (1 << (l1 - n1)) - 1
+        while s1 < (1 << l1):
+            if l2 == n2:
+                s2 = 0
+                s = make_state(flipmask, s1, s2, l1, l2)
+                is_repr_s, r = is_repr_Z22(s, perm0, perm1, block0, block1)
+                if is_repr_s:
+                    s_list.append(s)
+                    R_list.append(r)
+            else:
+                s2 = (1 << (l2 - n2)) - 1
+                while s2 < (1 << l2):
+                    s = make_state(flipmask, s1, s2, l1, l2)
+                    is_repr_s, r = is_repr_Z22(s, perm0, perm1, block0, block1)
+                    if is_repr_s:
+                        s_list.append(s)
+                        R_list.append(r)
+                    s2 = next_combination(s2)
+            s1 = next_combination(s1)
+
+    s_list = np.array(s_list) 
+    indx = np.argsort(s_list)
+    s_list = s_list[indx]
+    R_list = np.array(R_list)[indx]
+    return len(s_list), s_list, R_list
+
+
 
 ###########################################
 # Z23
@@ -339,6 +497,63 @@ def construct_Ndiff_Z23_basis(L: int, flipmask: int, Ndiff: np.ndarray, perm0, b
     s_list = s_list[indx]
     R_list = np.array(R_list)[indx]
     return len(s_list), s_list, R_list
+
+############################################
+# Nup2 Z23
+#############################################
+config.CACHE_DIR = numba_cache_dir
+@njit
+def construct_Nup2_Z23_basis(L: int, flipmask: int, Nup2: np.ndarray, perm0, block0, perm1, block1, perm2, block2) -> tuple[int, np.ndarray]:
+    s_list = []
+    R_list = []
+    l2 = count_tot_down(flipmask)
+    l1 = L - l2
+    for n1, n2 in Nup2:
+        if l1 == n1:
+            s1 = 0
+            if l2 == n2:
+                s2 = 0
+                s = make_state(flipmask, s1, s2, l1, l2)
+                is_repr_s, r = is_repr_Z23(s, perm0, perm1, perm2, block0, block1, block2)
+                if is_repr_s:
+                    s_list.append(s)
+                    R_list.append(r)
+            else:
+                s2 = (1 << (l2 - n2)) - 1
+                while s2 < (1 << l2):
+                    s = make_state(flipmask, s1, s2, l1, l2)
+                    is_repr_s, r = is_repr_Z23(s, perm0, perm1, perm2, block0, block1, block2)
+                    if is_repr_s:
+                        s_list.append(s)
+                        R_list.append(r)
+                    s2 = next_combination(s2)
+            continue
+        s1 = (1 << (l1 - n1)) - 1
+        while s1 < (1 << l1):
+            if l2 == n2:
+                s2 = 0
+                s = make_state(flipmask, s1, s2, l1, l2)
+                is_repr_s, r = is_repr_Z23(s, perm0, perm1, perm2, block0, block1, block2)
+                if is_repr_s:
+                    s_list.append(s)
+                    R_list.append(r)
+            else:
+                s2 = (1 << (l2 - n2)) - 1
+                while s2 < (1 << l2):
+                    s = make_state(flipmask, s1, s2, l1, l2)
+                    is_repr_s, r = is_repr_Z23(s, perm0, perm1, perm2, block0, block1, block2)
+                    if is_repr_s:
+                        s_list.append(s)
+                        R_list.append(r)
+                    s2 = next_combination(s2)
+            s1 = next_combination(s1)
+
+    s_list = np.array(s_list) 
+    indx = np.argsort(s_list)
+    s_list = s_list[indx]
+    R_list = np.array(R_list)[indx]
+    return len(s_list), s_list, R_list
+
 
 
 ###########################################

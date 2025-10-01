@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-28 14:27:09
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-28 17:57:30
+# @Last Modified time: 2025-10-01 17:51:20
 
 from ...basis_class import SpinHalfBasis
 import numpy as np
@@ -19,8 +19,6 @@ def get_permute_number(L, perm):
             return i + 1
     
     raise ValueError("perm should be self-inverse")
-
-
 
 def _permute(L, indx, sign, perm):
     res = np.zeros(L, dtype=int)
@@ -54,11 +52,6 @@ def _valdate_z2_commute(L, perm0, perm1):
     assert all(indx1 == indx2) and all(sign1 == sign2), f"perm0 and perm1 should commute, perm0: \n{perm0},\n perm1: \n{perm1}"
 
 
-class SpinHalfSuperBasis(SpinHalfBasis):
-    def __init__(self, L: int, flipset, Ndiff, **blocks) -> None:
-        super().__init__(L)
-
-
 class SpinHalfGeneralBasis(SpinHalfBasis):
     def __init__(self, L: int, flipset, Ndiff, **blocks) -> None:
         super().__init__(L)
@@ -68,9 +61,11 @@ class SpinHalfGeneralBasis(SpinHalfBasis):
             if isinstance(Ndiff, int):
                 Ndiff = [Ndiff]
             self.Ndiff = np.sort(list(set(Ndiff)))
+            self.flipnumber = len(flipset)
         else:
             self.flipmask = None
             self.Ndiff = None
+            self.flipnumber = 0
 
         ns = []
         ps = []
@@ -88,42 +83,22 @@ class SpinHalfGeneralBasis(SpinHalfBasis):
         self.perm = np.array(ps)
         self.block = np.array(bs)
 
+    def _validate_Ndiff(self) -> None:
+        min_ndiff = -self.flipnumber
+        max_ndiff = self.L - self.flipnumber
+        for ndiff in self.Ndiff:
+            assert ndiff in list(range(min_ndiff, max_ndiff+1)), "Ndiff should be in range(L//2)"
 
-############################################
-# Z21
-##############################################
-class BasisZ21(SpinHalfGeneralBasis):
-    def __init__(self, L: int, flipset, Ndiff, **blocks) -> None:
-        """
-        参数：
-        - L (int): 系统的大小。
-        - pblock (Optional[int]): 反演对称性块。-1 或 1。
-        """
-        assert len(blocks) == 1, "Z21 should have one Z2 symmetry"
-        assert flipset is None and Ndiff is None, "Z21 should not have Ndiff symmetry"
-        super().__init__(L, flipset, Ndiff, **blocks)
-        self._validate_block()
-        from .basis_core import construct_Z21_basis
-        self.Ns, self.s_list = construct_Z21_basis(self.L, self.perm[0], self.block[0])
-        self.default_complex = False
-
-    def _validate_block(self) -> None:
-        _valdate_z2(self.L, self.perm[0], self.block[0])
-   
-    def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
-        from .matrix_core import single_sparse_matrix_element_Z21
-        return single_sparse_matrix_element_Z21(opnm, posn, coef, self.L, self.perm[0], self.block[0], self.Ns, self.s_list, row_init, col_init, ME_init)
-    
-    def permute(self, s):
+    def permute(self, s, which_perm):
         from .basis_core import perm_operation
-        return perm_operation(s, self.perm[0])
+        return perm_operation(s, self.perm[which_perm])
 
 
 ############################################
 # Ndiff
 ##############################################       
 class BasisNdiff(SpinHalfGeneralBasis):
-    def __init__(self, L: int, flipset, Ndiff, **blocks) -> None:
+    def __init__(self, L: int, flipset, Ndiff, Nup2, **blocks) -> None:
         """
         参数：
         - L (int): 系统的大小。
@@ -132,55 +107,64 @@ class BasisNdiff(SpinHalfGeneralBasis):
         assert len(blocks) == 0, "Ndiff should not have Z2 symmetry"
         super().__init__(L, flipset, Ndiff, **blocks)
         self._validate_Ndiff()
-        from .basis_core import construct_Ndiff_basis
-        self.Ns, self.s_list = construct_Ndiff_basis(self.L, self.flipmask, self.Ndiff)
+        if Nup2 is not None:
+            from .basis_core import construct_Nup2_basis
+            self.Ns, self.s_list = construct_Nup2_basis(self.L, self.flipmask, Nup2)
+        else:
+            from .basis_core import construct_Ndiff_basis
+            self.Ns, self.s_list = construct_Ndiff_basis(self.L, self.flipmask, self.Ndiff)
         self.default_complex = False
 
-    def _validate_Ndiff(self) -> None:
-        for ndiff in self.Ndiff:
-            assert ndiff in list(range(-self.L//2, self.L//2+1)), "Ndiff should be in range(L//2)"
-    
     def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
         from .matrix_core import single_sparse_matrix_element_Nup
         return single_sparse_matrix_element_Nup(opnm, posn, coef, self.L, self.Ns, self.s_list, row_init, col_init, ME_init)
 
 
+
 ############################################
-# Ndiff Z21
-##############################################       
-class BasisNdiffZ21(SpinHalfGeneralBasis):
-    def __init__(self, L: int, flipset:np.ndarray, Ndiff:int|list[int], **blocks) -> None:
+# Z21
+##############################################
+class BasisZ21(SpinHalfGeneralBasis):
+    def __init__(self, L: int, flipset, Ndiff, Nup2, **blocks) -> None:
         """
         参数：
         - L (int): 系统的大小。
-        - Ndiff (Optional[int]): 
+        - pblock (Optional[int]): 反演对称性块。-1 或 1。
         """
-        assert len(blocks) == 1, "NdiffZ21 should have one Z2 symmetry"
+        assert len(blocks) == 1, "Z21 should have one Z2 symmetry"
         super().__init__(L, flipset, Ndiff, **blocks)
         self._validate_block()
-        from .basis_core import construct_Ndiff_Z21_basis
-        self.Ns, self.s_list = construct_Ndiff_Z21_basis(self.L, self.flipmask, self.Ndiff, self.perm[0], self.block[0])
+
+        if Nup2 is not None:
+            from .basis_core import construct_Nup2_Z21_basis
+            self.Ns, self.s_list = construct_Nup2_Z21_basis(self.L, self.flipmask, Nup2, self.perm[0], self.block[0])
+        elif Ndiff is not None:
+            self._validate_Ndiff()
+            from .basis_core import construct_Ndiff_Z21_basis
+            self.Ns, self.s_list = construct_Ndiff_Z21_basis(
+                self.L, self.flipmask, self.Ndiff, self.perm[0], self.block[0]
+            )
+        else:
+            from .basis_core import construct_Z21_basis
+            self.Ns, self.s_list = construct_Z21_basis(self.L, self.perm[0], self.block[0])
+        
         self.default_complex = False
 
-    def _validate_Ndiff(self) -> None:
-        assert self.Ndiff in list(range(-self.L//2, self.L//2+1)), "Ndiff should be in range(L//2)"
- 
     def _validate_block(self) -> None:
         _valdate_z2(self.L, self.perm[0], self.block[0])
-    
+ 
     def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
         from .matrix_core import single_sparse_matrix_element_Z21
-        return single_sparse_matrix_element_Z21(opnm, posn, coef, self.L, self.perm[0], self.block[0], self.Ns, self.s_list, row_init, col_init, ME_init)
- 
-    def permute(self, s):
-        from .basis_core import perm_operation
-        return perm_operation(s, self.perm[0])
-
+        return single_sparse_matrix_element_Z21(
+            opnm, posn, coef, self.L, self.perm[0], self.block[0], 
+            self.Ns, self.s_list, row_init, col_init, ME_init
+        )
+    
 ############################################
 # Z22
 ##############################################
 class BasisZ22(SpinHalfGeneralBasis):
-    def __init__(self, L: int, flipset, Ndiff, **blocks) -> None:
+    def __init__(self, L: int, flipset, Ndiff, Nup2, **blocks) -> None:
         """
         参数：
         - L (int): 系统的大小。
@@ -189,87 +173,73 @@ class BasisZ22(SpinHalfGeneralBasis):
         assert len(blocks) == 2, "Z22 should have two Z2 symmetries"
         super().__init__(L, flipset, Ndiff, **blocks)
         self._validate_block()
-        from .basis_core import construct_Z22_basis
-        self.Ns, self.s_list, self.R_list = construct_Z22_basis(self.L, self.perm[0], self.block[0], self.perm[1], self.block[1])
+
+        if Nup2 is not None:
+            from .basis_core import construct_Nup2_Z22_basis
+            self.Ns, self.s_list, self.R_list = construct_Nup2_Z22_basis(
+                self.L, self.flipmask, Nup2, self.perm[0], self.block[0],
+                self.perm[1], self.block[1]
+            )
+        elif Ndiff is not None:
+            self._validate_Ndiff()
+            from .basis_core import construct_Ndiff_Z22_basis
+            self.Ns, self.s_list, self.R_list = construct_Ndiff_Z22_basis(
+                self.L, self.flipmask, self.Ndiff, self.perm[0], self.block[0], self.perm[1], self.block[1]
+            ) 
+        else:
+            from .basis_core import construct_Z22_basis
+            self.Ns, self.s_list, self.R_list = construct_Z22_basis(
+                self.L, self.perm[0], self.block[0], self.perm[1], self.block[1]
+            )
         self.default_complex = False
 
     def _validate_block(self) -> None:
         _valdate_z2(self.L, self.perm[0], self.block[0])
         _valdate_z2(self.L, self.perm[1], self.block[1])
         _valdate_z2_commute(self.L, self.perm[0], self.perm[1])
-
-    
+   
     def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
         from .matrix_core import single_sparse_matrix_element_Z22
-        return single_sparse_matrix_element_Z22(opnm, posn, coef, self.L, self.perm[0], self.perm[1], self.block[0], self.block[1], self.Ns, self.s_list, self.R_list, row_init, col_init, ME_init)
-    
-    def permute(self, s, which_perm):
-        if which_perm == 0:
-            from .basis_core import perm_operation
-            return perm_operation(s, self.perm[0])
-        elif which_perm == 1:
-            from .basis_core import perm_operation
-            return perm_operation(s, self.perm[1])
-        else:
-            raise ValueError("which_perm should be 0 or 1")
-
-
-############################################
-# Nup Z22
-##############################################
-class BasisNdiffZ22(SpinHalfGeneralBasis):
-    def __init__(self, L: int, flipset:np.ndarray, Ndiff:int|list[int], **blocks) -> None:
-        """
-        参数：
-        - L (int): 系统的大小。
-        - pblock (Optional[int]): 反演对称性块。-1 或 1。
-        """
-        assert len(blocks) == 2, "NdiffZ22 should have two Z2 symmetries"
-        super().__init__(L, flipset, Ndiff, **blocks)
-        self._validate_block()
-        from .basis_core import construct_Ndiff_Z22_basis
-        self.Ns, self.s_list, self.R_list = construct_Ndiff_Z22_basis(self.L, self.flipmask, self.Ndiff, self.perm[0], self.block[0], self.perm[1], self.block[1])
-        self.default_complex = False
-
-    def _validate_block(self) -> None:
-        _valdate_z2(self.L, self.perm[0], self.block[0])
-        _valdate_z2(self.L, self.perm[1], self.block[1])
-        _valdate_z2_commute(self.L, self.perm[0], self.perm[1])
-    
-    def _validate_Ndiff(self) -> None:
-        for ndiff in self.Ndiff:
-            assert ndiff in list(range(-self.L//2, self.L//2+1)), "Ndiff should be in range(L//2)"
-    
-    def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
-        from .matrix_core import single_sparse_matrix_element_Z22
-        return single_sparse_matrix_element_Z22(opnm, posn, coef, self.L, self.perm[0], self.perm[1], self.block[0], self.block[1], self.Ns, self.s_list, self.R_list, row_init, col_init, ME_init)
-    
-    def permute(self, s, which_perm):
-        if which_perm == 0:
-            from .basis_core import perm_operation
-            return perm_operation(s, self.perm[0])
-        elif which_perm == 1:
-            from .basis_core import perm_operation
-            return perm_operation(s, self.perm[1])
-        else:
-            raise ValueError("which_perm should be 0 or 1")
+        return single_sparse_matrix_element_Z22(
+            opnm, posn, coef, self.L, self.perm[0], self.perm[1], self.block[0], self.block[1], 
+            self.Ns, self.s_list, self.R_list, row_init, col_init, ME_init
+        )
 
 ############################################
 # Z23
 ##############################################
 class BasisZ23(SpinHalfGeneralBasis):
-    def __init__(self, L: int, flipset, Ndiff, **blocks) -> None:
+    def __init__(self, L: int, flipset, Ndiff, Nup2, **blocks) -> None:
         """
         参数：
         - L (int): 系统的大小。
         - pblock (Optional[int]): 反演对称性块。-1 或 1。
         """
         assert len(blocks) == 3, "Z23 should have three Z2 symmetries"
-        assert flipset is None and Ndiff is None, "Z23 should not have Ndiff symmetry"
         super().__init__(L, flipset, Ndiff, **blocks)
         self._validate_block()
-        from .basis_core import construct_Z23_basis
-        self.Ns, self.s_list, self.R_list = construct_Z23_basis(self.L, self.perm[0], self.block[0], self.perm[1], self.block[1], self.perm[2], self.block[2])
+        
+        if Nup2 is not None:
+            from .basis_core import construct_Nup2_Z23_basis
+            self.Ns, self.s_list, self.R_list = construct_Nup2_Z23_basis(
+                self.L, self.flipmask, Nup2, self.perm[0], self.block[0],
+                self.perm[1], self.block[1], self.perm[2], self.block[2]
+            )
+        elif Ndiff is None:
+            from .basis_core import construct_Z23_basis
+            self.Ns, self.s_list, self.R_list = construct_Z23_basis(
+                self.L, self.perm[0], self.block[0], self.perm[1], 
+                self.block[1], self.perm[2], self.block[2]
+            )
+        else:
+            self._validate_Ndiff()
+            from .basis_core import construct_Ndiff_Z23_basis
+            self.Ns, self.s_list, self.R_list = construct_Ndiff_Z23_basis(
+                self.L, self.flipmask, self.Ndiff, self.perm[0], 
+                self.block[0], self.perm[1], self.block[1], 
+                self.perm[2], self.block[2]
+            )
+        
         self.default_complex = False
 
     def _validate_block(self) -> None:
@@ -279,86 +249,38 @@ class BasisZ23(SpinHalfGeneralBasis):
         _valdate_z2_commute(self.L, self.perm[0], self.perm[1])
         _valdate_z2_commute(self.L, self.perm[0], self.perm[2])
         _valdate_z2_commute(self.L, self.perm[1], self.perm[2])
-
-    
+ 
     def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
         from .matrix_core import single_sparse_matrix_element_Z23
-        return single_sparse_matrix_element_Z23(opnm, posn, coef, self.L, self.perm[0], self.perm[1], self.perm[2], self.block[0], self.block[1], self.block[2], self.Ns, self.s_list, self.R_list, row_init, col_init, ME_init)
-    
-    def permute(self, s, which_perm):
-        if which_perm == 0:
-            from .basis_core import perm_operation
-            return perm_operation(s, self.perm[0])
-        elif which_perm == 1:
-            from .basis_core import perm_operation
-            return perm_operation(s, self.perm[1])
-        else:
-            raise ValueError("which_perm should be 0 or 1")
-
-
-############################################
-# Nup Z23
-##############################################
-class BasisNdiffZ23(SpinHalfGeneralBasis):
-    def __init__(self, L: int, flipset:np.ndarray, Ndiff:int|list[int], **blocks) -> None:
-        """
-        参数：
-        - L (int): 系统的大小。
-        - pblock (Optional[int]): 反演对称性块。-1 或 1。
-        """
-        assert len(blocks) == 3, "NdiffZ23 should have three Z2 symmetries"
-        super().__init__(L, flipset, Ndiff, **blocks)
-        self._validate_block()
-        from .basis_core import construct_Ndiff_Z23_basis
-        self.Ns, self.s_list, self.R_list = construct_Ndiff_Z23_basis(self.L, self.flipmask, self.Ndiff, self.perm[0], self.block[0], self.perm[1], self.block[1], self.perm[2], self.block[2])
-        self.default_complex = False
-
-    def _validate_block(self) -> None:
-        _valdate_z2(self.L, self.perm[0], self.block[0])
-        _valdate_z2(self.L, self.perm[1], self.block[1])
-        _valdate_z2(self.L, self.perm[2], self.block[2])
-        _valdate_z2_commute(self.L, self.perm[0], self.perm[1])
-        _valdate_z2_commute(self.L, self.perm[0], self.perm[2])
-        _valdate_z2_commute(self.L, self.perm[1], self.perm[2])
-
-    def _validate_Ndiff(self) -> None:
-        for ndiff in self.Ndiff:
-            assert ndiff in list(range(-self.L//2, self.L//2+1)), "Ndiff should be in range(L//2)"
-
-    def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
-        from .matrix_core import single_sparse_matrix_element_Z23
-        return single_sparse_matrix_element_Z23(opnm, posn, coef, self.L, self.perm[0], self.perm[1], self.perm[2], self.block[0], self.block[1], self.block[2], self.Ns, self.s_list, self.R_list, row_init, col_init, ME_init)
-
-    def permute(self, s, which_perm):
-        if which_perm == 0:
-            from .basis_core import perm_operation
-            return perm_operation(s, self.perm[0])
-        elif which_perm == 1:
-            from .basis_core import perm_operation
-            return perm_operation(s, self.perm[1])
-        elif which_perm == 2:
-            from .basis_core import perm_operation
-            return perm_operation(s, self.perm[2])
-        else:
-            raise ValueError("which_perm should be 0 or 1")
-
-
+        return single_sparse_matrix_element_Z23(
+            opnm, posn, coef, self.L, self.perm[0], self.perm[1], self.perm[2], self.block[0], 
+            self.block[1], self.block[2], self.Ns, self.s_list, self.R_list, row_init, col_init, ME_init
+        )
+   
 ############################################
 # Z2N
 ##############################################
 class BasisZ2N(SpinHalfGeneralBasis):
-    def __init__(self, L: int, flipset, Ndiff, **blocks) -> None:
+    def __init__(self, L: int, flipset, Ndiff, Nup2, **blocks) -> None:
         """
         参数：
         - L (int): 系统的大小。
         - pblock (Optional[int]): 反演对称性块。-1 或 1。
         """
         assert len(blocks) >= 1, "Z2N should have at least one Z2 symmetry"
-        assert flipset is None and Ndiff is None, "Z2N should not have Ndiff symmetry"
         super().__init__(L, flipset, Ndiff, **blocks)
         self._validate_block()
-        from .basis_core import construct_Z2N_basis
-        self.Ns, self.s_list, self.R_list = construct_Z2N_basis(self.L, self.perm, self.block)
+         
+        if Ndiff is None:
+            from .basis_core import construct_Z2N_basis
+            self.Ns, self.s_list, self.R_list = construct_Z2N_basis(self.L, self.perm, self.block)
+        else:
+            self._validate_Ndiff()
+            from .basis_core import construct_Ndiff_Z2N_basis
+            self.Ns, self.s_list, self.R_list = construct_Ndiff_Z2N_basis(
+                self.L, self.flipmask, self.Ndiff, self.perm, self.block
+            )
+
         self.default_complex = False
 
     def _validate_block(self) -> None:
@@ -368,50 +290,14 @@ class BasisZ2N(SpinHalfGeneralBasis):
                 if i < j:
                     _valdate_z2_commute(self.L, perm1, perm2)
     
-   
-    def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
-        from .matrix_core import single_sparse_matrix_element_Z2N
-        return single_sparse_matrix_element_Z2N(opnm, posn, coef, self.L, self.perm, self.block, self.Ns, self.s_list, self.R_list, row_init, col_init, ME_init)
-    
-    def permute(self, s, which_perm):
-        from .basis_core import perm_operation
-        return perm_operation(s, self.perm[which_perm])
-
-
-############################################
-# Nup Z2N
-##############################################
-class BasisNdiffZ2N(SpinHalfGeneralBasis):
-    def __init__(self, L: int, flipset:np.ndarray, Ndiff:int|list[int], **blocks) -> None:
-        """
-        参数：
-        - L (int): 系统的大小。
-        - pblock (Optional[int]): 反演对称性块。-1 或 1。
-        """
-        assert len(blocks) >= 1, "NdiffZ2N should have at least one Z2 symmetry"
-        super().__init__(L, flipset, Ndiff, **blocks)
-        self._validate_block()
-        from .basis_core import construct_Ndiff_Z2N_basis
-        self.Ns, self.s_list, self.R_list = construct_Ndiff_Z2N_basis(self.L, self.flipmask, self.Ndiff, self.perm, self.block)
-        self.default_complex = False
-
-    def _validate_block(self) -> None:
-        for i, (perm1, block1) in enumerate(zip(self.perm, self.block)):
-            _valdate_z2(self.L, perm1, block1)
-            for j, (perm2, block2) in enumerate(zip(self.perm, self.block)):
-                if i < j:
-                    _valdate_z2_commute(self.L, perm1, perm2)
-
     def _validate_Ndiff(self) -> None:
         for ndiff in self.Ndiff:
             assert ndiff in list(range(-self.L//2, self.L//2+1)), "Ndiff should be in range(L//2)"
    
     def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
         from .matrix_core import single_sparse_matrix_element_Z2N
-        return single_sparse_matrix_element_Z2N(opnm, posn, coef, self.L, self.perm, self.block, self.Ns, self.s_list, self.R_list, row_init, col_init, ME_init)
+        return single_sparse_matrix_element_Z2N(
+            opnm, posn, coef, self.L, self.perm, self.block, self.Ns, self.s_list, self.R_list, 
+            row_init, col_init, ME_init
+        )
     
-    def permute(self, s, which_perm):
-        from .basis_core import perm_operation
-        return perm_operation(s, self.perm[which_perm])
-
-

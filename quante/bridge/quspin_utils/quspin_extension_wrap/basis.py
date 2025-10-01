@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 18:08:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 17:07:14
+# @Last Modified time: 2025-09-30 20:45:59
 
 # quspin_basis 是 quspin 库中的源码，这里提供一个简单的封装，使得用户可以更方便地使用 quspin_basis 中的 basis 类。
 
@@ -15,110 +15,107 @@ from quspin.basis import (
 )
 import numpy as np
 
-def spin_basis_2d(
-    Lx:int, Ly:int, pauli:bool, 
-    Nup:int|None=None, 
-    pxblock:int|None=None,
-    pyblock:int|None=None,
-    pzxblock:int|None=None,
-    pzyblock:int|None=None,
-    zblock:int|None=None,
-    kxblock:int|None=None, 
-    kyblock:int|None=None,
-    **blocks
-) -> spin_basis_general:
-    """This function shows how to use quspin to generate 2d spin basis.
-
-    The px, py, pzx, pzy, z, kx, ky blocks can be used simply here.
-
-    Parameters
-    ----------
-    Lx : int
-        the length of x direction
-    Ly : int
-        the length of y direction
-    pauli : bool
-        whether to use pauli matrices, True for pauli matrices, False for spin operators
-    Nup : int | None, optional
-        the number of spin up, by default None
-    pxblock : int | None, optional
-        the x parity block, by default None
-    pyblock : int | None, optional
-        the y parity block, by default None
-    pzxblock : int | None, optional
-        the x parity and z parity block, by default None
-    pzyblock : int | None, optional
-        the y parity and z parity block, by default None
-    zblock : int | None, optional
-        the z parity block, by default None
-    kxblock : int | None, optional
-        the x momentum block, by default None
-    kyblock : int | None, optional
-        the y momentum block, by default None
-
-    Returns
-    -------
-    _type_
-        _description_
-
-    Raises
-    ------
-    ValueError
-        _description_
-    """
-        
-    if pauli is True:
-        _pauli = -1
-    elif pauli is False:
-        _pauli = 0
-    else:
-        raise ValueError("pauli must be True or False")
-
-    N_2d = Lx * Ly  # total number of sites
-    s = np.arange(N_2d)  # sites [0,1,2,..]
-    x = s % Lx  # x positions for sites
-    y = s // Lx  # y positions for sites
-
-    for i,j in blocks:
-        assert len(i) == N_2d
-        assert isinstance(j, int)
-        
-    if kxblock is not None and 'kxblock' not in blocks:
-        T_x = (x + 1) % Lx + Lx * y  # translation along x-direction
-        blocks['kxblock'] = (T_x, kxblock)
-
-    if kyblock is not None and 'kyblock' not in blocks:
-        T_y = x + Lx * ((y + 1) % Ly)  # translation along y-direction
-        blocks['kyblock'] = (T_y, kyblock)
-
-    if pxblock is not None and 'pxblock' not in blocks:
-        P_x = (Lx - x - 1) + Lx * y
-        blocks['pxblock'] = (P_x, pxblock)
-
-    if pyblock is not None and 'pyblock' not in blocks:
-        P_y = x + Lx * (Ly - y - 1)
-        blocks['pyblock'] = (P_y, pyblock)
-
-    if pzxblock is not None and 'pzxblock' not in blocks:
-        PZ_x = - ((Lx - x - 1) + Lx * y + 1)
-        blocks['pzxblock'] = (PZ_x, pzxblock)
-
-    if pzyblock is not None and 'pzyblock' not in blocks:
-        PZ_y = - (x + Lx * (Ly - y - 1) + 1)
-        blocks['pzyblock'] = (PZ_y, pzyblock)
-
-    if zblock is not None and 'zblock' not in blocks:
-        Z = -(s + 1)
-        blocks['zblock'] = (Z, zblock)
-
-    basis = spin_basis_general(
-        N_2d,
-        S='1/2',
-        pauli=_pauli,
-        Nup=Nup,
+class spin_basis_2d(spin_basis_general):
+    def __init__(self,
+        Lx:int, Ly:int, pauli:bool, 
+        Nup:int|None=None, 
+        pxblock:int|None=None,
+        pyblock:int|None=None,
+        pzxblock:int|None=None,
+        pzyblock:int|None=None,
+        zblock:int|None=None,
+        kxblock:int|None=None, 
+        kyblock:int|None=None,
         **blocks
-    )
-    return basis
+    ):
+        """This function shows how to use quspin to generate 2d spin basis.
+
+        The px, py, pzx, pzy, z, kx, ky blocks can be used simply here.
+
+        Parameters
+        ----------
+        Lx : int
+            the length of x direction
+        Ly : int
+            the length of y direction
+        pauli : bool
+            whether to use pauli matrices, True for pauli matrices, False for spin operators
+        Nup : int | None, optional
+            the number of spin up, by default None
+        pxblock : int | None, optional
+            the x parity block, by default None
+        pyblock : int | None, optional
+            the y parity block, by default None
+        pzxblock : int | None, optional
+            the x parity and z parity block, by default None
+        pzyblock : int | None, optional
+            the y parity and z parity block, by default None
+        zblock : int | None, optional
+            the z parity block, by default None
+        kxblock : int | None, optional
+            the x momentum block, by default None
+        kyblock : int | None, optional
+            the y momentum block, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+
+        Raises
+        ------
+        ValueError
+            _description_
+        """
+            
+        if pauli is True:
+            _pauli = -1
+        elif pauli is False:
+            _pauli = 0
+        else:
+            _pauli = pauli
+
+        N_2d = Lx * Ly  # total number of sites
+        s = np.arange(N_2d)  # sites [0,1,2,..]
+        x = s % Lx  # x positions for sites
+        y = s // Lx  # y positions for sites
+
+        for i,j in blocks:
+            assert len(i) == N_2d
+            assert isinstance(j, int)
+            
+        if kxblock is not None and 'kxblock' not in blocks:
+            T_x = (x + 1) % Lx + Lx * y  # translation along x-direction
+            blocks['kxblock'] = (T_x, kxblock)
+
+        if kyblock is not None and 'kyblock' not in blocks:
+            T_y = x + Lx * ((y + 1) % Ly)  # translation along y-direction
+            blocks['kyblock'] = (T_y, kyblock)
+
+        if pxblock is not None and 'pxblock' not in blocks:
+            P_x = (Lx - x - 1) + Lx * y
+            blocks['pxblock'] = (P_x, pxblock)
+
+        if pyblock is not None and 'pyblock' not in blocks:
+            P_y = x + Lx * (Ly - y - 1)
+            blocks['pyblock'] = (P_y, pyblock)
+
+        if pzxblock is not None and 'pzxblock' not in blocks:
+            PZ_x = - ((Lx - x - 1) + Lx * y + 1)
+            blocks['pzxblock'] = (PZ_x, pzxblock)
+
+        if pzyblock is not None and 'pzyblock' not in blocks:
+            PZ_y = - (x + Lx * (Ly - y - 1) + 1)
+            blocks['pzyblock'] = (PZ_y, pzyblock)
+
+        if zblock is not None and 'zblock' not in blocks:
+            Z = -(s + 1)
+            blocks['zblock'] = (Z, zblock)
+
+        super().__init__(N_2d, S='1/2', pauli=_pauli, Nup=Nup, **blocks)
+        self.Lx = Lx
+        self.Ly = Ly
+ 
 
 
 def spin_basis(

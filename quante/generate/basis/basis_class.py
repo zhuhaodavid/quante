@@ -194,47 +194,6 @@ class GeneralBasis:
 
 
 class SpinBasis(GeneralBasis):
-    """
-    自旋基矢，目前包含：
-        具体的方法参见子类
-    
-    SpinBasis\n
-    |__ SpinHalfBasis
-        |__ SpinHalfBasisNoBlock: 
-        |           [noblock](file://./spin_half/noblock/defclass.py)
-        |
-        |__ SpinHalfBasisNup: 
-        |           [Nup](file://./spin_half/Nup/defclass.py)
-        |
-        |__ SpinHalfBasisKBlock: 
-        |           [kblock](file://./spin_half/kblock/defclass.py)
-        |
-        |__ SpinHalfBasisPBlock: 
-        |           [pblock](file://./spin_half/pblock/defclass.py)
-        |
-        |__ SpinHalfBasisZBlock: 
-        |           [zblock](file://./spin_half/zblock/defclass.py)
-        |
-        |__ SpinHalfBasisNupKBlock: 
-        |           [Nup_kblock](file://./spin_half/Nup_kblock/defclass.py)
-        |
-        |__ SpinHalfBasisNupPBlock: 
-        |           [Nup_pblock](file://./spin_half/Nup_pblock/defclass.py)
-        |
-        |__ SpinHalfBasisNupZBlock: 
-        |           [Nup_zblock](file://./spin_half/Nup_zblock/defclass.py) 
-        |
-        |__ SpinHalfBasisNupKPBlock: 
-        |           [Nup_kpblock](file://./spin_half/Nup_kblock_pblock/defclass.py)
-        |
-        |__ SpinHalfBasisNupKPZBlock:
-        |           [Nup_kpzblock](file://./spin_half/Nup_kblock_pblock_zblock/defclass.py)
-        |
-        |__ SpinHalfBasisSU2: 
-                    [SU2](file://./spin_half/su2/defclass.py)
-    
-    |__ SpinHighBasis
-    """
     def __init__(self, L, S = 0.5):
         super().__init__(L)
         self.S: float = float(S)
