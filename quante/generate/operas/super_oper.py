@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-22 13:10:02
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 19:51:19
+# @Last Modified time: 2025-10-02 00:47:27
 
 import numpy as np
 from typing import Literal
@@ -239,9 +239,19 @@ class LiouvilleOper(SpinOper):
         oper_antisym = self - oper_reflacted
         oper_antisym *= 0.5
         return oper_sym.clean(pauli=pauli), oper_antisym.clean(pauli=pauli)
+    
+    def to_matrix(self, basis, pauli, sparse=False):
+        from ..basis.spin_half.spin_super.basis import SpinHalfSuperBasis
+        if isinstance(basis, SpinHalfSuperBasis):
+            liou_sym, liou_asym = self.sym_asym_split(pauli=True)
+            liou_sym_list, sym_complex = liou_sym._convert_to_quick_form(2*self.L)
+            liou_asym_list, asym_complex = (1j*liou_asym)._convert_to_quick_form(2*self.L)
+            assert not sym_complex, "sym part should be real"
+            assert not asym_complex, "asym part should be real"
+            mat0 = basis._real_sparse_matrix(liou_sym_list, liou_asym_list, False)
+            return mat0 if sparse else mat0.toarray()
+        return super().to_matrix(basis, pauli, sparse)
 
-    # def check_symm(self, L=None, pauli=False, Nup=False, kblock=False, pblock=False, zblock=False):
-    #     return super().check_symm(L, pauli, Nup, kblock, pblock, zblock)
 
 def _flip_opstr(opstr, coef):
     assert 'n' not in opstr, "flip must be False when 'n' operator is present"

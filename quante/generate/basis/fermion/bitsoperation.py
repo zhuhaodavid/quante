@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-04 20:55:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 20:13:06
+# @Last Modified time: 2025-10-02 01:20:28
 
 from ....basicfun.utils_numba import njit, config, numba_cache_dir
 import numpy as _np
@@ -57,13 +57,14 @@ def operateon(opnm, posn, a, L):
     for i in range(1,len(opnm)+1):
         oi = opnm[-i]
         pi = posn[-i]
-        mask = 1 << (L - pi - 1)
+        mask = 1 << pi
         if oi == 0:
             if t & mask != 0:
                 return opco, -1
             # cnt = count_tot_down(t >> (L-pi))
             cnt = count_tot_down((mask - 1) & t)
-            if (pi - cnt) & 1:
+            if (L + pi + cnt) & 1:
+            # if cnt & 1:
                 opco *= -1
             t = t ^ mask
         elif oi == 1:
@@ -71,7 +72,7 @@ def operateon(opnm, posn, a, L):
                 return opco, -1
             # cnt = count_tot_down(t >> (L-pi))
             cnt = count_tot_down((mask - 1) & t)
-            if (pi - cnt) & 1:
+            if (L + pi + cnt) & 1:
                 opco *= -1
             t = t ^ mask
         elif oi == 3 and t & mask != 0:

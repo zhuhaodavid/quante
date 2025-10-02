@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-28 14:27:09
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-01 17:51:20
+# @Last Modified time: 2025-10-01 20:45:14
 
 from ...basis_class import SpinHalfBasis
 import numpy as np
@@ -155,6 +155,7 @@ class BasisZ21(SpinHalfGeneralBasis):
  
     def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
         from .matrix_core import single_sparse_matrix_element_Z21
+        # print(self.perm[0])
         return single_sparse_matrix_element_Z21(
             opnm, posn, coef, self.L, self.perm[0], self.block[0], 
             self.Ns, self.s_list, row_init, col_init, ME_init

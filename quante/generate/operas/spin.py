@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 19:55:27
+# @Last Modified time: 2025-10-02 00:46:31
 
 import numpy as np
 import warnings
@@ -118,7 +118,7 @@ class SpinOper(Oper):
             res += newopstr, posn, np.conj(coef)
         return res.build()
 
-    def expandxy(self, pauli:bool = False) -> 'SpinOper':
+    def expandxy(self, pauli:bool) -> 'SpinOper':
         """
         展开算符中的 `x`,`y`，同时将 `z` 替换为 `Z` 
         其中 `Z` = `pm`-`mp` = `sigma_z`，这是为了 `to_matrix` 方便
@@ -347,12 +347,12 @@ class SpinOper(Oper):
         if basis.S != 0.5 and pauli is True:
             raise KeyError("自旋不是 1/2，不能使用 Pauli 矩阵")
         mat = basis._sparse_matrix(
-            *expanded._convert_to_quick_form(),
+            *expanded._convert_to_quick_form(basis.L),
             savememory=False)
         return mat if sparse else mat.toarray()
         
    
-    def _convert_to_quick_form(self):
+    def _convert_to_quick_form(self, L):
         """这个函数专门为 to_matrix 写的，其他函数不需要"""
         eachterm = []
         hascomplex = False
@@ -370,7 +370,7 @@ class SpinOper(Oper):
                 else:
                     raise ValueError(f"opnm {i} is not supported")
             opnm_list = np.array(opnm_list, dtype=np.int64)
-            posn_list = np.array(posn, dtype=np.int64)
+            posn_list = L - np.array(posn, dtype=np.int64) - 1
             coef_real = np.real_if_close(coef).item()
             if isinstance(coef_real, complex):
                 hascomplex = True

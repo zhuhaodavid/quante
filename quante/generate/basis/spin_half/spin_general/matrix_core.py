@@ -22,7 +22,7 @@ def single_sparse_matrix_element_Z21(opnm, posn, coef, L, perm, p, M, s_list, ro
     for a in prange(M):
         sa = s_list[a]
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             sb, l = representative_Z21(s, perm)
             b = findstate(s_list, sb)
@@ -53,7 +53,7 @@ def single_sparse_matrix_element_Nup(opnm, posn, coef, L, M, s_list, row_init, c
     for a in prange(M):
         sa = s_list[a]
         
-        opco, sb = operateon(opnm, posn, sa, L)
+        opco, sb = operateon(opnm, posn, sa)
         if sb != -1:
             b = findstate(s_list, sb)
             if b != -1:
@@ -77,7 +77,7 @@ def single_sparse_matrix_element_Z22(opnm, posn, coef, L, perm0, perm1, p0, p1, 
     for a in prange(M):
         sa = s_list[a]
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             sb, l0, l1 = representative_Z22(s, perm0, perm1)
             b = findstate(s_list, sb)
@@ -104,7 +104,7 @@ def single_sparse_matrix_element_Z23(opnm, posn, coef, L, perm0, perm1, perm2, p
     for a in prange(M):
         sa = s_list[a]
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             sb, l0, l1, l2 = representative_Z23(s, perm0, perm1, perm2)
             b = findstate(s_list, sb)
@@ -132,7 +132,7 @@ def single_sparse_matrix_element_Z2N(opnm, posn, coef, L, perm, block, M, s_list
     for a in prange(M):
         sa = s_list[a]
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             sb, ls = representative_Z2N(s, perm)
             b = findstate(s_list, sb)

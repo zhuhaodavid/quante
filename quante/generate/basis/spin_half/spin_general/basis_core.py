@@ -2,12 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-09-28 14:30:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-01 17:51:05
+# @Last Modified time: 2025-10-02 19:58:37
 
 
 import numpy as np
 from .....basicfun.utils_numba import njit, config, numba_cache_dir
-from ..bitsoperation import perm_operation, count_tot_down, next_combination
+from ..bitsoperation import perm_operation, count_tot_down, next_combination, no_equal
 
 ###########################################
 # Z21
@@ -237,7 +237,7 @@ def is_repr_Z22(s, perm0, perm1, block0, block1):
 
     if s == s_prime0 == s_prime1 == s_prime01:
         return True, 1  # 4 states combined into 1
-    elif s != s_prime0 != s_prime1 != s_prime01:
+    elif no_equal([s, s_prime0, s_prime1, s_prime01]) :
         return True, 4  # 4 states combined into 4
     else:
         return True, 2  # 4 states combined into 2

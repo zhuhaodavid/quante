@@ -2,12 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-09-16 10:50:15
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-16 11:06:33
+# @Last Modified time: 2025-10-01 20:26:23
 
 import numpy as np
 
 def u1m2():
-    """Return the gate of second moment of U(1) symmetry.
+    r"""Return the gate of second moment of U(1) symmetry.
 
     .. math::
         \overline{U^* \otimes U \otimes U^* \otimes U} = \mathcal{T}

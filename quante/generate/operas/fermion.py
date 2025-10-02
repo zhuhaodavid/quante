@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 19:13:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-09 14:16:00
+# @Last Modified time: 2025-10-02 00:46:45
 
 import numpy as np
 import scipy.sparse as sp
@@ -272,7 +272,7 @@ class FermionOper(Oper):
         self._check_length(basis.L) 
         from ..basis.basis_class import FermionBasis
         if isinstance(basis, FermionBasis):
-            eachterm, hascomplex = self._convert_to_quick_form()
+            eachterm, hascomplex = self._convert_to_quick_form(basis.L)
             mat = basis._sparse_matrix(eachterm, hascomplex, savememory=False)
             if sparse:
                 return mat
@@ -282,7 +282,7 @@ class FermionOper(Oper):
             raise NotImplementedError(f"basis should be FermionBasis, but got {type(basis)}")
 
 
-    def _convert_to_quick_form(self):
+    def _convert_to_quick_form(self, L):
         """这个函数专门为 to_matrix 写的，其他函数不需要"""
         eachterm = []
         hascomplex = False
@@ -300,7 +300,7 @@ class FermionOper(Oper):
                 else:
                     raise ValueError(f"opnm {i} is not supported")
             opnm_list = np.array(opnm_list, dtype=np.int64)
-            posn_list = np.array(posn, dtype=np.int64)
+            posn_list = L - np.array(posn, dtype=np.int64) - 1
             coef_real = np.real_if_close(coef).item()
             if isinstance(coef_real, complex):
                 hascomplex = True

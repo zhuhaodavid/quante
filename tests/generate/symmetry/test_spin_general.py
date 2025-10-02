@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-24 12:29:22
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-01 18:02:07
+# @Last Modified time: 2025-10-02 22:17:01
 
 import unittest
 import numpy as np
@@ -14,7 +14,7 @@ from quante.generate.basis.spin_half.spin_general.basis import *
 from quante.generate.basis.spin_half.spin_general.basis_core import *
 
 class TestLiouvilleSuperBasis(unittest.TestCase):
-    L, J, Δ, gamma = 6, 1.0, 0.5, 1.0
+    L, J, Δ, gamma = 4, 1.0, 0.5, 1.0
 
     @classmethod
     def setUpClass(cls):

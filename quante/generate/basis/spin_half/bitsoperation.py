@@ -2,21 +2,18 @@
 # @Author: hzhu
 # @Date:   2024-09-04 20:55:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-28 15:12:37
+# @Last Modified time: 2025-10-02 19:57:49
 
 from ....basicfun.utils_numba import njit, types, config, numba_cache_dir
 import numpy as _np
 
 config.CACHE_DIR = numba_cache_dir
-
-@njit("i8(i8)")
+@njit("i8(i8)", inline='always')
 def next_combination(x):
-    # 生成下一个具有相同数量1的整数
     u = x & -x
     v = u + x
     return v + (((v ^ x) // u) >> 2)
 
-config.CACHE_DIR = numba_cache_dir
 
 # @njit(types.Tuple((types.float64, types.int64))(types.string, types.ListType(types.int64), types.int64, types.int64))
 # def operateon(opnm:str, posn:_np.ndarray, s:int, N:int) -> int:
@@ -46,9 +43,9 @@ config.CACHE_DIR = numba_cache_dir
 #             raise ValueError("Invalid operator")
 #     return coef, t
 
-# 'Tuple((f8,i8))(i8[:],i8[:],i8,i8)', 
+config.CACHE_DIR = numba_cache_dir
 @njit(inline='always')
-def operateon(opnm, posn, a, L):
+def operateon(opnm, posn, a):
     """
     Apply the operator opnm to the state s.
     """
@@ -57,7 +54,7 @@ def operateon(opnm, posn, a, L):
     for i in range(1,len(opnm)+1):
         oi = opnm[-i]
         pi = posn[-i]
-        mask = 1 << (L - pi - 1)
+        mask = 1 << pi
         if oi == 0:
             if t & mask != 0:
                 return opco, -1
@@ -126,8 +123,20 @@ def flip(a:int, i:int, j:int) -> int:
     return a ^ ((1 << i) | (1 << j))
 
 config.CACHE_DIR = numba_cache_dir
-@njit('i8(i8)')  # 如何更快？ a.bit_count()
+@njit  # 如何更快？ a.bit_count()
 def count_tot_down(n:int) -> int:
+    """Calculate the sum of binary digits in the integer s using a high-efficiency approach.
+    hacker_popcnt
+    """
+    if n >= -(1 << 31) and n < (1 << 31):
+        return count_tot_down_32(n)
+    else:
+        return count_tot_down_64(n)
+    
+
+config.CACHE_DIR = numba_cache_dir
+@njit('i4(i4)')  # 如何更快？ a.bit_count()
+def count_tot_down_32(n:int) -> int:
     """Calculate the sum of binary digits in the integer s using a high-efficiency approach.
     hacker_popcnt
     """
@@ -137,11 +146,19 @@ def count_tot_down(n:int) -> int:
     n += n >> 8
     n += n >> 16
     return n & 0x3F
-    # count = 0
-    # while s:
-    #     count += s & 1  # Add the least significant bit to count
-    #     s >>= 1  # Shift bits to the right by 1
-    # return count
+
+@njit('i8(i8)')
+def count_tot_down_64(n: int) -> int:
+    """高效统计int64整数的二进制位为1的个数（popcount, 适用于64位）"""
+    n = n - ((n >> 1) & 0x5555555555555555)
+    n = (n & 0x3333333333333333) + ((n >> 2) & 0x3333333333333333)
+    n = (n + (n >> 4)) & 0x0F0F0F0F0F0F0F0F
+    n = n + (n >> 8)
+    n = n + (n >> 16)
+    n = n + (n >> 32)
+    return n & 0x7F
+
+
 
 config.CACHE_DIR = numba_cache_dir
 @njit("i8(i8[:],i8)")
@@ -187,5 +204,14 @@ def perm_operation(s:int, perm:_np.ndarray) -> int:
             bit = 1 - bit
         res |= bit << dst
     return res
+
+config.CACHE_DIR = numba_cache_dir
+@njit
+def no_equal(arr):
+    for i in range(len(arr)):
+        for j in range(i + 1, len(arr)):
+            if arr[i] == arr[j]:
+                return False
+    return True
 
 

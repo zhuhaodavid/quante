@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-14 00:59:50
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 19:54:31
+# @Last Modified time: 2025-10-02 00:44:55
 
 import numpy as np
 import cupy as cp
@@ -194,7 +194,7 @@ config.CACHE_DIR = numba_cache_dir
 def noblock_op(opnm, posn, coef, L, M, row_init, col_init, ME_init):
     indx = cuda.grid(1)
     if indx < M:
-        opco, t = operateon(opnm, posn, indx, L)
+        opco, t = operateon(opnm, posn, indx)
         if t != -1:
             row_init[indx] = t
             col_init[indx] = indx

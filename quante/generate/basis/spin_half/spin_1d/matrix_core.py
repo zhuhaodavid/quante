@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-28 13:01:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-28 14:26:34
+# @Last Modified time: 2025-10-02 00:55:49
 
 
 import numpy as np
@@ -54,7 +54,7 @@ def single_sparse_matrix_element_noblock(opnm, posn, coef, L, M, row_init, col_i
     
     for a in prange(M):
         
-        opco, t = operateon(opnm, posn, a, L)
+        opco, t = operateon(opnm, posn, a)
         if t != -1:
             row_init[a] = t
             col_init[a] = a
@@ -69,7 +69,7 @@ config.CACHE_DIR = numba_cache_dir
 def diag_matrix_element_noblock(opnm, posn, coef, L, M, dtype):
     diag = np.empty(M, dtype=dtype)
     for a in prange(M):
-        opco, t = operateon(opnm, posn, a, L)
+        opco, t = operateon(opnm, posn, a)
         if t < 0:
             diag[a] = 0.0
         else:
@@ -118,7 +118,7 @@ def single_sparse_matrix_element_Nup(opnm, posn, coef, L, M, s_list, row_init, c
     for a in prange(M):
         sa = s_list[a]
         
-        opco, sb = operateon(opnm, posn, sa, L)
+        opco, sb = operateon(opnm, posn, sa)
         if sb != -1:
             b = findstate(s_list, sb)
             if b != -1:
@@ -137,7 +137,7 @@ def diag_matrix_element_Nup(opnm, posn, coef, L, M, s_list, dtype):
     diag = np.empty(M, dtype=dtype)
     for a in prange(M):
         sa = s_list[a]
-        opco, t = operateon(opnm, posn, sa, L)
+        opco, t = operateon(opnm, posn, sa)
         if t < 0:
             diag[a] = 0.0
         else:
@@ -209,7 +209,7 @@ def single_sparse_matrix_element_pblock(opnm, posn, coef, L, p, M, s_list, row_i
     for a in prange(M):
         sa = s_list[a]
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             sb, l = representative_pblock(s, L)
             b = findstate(s_list, sb)
@@ -270,7 +270,7 @@ def single_sparse_matrix_element_zblock(opnm, posn, coef, L, z, M, s_list, row_i
     for a in prange(M):
         sa = s_list[a]
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             sb, l = representative_zblock(s, L)
             b = findstate(s_list, sb)
@@ -331,7 +331,7 @@ def single_sparse_matrix_element_pzblock(opnm, posn, coef, L, pz, M, s_list, row
     for a in prange(M):
         sa = s_list[a]
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             sb, l = representative_pzblock(s, L)
             b = findstate(s_list, sb)
@@ -388,7 +388,7 @@ def single_sparse_matrix_element_kblock(opnm, posn, coef, L, k, M, s_list, R_lis
     for a in prange(M):
         sa = s_list[a]
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             r, l = representative_kblock(s, L)
             b = findstate(s_list, r)
@@ -546,7 +546,7 @@ def single_sparse_matrix_element_kblock_pblock(opnm, posn, coef, L, k, p, M, s_l
         else:
             n = 1  # n is the number of copies of the representative
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             sb, l, q = representative_kblock_pblock(s, L)
             b = findstate(s_list, sb)
@@ -702,7 +702,7 @@ def single_sparse_matrix_element_Nup_kblock_pblock(opnm, posn, coef, L, k, p, M,
         else:
             n = 1  # n is the number of copies of the representative
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             sb, l, q = representative_Nup_kblock_pblock(s, L)
             b = findstate(s_list, sb)
@@ -854,7 +854,7 @@ def single_sparse_matrix_element_Nup_kblock_pblock_zblock(opnm, posn, coef, L, k
         else:
             n = 1  # n is the number of copies of the representative
         
-        opco, s = operateon(opnm, posn, sa, L)
+        opco, s = operateon(opnm, posn, sa)
         if s != -1:
             sb, l, q, g = representative_Nup_kblock_pblock_zblock(s, L)
             b = findstate(s_list, sb)

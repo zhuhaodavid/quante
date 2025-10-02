@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-03 14:19:42
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-04 20:13:23
+# @Last Modified time: 2025-10-02 00:55:07
 
 from ..bitsoperation import findstate, flip, operateon
 from .....basicfun.utils_numba import njit, config, numba_cache_dir, pnjit, prange
