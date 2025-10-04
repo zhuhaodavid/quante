@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 18:35:46
+# @Last Modified time: 2025-10-04 16:11:11
 
 
 from scipy import sparse as sps
@@ -26,7 +26,7 @@ __all__ = [
 class EvolveEngine:
     """            
     This class make use of the `expm_multiply` function to evolve the state vector.
-    The precalculation will be done in the constructor here, which will speed up the
+    The precalculation will be done in the constructor here, which may speed up the
     calculation of the time evolution.
     """
     def __init__(
@@ -44,7 +44,6 @@ class EvolveEngine:
             'eig-cpu', 'eig-cuda:0', 'mul-cpu', 'mul-cuda:0',
             'RK45', 'RK23', 'DOP853', 'Radau', 'BDF', 'LSODA'
         ] = 'mul-cpu',
-        isdm: bool = False,
         ivp_kwargs: dict = {}
     ):
         """calculate the time evolution of the state vector
@@ -91,12 +90,14 @@ class EvolveEngine:
         """
         device = method[4:] if method[:3] in ['eig', 'mul'] else 'cpu'
         
-        from ...generate.matrix import Liouvillian, make_Liouvillian
-        if isinstance(ham, Liouvillian):
-            isdm = True
+        if isinstance(ham, LinearOperator) and traceA is None:
             # convert the Liouvillian to a csr sparse matrix if needed
             # else it will be a LinearOperator, along with the traceA
-            ham, traceA = ham._tolo()
+            if traceA is None:
+                try:
+                    traceA = ham.trace
+                except AttributeError:
+                    raise ValueError("ham should have the trace attribute, please pass in the traceA")
         if device == 'cpu':
             # for cpu, the hamiltonian can be a LinearOperator or a csr sparse matrix
             if isinstance(ham, LinearOperator):
@@ -140,14 +141,12 @@ class EvolveEngine:
         self.method = method
         self.ivp_kwargs = dict(rtol=1e-9, atol=1e-12)
         self.ivp_kwargs.update(**ivp_kwargs)
-        self.isdm = isdm
-        if isdm:
-            d = int(self.csr_mt.shape[0]**0.5)
-            self.state_shape = (d, d)
-        else:
-            self.state_shape = (self.csr_mt.shape[0], )
         self._eigen = self._UinvPsi = self._all_states = None
-    
+
+    ####################
+    # main evolve
+    ####################
+
     @property
     def eigen(self):
         if self._eigen is None:
@@ -223,14 +222,19 @@ class EvolveEngine:
                 self.cur_state /= self.pkg.linalg.norm(self.cur_state)
         return self.cur_state
     
+    ####################
+    # main measure
+    ####################
+
+   
     def pre_obs(self, obs):
         if obs is None:
-            return lambda t, state: state.reshape(self.state_shape)
+            return lambda t, state: state.reshape(-1)
         elif isinstance(obs, (sps.sparray, sps.spmatrix, list, _np.ndarray)):
             if self.device != 'cpu':
                 from ...bridge.torch_utils import totc
                 obs = totc(obs, device=self.device)
-            return lambda t, state: expect(obs, state.reshape(self.state_shape), isdm=self.isdm)
+            return lambda t, state: expect(obs, state.reshape(-1), isdm=False)
         elif callable(obs):
             return obs
         else:
@@ -285,10 +289,12 @@ class EvolveEngine:
                 try:
                     res.append(obs(t, state))
                 except Exception as e:
-                    raise MeasureError(f"Error in measure: {e}. \n"
+                    raise MeasureError(
                             "Please check the measure function so that it can deal with the"
                             f"states with \ntype:{type(state)}, shape:{state.shape}, "
-                            f"dtype:{state.dtype}") from e
+                            f"dtype:{state.dtype}.\n"
+                            f"Error in measure: \n{e}."
+                            ) from e
             try:
                 return _np.real_if_close(res)    
             except:
@@ -384,17 +390,19 @@ class EvolveEngine:
                 if self.device != 'cpu':
                     from ...bridge.torch_utils import totc
                     measure = totc(measure, device=self.device)
-                return expect(measure, states.reshape(*self.state_shape,-1), isdm=self.isdm).T
+                return expect(measure, states, isdm=False).T
             else:
                 return _np.array([
-                    measure(t, states[:, i].reshape(self.state_shape)) 
+                    measure(t, states[:, i]) 
                     for i, t in enumerate(self.tlist)
                 ])
         except Exception as e:
-            raise MeasureError(f"Error in measure: {e}. \n"
+            raise MeasureError(
                             "Please check the measure function so that it can deal with the"
                             f"states with \ntype:{type(states)}, shape:{states.shape}, "
-                            f"dtype:{states.dtype}") from e
+                            f"dtype:{states.dtype}\n"
+                            f"Error in measure: \n{e}."
+            ) from e
     
 
 class MeasureError(Exception):
@@ -402,7 +410,7 @@ class MeasureError(Exception):
     pass
 
 def evolve_and_measure(
-    matrix: _np.ndarray | sps.csr_array,
+    matrix: _np.ndarray | sps.csr_array | LinearOperator,
     inistate: _np.ndarray,
     tlist: _np.ndarray,
     *,
@@ -413,6 +421,7 @@ def evolve_and_measure(
               | list[_np.ndarray] 
               | Callable[[float, _np.ndarray], _np.ndarray] 
     ) = None,
+    ttype: Literal['real-time', 'imag-time'] = 'real-time',
     normalize: bool = False,
     method: Literal[
         'eig-cpu', 'eig-cuda:0', 'mul-cpu', 'mul-cuda:0',
@@ -427,19 +436,9 @@ def evolve_and_measure(
 
     Calculate the time evolution of the state vector and measure the observable.
 
-    For LinearOperator, _np.ndarray and sps.csr_array, the time evolution is calculated as
-    .. math::
-        \\psi(t) = \\exp(-i H t) \\psi(0)
-    where :math:`H` is the Hamiltonian matrix.
-
-    For Liouvillian, the time evolution is calculated as
-    .. math::
-        \\rho(t) = \\exp(L t) \\rho(0)
-    where :math:`L` is the Liouvillian operator.
-
     Parameters
     ----------
-    matrix : ndarray | csr_array | Liouvillian
+    matrix : ndarray | csr_array | LinearOperator
         the Hamiltonian or Liouvillian matrix/operator
     inistate : ndarray
         the initial state vector
@@ -454,6 +453,9 @@ def evolve_and_measure(
           different time points, reflected in the second and subsequent indices of the
           return value
         - `None`: return the time evolution state at different time points
+    ttype : str, optional
+        - `ttype='real-time'`: real-time evolution using `exp(-1j * H * t)`
+        - `ttype='imag-time'`: imaginary-time evolution using `exp(H * t)`
     normalize : bool, optional
         if True, normalize the state after each evolution, by default False
     method : str, optional, by default `mul-cpu`
@@ -485,10 +487,7 @@ def evolve_and_measure(
     ndarray
         return a multi-dimensional array, the first dimension is the time point, and the subsequent dimensions are determined by `measure`
     """
-    from ...generate.matrix import Liouvillian
     tlist = _np.asarray(tlist)
-    ttype = 'imag-time' if isinstance(matrix, Liouvillian) else 'real-time'
-
     return EvolveEngine(
         matrix, inistate, tlist, ttype=ttype,
         normalize=normalize, method=method,

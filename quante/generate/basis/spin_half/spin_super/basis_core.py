@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 15:43:21
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-02 22:04:42
+# @Last Modified time: 2025-10-04 17:14:28
 
 import numpy as np
 from .....basicfun.utils_numba import njit, config, numba_cache_dir
@@ -76,7 +76,7 @@ config.CACHE_DIR = numba_cache_dir
 @njit
 def project_full(state, L, s_list, N_sym, Ns, anci_perm, dtype):
     M, N = state.shape
-    res = np.zeros((Ns, N), dtype=dtype)
+    res = np.zeros((Ns, N), dtype=np.complex128)
     for j in range(N):
         for i in range(N_sym):
             t = s_list[i]
@@ -90,7 +90,6 @@ def project_full(state, L, s_list, N_sym, Ns, anci_perm, dtype):
             tp = perm_operation(t, anci_perm)
             res[i, j] += -1j/np.sqrt(2) * (state[t, j] - state[tp, j])
     return res
-
 
 config.CACHE_DIR = numba_cache_dir
 @njit
@@ -166,18 +165,21 @@ def construct_Nup2_basis(L: int, Nup2: np.ndarray, anci_perm) -> tuple[int, np.n
     s_list = np.zeros(dim, dtype=np.int64)
     ct = 0
     ct1 = dim-1
+    sp_list = []
     for n1, n2 in Nup2:
         if L == n1:
             s1 = 0
             if L == n2:
                 s2 = 0
                 s = (s1 << L) | s2
+                sp_list.append(s)
                 tp = perm_operation(s, anci_perm)
                 ct, ct1 = _update_s_list(s, tp, s_list, ct, ct1)
             else:
                 s2 = (1 << (L - n2)) - 1
                 while s2 < (1 << L):
                     s = (s1 << L) | s2
+                    sp_list.append(s)
                     tp = perm_operation(s, anci_perm)
                     ct, ct1 = _update_s_list(s, tp, s_list, ct, ct1)
                     s2 = next_combination(s2)
@@ -187,12 +189,14 @@ def construct_Nup2_basis(L: int, Nup2: np.ndarray, anci_perm) -> tuple[int, np.n
             if L == n2:
                 s2 = 0
                 s = (s1 << L) | s2
+                sp_list.append(s)
                 tp = perm_operation(s, anci_perm)
                 ct, ct1 = _update_s_list(s, tp, s_list, ct, ct1)
             else:
                 s2 = (1 << (L-n2)) - 1
                 while s2 < (1 << L):
                     s = (s1 << L) | s2
+                    sp_list.append(s)
                     tp = perm_operation(s, anci_perm)
                     ct, ct1 = _update_s_list(s, tp, s_list, ct, ct1)
                     s2 = next_combination(s2)
@@ -202,7 +206,37 @@ def construct_Nup2_basis(L: int, Nup2: np.ndarray, anci_perm) -> tuple[int, np.n
         raise ValueError("Internal error in construct_Ndiff_basis")
     s_list[:dim_sym] = np.sort(s_list[:dim_sym]) 
     s_list[dim_sym:] = np.sort(s_list[dim_sym:])
-    return s_list, dim_sym, dim-dim_sym
+    sp_list = np.array(sp_list, dtype=np.int64)
+    sp_list = np.sort(sp_list)
+    return sp_list, s_list, dim_sym, dim-dim_sym
+
+config.CACHE_DIR = numba_cache_dir
+@njit
+def project_full_Nup2(state, L, s_list, s2_list, N_sym, Ns, anci_perm, dtype):
+    M, N = state.shape
+    res = np.zeros((Ns, N), dtype=np.complex128)
+    for j in range(N):
+        for i in range(N_sym):
+            x = s_list[i]
+            t = findstate(s2_list, x)
+            assert t >= 0
+            xp = perm_operation(x, anci_perm)
+            tp = findstate(s2_list, xp)
+            assert tp >= 0
+            if xp == x:
+                res[i, j] += state[t, j]
+            else:
+                res[i, j] += 1/np.sqrt(2) * (state[t, j] + state[tp, j])
+        for i in range(N_sym, Ns):
+            x = s_list[i]
+            t = findstate(s2_list, x)
+            assert t >= 0
+            xp = perm_operation(x, anci_perm)
+            tp = findstate(s2_list, xp)
+            assert tp >= 0
+            res[i, j] += -1j/np.sqrt(2) * (state[t, j] - state[tp, j])
+    return res
+
 
 
 ###########################################

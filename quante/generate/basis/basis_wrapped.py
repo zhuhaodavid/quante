@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-01 16:37:40
+# @Last Modified time: 2025-10-04 16:50:50
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -283,7 +283,7 @@ def _process_spin_high_Nup_block(L:int, S:Union[int, float], block_dic:dict) -> 
     if S == 0.5 and block_dic['Nup'] == 1:
         # For this single excitation, we can accelerate the calculation
         # by using the SpinHalfSingleExcitation basis
-        from .spin_half.single_excitation.defclass import SpinHalfSingleExcitation
+        from .spin_half.spin_excitation.defclass import SpinHalfSingleExcitation
         return SpinHalfSingleExcitation(L)
     from .spin_high.Nup.defclass import SpinHighBasisNup
     return SpinHighBasisNup(L, S, block_dic['Nup'])
@@ -351,10 +351,10 @@ def spin_basis_general(
         Number of sites.
     S : str|int|float, default '1/2'
         Spin quantum number (only 1/2 supported currently).
-    flipset : sequence|None
-        Optional flip-site set used in Ndiff-related bases.
     Nup : int|None
         Particle number difference (or magnetization style) constraint.
+    Ndiff : tuple[array_like, int]|None
+        Particle number difference constraint. Must be a tuple ``(flipset, Ndiff)``,
     **blocks : dict[str, tuple[array_like,int]]
         Z2 symmetry specification(s). Each value must be a tuple ``(perm, sector)``.
 
@@ -364,6 +364,7 @@ def spin_basis_general(
     large if/elif chain is collapsed into a dynamic class name resolution to ease
     maintenance. Behaviour is preserved.
     """
+    assert L < 64, "L must be less than 64 for spin_basis_general generation."
     S = _check_spin_number(S)
     if S != 0.5:
         raise NotImplementedError("spin_basis_general is only implemented for spin-1/2 now.")
@@ -393,7 +394,7 @@ def spin_basis_general(
         if isinstance(_Ndiff, int):
             _Ndiff = [_Ndiff]
         assert isinstance(_Ndiff, list), f"Ndiff must be a list, not {type(_Ndiff)}."
-        assert isinstance(flipset, (list, np.ndarray)), f"flipset must be a list or array, not {type(flipset)}."
+        assert isinstance(flipset, (range, list, np.ndarray)), f"flipset must be a list or array, not {type(flipset)}."
         if Nup is None:
             _Nup2 = None
         else:
@@ -439,14 +440,125 @@ def spin_basis_general(
 
     return BasisCls(L, flipset, _Ndiff, _Nup2, **blocks)
 
+def spin_basis_2d(
+    Lx:int, Ly:int,
+    Nup:int|None=None, 
+    Ndiff:int|None=None,
+    pxblock:int|None=None,
+    pyblock:int|None=None,
+    pzxblock:int|None=None,
+    pzyblock:int|None=None,
+    zblock:int|None=None,
+    **blocks
+):
+    """Generate 2D spin basis with optional Z2 symmetries and Ndiff constraint.
+
+    Parameters
+    ----------
+    Lx : int
+        the length of x direction
+    Ly : int
+        the length of y direction
+    Nup : int | None, optional
+        the number of spin up, by default None
+    Ndiff : tuple[array_like, int]|None
+        Particle number difference constraint. Must be a tuple ``(flipset, Ndiff)``,
+    pxblock : int | None, optional
+        the x parity block, by default None
+    pyblock : int | None, optional
+        the y parity block, by default None
+    pzxblock : int | None, optional
+        the x parity and z parity block, by default None
+    pzyblock : int | None, optional
+        the y parity and z parity block, by default None
+    zblock : int | None, optional
+        the z parity block, by default None
+    kxblock : int | None, optional
+        the x momentum block, by default None
+    kyblock : int | None, optional
+        the y momentum block, by default None
+
+    Notes
+    -----
+    Current implementation only supports spin-1/2 and Z2-type symmetries. The original
+    large if/elif chain is collapsed into a dynamic class name resolution to ease
+    maintenance. Behaviour is preserved.
+    """
+    N_2d = Lx * Ly  # total number of sites
+    s = np.arange(N_2d)  # sites [0,1,2,..]
+    x = s % Lx  # x positions for sites
+    y = s // Lx  # y positions for sites
+
+    for i,j in blocks:
+        assert len(i) == N_2d
+        assert isinstance(j, int)
+        
+    if pxblock is not None and 'pxblock' not in blocks:
+        P_x = (Lx - x - 1) + Lx * y
+        blocks['pxblock'] = (P_x, pxblock)
+
+    if pyblock is not None and 'pyblock' not in blocks:
+        P_y = x + Lx * (Ly - y - 1)
+        blocks['pyblock'] = (P_y, pyblock)
+
+    if pzxblock is not None and 'pzxblock' not in blocks:
+        PZ_x = - ((Lx - x - 1) + Lx * y + 1)
+        blocks['pzxblock'] = (PZ_x, pzxblock)
+
+    if pzyblock is not None and 'pzyblock' not in blocks:
+        PZ_y = - (x + Lx * (Ly - y - 1) + 1)
+        blocks['pzyblock'] = (PZ_y, pzyblock)
+
+    if zblock is not None and 'zblock' not in blocks:
+        Z = -(s + 1)
+        blocks['zblock'] = (Z, zblock)
+    
+    return spin_basis_general(
+        N_2d, "1/2", Nup=Nup, Ndiff=Ndiff, **blocks
+    )
 
 # todo: realize spin_basis_general with numba
 def spin_super_basis(
-    L, flipset=None, Nup=None, pblock=None, zblock=None
+    L, 
+    indx_order='stacked', 
+    Nup=None, 
+    Ndiff=None, 
+    Nup2=None,
+    pblock=None, 
+    zblock=None, 
+    **blocks
 ):
-    # from ...bridge.quspin_utils import spin_super_basis as qs_basis
-    # return qs_basis()
-    raise NotImplementedError("spin_super_basis is not implemented yet.")
+    assert 2*L < 64, "L must be less than 64 for spin_super_basis generation."
+    if pblock is not None:
+        if indx_order == 'stacked':
+            Px = [i+j*L for j in [0,1] for i in range(L-1,-1,-1)]
+        elif indx_order == 'snake':
+            Px = [i-j for i in range(2*L-1,-1,-2) for j in [1,0]]
+        else:
+            raise ValueError(f"indx_order must be 'stacked' or 'snake', but got {indx_order}.")
+        blocks.update({'pblock': (Px, pblock)})
+    if zblock is not None:
+        Pz = [-i-1 for i in range(2*L)]
+        blocks.update({'zblock': (Pz, zblock)})
+    if Nup2 is not None:
+        if isinstance(Nup2, int):
+            Nup2 = [Nup2]
+        Ndiff = 0
+        Nup = [2*n for n in Nup2]
+    if len(blocks) == 0:
+        from .spin_half.spin_super.basis import BasisFull
+        return BasisFull(L, Ndiff, Nup, indx_order, **blocks)
+    elif len(blocks) == 1:
+        from .spin_half.spin_super.basis import BasisZ21
+        return BasisZ21(L, Ndiff, Nup, indx_order, **blocks)
+    else:
+        
+        raise NotImplementedError("" \
+        "Only one Z2 is supported for spin_super_basis now.\n" \
+        f"we now have {list(blocks.keys())}"
+        )
+
+
 
 
 

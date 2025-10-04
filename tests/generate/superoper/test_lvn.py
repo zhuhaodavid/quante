@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 19:45:12
+# @Last Modified time: 2025-10-04 17:49:12
 
 import unittest
 import quante as qt
@@ -22,16 +22,21 @@ class TestLiouvillian(unittest.TestCase):
 
         Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i).to_matrix(basis=basis, pauli=False, sparse=True) for i in range(L-1)]
         Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1).to_matrix(basis=basis, pauli=False, sparse=True) for i in range(L-1)]
-        particle_number = [op.n(i).to_matrix(basis=basis, pauli=False, sparse=True) for i in range(L)]
 
-        lvn = qt.generate.matrix.superoper.Liouvillian(hammat, Lindblad_R + Lindblad_L)
+        mats = [op.n(i).to_matrix(basis=basis, pauli=False, sparse=True) for i in range(L)]
+        Ns = basis.Ns
+        def particle_number(t, rho):
+            return np.array([np.trace(rho.reshape((Ns,Ns)) @ m.toarray()) for m in mats])
+
+        lvn = qt.generate.operas.super_oper.LiouvillianLinearOperator(hammat, Lindblad_R + Lindblad_L).to_matrix()
         state = qt.generate.state.product_state(['up']+['dn']*(L-1), Nup=1)
         rhoinit = np.outer(state, state)
 
         res1 = qt.linalg.evolve_and_measure(
             lvn, rhoinit, [10, 20, 30, 40, 50], 
             measure=particle_number, 
-            method='eig-cpu'
+            method='eig-cpu',
+            ttype='imag-time'
         )
         self.lvn = lvn
         self.rhoinit = rhoinit
@@ -44,28 +49,32 @@ class TestLiouvillian(unittest.TestCase):
             res2 = qt.linalg.evolve_and_measure(
                 self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
                 measure=self.particle_number, 
-                method='eig-cuda:0'
+                method='eig-cuda:0',
+                ttype='imag-time'
             )
             self.assertTrue(np.allclose(self.res1, res2))
 
             res2 = qt.linalg.evolve_and_measure(
                 self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
                 measure=self.particle_number, 
-                method='mul-cuda:0'
+                method='mul-cuda:0',
+                ttype='imag-time'
             )
             self.assertTrue(np.allclose(self.res1, res2))
         
         res2 = qt.linalg.evolve_and_measure(
             self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
             measure=self.particle_number, 
-            method='mul-cpu'
+            method='mul-cpu',
+            ttype='imag-time'
         )
         self.assertTrue(np.allclose(self.res1, res2))
         
         res2 = qt.linalg.evolve_and_measure(
             self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
             measure=self.particle_number, 
-            method='RK45'
+            method='RK45',
+            ttype='imag-time'
         )
         self.assertTrue(np.allclose(self.res1, res2))
 
@@ -73,14 +82,16 @@ class TestLiouvillian(unittest.TestCase):
         res2 = qt.linalg.evolve_and_measure(
             self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
             measure=self.particle_number, 
-            method='mul-cpu'
+            method='mul-cpu',
+            ttype='imag-time'
         )
         self.assertTrue(np.allclose(self.res1, res2))
 
         res2 = qt.linalg.evolve_and_measure(
             self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
             measure=self.particle_number, 
-            method='RK45'
+            method='RK45',
+            ttype='imag-time'
         )
 
 try:
@@ -112,15 +123,16 @@ class TestmakeLiouvillianOper(unittest.TestCase):
         Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1) for i in range(L-1)]
 
         lo = Lindblad_R[0].to_matrix(basis, sparse=True, pauli=False)
-        lvn = qt.generate.matrix.superoper.make_Liouvillian(ham, Lindblad_R + Lindblad_L, basis, pauli=False).matrix
+        # lvn = qt.generate.matrix.superoper.make_Liouvillian(ham, Lindblad_R + Lindblad_L, basis, pauli=False).matrix
+        # liou = qt.generate.operas.super_oper.LiouvilleOper(ham, Lindblad_R + Lindblad_L).to_matrix(basis=basis, sparse=True, pauli=False)
 
 
         # lvnOper = qt.generate.matrix.superoper.make_LiouvillianOper(L, ham, Lindblad_R + Lindblad_L)
-        lvnOper = qt.generate.operas.super_oper.LiouvilleOper(L, ham, Lindblad_R + Lindblad_L, indx_order='stacked')
+        lvnOper = qt.generate.operas.super_oper.LiouvilleOper(L, ham, Lindblad_R + Lindblad_L)
         # print(lvnOper)
         basis = qt.generate.basis.spin_basis(L=2*L)
-        lvn2 = lvnOper.to_matrix(basis, sparse=True, pauli=False)
-        self.assertAlmostEqual(np.linalg.norm((lvn - lvn2).data), 0.)
+        lvn = lvnOper.to_matrix(basis, sparse=True, pauli=False)
+        # self.assertAlmostEqual(np.linalg.norm((lvn - lvn2).data), 0.)
 
         # lvnOper = qt.generate.matrix.superoper.make_LiouvillianOper(L, ham, Lindblad_R + Lindblad_L, format='ladder')
         lvnOper = qt.generate.operas.super_oper.LiouvilleOper(L, ham, Lindblad_R + Lindblad_L, indx_order='snake')

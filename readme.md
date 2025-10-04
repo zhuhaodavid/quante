@@ -240,7 +240,7 @@ array([[-0.5       ,  0.5       , -0.5       , ...,  0.5       , -0.5       ,  0
 import quante as qt
 import numpy as np
 
-op = qt.generate.operas.spin
+op = qt.generate.operas
 
 L = 30
 J = 1.
@@ -252,23 +252,31 @@ for i in range(L-1):
     ham += "+-", [i+1, i], -J
     ham += "+-", [i, i+1], -J
 ham = ham.build()
+
 Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i) for i in range(L-1)]
 Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1) for i in range(L-1)]
+lind_ops = Lindblad_R + Lindblad_L
+liou = op.super_oper.LiouvilleOper(L, ham, lind_ops)
 
 basis = qt.generate.basis.spin_basis(L=L, Nup=1)
-lvn = qt.generate.matrix.superoper.make_Liouvillian(
-    ham, Lindblad_R + Lindblad_L, basis, pauli=False
-)
+liou_mat = liou.to_matrix(basis=basis, pauli=False)
 
 state = qt.generate.state.product_state(['up']+['dn']*(L-1), Nup=1)
 rhoinit = np.outer(state, state)
-particle_number = [op.n(i).to_matrix(basis=basis, pauli=False, sparse=True) for i in range(L)]
 
+particle_number_mat = [
+    op.n(i).to_matrix(basis=basis, pauli=False, sparse=True).T.reshape(-1) 
+    for i in range(L)
+]
+measure = lambda t, rho: np.real_if_close([n @ rho.reshape(-1) for n in particle_number_mat])
 
 res = qt.linalg.evolve_and_measure(
-    lvn, rhoinit, [10, 20, 30, 40, 50], 
-    measure=particle_number, 
+    liou_mat, rhoinit, [10, 20, 30, 40, 50], 
+    measure=measure, 
+    ttype='imag-time',
+    method='mul-cpu'
 )
+
 res.shape
 ```
 
@@ -331,6 +339,20 @@ Sweep 3: 100%|##########| 18/18 [00:00<00:00, 162.75it/s, pE=-4.2580e+00, chi=20
 Sweep 4: 100%|##########| 18/18 [00:00<00:00, 155.70it/s, pE=-4.2580e+00, chi=20]
 Energy converged to -4.2580352068 after 4 sweeps.
 ```
+
+## todos
+
+- spin basis general/super 支持 Zn、稀疏投影
+
+- spin 基矢的激发态表象，large int 表示
+
+- 玻色基矢、复合基矢
+
+- Krylov evolve and svd
+
+- SU(2) 矩阵高效生成
+
+- 对称性张量网络
 
 ## Third-Party Licenses
 

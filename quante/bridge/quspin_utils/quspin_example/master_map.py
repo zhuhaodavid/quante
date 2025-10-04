@@ -159,7 +159,7 @@ def liouvillian(
     check_symm:bool=False
 ):
     assert isinstance(basis, spin_basis_general), "basis must be an instance of spin_super_basis"
-    liou = LiouvilleOper(L=L, ham=ham, lindblad_ops=lindblad_ops, indx_order=indx_order, flip=flip)
+    liou = LiouvilleOper(L=L, ham=ham, lind_ops=lindblad_ops, indx_order=indx_order, flip=flip)
 
     if isinstance(basis, spin_super_basis):
         assert flip == basis.flip, "flip must be the same as basis.flip"

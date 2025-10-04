@@ -4,4 +4,10 @@
 # @Last Modified by:   hzhu
 # @Last Modified time: 2025-09-27 18:36:54
 
-from .basis_wrapped import spin_basis, fermion_basis, spin_super_basis, spin_basis_general
+from .basis_wrapped import (
+    spin_basis, 
+    fermion_basis, 
+    spin_super_basis, 
+    spin_basis_general,
+    spin_basis_2d,
+)

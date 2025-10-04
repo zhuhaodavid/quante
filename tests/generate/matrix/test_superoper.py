@@ -2,13 +2,14 @@
 # @Author: hzhu
 # @Date:   2025-05-14 22:23:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 18:56:56
+# @Last Modified time: 2025-10-04 17:51:25
 
 
 import unittest
 import quante as qt
 import numpy as np
-from quante.generate.matrix import SuperOperator
+# from quante.generate.matrix import SuperOperator
+from quante.generate.matrix.models.super_oper import SuperOperator
 
 class TestSuperOper(unittest.TestCase):
     def setUp(self):
@@ -69,10 +70,3 @@ if __name__ == "__main__":
     # runner.run(suite)
        
 
-
-if __name__ == "__main__":
-    unittest.main()
-    # suite = unittest.TestSuite()
-    # suite.addTest(TestTN("test_expm_multiply_numba_matrix"))
-    # runner = unittest.TextTestRunner()
-    # runner.run(suite)

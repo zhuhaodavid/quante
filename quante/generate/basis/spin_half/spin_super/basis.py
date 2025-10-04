@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 15:20:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-02 21:44:26
+# @Last Modified time: 2025-10-04 17:16:58
 
 from ...basis_class import SpinHalfBasis
 import numpy as np
@@ -16,7 +16,8 @@ class SpinHalfSuperBasis(SpinHalfBasis):
             Nup = [Nup]
         if isinstance(Ndiff, int):
             Ndiff = [Ndiff]
-        
+
+        self.flipmask = None
         if Ndiff is not None:
             _Ndiff = []
             for n in Ndiff:
@@ -25,6 +26,15 @@ class SpinHalfSuperBasis(SpinHalfBasis):
                     _Ndiff.append(n)
                 if -n not in _Ndiff:
                     _Ndiff.append(-n)
+            if indx_order == 'stacked':
+                self.flipmask = (1 << L) - 1
+            elif indx_order == 'snake':
+                res = 0
+                for i in range(L):
+                    res = (res << 2) | 1
+                self.flipmask = res
+            else:
+                raise ValueError(f"indx_order should be 'stacked' or 'snake', not {indx_order}")
             if Nup is not None:
                 _Nup = []
                 for ndiff in _Ndiff:
@@ -32,6 +42,7 @@ class SpinHalfSuperBasis(SpinHalfBasis):
                         assert (nup + ndiff) % 2 == 0, f"Nup={nup} and Ndiff={ndiff} are incompatible"
                         _Nup.append([(nup + ndiff)//2, (nup - ndiff)//2])
                 Nup = np.array(_Nup)
+                self.flipmask = 0
         else:
             _Ndiff = None
         
@@ -140,7 +151,7 @@ class BasisFull(SpinHalfSuperBasis):
 
         if Nup is not None and Ndiff is not None:
             from .basis_core import construct_Nup2_basis
-            self.s_list, self.Ns_sym, self.Ns_asym = construct_Nup2_basis(
+            self.sp_list, self.s_list, self.Ns_sym, self.Ns_asym = construct_Nup2_basis(
                 self.L, self.Nup, self._ancillary_perm
             )
         elif Nup is not None:
@@ -175,13 +186,21 @@ class BasisFull(SpinHalfSuperBasis):
                 opnm, posn, coef, 2*self.L, self._ancillary_perm, self.Ns_sym, self.Ns, self.s_list, row_init, col_init, ME_init
             )
     
-    def project(self, vec):
+    def project(self, vec, Nup2=False):
         """Project a vector to the symmetry sector.
         """
-        from .basis_core import project_full
-        if vec.ndim == 1:
-            vec = vec.reshape(-1,1)
-        return project_full(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, vec.dtype)
+        if Nup2 is False:
+            from .basis_core import project_full
+            if vec.ndim == 1:
+                vec = vec.reshape(-1,1)
+            res = project_full(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, vec.dtype)
+            return np.real_if_close(res)
+        else:
+            from .basis_core import project_full_Nup2
+            if vec.ndim == 1:
+                vec = vec.reshape(-1,1)
+            res = project_full_Nup2(vec, 2*self.L, self.s_list, self.sp_list, self.Ns_sym, self.Ns, self._ancillary_perm, vec.dtype)
+            return np.real_if_close(res)
 
     def recover(self, vec):
         """Recover a vector from the symmetry sector.
