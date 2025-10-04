@@ -4,3 +4,4 @@ docs/* linguist-documentation
 
 # 排除指定文件
 *.md linguist-documentation
+*.ipynb linguist-notebook
