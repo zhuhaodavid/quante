@@ -290,11 +290,13 @@ class EvolveEngine:
                     res.append(obs(t, state))
                 except Exception as e:
                     raise MeasureError(
-                            "Please check the measure function so that it can deal with the"
-                            f"states with \ntype:{type(state)}, shape:{state.shape}, "
-                            f"dtype:{state.dtype}.\n"
-                            f"Error in measure: \n{e}."
-                            ) from e
+                        "An error occurred while processing the measure function. \n"
+                        "Please ensure the measure function can handle the following:\n"
+                        f"- State type: {type(state)}\n"
+                        f"- State shape: {state.shape}\n"
+                        f"- State dtype: {state.dtype}\n"
+                        f"Error details:\n{e}"
+                    ) from e
             try:
                 return _np.real_if_close(res)    
             except:
@@ -398,10 +400,12 @@ class EvolveEngine:
                 ])
         except Exception as e:
             raise MeasureError(
-                            "Please check the measure function so that it can deal with the"
-                            f"states with \ntype:{type(states)}, shape:{states.shape}, "
-                            f"dtype:{states.dtype}\n"
-                            f"Error in measure: \n{e}."
+                "An error occurred while processing the measure function. "
+                "Please ensure the measure function can handle the following:\n"
+                f"- State type: {type(states)}\n"
+                f"- State shape: {states.shape}\n"
+                f"- State dtype: {states.dtype}\n"
+                f"Error details:\n{e}"
             ) from e
     
 

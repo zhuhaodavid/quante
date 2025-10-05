@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-04 17:49:12
+# @Last Modified time: 2025-10-05 20:20:20
 
 import unittest
 import quante as qt
@@ -27,6 +27,9 @@ class TestLiouvillian(unittest.TestCase):
         Ns = basis.Ns
         def particle_number(t, rho):
             return np.array([np.trace(rho.reshape((Ns,Ns)) @ m.toarray()) for m in mats])
+        def particle_number_tc(t, rho):
+            # return np.array([np.trace(rho.reshape((Ns,Ns)) @ m.toarray()) for m in mats])
+            return np.real_if_close([qt.measure.expect(m, rho.reshape((Ns,Ns)).cpu().numpy(), isdm=True) for m in mats])
 
         lvn = qt.generate.operas.super_oper.LiouvillianLinearOperator(hammat, Lindblad_R + Lindblad_L).to_matrix()
         state = qt.generate.state.product_state(['up']+['dn']*(L-1), Nup=1)
@@ -42,13 +45,14 @@ class TestLiouvillian(unittest.TestCase):
         self.rhoinit = rhoinit
         self.res1 = res1
         self.particle_number = particle_number
+        self.particle_number_tc = particle_number_tc
 
     def test_time_measurements(self):
         import torch as tc
         if tc.cuda.is_available():
             res2 = qt.linalg.evolve_and_measure(
                 self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
-                measure=self.particle_number, 
+                measure=self.particle_number_tc, 
                 method='eig-cuda:0',
                 ttype='imag-time'
             )
@@ -56,7 +60,7 @@ class TestLiouvillian(unittest.TestCase):
 
             res2 = qt.linalg.evolve_and_measure(
                 self.lvn, self.rhoinit, [10, 20, 30, 40, 50], 
-                measure=self.particle_number, 
+                measure=self.particle_number_tc, 
                 method='mul-cuda:0',
                 ttype='imag-time'
             )
