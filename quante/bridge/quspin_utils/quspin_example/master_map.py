@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-24 12:28:43
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 20:46:14
+# @Last Modified time: 2025-10-05 21:35:31
 
 from typing import Literal
 import numpy as np
@@ -11,7 +11,7 @@ import scipy.sparse as sp
 
 from ..quspin_extension_wrap import spin_basis_2d, hamiltonian, spin_basis_general
 from ....generate.operas.spin import SpinOper
-from ....generate.operas.super_oper import LiouvilleOper
+from ....generate.operas.super_oper import Lindbladian
 
 def real_if_close(mat):
     if isinstance(mat, np.ndarray):
@@ -21,7 +21,7 @@ def real_if_close(mat):
         return mat
 
 class spin_super_basis(spin_basis_2d):
-    """spin super basis for the Liouvillian (super operator) in master equation.
+    """spin super basis for the Lindbladian (super operator) in master equation.
 
     ctype = 'chain' or 'ladder'
     For chain:
@@ -149,17 +149,17 @@ class spin_super_basis(spin_basis_2d):
         res = P.conj().T @ liou_mat @ P
         return real_if_close(res)
 
-def liouvillian(
+def lindbladian(
     L:int, 
     ham:SpinOper, 
-    lindblad_ops:list[SpinOper],
+    jump_ops:list[SpinOper],
     basis:spin_super_basis,
     indx_order:Literal['stacked', 'snake']='stacked',
     flip:bool=False,
     check_symm:bool=False
 ):
     assert isinstance(basis, spin_basis_general), "basis must be an instance of spin_super_basis"
-    liou = LiouvilleOper(L=L, ham=ham, lind_ops=lindblad_ops, indx_order=indx_order, flip=flip)
+    liou = Lindbladian(L=L, ham=ham, jump_ops=jump_ops, indx_order=indx_order, flip=flip)
 
     if isinstance(basis, spin_super_basis):
         assert flip == basis.flip, "flip must be the same as basis.flip"

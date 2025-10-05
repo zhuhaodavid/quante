@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 20:07:21
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-02 22:11:19
+# @Last Modified time: 2025-10-05 21:37:38
 
 import unittest
 from quante.generate.basis.spin_half.spin_super.basis import *
@@ -16,8 +16,8 @@ class TestLiouvilleBasis(unittest.TestCase):
         J, Δ, gamma = 1., 0.5, 1.
         self.J, self.Δ, self.gamma = J, Δ, gamma
         self.ham = op.sum(J*(op.xx(i,i+1) + op.yy(i,i+1)) for i in range(self.L-1))
-        self.lind_ops = [np.sqrt(gamma)*op.I(i) for i in range(self.L)]
-        self.liou = qt.generate.operas.super_oper.LiouvilleOper(self.L, self.ham, self.lind_ops)
+        self.jump_ops = [np.sqrt(gamma)*op.I(i) for i in range(self.L)]
+        self.liou = qt.generate.operas.super_oper.Lindbladian(self.L, self.ham, self.jump_ops)
 
     def test_full_basis(self):
         import quante.bridge.quspin_utils as qs

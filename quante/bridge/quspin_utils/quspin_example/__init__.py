@@ -6,5 +6,5 @@
 
 from .gen_matrix import optimize_basis
 from .oper_mani import clean_static, clean_static2
-from .master_map import spin_super_basis, liouvillian
+from .master_map import spin_super_basis, lindbladian
 

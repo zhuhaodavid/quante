@@ -2,13 +2,13 @@
 # @Author: hzhu
 # @Date:   2024-10-01 00:36:26
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-05 20:20:20
+# @Last Modified time: 2025-10-05 21:32:21
 
 import unittest
 import quante as qt
 import numpy as np
 
-class TestLiouvillian(unittest.TestCase):
+class TestLindbladian(unittest.TestCase):
     def setUp(self):
         op = qt.generate.operas
 
@@ -31,7 +31,7 @@ class TestLiouvillian(unittest.TestCase):
             # return np.array([np.trace(rho.reshape((Ns,Ns)) @ m.toarray()) for m in mats])
             return np.real_if_close([qt.measure.expect(m, rho.reshape((Ns,Ns)).cpu().numpy(), isdm=True) for m in mats])
 
-        lvn = qt.generate.operas.super_oper.LiouvillianLinearOperator(hammat, Lindblad_R + Lindblad_L).to_matrix()
+        lvn = qt.generate.operas.super_oper.LindbladianLinearOperator(hammat, Lindblad_R + Lindblad_L).to_matrix()
         state = qt.generate.state.product_state(['up']+['dn']*(L-1), Nup=1)
         rhoinit = np.outer(state, state)
 
@@ -105,8 +105,8 @@ except:
     quspin_available = False
 
 
-class TestmakeLiouvillianOper(unittest.TestCase):
-    def test_make_LiouvillianOper(self):
+class TestmakeLindbladianOper(unittest.TestCase):
+    def test_make_LindbladianOper(self):
         op = qt.generate.operas.spin
 
         L = 8
@@ -132,14 +132,14 @@ class TestmakeLiouvillianOper(unittest.TestCase):
 
 
         # lvnOper = qt.generate.matrix.superoper.make_LiouvillianOper(L, ham, Lindblad_R + Lindblad_L)
-        lvnOper = qt.generate.operas.super_oper.LiouvilleOper(L, ham, Lindblad_R + Lindblad_L)
+        lvnOper = qt.generate.operas.super_oper.Lindbladian(L, ham, Lindblad_R + Lindblad_L)
         # print(lvnOper)
         basis = qt.generate.basis.spin_basis(L=2*L)
         lvn = lvnOper.to_matrix(basis, sparse=True, pauli=False)
         # self.assertAlmostEqual(np.linalg.norm((lvn - lvn2).data), 0.)
 
         # lvnOper = qt.generate.matrix.superoper.make_LiouvillianOper(L, ham, Lindblad_R + Lindblad_L, format='ladder')
-        lvnOper = qt.generate.operas.super_oper.LiouvilleOper(L, ham, Lindblad_R + Lindblad_L, indx_order='snake')
+        lvnOper = qt.generate.operas.super_oper.Lindbladian(L, ham, Lindblad_R + Lindblad_L, indx_order='snake')
         basis = qt.generate.basis.spin_basis(L=2*L)
         lvn3 = lvnOper.to_matrix(basis, sparse=True, pauli=False)
 
@@ -148,7 +148,7 @@ class TestmakeLiouvillianOper(unittest.TestCase):
     
 
     @unittest.skipIf(not quspin_available, "quspin not available")
-    def test_make_LiouvillianOper_kblock(self):
+    def test_make_LindbladianOper_kblock(self):
         import quante.bridge.quspin_utils as qs
         op = qt.generate.operas.spin
 
@@ -161,7 +161,7 @@ class TestmakeLiouvillianOper(unittest.TestCase):
         # lvn = qt.generate.matrix.superoper.make_LiouvillianOper(
         #     L, ham, Lindblad, format='ladder'
         # )
-        lvn = qt.generate.operas.super_oper.LiouvilleOper(
+        lvn = qt.generate.operas.super_oper.Lindbladian(
             L, ham, Lindblad, indx_order='snake'
         )
 

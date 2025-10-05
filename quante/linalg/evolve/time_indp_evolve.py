@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-04 16:11:11
+# @Last Modified time: 2025-10-05 21:30:59
 
 
 from scipy import sparse as sps
@@ -91,7 +91,7 @@ class EvolveEngine:
         device = method[4:] if method[:3] in ['eig', 'mul'] else 'cpu'
         
         if isinstance(ham, LinearOperator) and traceA is None:
-            # convert the Liouvillian to a csr sparse matrix if needed
+            # convert the Lindbladian to a csr sparse matrix if needed
             # else it will be a LinearOperator, along with the traceA
             if traceA is None:
                 try:
@@ -443,7 +443,7 @@ def evolve_and_measure(
     Parameters
     ----------
     matrix : ndarray | csr_array | LinearOperator
-        the Hamiltonian or Liouvillian matrix/operator
+        the Hamiltonian or Lindbladian matrix/operator
     inistate : ndarray
         the initial state vector
     tlist : ndarray

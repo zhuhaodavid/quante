@@ -6,4 +6,4 @@
 
 from .spin import *
 from . import spin, fermion, boson, spinful_fermion, super_oper
-from .super_oper import LiouvilleOper
+from .super_oper import Lindbladian

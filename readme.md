@@ -253,10 +253,10 @@ for i in range(L-1):
     ham += "+-", [i, i+1], -J
 ham = ham.build()
 
-Lindblad_R = [np.sqrt(gamma_R) * op.pm(i+1,i) for i in range(L-1)]
-Lindblad_L = [np.sqrt(gamma_L) * op.pm(i,i+1) for i in range(L-1)]
-lind_ops = Lindblad_R + Lindblad_L
-liou = op.super_oper.LiouvilleOper(L, ham, lind_ops)
+jump_R = [np.sqrt(gamma_R) * op.pm(i+1,i) for i in range(L-1)]
+jump_L = [np.sqrt(gamma_L) * op.pm(i,i+1) for i in range(L-1)]
+jump_ops = jump_R + jump_L
+liou = op.Lindbladian(L, ham, jump_ops)
 
 basis = qt.generate.basis.spin_basis(L=L, Nup=1)
 liou_mat = liou.to_matrix(basis=basis, pauli=False)
@@ -341,6 +341,8 @@ Energy converged to -4.2580352068 after 4 sweeps.
 ```
 
 ## todos
+
+- Clifford circuits
 
 - spin basis general/super 支持 Zn、稀疏投影
 

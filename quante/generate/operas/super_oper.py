@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-22 13:10:02
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-04 17:40:47
+# @Last Modified time: 2025-10-05 21:35:38
 
 import numpy as np
 from typing import Literal
@@ -11,26 +11,26 @@ from scipy.sparse.linalg import LinearOperator, spsolve, eigsh, svds
 
 from .spin import SpinOper
 
-__all__ = ['LiouvilleOper', 'LiouvillianLinearOperator']
+__all__ = ['Lindbladian', 'LindbladianLinearOperator']
 
-class LiouvilleOper(SpinOper):
+class Lindbladian(SpinOper):
     def __init__(
         self,
         L:int,
         ham:SpinOper,
-        lind_ops:list[SpinOper],
+        jump_ops:list[SpinOper],
         indx_order:Literal['stacked', 'snake']='stacked', 
         flip:bool=False
     ):
         r"""
-        The Liouvillian is given by the following equation:
+        The Lindbladian is given by the following equation:
         
         .. math::
             \mathcal{L}(\rho) = -i [H, \rho] + \sum_{l} L_l \rho L_l^{\dagger} - \frac{1}{2} \sum_{l} (L_l^{\dagger} L_l \rho + \rho L_l^{\dagger} L_l)
         
         where :math:`H` is the Hamiltonian, :math:`L_l` are the Lindblad operators, and :math:`\rho` is the density matrix.
 
-        In vectorized space, the Liouvillian can be represented as:
+        In vectorized space, the Lindbladian can be represented as:
         .. math::
             \mathcal{L} = -i (H_{eff} \otimes I - I \otimes H_{eff}^*) + \sum_{l} L_l \otimes L_l^* 
         
@@ -65,10 +65,10 @@ class LiouvilleOper(SpinOper):
             The total number of sites.
         ham : Operator
             The Hamiltonian operator.
-        lindblad_ops : list of Operators
-            The Lindblad operators.
+        jump_ops : list of Operators
+            The jump operators.
         indx_order : str, optional
-            The format of the Liouvillian operator, by default 'chain'.
+            The format of the Lindbladian operator, by default 'chain'.
             Options are 'stacked' and 'snake'.
         flip : bool, optional
             Whether to flip the operators in the right part, by default False.
@@ -83,15 +83,15 @@ class LiouvilleOper(SpinOper):
         Returns
         -------
         Operator
-            The Liouvillian operator in the specified format.
+            The Lindbladian operator in the specified format.
         """
         self._L = L
         self.ham = ham
-        self.lindblad_ops = lind_ops
+        self.jump_ops = jump_ops
         self.flip = flip
         self.indx_order = indx_order
         self._check_liou_length()
-        data = self._build_liouvillian()
+        data = self._build_lindbladian()
         super().__init__(data)
     
     @property
@@ -99,38 +99,38 @@ class LiouvilleOper(SpinOper):
         return self._L
     
     def show_split(self):
-        print(f"Liouvillian Operator, L={self.L}, indx_order={self.indx_order}, flip={self.flip}")
+        print(f"Lindbladian Operator, L={self.L}, indx_order={self.indx_order}, flip={self.flip}")
         print(f"Hamiltonian:")
         self.ham.show()
         print(f"Lindblad operators:")
-        for i, lo in enumerate(self.lindblad_ops):
+        for i, lo in enumerate(self.jump_ops):
             print(f"  L_{i}:")
             lo.show()
     
     def show(self):
-        print(f"Liouvillian Operator in vectorized space, L={self.L}, indx_order={self.indx_order}, flip={self.flip}")
+        print(f"Lindbladian Operator in vectorized space, L={self.L}, indx_order={self.indx_order}, flip={self.flip}")
         super().show()
 
     def _check_liou_length(self):
         if self.L < self.ham.L:
             raise ValueError(f"ham length {self.ham.L} exceeds L {self.L}")
-        for lo in self.lindblad_ops:
+        for lo in self.jump_ops:
             if self.L < lo.L:
-                raise ValueError(f"lindblad_ops length {lo.L} exceeds L {self.L}")
+                raise ValueError(f"jump_ops length {lo.L} exceeds L {self.L}")
     
-    def _build_liouvillian(self):
+    def _build_lindbladian(self):
         if self.indx_order == 'stacked':
-            return self._build_liouvillian_stacked()
+            return self._build_lindbladian_stacked()
         elif self.indx_order == 'snake':
-            return self._build_liouvillian_snake()
+            return self._build_lindbladian_snake()
         else:
             raise ValueError(f"indx_order should be 'stacked' or 'snake', but not {self.indx_order}")
 
-    def _build_liouvillian_stacked(self):
+    def _build_lindbladian_stacked(self):
         L = self.L
         ham = self.ham
         flip = self.flip
-        lindblad_ops = self.lindblad_ops
+        jump_ops = self.jump_ops
 
         res = self.builder()
         # transpose ham
@@ -143,7 +143,7 @@ class LiouvilleOper(SpinOper):
             num_y = opstr.count('y')
             res += opstr, [p+L for p in posn], (-1)**num_y * np.conj(coef) * (1j)
         
-        for lo in lindblad_ops:
+        for lo in jump_ops:
             for opstr, posn, coef in (lo.hc() @ lo).each_term():
                 # Ldag L oxx I
                 res += opstr, posn, coef * (-0.5)
@@ -167,9 +167,9 @@ class LiouvilleOper(SpinOper):
     
         return res._build_dict()
     
-    def _build_liouvillian_snake(self):
+    def _build_lindbladian_snake(self):
         ham = self.ham
-        lindblad_ops = self.lindblad_ops
+        jump_ops = self.jump_ops
         flip = self.flip
 
         res = self.builder()
@@ -182,7 +182,7 @@ class LiouvilleOper(SpinOper):
             num_y = opstr.count('y')
             res += opstr, [2*p+1 for p in posn], (-1)**num_y * np.conj(coef) * (1j)
         
-        for lo in lindblad_ops:
+        for lo in jump_ops:
             for opstr, posn, coef in (lo.hc() @ lo).each_term():
                 # Ldag L oxx I
                 res += opstr, [2*p for p in posn], coef * (-0.5)
@@ -219,7 +219,7 @@ class LiouvilleOper(SpinOper):
         self, 
         pauli:bool,
     ) -> tuple[SpinOper, SpinOper]:
-        """Split the Liouvillian into its symmetric and antisymmetric parts.
+        """Split the Lindbladian into its symmetric and antisymmetric parts.
 
         Parameters
         ----------
@@ -240,7 +240,7 @@ class LiouvilleOper(SpinOper):
         Returns
         -------
         tuple[SpinOper, SpinOper]
-            The symmetric and antisymmetric parts of the Liouvillian.
+            The symmetric and antisymmetric parts of the Lindbladian.
         """
         self._check_pauli(pauli)
         L = self.L
@@ -274,10 +274,10 @@ class LiouvilleOper(SpinOper):
         elif basis.L == 2 * self.L:
             return super().to_matrix(basis, pauli, sparse)
         else:
-            raise ValueError(f"basis.L {basis.L} does not match Liouvillian L {self.L} or {2*self.L}")
+            raise ValueError(f"basis.L {basis.L} does not match Lindbladian L {self.L} or {2*self.L}")
     
     def nonhermitian_part(self):
-        r"""Get the non-Hamiltonian part of the Liouvillian.
+        r"""Get the non-Hamiltonian part of the Lindbladian.
 
         .. math::
             \mathcal{L}_{non-H} = H - \frac{i}{2} \sum_{l} L_l^{\dagger} L_l
@@ -290,10 +290,10 @@ class LiouvilleOper(SpinOper):
         Returns
         -------
         SpinOper
-            The non-Hamiltonian part of the Liouvillian.
+            The non-Hamiltonian part of the Lindbladian.
         """
         Heff = self.ham.copy()
-        for lo in self.lindblad_ops:
+        for lo in self.jump_ops:
             Heff += (-1j/2) * (lo.hc() @ lo)
         return Heff
     
@@ -304,8 +304,8 @@ class LiouvilleOper(SpinOper):
         
         self._check_pauli(pauli)
         ham = self.ham.to_matrix(basis=basis, pauli=pauli, sparse=sparse)
-        lindblad_ops = [lo.to_matrix(basis=basis, pauli=pauli, sparse=sparse) for lo in self.lindblad_ops]
-        return LiouvillianLinearOperator(ham=ham, lindblad_ops=lindblad_ops)
+        jump_ops = [lo.to_matrix(basis=basis, pauli=pauli, sparse=sparse) for lo in self.jump_ops]
+        return LindbladianLinearOperator(ham=ham, jump_ops=jump_ops)
     
     def steady_state(self, basis, pauli, method:Literal['direct', 'eig', 'svd'] = 'direct'):
         assert method in ['direct', 'eig', 'svd'], "method should be 'direct' or 'eig' or 'svd'"
@@ -319,26 +319,26 @@ def _flip_opstr(opstr, coef):
     coef = (-1)**num_yzZ * coef
     return opstr, coef
 
-class LiouvillianLinearOperator(LinearOperator):
+class LindbladianLinearOperator(LinearOperator):
     def __init__(
         self,
         ham:sps.csr_array|None,
-        lindblad_ops:list[sps.csr_array]|None,
+        jump_ops:list[sps.csr_array]|None,
     ):
         r"""
-        The Liouvillian is given by the following equation:
+        The Lindbladian is given by the following equation:
         
         .. math::
             \mathcal{L}(\rho) = -i [H, \rho] + \sum_{l} L_l \rho L_l^{\dagger} - \frac{1}{2} \sum_{l} (L_l^{\dagger} L_l \rho + \rho L_l^{\dagger} L_l)
         
         where :math:`H` is the Hamiltonian, :math:`L_l` are the Lindblad operators, and :math:`\rho` is the density matrix.
         """
-        if ham is None and lindblad_ops is None:
-            raise ValueError("ham and lindblad_ops cannot be both None")
+        if ham is None and jump_ops is None:
+            raise ValueError("ham and jump_ops cannot be both None")
         
         self.ham = ham
-        self.lindblad_ops = lindblad_ops
-        self.Ns = ham.shape[0] if ham is not None else lindblad_ops[0].shape[0]
+        self.jump_ops = jump_ops
+        self.Ns = ham.shape[0] if ham is not None else jump_ops[0].shape[0]
         self.dtype = np.dtype(np.complex128)
         self.shape = (self.Ns**2, self.Ns**2)
         self._ham_eff = None
@@ -348,16 +348,16 @@ class LiouvillianLinearOperator(LinearOperator):
         if self._ham_eff is None:
             if self.ham is None:
                 tmp = 0
-                for lo in self.lindblad_ops:
+                for lo in self.jump_ops:
                     if sps.issparse(lo) and lo.nnz == 0:
                         continue
                     tmp = tmp + lo.conj().T @ lo
                 self._ham_eff =  - 1j * tmp/2
-            elif self.lindblad_ops is None:
+            elif self.jump_ops is None:
                 self._ham_eff = self.ham
             else:
                 tmp = 0
-                for lo in self.lindblad_ops:
+                for lo in self.jump_ops:
                     if sps.issparse(lo) and lo.nnz == 0:
                         continue
                     tmp = tmp + lo.conj().T @ lo
@@ -367,9 +367,9 @@ class LiouvillianLinearOperator(LinearOperator):
     @property
     def trace(self):
         a = 2 * self.Ns * self.ham_eff.trace().imag
-        if self.lindblad_ops is None:
+        if self.jump_ops is None:
             return a
-        b = sum(abs(lo.trace())**2 for lo in self.lindblad_ops)
+        b = sum(abs(lo.trace())**2 for lo in self.jump_ops)
         res = a + b
         if isinstance(res, np.ndarray):
             return res.item()
@@ -379,9 +379,9 @@ class LiouvillianLinearOperator(LinearOperator):
     def lo_mul(self, flatten_rho):
         rho = flatten_rho.reshape(self.Ns, self.Ns)
         drho_dt = -1j * (self.ham_eff @ rho - rho @ self.ham_eff.conj().T) 
-        if self.lindblad_ops is None:
+        if self.jump_ops is None:
             return drho_dt
-        for lo in self.lindblad_ops:
+        for lo in self.jump_ops:
             drho_dt += lo @ rho @ lo.conj().T 
         return drho_dt.flatten()
 
@@ -394,23 +394,23 @@ class LiouvillianLinearOperator(LinearOperator):
     def _rmatvec(self, flatten_rho):
         rho = flatten_rho.reshape(self.Ns, self.Ns)
         drho_dt = -1j * (self.ham_eff.T @ rho - rho @ self.ham_eff.conj()) 
-        if self.lindblad_ops is None:
+        if self.jump_ops is None:
             return drho_dt.flatten()
-        for lo in self.lindblad_ops:
+        for lo in self.jump_ops:
             drho_dt += lo.T @ rho @ lo.conj()
         return drho_dt.flatten()
  
     def _sum_jump(self):
         """将所有的 jump operator 进行求和，得到一个稀疏矩阵"""
-        if self.lindblad_ops is None:
+        if self.jump_ops is None:
             return None
-        # self._sum_jump = sum(sps.kron(lo, lo.conj()) for lo in self.lindblad_ops)
+        # self._sum_jump = sum(sps.kron(lo, lo.conj()) for lo in self.jump_ops)
         # 如果 lo 比较多且简单，那么下面的方法会更高效（占用内存会更多）
         from ..basis.basis_class_nb import coodiaglists2csr
         row_result = []
         col_result = []
         ele_result = [] 
-        for lo in self.lindblad_ops:
+        for lo in self.jump_ops:
             tmp = sps.kron(lo, lo.conj())
             row_result.append(tmp.row)
             col_result.append(tmp.col)
@@ -420,7 +420,7 @@ class LiouvillianLinearOperator(LinearOperator):
     def to_matrix(self):
         eye = sps.eye(self.Ns)
         nonherm = -1j * (sps.kron(self.ham_eff, eye) - sps.kron(eye, self.ham_eff.conj()))
-        if self.lindblad_ops is None:
+        if self.jump_ops is None:
             return nonherm
         return nonherm + self._sum_jump()
     
