@@ -88,6 +88,9 @@ eng, vec = H.dmrg(nsweep=10)
 ham.gdenergy(pauli=False)
 ```
 
+More usage examples can be found in `README_zh.md` and the `example/` folder, but they are written in Chinese.
+
+
 ## Citation
 
 If you find this toolkit useful for your research, please cite or acknowledge the repository in your work:
