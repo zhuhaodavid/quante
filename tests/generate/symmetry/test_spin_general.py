@@ -33,12 +33,12 @@ class TestLiouvilleSuperBasis(unittest.TestCase):
         cls.ham = op.sum(J*(op.xx(i,i+1) + op.yy(i,i+1) + Δ*op.zz(i,i+1)) for i in range(L-1))
         # Lindblad (m 跳跃)
         cls.lind_m = [np.sqrt(gamma)*op.m(i) for i in range(L)]
-        cls.liou_m = op.super_oper.LiouvilleOper(L, cls.ham, cls.lind_m, indx_order='stacked', flip=False)
-        cls.liou_m_flip = op.super_oper.LiouvilleOper(L, cls.ham, cls.lind_m, indx_order='stacked', flip=True)
+        cls.liou_m = op.super_oper.Lindbladian(L, cls.ham, cls.lind_m, indx_order='stacked', flip=False)
+        cls.liou_m_flip = op.super_oper.Lindbladian(L, cls.ham, cls.lind_m, indx_order='stacked', flip=True)
         # Lindblad (z 跳跃)
         cls.lind_z = [np.sqrt(gamma)*op.z(i) for i in range(L)]
-        cls.liou_z = op.super_oper.LiouvilleOper(L, cls.ham, cls.lind_z, indx_order='stacked', flip=False)
-        cls.liou_z_flip = op.super_oper.LiouvilleOper(L, cls.ham, cls.lind_z, indx_order='stacked', flip=True)
+        cls.liou_z = op.super_oper.Lindbladian(L, cls.ham, cls.lind_z, indx_order='stacked', flip=False)
+        cls.liou_z_flip = op.super_oper.Lindbladian(L, cls.ham, cls.lind_z, indx_order='stacked', flip=True)
 
     @staticmethod
     def _sorted_eigs(mat):

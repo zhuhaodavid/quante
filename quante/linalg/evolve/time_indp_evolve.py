@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-04 16:11:11
+# @Last Modified time: 2025-10-05 21:30:59
 
 
 from scipy import sparse as sps
@@ -91,7 +91,7 @@ class EvolveEngine:
         device = method[4:] if method[:3] in ['eig', 'mul'] else 'cpu'
         
         if isinstance(ham, LinearOperator) and traceA is None:
-            # convert the Liouvillian to a csr sparse matrix if needed
+            # convert the Lindbladian to a csr sparse matrix if needed
             # else it will be a LinearOperator, along with the traceA
             if traceA is None:
                 try:
@@ -290,11 +290,13 @@ class EvolveEngine:
                     res.append(obs(t, state))
                 except Exception as e:
                     raise MeasureError(
-                            "Please check the measure function so that it can deal with the"
-                            f"states with \ntype:{type(state)}, shape:{state.shape}, "
-                            f"dtype:{state.dtype}.\n"
-                            f"Error in measure: \n{e}."
-                            ) from e
+                        "An error occurred while processing the measure function. \n"
+                        "Please ensure the measure function can handle the following:\n"
+                        f"- State type: {type(state)}\n"
+                        f"- State shape: {state.shape}\n"
+                        f"- State dtype: {state.dtype}\n"
+                        f"Error details:\n{e}"
+                    ) from e
             try:
                 return _np.real_if_close(res)    
             except:
@@ -398,10 +400,12 @@ class EvolveEngine:
                 ])
         except Exception as e:
             raise MeasureError(
-                            "Please check the measure function so that it can deal with the"
-                            f"states with \ntype:{type(states)}, shape:{states.shape}, "
-                            f"dtype:{states.dtype}\n"
-                            f"Error in measure: \n{e}."
+                "An error occurred while processing the measure function. "
+                "Please ensure the measure function can handle the following:\n"
+                f"- State type: {type(states)}\n"
+                f"- State shape: {states.shape}\n"
+                f"- State dtype: {states.dtype}\n"
+                f"Error details:\n{e}"
             ) from e
     
 
@@ -439,7 +443,7 @@ def evolve_and_measure(
     Parameters
     ----------
     matrix : ndarray | csr_array | LinearOperator
-        the Hamiltonian or Liouvillian matrix/operator
+        the Hamiltonian or Lindbladian matrix/operator
     inistate : ndarray
         the initial state vector
     tlist : ndarray

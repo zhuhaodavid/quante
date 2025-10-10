@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-24 14:05:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 20:22:24
+# @Last Modified time: 2025-10-10 21:56:18
 
 import unittest
 import numpy as np
@@ -11,7 +11,7 @@ import quante.generate.operas.spin as op
 import quante.bridge.quspin_utils as qs
 from quante.generate.basis.spin_half.bitsoperation import count_tot_down
 
-class TestLiouvillianDecomposition(unittest.TestCase):
+class TestLindbladianDecomposition(unittest.TestCase):
     L = 4
     J = 1.0
     Δ = 0.5
@@ -22,7 +22,7 @@ class TestLiouvillianDecomposition(unittest.TestCase):
         return op.sum(J * (op.xx(i, i+1) + op.yy(i, i+1) + Δ * op.zz(i, i+1)) for i in range(L-1))
 
     @staticmethod
-    def _lind_ops(L, gamma):
+    def _jump_ops(L, gamma):
         return [np.sqrt(gamma) * op.m(i) for i in range(L)]
 
     @staticmethod
@@ -43,7 +43,7 @@ class TestLiouvillianDecomposition(unittest.TestCase):
     @staticmethod
     def _iLiou_flip_antisym(L, J, Δ):
         # 与 _iLiou_antisym 形式相同，这里保留语义区分
-        return TestLiouvillianDecomposition._iLiou_antisym(L, J, Δ)
+        return TestLindbladianDecomposition._iLiou_antisym(L, J, Δ)
 
     @staticmethod
     def _Liou_flip_sym(L, gamma):
@@ -57,7 +57,7 @@ class TestLiouvillianDecomposition(unittest.TestCase):
     def _op_list_from_antisym(iLiou_antisym):
         return [[opnm, j, i] for opnm, coef in iLiou_antisym.to_quspin(pauli=True) for i, *j in coef]
 
-    def test_full_liouvillian_equivalence(self):
+    def test_full_lindbladian_equivalence(self):
         L, J, Δ, gamma = self.L, self.J, self.Δ, self.gamma
         iLiou_antisym = self._iLiou_antisym(L, J, Δ)
         Liou_sym = self._Liou_sym(L, gamma)
@@ -68,8 +68,8 @@ class TestLiouvillianDecomposition(unittest.TestCase):
         eng_original = qt.linalg.sortcomplex(np.linalg.eigvals(Lioumat))
         self.assertEqual(Lioumat_real.dtype, np.complex128)
         ham = self._ham(L, J, Δ)
-        lind_ops = self._lind_ops(L, gamma)
-        mat = qs.liouvillian(L, ham, lind_ops, basis_full).toarray()
+        jump_ops = self._jump_ops(L, gamma)
+        mat = qs.lindbladian(L, ham, jump_ops, basis_full).toarray()
         self.assertTrue(np.allclose(mat, Lioumat))
         # 保存供后续测试复用（缓存)
         self._cache = {
@@ -83,7 +83,7 @@ class TestLiouvillianDecomposition(unittest.TestCase):
 
     def test_sym_antisym_real_transform(self):
         if not hasattr(self, "_cache"):
-            self.test_full_liouvillian_equivalence()
+            self.test_full_lindbladian_equivalence()
         L, Lioumat, eng_original = self.L, self._cache["Lioumat"], self._cache["eng_original"]
         basis_full = self._cache["basis_full"]
         basis_sym = qs.spin_basis_2d(Lx=L, Ly=2, pauli=True, pyblock=0)
@@ -110,7 +110,7 @@ class TestLiouvillianDecomposition(unittest.TestCase):
 
     def test_sym_antisym_blocks_op_shift_sector(self):
         if not hasattr(self, "_cache"):
-            self.test_full_liouvillian_equivalence()
+            self.test_full_lindbladian_equivalence()
         L = self.L
         iLiou_antisym = self._cache["iLiou_antisym"]
         Liou_sym = self._cache["Liou_sym"]
@@ -137,26 +137,26 @@ class TestLiouvillianDecomposition(unittest.TestCase):
     def test_super_basis_equivalence(self):
         L, J, Δ, gamma = self.L, self.J, self.Δ, self.gamma
         ham = self._ham(L, J, Δ)
-        lind_ops = self._lind_ops(L, gamma)
+        jump_ops = self._jump_ops(L, gamma)
         basis_super = qs.spin_super_basis_fast(L, pauli=True)
-        mat1 = qs.liouvillian(L, ham, lind_ops, basis_super).toarray()
+        mat1 = qs.lindbladian(L, ham, jump_ops, basis_super).toarray()
         eng1 = qt.linalg.sortcomplex(np.linalg.eigvals(mat1))
         self.assertEqual(mat1.dtype, np.float64)
         basis_super_snake = qs.spin_super_basis_fast(L, pauli=True, indx_order='snake')
-        mat2 = qs.liouvillian(L, ham, lind_ops, basis_super_snake, indx_order='snake').toarray()
+        mat2 = qs.lindbladian(L, ham, jump_ops, basis_super_snake, indx_order='snake').toarray()
         eng2 = qt.linalg.sortcomplex(np.linalg.eigvals(mat2))
         self.assertTrue(np.allclose(eng1, eng2))
         basis_px = qs.spin_basis_2d(Lx=L, Ly=2, pauli=True, pxblock=0)
-        mat_px = qs.liouvillian(L, ham, lind_ops, basis_px).toarray()
+        mat_px = qs.lindbladian(L, ham, jump_ops, basis_px).toarray()
         eng_px = qt.linalg.sortcomplex(np.linalg.eigvals(mat_px))
         basis_super_p = qs.spin_super_basis_fast(L, pauli=True, pblock=0)
-        mat_p = qs.liouvillian(L, ham, lind_ops, basis_super_p).toarray()
+        mat_p = qs.lindbladian(L, ham, jump_ops, basis_super_p).toarray()
         eng_p = qt.linalg.sortcomplex(np.linalg.eigvals(mat_p))
         self.assertTrue(np.allclose(eng_px, eng_p))
 
-    def test_flip_liouvillian(self):
+    def test_flip_lindbladian(self):
         if not hasattr(self, "_cache"):
-            self.test_full_liouvillian_equivalence()
+            self.test_full_lindbladian_equivalence()
         L, J, Δ, gamma = self.L, self.J, self.Δ, self.gamma
         iLiou_flip_antisym = self._iLiou_flip_antisym(L, J, Δ)
         Liou_flip_sym = self._Liou_flip_sym(L, gamma)
@@ -171,10 +171,10 @@ class TestLiouvillianDecomposition(unittest.TestCase):
         eng_Nup = qt.linalg.sortcomplex(np.linalg.eigvals(Lioumat_flip_Nup))
         self.assertTrue(all(any(np.isclose(e, e0) for e0 in eng_flip) for e in eng_Nup))
         ham = self._ham(L, J, Δ)
-        lind_ops = self._lind_ops(L, gamma)
-        mat_full = qs.liouvillian(L, ham, lind_ops, basis_full, flip=True).toarray()
+        jump_ops = self._jump_ops(L, gamma)
+        mat_full = qs.lindbladian(L, ham, jump_ops, basis_full, flip=True).toarray()
         self.assertTrue(np.allclose(Lioumat_flip, mat_full))
-        mat_Nup = qs.liouvillian(L, ham, lind_ops, basis_Nup, flip=True).toarray()
+        mat_Nup = qs.lindbladian(L, ham, jump_ops, basis_Nup, flip=True).toarray()
         self.assertTrue(np.allclose(Lioumat_flip_Nup, mat_Nup))
         # 缓存
         self._cache.update({
@@ -186,7 +186,7 @@ class TestLiouvillianDecomposition(unittest.TestCase):
 
     def test_flip_half_filling_sym_antisym_blocks(self):
         if "Liou_flip" not in getattr(self, "_cache", {}):
-            self.test_flip_liouvillian()
+            self.test_flip_lindbladian()
         L = self.L
         Lioumat_flip = self._cache["Lioumat_flip"]
         Liou_flip_sym = self._cache["Liou_flip_sym"]
@@ -222,14 +222,14 @@ class TestLiouvillianDecomposition(unittest.TestCase):
         blk10 = -blk10.real
         self.assertTrue(np.allclose(np.block([[mat00, blk01], [blk10, mat11]]), Liou_flip_real))
         ham = self._ham(L, self.J, self.Δ)
-        lind_ops = self._lind_ops(L, self.gamma)
+        jump_ops = self._jump_ops(L, self.gamma)
         basis_real = qs.spin_super_basis_fast(L, pauli=True, Nup=L, flip=True)
-        mat_liou = qs.liouvillian(L, ham, lind_ops, basis_real, flip=True).toarray()
+        mat_liou = qs.lindbladian(L, ham, jump_ops, basis_real, flip=True).toarray()
         self.assertTrue(np.allclose(Liou_flip_real, mat_liou))
 
     def test_non_half_filling_blocks(self):
         if "Liou_flip" not in getattr(self, "_cache", {}):
-            self.test_flip_liouvillian()
+            self.test_flip_lindbladian()
         L = self.L
         Lioumat_flip = self._cache["Lioumat_flip"]
         Ndiff = 1
