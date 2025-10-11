@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 15:20:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-04 17:16:58
+# @Last Modified time: 2025-10-11 20:06:43
 
 from ...basis_class import SpinHalfBasis
 import numpy as np
@@ -46,8 +46,8 @@ class SpinHalfSuperBasis(SpinHalfBasis):
         else:
             _Ndiff = None
         
-        self.Nup = Nup
-        self.Ndiff = _Ndiff
+        self.Nup = np.array(Nup)
+        self.Ndiff = np.array(_Ndiff)
 
         ns = []
         ps = []
@@ -63,8 +63,8 @@ class SpinHalfSuperBasis(SpinHalfBasis):
             ps.append(_perm)
             bs.append(_block)
         self.block_name = ns
-        self.perm = np.array(ps)
-        self.block = np.array(bs)
+        self.perm = np.array(ps, dtype=np.int64).reshape(-1, 2*self.L, 3)
+        self.block = np.array(bs, dtype=np.int64).reshape(-1)
 
         if indx_order == 'stacked':
             self.indx_order = indx_order
@@ -142,130 +142,49 @@ class SpinHalfSuperBasis(SpinHalfBasis):
             return _sp.dia_array((self.Ns,self.Ns),dtype=dtype)
 
 ############################################
-# Full
+# Z2N
 ############################################     
-class BasisFull(SpinHalfSuperBasis):
+class BasisZ2N(SpinHalfSuperBasis):
     def __init__(self, L: int, Ndiff, Nup, indx_order, **blocks) -> None:
-        assert len(blocks) == 0, "Ndiff should not have Z2 symmetry"
         super().__init__(L, Ndiff, Nup, indx_order, **blocks)
 
         if Nup is not None and Ndiff is not None:
-            from .basis_core import construct_Nup2_basis
-            self.sp_list, self.s_list, self.Ns_sym, self.Ns_asym = construct_Nup2_basis(
-                self.L, self.Nup, self._ancillary_perm
+            from .basis_core import construct_Nup2_basis_Z2N
+            self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Nup2_basis_Z2N(
+                self.L, self.Nup, self.perm, self.block, self._ancillary_perm
             )
         elif Nup is not None:
-            from .basis_core import construct_Ndiff_basis
+            from .basis_core import construct_Ndiff_basis_Z2N
             flipmask = 0
-            self.s_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis(
-                self.L, self.Nup, self._ancillary_perm, flipmask
+            self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis_Z2N(
+                self.L, self.Nup, self.perm, self.block, self._ancillary_perm, flipmask
             )
         elif Ndiff is not None:
-            from .basis_core import construct_Ndiff_basis
+            from .basis_core import construct_Ndiff_basis_Z2N
             flipmask = (1 << L) - 1
-            self.s_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis(
-                self.L, self.Ndiff, self._ancillary_perm, flipmask
+            self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis_Z2N(
+                self.L, self.Ndiff, self.perm, self.block, self._ancillary_perm, flipmask
             )
         else:
-            from .basis_core import construct_full_basis
-            self.s_list, self.Ns_sym, self.Ns_asym = construct_full_basis(
-                self.L, self._ancillary_perm
+            from .basis_core import construct_basis_Z2N
+            self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_basis_Z2N(
+                2*self.L, self.perm, self.block, self._ancillary_perm
             )
         self.Ns = self.Ns_sym + self.Ns_asym
         self.default_complex = False
 
     def _Op_real(self, opnm, posn, coef, row_init, col_init, ME_init, op_sym):
         if op_sym:
-            from .matrix_core import single_sparse_matrix_element_full_sym
-            return single_sparse_matrix_element_full_sym(
-                opnm, posn, coef, 2*self.L, self._ancillary_perm, self.Ns_sym, self.Ns, self.s_list, row_init, col_init, ME_init
-            )
-        else:
-            from .matrix_core import single_sparse_matrix_element_full_asym
-            return single_sparse_matrix_element_full_asym(
-                opnm, posn, coef, 2*self.L, self._ancillary_perm, self.Ns_sym, self.Ns, self.s_list, row_init, col_init, ME_init
-            )
-    
-    def project(self, vec, Nup2=False):
-        """Project a vector to the symmetry sector.
-        """
-        if Nup2 is False:
-            from .basis_core import project_full
-            if vec.ndim == 1:
-                vec = vec.reshape(-1,1)
-            res = project_full(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, vec.dtype)
-            return np.real_if_close(res)
-        else:
-            from .basis_core import project_full_Nup2
-            if vec.ndim == 1:
-                vec = vec.reshape(-1,1)
-            res = project_full_Nup2(vec, 2*self.L, self.s_list, self.sp_list, self.Ns_sym, self.Ns, self._ancillary_perm, vec.dtype)
-            return np.real_if_close(res)
-
-    def recover(self, vec):
-        """Recover a vector from the symmetry sector.
-        """
-        from .basis_core import recover_full
-        if vec.ndim == 1:
-            vec = vec.reshape(-1,1)
-        res = recover_full(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm)
-        return np.real_if_close(res)
-
-    def projection_matrix(self):
-        """Return the projection matrix to the symmetry sector.
-        """
-        from .basis_core import projmat_full
-        row, col, ele = projmat_full(self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm)
-        return _sp.csr_array((ele,(row,col)),shape=(1<<2*self.L, self.Ns),dtype=np.complex128)
-
-############################################
-# Z21
-############################################     
-class BasisZ21(SpinHalfSuperBasis):
-    def __init__(self, L: int, Ndiff, Nup, indx_order, **blocks) -> None:
-        assert len(blocks) == 1, "Ndiff should not have Z2 symmetry"
-        super().__init__(L, Ndiff, Nup, indx_order, **blocks)
-
-        if Nup is not None and Ndiff is not None:
-            from .basis_core import construct_Nup2_basis_Z21
-            self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Nup2_basis_Z21(
-                self.L, self.Nup, self.perm[0], self.block[0],
-                self._ancillary_perm
-            )
-        elif Nup is not None:
-            from .basis_core import construct_Ndiff_basis_Z21
-            flipmask = 0
-            self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis_Z21(
-                self.L, self.Nup, self.perm[0], self.block[0],
-                self._ancillary_perm, flipmask
-            )
-        elif Ndiff is not None:
-            from .basis_core import construct_Ndiff_basis_Z21
-            flipmask = (1 << L) - 1
-            self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis_Z21(
-                self.L, self.Ndiff, self.perm[0], self.block[0],
-                self._ancillary_perm, flipmask
-            )
-        else:
-            from .basis_core import construct_basis_Z21
-            self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_basis_Z21(
-                2*self.L, self.perm[0], self.block[0], self._ancillary_perm
-            )
-        self.Ns = self.Ns_sym + self.Ns_asym
-        self.default_complex = False
-
-    def _Op_real(self, opnm, posn, coef, row_init, col_init, ME_init, op_sym):
-        if op_sym:
-            from .matrix_core import single_sparse_matrix_element_Z21_sym
-            return single_sparse_matrix_element_Z21_sym(
-                opnm, posn, coef, 2*self.L, self.perm[0], self.block[0], 
+            from .matrix_core import single_sparse_matrix_element_Z2N_sym
+            return single_sparse_matrix_element_Z2N_sym(
+                opnm, posn, coef, 2*self.L, self.perm, self.block, 
                 self._ancillary_perm, self.R_list, self.Ns_sym, self.Ns, 
                 self.s_list, row_init, col_init, ME_init
             )
         else:
-            from .matrix_core import single_sparse_matrix_element_Z21_asym
-            return single_sparse_matrix_element_Z21_asym(
-                opnm, posn, coef, 2*self.L, self.perm[0], self.block[0], 
+            from .matrix_core import single_sparse_matrix_element_Z2N_asym
+            return single_sparse_matrix_element_Z2N_asym(
+                opnm, posn, coef, 2*self.L, self.perm, self.block, 
                 self._ancillary_perm, self.R_list, self.Ns_sym, self.Ns, 
                 self.s_list, row_init, col_init, ME_init
             )
@@ -273,27 +192,263 @@ class BasisZ21(SpinHalfSuperBasis):
     def project(self, vec):
         """Project a vector to the symmetry sector.
         """
-        from .basis_core import project_Z21
+        from .basis_core import project_Z2N
         if vec.ndim == 1:
             vec = vec.reshape(-1,1)
-        res = project_Z21(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, self.perm[0], self.block[0])
+        res = project_Z2N(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, self.perm, self.block)
         return np.real_if_close(res)
 
     def recover(self, vec):
         """Recover a vector from the symmetry sector.
         """
-        from .basis_core import recover_Z21
+        from .basis_core import recover_Z2N
         if vec.ndim == 1:
             vec = vec.reshape(-1,1)
-        return recover_Z21(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, self.perm[0], self.block[0])
+        return recover_Z2N(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, self.perm, self.block)
 
     def projection_matrix(self):
         """Return the projection matrix to the symmetry sector.
         """
-        from .basis_core import projmat_Z21
-        row, col, ele = projmat_Z21(self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm,
-                                    self.perm[0], self.block[0])
+        from .basis_core import projmat_Z2N
+        row, col, ele = projmat_Z2N(self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm,
+                                    self.perm, self.block)
         return _sp.csr_array((ele,(row,col)),shape=(1<<2*self.L, self.Ns),dtype=np.complex128)
+
+
+# ############################################
+# # Full
+# ############################################     
+# class BasisFull(SpinHalfSuperBasis):
+#     def __init__(self, L: int, Ndiff, Nup, indx_order, **blocks) -> None:
+#         assert len(blocks) == 0, "no symmetry is allowed"
+#         super().__init__(L, Ndiff, Nup, indx_order, **blocks)
+
+#         if Nup is not None and Ndiff is not None:
+#             from .basis_core import construct_Nup2_basis
+#             self.sp_list, self.s_list, self.Ns_sym, self.Ns_asym = construct_Nup2_basis(
+#                 self.L, self.Nup, self._ancillary_perm
+#             )
+#         elif Nup is not None:
+#             from .basis_core import construct_Ndiff_basis
+#             flipmask = 0
+#             self.s_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis(
+#                 self.L, self.Nup, self._ancillary_perm, flipmask
+#             )
+#         elif Ndiff is not None:
+#             from .basis_core import construct_Ndiff_basis
+#             flipmask = (1 << L) - 1
+#             self.s_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis(
+#                 self.L, self.Ndiff, self._ancillary_perm, flipmask
+#             )
+#         else:
+#             from .basis_core import construct_full_basis
+#             self.s_list, self.Ns_sym, self.Ns_asym = construct_full_basis(
+#                 self.L, self._ancillary_perm
+#             )
+#         self.Ns = self.Ns_sym + self.Ns_asym
+#         self.default_complex = False
+
+#     def _Op_real(self, opnm, posn, coef, row_init, col_init, ME_init, op_sym):
+#         if op_sym:
+#             from .matrix_core import single_sparse_matrix_element_full_sym
+#             return single_sparse_matrix_element_full_sym(
+#                 opnm, posn, coef, 2*self.L, self._ancillary_perm, self.Ns_sym, self.Ns, self.s_list, row_init, col_init, ME_init
+#             )
+#         else:
+#             from .matrix_core import single_sparse_matrix_element_full_asym
+#             return single_sparse_matrix_element_full_asym(
+#                 opnm, posn, coef, 2*self.L, self._ancillary_perm, self.Ns_sym, self.Ns, self.s_list, row_init, col_init, ME_init
+#             )
+    
+#     def project(self, vec, Nup2=False):
+#         """Project a vector to the symmetry sector.
+#         """
+#         if Nup2 is False:
+#             from .basis_core import project_full
+#             if vec.ndim == 1:
+#                 vec = vec.reshape(-1,1)
+#             res = project_full(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, vec.dtype)
+#             return np.real_if_close(res)
+#         else:
+#             from .basis_core import project_full_Nup2
+#             if vec.ndim == 1:
+#                 vec = vec.reshape(-1,1)
+#             res = project_full_Nup2(vec, 2*self.L, self.s_list, self.sp_list, self.Ns_sym, self.Ns, self._ancillary_perm, vec.dtype)
+#             return np.real_if_close(res)
+
+#     def recover(self, vec):
+#         """Recover a vector from the symmetry sector.
+#         """
+#         from .basis_core import recover_full
+#         if vec.ndim == 1:
+#             vec = vec.reshape(-1,1)
+#         res = recover_full(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm)
+#         return np.real_if_close(res)
+
+#     def projection_matrix(self):
+#         """Return the projection matrix to the symmetry sector.
+#         """
+#         from .basis_core import projmat_full
+#         row, col, ele = projmat_full(self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm)
+#         return _sp.csr_array((ele,(row,col)),shape=(1<<2*self.L, self.Ns),dtype=np.complex128)
+
+# ############################################
+# # Z21
+# ############################################     
+# class BasisZ21(SpinHalfSuperBasis):
+#     def __init__(self, L: int, Ndiff, Nup, indx_order, **blocks) -> None:
+#         assert len(blocks) == 1, "only one Z2 symmetry is allowed"
+#         super().__init__(L, Ndiff, Nup, indx_order, **blocks)
+
+#         if Nup is not None and Ndiff is not None:
+#             from .basis_core import construct_Nup2_basis_Z21
+#             self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Nup2_basis_Z21(
+#                 self.L, self.Nup, self.perm[0], self.block[0],
+#                 self._ancillary_perm
+#             )
+#         elif Nup is not None:
+#             from .basis_core import construct_Ndiff_basis_Z21
+#             flipmask = 0
+#             self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis_Z21(
+#                 self.L, self.Nup, self.perm[0], self.block[0],
+#                 self._ancillary_perm, flipmask
+#             )
+#         elif Ndiff is not None:
+#             from .basis_core import construct_Ndiff_basis_Z21
+#             flipmask = (1 << L) - 1
+#             self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis_Z21(
+#                 self.L, self.Ndiff, self.perm[0], self.block[0],
+#                 self._ancillary_perm, flipmask
+#             )
+#         else:
+#             from .basis_core import construct_basis_Z21
+#             self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_basis_Z21(
+#                 2*self.L, self.perm[0], self.block[0], self._ancillary_perm
+#             )
+#         self.Ns = self.Ns_sym + self.Ns_asym
+#         self.default_complex = False
+
+#     def _Op_real(self, opnm, posn, coef, row_init, col_init, ME_init, op_sym):
+#         if op_sym:
+#             from .matrix_core import single_sparse_matrix_element_Z21_sym
+#             return single_sparse_matrix_element_Z21_sym(
+#                 opnm, posn, coef, 2*self.L, self.perm[0], self.block[0], 
+#                 self._ancillary_perm, self.R_list, self.Ns_sym, self.Ns, 
+#                 self.s_list, row_init, col_init, ME_init
+#             )
+#         else:
+#             from .matrix_core import single_sparse_matrix_element_Z21_asym
+#             return single_sparse_matrix_element_Z21_asym(
+#                 opnm, posn, coef, 2*self.L, self.perm[0], self.block[0], 
+#                 self._ancillary_perm, self.R_list, self.Ns_sym, self.Ns, 
+#                 self.s_list, row_init, col_init, ME_init
+#             )
+    
+#     def project(self, vec):
+#         """Project a vector to the symmetry sector.
+#         """
+#         from .basis_core import project_Z21
+#         if vec.ndim == 1:
+#             vec = vec.reshape(-1,1)
+#         res = project_Z21(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, self.perm[0], self.block[0])
+#         return np.real_if_close(res)
+
+#     def recover(self, vec):
+#         """Recover a vector from the symmetry sector.
+#         """
+#         from .basis_core import recover_Z21
+#         if vec.ndim == 1:
+#             vec = vec.reshape(-1,1)
+#         return recover_Z21(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, self.perm[0], self.block[0])
+
+#     def projection_matrix(self):
+#         """Return the projection matrix to the symmetry sector.
+#         """
+#         from .basis_core import projmat_Z21
+#         row, col, ele = projmat_Z21(self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm,
+#                                     self.perm[0], self.block[0])
+#         return _sp.csr_array((ele,(row,col)),shape=(1<<2*self.L, self.Ns),dtype=np.complex128)
+
+
+
+# ############################################
+# # Z22
+# ############################################     
+# class BasisZ22(SpinHalfSuperBasis):
+#     def __init__(self, L: int, Ndiff, Nup, indx_order, **blocks) -> None:
+#         super().__init__(L, Ndiff, Nup, indx_order, **blocks)
+#         assert len(blocks) == 2, "exactly two Z2 symmetries are required"
+
+#         if Nup is not None and Ndiff is not None:
+#             from .basis_core import construct_Nup2_basis_Z22
+#             self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Nup2_basis_Z22(
+#                 self.L, self.Nup, self.perm[0], self.block[0], self.perm[1], self.block[1],
+#                 self._ancillary_perm
+#             )
+#         elif Nup is not None:
+#             from .basis_core import construct_Ndiff_basis_Z22
+#             flipmask = 0
+#             self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis_Z22(
+#                 self.L, self.Nup, self.perm[0], self.block[0], self.perm[1], self.block[1],
+#                 self._ancillary_perm, flipmask
+#             )
+#         elif Ndiff is not None:
+#             from .basis_core import construct_Ndiff_basis_Z22
+#             flipmask = (1 << L) - 1
+#             self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis_Z22(
+#                 self.L, self.Ndiff, self.perm[0], self.block[0], self.perm[1], self.block[1],
+#                 self._ancillary_perm, flipmask
+#             )
+#         else:
+#             from .basis_core import construct_basis_Z22
+#             self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_basis_Z22(
+#                 2*self.L, self.perm[0], self.block[0], self.perm[1], self.block[1], self._ancillary_perm
+#             )
+#         self.Ns = self.Ns_sym + self.Ns_asym
+#         self.default_complex = False
+
+#     def _Op_real(self, opnm, posn, coef, row_init, col_init, ME_init, op_sym):
+#         if op_sym:
+#             from .matrix_core import single_sparse_matrix_element_Z22_sym
+#             return single_sparse_matrix_element_Z22_sym(
+#                 opnm, posn, coef, 2*self.L, self.perm[0], self.block[0], 
+#                 self.perm[1], self.block[1],
+#                 self._ancillary_perm, self.R_list, self.Ns_sym, self.Ns, 
+#                 self.s_list, row_init, col_init, ME_init
+#             )
+#         else:
+#             from .matrix_core import single_sparse_matrix_element_Z22_asym
+#             return single_sparse_matrix_element_Z22_asym(
+#                 opnm, posn, coef, 2*self.L, self.perm[0], self.block[0], 
+#                 self.perm[1], self.block[1],
+#                 self._ancillary_perm, self.R_list, self.Ns_sym, self.Ns, 
+#                 self.s_list, row_init, col_init, ME_init
+#             )
+    
+#     def project(self, vec):
+#         """Project a vector to the symmetry sector.
+#         """
+#         from .basis_core import project_Z22
+#         if vec.ndim == 1:
+#             vec = vec.reshape(-1,1)
+#         res = project_Z22(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, self.perm[0], self.block[0], self.perm[1], self.block[1])
+#         return np.real_if_close(res)
+
+#     def recover(self, vec):
+#         """Recover a vector from the symmetry sector.
+#         """
+#         from .basis_core import recover_Z22
+#         if vec.ndim == 1:
+#             vec = vec.reshape(-1,1)
+#         return recover_Z22(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, self.perm[0], self.block[0], self.perm[1], self.block[1])
+
+#     def projection_matrix(self):
+#         """Return the projection matrix to the symmetry sector.
+#         """
+#         from .basis_core import projmat_Z22
+#         row, col, ele = projmat_Z22(self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm,
+#                                     self.perm[0], self.block[0], self.perm[1], self.block[1])
+#         return _sp.csr_array((ele,(row,col)),shape=(1<<2*self.L, self.Ns),dtype=np.complex128)
 
 
 

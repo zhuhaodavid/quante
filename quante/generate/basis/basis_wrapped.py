@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-04 16:50:50
+# @Last Modified time: 2025-10-11 21:59:25
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -368,6 +368,7 @@ def spin_basis_general(
     S = _check_spin_number(S)
     if S != 0.5:
         raise NotImplementedError("spin_basis_general is only implemented for spin-1/2 now.")
+    
 
     from .spin_half.spin_general.basis import get_permute_number as _get_perm_num
     # Validate each provided symmetry block is Z2
@@ -377,68 +378,17 @@ def spin_basis_general(
                 for a,i in enumerate(_perm)
         ])
         n = _get_perm_num(L, _perm)
-        blocks[_name] = (_perm, _sector)
+        blocks[_name] = (_perm, _sector, 2)
         assert n == 2, "only Z2 symmetry is supported for spin_basis_general now."
-
-    n_blocks = len(blocks)
-
-    # Fast path: no Ndiff / flipset involvement and no symmetry blocks
+    
+    from .spin_half.spin_general.basis import BasisZ2N
     if Ndiff is None:
-        if Nup is None:
-            if n_blocks == 0:
-                from .spin_half.spin_1d.basis import SpinHalfBasisNoBlock
-                return SpinHalfBasisNoBlock(L)
-        flipset, _Ndiff, _Nup2 = [], Nup, None
+        flipset = None
+        _Ndiff = None
     else:
         flipset, _Ndiff = Ndiff
-        if isinstance(_Ndiff, int):
-            _Ndiff = [_Ndiff]
-        assert isinstance(_Ndiff, list), f"Ndiff must be a list, not {type(_Ndiff)}."
-        assert isinstance(flipset, (range, list, np.ndarray)), f"flipset must be a list or array, not {type(flipset)}."
-        if Nup is None:
-            _Nup2 = None
-        else:
-            if isinstance(Nup, int):
-                Nup = [Nup]
-            if len(flipset) == 0:
-                assert set(_Ndiff) == set(Nup), "When flipset is empty, Ndiff must equal Nup."
-                flipset, _Ndiff = [], Nup
-                _Nup2 = None
-            else:
-                _Nup2 = []
-                for i in Nup:
-                    for j in _Ndiff:
-                        assert (i+j)%2 == 0, f"Nup + Ndiff must be even, but got Nup={i}, Ndiff={j}."
-                        _Nup2.append(((i+j)//2, (i-j)//2))
-                _Nup2 = np.array(_Nup2)
+    return BasisZ2N(L, flipset, _Ndiff, Nup, **blocks)
 
-    # Map number of blocks to suffix; >=4 collapses to 'N'
-    if n_blocks in (1, 2, 3):
-        class_name = f"BasisZ2{n_blocks}"
-    else:  # n_blocks >= 4
-        class_name = "BasisZ2N"
-
-    if n_blocks == 0:
-        # Special solitary class name
-        from .spin_half.spin_general.basis import BasisNdiff
-        return BasisNdiff(L, flipset, _Ndiff, _Nup2)
-
-    # Map number of blocks to suffix; >=4 collapses to 'N'
-    if n_blocks in (1, 2, 3):
-        class_name = f"BasisZ2{n_blocks}"
-    else:  # n_blocks >= 4
-        class_name = "BasisZ2N"
-
-    # class_name = ("BasisNdiff" if use_ndiff else "Basis") + suffix
-
-    # Import module once then getattr
-    from .spin_half.spin_general import basis as _basis_mod  # type: ignore
-    try:
-        BasisCls = getattr(_basis_mod, class_name)
-    except AttributeError as exc:  # pragma: no cover - defensive
-        raise RuntimeError(f"Expected basis class '{class_name}' not found.") from exc
-
-    return BasisCls(L, flipset, _Ndiff, _Nup2, **blocks)
 
 def spin_basis_2d(
     Lx:int, Ly:int,
