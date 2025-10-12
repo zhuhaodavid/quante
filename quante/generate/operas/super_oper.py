@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-22 13:10:02
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-05 21:35:38
+# @Last Modified time: 2025-10-12 18:27:40
 
 import numpy as np
 from typing import Literal
@@ -258,9 +258,11 @@ class Lindbladian(SpinOper):
         oper_antisym *= 0.5
         return oper_sym.clean(pauli=pauli), oper_antisym.clean(pauli=pauli)
     
-    def to_matrix(self, basis, pauli, sparse=False):
+    def to_matrix(self, basis, pauli, sparse=False, check_symm=False):
         from ..basis.spin_half.spin_super.basis import SpinHalfSuperBasis
         if isinstance(basis, SpinHalfSuperBasis):
+            if check_symm:
+                self.check_symm(2*self.L, pauli, basis=basis)
             liou_sym, liou_asym = self.sym_asym_split(pauli=True)
             liou_sym_list, sym_complex = liou_sym._convert_to_quick_form(2*self.L)
             liou_asym_list, asym_complex = (1j*liou_asym)._convert_to_quick_form(2*self.L)
@@ -269,10 +271,10 @@ class Lindbladian(SpinOper):
             mat0 = basis._real_sparse_matrix(liou_sym_list, liou_asym_list, False)
             return mat0 if sparse else mat0.toarray()
         if basis.L == self.L:
-            res = self.to_linearoperator(basis, pauli).to_matrix()
+            res = self.to_linearoperator(basis, pauli, check_symm=check_symm).to_matrix()
             return res if sparse else res.toarray()
         elif basis.L == 2 * self.L:
-            return super().to_matrix(basis, pauli, sparse)
+            return super().to_matrix(basis, pauli, sparse, check_symm=check_symm)
         else:
             raise ValueError(f"basis.L {basis.L} does not match Lindbladian L {self.L} or {2*self.L}")
     
@@ -297,14 +299,14 @@ class Lindbladian(SpinOper):
             Heff += (-1j/2) * (lo.hc() @ lo)
         return Heff
     
-    def to_linearoperator(self, basis, pauli:bool, sparse=True):
+    def to_linearoperator(self, basis, pauli:bool, sparse=True, check_symm=False):
         from ..basis.spin_half.spin_1d.basis import SpinHalf1DBasis
         if not isinstance(basis, SpinHalf1DBasis):
             raise ValueError("need basis in Hilbert space not the vectorized space")
         
         self._check_pauli(pauli)
-        ham = self.ham.to_matrix(basis=basis, pauli=pauli, sparse=sparse)
-        jump_ops = [lo.to_matrix(basis=basis, pauli=pauli, sparse=sparse) for lo in self.jump_ops]
+        ham = self.ham.to_matrix(basis=basis, pauli=pauli, sparse=sparse, check_symm=check_symm)
+        jump_ops = [lo.to_matrix(basis=basis, pauli=pauli, sparse=sparse, check_symm=check_symm) for lo in self.jump_ops]
         return LindbladianLinearOperator(ham=ham, jump_ops=jump_ops)
     
     def steady_state(self, basis, pauli, method:Literal['direct', 'eig', 'svd'] = 'direct'):

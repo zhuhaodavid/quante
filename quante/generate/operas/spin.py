@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-02 00:46:31
+# @Last Modified time: 2025-10-12 18:52:13
 
 import numpy as np
 import warnings
@@ -284,7 +284,7 @@ class SpinOper(Oper):
     # def to_matrix(self, basis, pauli=False, sparse:Literal[False]=False) -> np.ndarray:
     #     ...
 
-    def to_matrix(self, basis, pauli:bool, sparse=False):
+    def to_matrix(self, basis, pauli:bool, sparse=False, check_symm=False):
         """
         生成哈密顿量在给定基矢下的矩阵，对于自旋 1/2 默认使用 symmetrize 的方法计算矩阵元
         
@@ -346,6 +346,8 @@ class SpinOper(Oper):
         expanded = self.expandxy(pauli=pauli) if not self._has_expanded() else self
         if basis.S != 0.5 and pauli is True:
             raise KeyError("自旋不是 1/2，不能使用 Pauli 矩阵")
+        if check_symm:
+            self.check_symm(basis.L, pauli, basis=basis)
         mat = basis._sparse_matrix(
             *expanded._convert_to_quick_form(basis.L),
             savememory=False)
@@ -1154,6 +1156,7 @@ def _merge_terms(opnm: str, posn: np.ndarray, coef: float) -> tuple[str, np.ndar
 
 
 
+
 class SpinBuilder:
     def __init__(self):
         """
@@ -1234,49 +1237,26 @@ def heisenberg_operator(L, j=1., *, hx=0.0, hy=0.0, hz=0.0, jxy=0.0, jyx=0.0, cy
         是否是周期性模型，默认是 False
     
     """
-    # return HeisenbergOper(L=L, j=j, h=h, jxy=jxy, jyx=jyx, cyclic=cyclic)._make_spinoper()
     if np.isscalar(j) or j.__class__.__module__.startswith('sympy.'):
         jx = jy = jz = j
     else:
         jx, jy, jz = j # type: ignore
-
     data = {}
     posn1 = np.arange(0, L, dtype=int).reshape(L,1)
     notcloseset(data, "x", posn1, hx, L)
     notcloseset(data, "y", posn1, hy, L)
     notcloseset(data, "z", posn1, hz, L)
-
-
-    # if not np.allclose(hx, 0):
-    #     data["x"] = (posn1, _to_array(hx, L))
-    # if not np.allclose(hy, 0):
-    #     data["y"] = (posn1, _to_array(hy, L))
-    # if not np.allclose(hz, 0):
-    #     data["z"] = (posn1, _to_array(hz, L))
-    
     if cyclic:
         posn2 = np.array([[i%L, (i+1)%L] for i in range(L)], dtype=int)
         Lp = L
     else:
         posn2 = np.array([[i, i+1] for i in range(L-1)], dtype=np.int32)
         Lp = L-1
-    
     notcloseset(data, "xx", posn2, jx, Lp)
     notcloseset(data, "yy", posn2, jy, Lp)
     notcloseset(data, "zz", posn2, jz, Lp)
     notcloseset(data, "xy", posn2, jxy, Lp)
     notcloseset(data, "yx", posn2, jyx, Lp)
-    # if not np.allclose(jx, 0.):
-    #     data["xx"] = (posn2, _to_array(jx, Lp))
-    # if not np.allclose(jy, 0.):
-    #     data["yy"] = (posn2, _to_array(jy, Lp))
-    # if not np.allclose(jz, 0.):
-    #     data["zz"] = (posn2, _to_array(jz, Lp))
-    # if not np.allclose(jxy, 0.):
-    #     data["xy"] = (posn2, _to_array(jxy, Lp))
-    # if not np.allclose(jyx, 0.):
-    #     data["yx"] = (posn2, _to_array(jyx, Lp))
-   
     return SpinOper(data)
 
 def ising_operator(L, j=1.0, h=1.0, cyclic=False):
@@ -1311,8 +1291,14 @@ _default_flip_dict = {
 def _transform_op(ham, perm, flip_dict=None):
     if flip_dict is None:
         flip_dict = _default_flip_dict
-    flip_list = np.array([p < 0 for p in perm])
-    perm_list = np.array([-p-1 if p < 0 else p for p in perm])
+    if perm.ndim == 1:
+        flip_list = np.array([p < 0 for p in perm])
+        perm_list = np.array([-p-1 if p < 0 else p for p in perm])
+    else:
+        arr_sorted = perm[np.argsort(perm[:, 0])]
+        perm_list = arr_sorted[:,1]
+        flip_list = arr_sorted[:,2]
+
     builder = SpinBuilder()
     for opstr, posn, coef in ham.each_term():
         newopstr = []
@@ -1325,4 +1311,5 @@ def _transform_op(ham, perm, flip_dict=None):
             newopstr.append(no)
         builder += ''.join(newopstr), newposn, newcoef
     return builder.build()
+
 

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-28 15:23:53
+# @Last Modified time: 2025-10-12 15:33:45
 
 import numpy as np
 import copy 
@@ -561,3 +561,46 @@ class Oper:
             if len(diffOper.data) == 0:
                 return True
             return False
+
+    def translate(self, direction:Literal['x','y'], tol:int, Lx:int, Ly:int, step=1) -> 'Oper':
+        if direction == 'x':
+            newoper = self.builder()
+            for opnm, posn, coef in self.each_term():
+                newoper += opnm, posn, coef
+                posn_arr = np.array(posn)
+                for n in range(1,tol):
+                    x, y = posn_arr % Lx, posn_arr // Lx
+                    newpos = ( (x + step*n) % Lx ) + Lx * y
+                    newoper += opnm, newpos, coef
+            newoper = newoper.build()
+            return newoper
+        elif direction == 'y':
+            newoper = self.builder()
+            for opnm, posn, coef in self.each_term():
+                newoper += opnm, posn, coef
+                posn_arr = np.array(posn)
+                for n in range(1,tol):
+                    x, y = posn_arr % Lx, posn_arr // Lx
+                    newpos = x + Lx * ((y + step*n) % Ly)
+                    newoper += opnm, newpos, coef
+            newoper = newoper.build()
+            return newoper
+        else:
+            raise NotImplementedError(f"direction should be 'x' or 'y', not {direction}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

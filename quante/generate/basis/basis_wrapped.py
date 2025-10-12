@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-11 21:59:25
+# @Last Modified time: 2025-10-12 18:18:31
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -341,7 +341,7 @@ def _process_fermionbit_Nf_block(L:int, block_dic:dict) -> FermionBasis:
 
 def spin_basis_general(
     L, S:Union[str, int, float]="1/2", 
-    Nup=None, Ndiff=None, **blocks
+    Nup=None, Ndiff=None, check_commute=True, **blocks
 ):
     """General spin-1/2 basis constructor with optional Z2 symmetries and Ndiff constraint.
 
@@ -357,12 +357,6 @@ def spin_basis_general(
         Particle number difference constraint. Must be a tuple ``(flipset, Ndiff)``,
     **blocks : dict[str, tuple[array_like,int]]
         Z2 symmetry specification(s). Each value must be a tuple ``(perm, sector)``.
-
-    Notes
-    -----
-    Current implementation only supports spin-1/2 and Z2-type symmetries. The original
-    large if/elif chain is collapsed into a dynamic class name resolution to ease
-    maintenance. Behaviour is preserved.
     """
     assert L < 64, "L must be less than 64 for spin_basis_general generation."
     S = _check_spin_number(S)
@@ -370,24 +364,31 @@ def spin_basis_general(
         raise NotImplementedError("spin_basis_general is only implemented for spin-1/2 now.")
     
 
-    from .spin_half.spin_general.basis import get_permute_number as _get_perm_num
+    from .spin_half.spin_general.basis import get_permute_number, _check_commute
     # Validate each provided symmetry block is Z2
+    allz2 = True
     for _name, (_perm, _sector) in blocks.items():  # type: ignore
         _perm = np.array([
                 [L+i, L-a-1, 1] if i < 0 else [L-i-1, L-a-1, 0]
                 for a,i in enumerate(_perm)
         ])
-        n = _get_perm_num(L, _perm)
-        blocks[_name] = (_perm, _sector, 2)
-        assert n == 2, "only Z2 symmetry is supported for spin_basis_general now."
+        n = get_permute_number(L, _perm)
+        blocks[_name] = (_perm, _sector, n)
+        if n != 2:
+            allz2 = False
+    if check_commute:
+        _check_commute(L, blocks)
     
-    from .spin_half.spin_general.basis import BasisZ2N
+    from .spin_half.spin_general.basis import BasisZ2N, BasisZNN
+    BasisZN = BasisZ2N if allz2 else BasisZNN
+    # BasisZN = BasisZNN
     if Ndiff is None:
         flipset = None
         _Ndiff = None
     else:
         flipset, _Ndiff = Ndiff
-    return BasisZ2N(L, flipset, _Ndiff, Nup, **blocks)
+    return BasisZN(L, flipset, _Ndiff, Nup, **blocks)
+
 
 
 def spin_basis_2d(
@@ -396,6 +397,8 @@ def spin_basis_2d(
     Ndiff:int|None=None,
     pxblock:int|None=None,
     pyblock:int|None=None,
+    kxblock:int|None=None,
+    kyblock:int|None=None,
     pzxblock:int|None=None,
     pzyblock:int|None=None,
     zblock:int|None=None,
@@ -427,12 +430,6 @@ def spin_basis_2d(
         the x momentum block, by default None
     kyblock : int | None, optional
         the y momentum block, by default None
-
-    Notes
-    -----
-    Current implementation only supports spin-1/2 and Z2-type symmetries. The original
-    large if/elif chain is collapsed into a dynamic class name resolution to ease
-    maintenance. Behaviour is preserved.
     """
     N_2d = Lx * Ly  # total number of sites
     s = np.arange(N_2d)  # sites [0,1,2,..]
@@ -450,6 +447,14 @@ def spin_basis_2d(
     if pyblock is not None and 'pyblock' not in blocks:
         P_y = x + Lx * (Ly - y - 1)
         blocks['pyblock'] = (P_y, pyblock)
+    
+    if kxblock is not None and 'kxblock' not in blocks:
+        T_x = (x + 1) % Lx + Lx * y  # translation along x-direction
+        blocks['kxblock'] = (T_x, kxblock)
+
+    if kyblock is not None and 'kyblock' not in blocks:
+        T_y = x + Lx * ((y + 1) % Ly)  # translation along y-direction
+        blocks['kyblock'] = (T_y, kyblock)
 
     if pzxblock is not None and 'pzxblock' not in blocks:
         PZ_x = - ((Lx - x - 1) + Lx * y + 1)
@@ -467,15 +472,16 @@ def spin_basis_2d(
         N_2d, "1/2", Nup=Nup, Ndiff=Ndiff, **blocks
     )
 
-# todo: realize spin_basis_general with numba
+
 def spin_super_basis(
     L, 
-    indx_order='stacked', 
     Nup=None, 
     Ndiff=None, 
     Nup2=None,
     pblock=None, 
     zblock=None, 
+    indx_order='stacked', 
+    check_commute=True,
     **blocks
 ):
     assert 2*L < 64, "L must be less than 64 for spin_super_basis generation."
@@ -495,21 +501,28 @@ def spin_super_basis(
             Nup2 = [Nup2]
         Ndiff = 0
         Nup = [2*n for n in Nup2]
-    if len(blocks) == 0:
-        from .spin_half.spin_super.basis import BasisFull
-        return BasisFull(L, Ndiff, Nup, indx_order, **blocks)
-    elif len(blocks) == 1:
-        from .spin_half.spin_super.basis import BasisZ21
-        return BasisZ21(L, Ndiff, Nup, indx_order, **blocks)
+    
+    from .spin_half.spin_general.basis import get_permute_number, _check_commute
+    # Validate each provided symmetry block is Z2
+    allz2 = True
+    for _name, (_perm, _sector) in blocks.items():  # type: ignore
+        _perm = np.array([
+                [2*L+i, 2*L-a-1, 1] if i < 0 else [2*L-i-1, 2*L-a-1, 0]
+                for a,i in enumerate(_perm)
+        ])
+        n = get_permute_number(L, _perm)
+        blocks[_name] = (_perm, _sector)
+        if n != 2:
+            allz2 = False
+    if check_commute:
+        _check_commute(L, blocks)
+
+    if allz2:
+        from .spin_half.spin_super.basis import BasisZ2N
+        return BasisZ2N(L, Ndiff, Nup, indx_order, **blocks)
     else:
-        
         raise NotImplementedError("" \
-        "Only one Z2 is supported for spin_super_basis now.\n" \
-        f"we now have {list(blocks.keys())}"
+            "Only one Z2 is supported for spin_super_basis now.\n" \
+            f"not support: {list(blocks.keys())}"
         )
-
-
-
-
-
 

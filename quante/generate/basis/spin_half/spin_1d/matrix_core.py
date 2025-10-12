@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-28 13:01:08
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-02 00:55:49
+# @Last Modified time: 2025-10-12 14:22:14
 
 
 import numpy as np
@@ -393,7 +393,6 @@ def single_sparse_matrix_element_kblock(opnm, posn, coef, L, k, M, s_list, R_lis
             r, l = representative_kblock(s, L)
             b = findstate(s_list, r)
             if b >= 0:
-                
                 row_init[a] = b
                 col_init[a] = a
                 ME_init[a] = opco * coef * (R_list[a] / R_list[b])**0.5 * tmpval ** l

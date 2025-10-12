@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 20:07:21
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-11 20:17:48
+# @Last Modified time: 2025-10-12 18:23:49
 
 import unittest
 from quante.generate.basis.spin_half.spin_super.basis import *

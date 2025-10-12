@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 15:43:21
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-11 20:19:05
+# @Last Modified time: 2025-10-12 17:22:06
 
 import numpy as np
 from .....basicfun.utils_numba import njit, config, numba_cache_dir
@@ -282,7 +282,7 @@ def proj_coef_Z2N(s, ps, anci_perm):
 config.CACHE_DIR = numba_cache_dir
 @njit
 def projmat_Z2N(L, s_list, N_sym, Ns, anci_perm, ps, bs):
-    dim = 8*Ns
+    dim = (2**(len(ps)+2))*Ns
     row = np.zeros(dim, dtype=np.int64)
     col = np.zeros(dim, dtype=np.int64)
     ele = np.zeros(dim, dtype=np.complex128)

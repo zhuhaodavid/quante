@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 18:08:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-10 21:58:42
+# @Last Modified time: 2025-10-12 14:57:17
 
 # quspin_basis 是 quspin 库中的源码，这里提供一个简单的封装，使得用户可以更方便地使用 quspin_basis 中的 basis 类。
 
@@ -122,7 +122,7 @@ class spin_basis_2d(spin_basis_general):
 
 def spin_basis(
     L:int, 
-    pauli:int, 
+    pauli:bool, 
     S:str="1/2", 
     m:float|None = None, 
     Nup:int|None=None, 
@@ -159,6 +159,12 @@ def spin_basis(
     zBblock : int | None, optional
         spin inversion symmetry on B sublattice, by default None
     """
+    if pauli is True:
+        _pauli = -1
+    elif pauli is False:
+        _pauli = 0
+    else:
+        raise ValueError(f"pauli should be either True or False, not {pauli}")
     blocks = {'a': a,
               "kblock": kblock, 
               "pblock": pblock, 
@@ -166,7 +172,7 @@ def spin_basis(
               "pzblock": pzblock, 
               "zAblock": zAblock, 
               "zBblock": zBblock}
-    return spin_basis_1d(L=L, S=S, Nup=Nup, m=m, pauli=pauli, **blocks)
+    return spin_basis_1d(L=L, S=S, Nup=Nup, m=m, pauli=_pauli, **blocks)
 
 
 def fermion_basis(

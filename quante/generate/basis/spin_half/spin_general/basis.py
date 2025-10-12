@@ -2,10 +2,12 @@
 # @Author: hzhu
 # @Date:   2025-09-28 14:27:09
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-11 22:40:47
+# @Last Modified time: 2025-10-12 18:53:21
 
+from .....basicfun import println
 from ...basis_class import SpinHalfBasis
 import numpy as np
+import scipy.sparse as _sp
 
 def get_permute_number(L, perm):
     indx0 = np.arange(L)
@@ -21,36 +23,35 @@ def get_permute_number(L, perm):
     raise ValueError("perm should be self-inverse")
 
 def _permute(L, indx, sign, perm):
+    sign_res = np.copy(sign)
     res = np.zeros(L, dtype=int)
     for ri, r in enumerate(indx):
         for pi, p in enumerate(perm[:, 0]):
             if r == p:
                 res[ri] = perm[pi, 1]
-                sign[ri] *= 1-2*perm[pi, 2]
+                sign_res[ri] *= 1-2*perm[pi, 2]
                 break
-    return res, sign
+    return res, sign_res
 
-def _valdate_z2(L, perm, block):
+def _check_commute(L, blocks):
     indx0 = np.arange(L)
     sign0 = np.ones(L, dtype=int)
-    indx, sign = _permute(L, indx0, sign0, perm)
-    indx, sign = _permute(L, indx, sign, perm)
-    assert all(indx == np.arange(L)), f"perm should be self-inverse, perm: \n{perm}"
-    assert all(sign == 1), f"perm should be self-inverse, perm: \n{perm}"
-    assert block in [0, 1], "pblock should be 0 or 1"
+    names = list(blocks.keys())
+    for i in range(len(names)):
+        for j in range(i):
+            perm1 = blocks[names[i]][0]
+            perm2 = blocks[names[j]][0]
 
-def _valdate_z2_commute(L, perm0, perm1):
-    indx0 = np.arange(L)
-    sign0 = np.ones(L, dtype=int)
+            indx1, sign1 = _permute(L, indx0, sign0, perm1)
+            indx1, sign1 = _permute(L, indx1, sign1, perm2)
 
-    indx1, sign1 = _permute(L, indx0, sign0, perm0)
-    indx1, sign1 = _permute(L, indx1, sign1, perm1)
+            indx2, sign2 = _permute(L, indx0, sign0, perm2)
+            indx2, sign2 = _permute(L, indx2, sign2, perm1)
 
-    indx2, sign2 = _permute(L, indx0, sign0, perm1)
-    indx2, sign2 = _permute(L, indx2, sign2, perm0)
-
-    assert all(indx1 == indx2) and all(sign1 == sign2), f"perm0 and perm1 should commute, perm0: \n{perm0},\n perm1: \n{perm1}"
-
+            if ((not all(i1 == i2 for i1, i2 in zip(indx1, indx2))) 
+                or not all(i1 == i2 for i1, i2 in zip(sign1, sign2))):
+                raise ValueError(f"not commuting: {names[i]}, {names[j]}")
+    # println("check commute pass")
 
   
 ############################################
@@ -79,11 +80,11 @@ class SpinHalfGeneralBasis(SpinHalfBasis):
             self.flipmask = sum(1 << (L-1-flip) for flip in flipset)
         elif Nup is not None:
             self.flipmask = 0
-            self.Ndiff = Nup
+            self.Ndiff = np.array(Nup)
             self.flipnumber = 0
         elif Ndiff is not None:
             self.flipmask = sum(1 << (L-1-flip) for flip in flipset)
-            self.Ndiff = np.sort(list(set(Ndiff)))
+            self.Ndiff = np.sort(np.array(list(set(Ndiff))))
             self.flipnumber = len(flipset)
         else:
             pass
@@ -92,6 +93,8 @@ class SpinHalfGeneralBasis(SpinHalfBasis):
         ps = []
         bs = []
         ms = []
+        self._maps_dict = {}
+        self._pcon_args = {}
         for key, (_perm, _block, _m) in blocks.items():
             ns.append(key)
             if _perm.ndim == 1:
@@ -102,16 +105,11 @@ class SpinHalfGeneralBasis(SpinHalfBasis):
             ps.append(_perm)
             bs.append(_block)
             ms.append(_m)
+            self._maps_dict[key] = _perm
         self.block_name = ns
         self.perm = np.array(ps, dtype=np.int64).reshape(-1, self.L, 3)
         self.block = np.array(bs, dtype=np.int64).reshape(-1)
         self.ns = np.array(ms, dtype=np.int64).reshape(-1)
-
-    def _validate_Ndiff(self) -> None:
-        min_ndiff = -self.flipnumber
-        max_ndiff = self.L - self.flipnumber
-        for ndiff in self.Ndiff:
-            assert ndiff in list(range(min_ndiff, max_ndiff+1)), "Ndiff should be in range(L//2)"
 
     def permute(self, s, which_perm):
         from .basis_core import perm_operation
@@ -121,7 +119,6 @@ class SpinHalfGeneralBasis(SpinHalfBasis):
 class BasisZ2N(SpinHalfGeneralBasis):
     def __init__(self, L: int, flipset, Ndiff, Nup, **blocks) -> None:
         super().__init__(L, flipset, Ndiff, Nup, **blocks)
-        self._validate_block()
          
         if self.Nup2 is not None:
             from .basis_core import construct_Nup2_Z2N_basis
@@ -129,7 +126,6 @@ class BasisZ2N(SpinHalfGeneralBasis):
                 self.L, self.flipmask, self.Nup2, self.perm, self.block,
             )
         elif self.Ndiff is not None:
-            self._validate_Ndiff()
             from .basis_core import construct_Ndiff_Z2N_basis
             self.Ns, self.s_list, self.R_list = construct_Ndiff_Z2N_basis(
                 self.L, self.flipmask, self.Ndiff, self.perm, self.block 
@@ -140,17 +136,6 @@ class BasisZ2N(SpinHalfGeneralBasis):
                 self.L, self.perm, self.block 
             )
         self.default_complex = False
-
-    def _validate_block(self) -> None:
-        for i, (perm1, block1) in enumerate(zip(self.perm, self.block)):
-            _valdate_z2(self.L, perm1, block1)
-            for j, (perm2, block2) in enumerate(zip(self.perm, self.block)):
-                if i < j:
-                    _valdate_z2_commute(self.L, perm1, perm2)
-    
-    def _validate_Ndiff(self) -> None:
-        for ndiff in self.Ndiff:
-            assert ndiff in list(range(-self.L, self.L+1)), "Ndiff should be in range(L//2)"
    
     def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
         from .matrix_core import single_sparse_matrix_element_Z2N
@@ -159,46 +144,79 @@ class BasisZ2N(SpinHalfGeneralBasis):
             row_init, col_init, ME_init
         )
 
-# class BasisZNN(SpinHalfGeneralBasis):
-#     def __init__(self, L: int, flipset, Ndiff, Nup, **blocks) -> None:
-#         super().__init__(L, flipset, Ndiff, Nup, **blocks)
-#         # self._validate_block()
-         
-#         if self.Nup2 is not None:
-#             from .basis_core import construct_Nup2_ZNN_basis
-#             self.Ns, self.s_list, self.R_list = construct_Nup2_ZNN_basis(
-#                 self.L, self.flipmask, self.Nup2, self.perm, self.block,
-#             )
-#         elif self.Ndiff is not None:
-#             self._validate_Ndiff()
-#             from .basis_core import construct_Ndiff_ZNN_basis
-#             self.Ns, self.s_list, self.R_list = construct_Ndiff_ZNN_basis(
-#                 self.L, self.flipmask, self.Ndiff, self.perm, self.block 
-#             ) 
-#         else:
-#             from .basis_core import construct_ZNN_basis
-#             self.Ns, self.s_list, self.R_list = construct_ZNN_basis(
-#                 self.L, self.perm, self.block, self.ns
-#             )
-#         self.default_complex = False
-
-    # def _validate_block(self) -> None:
-    #     for i, (perm1, block1) in enumerate(zip(self.perm, self.block)):
-    #         _valdate_z2(self.L, perm1, block1)
-    #         for j, (perm2, block2) in enumerate(zip(self.perm, self.block)):
-    #             if i < j:
-    #                 _valdate_z2_commute(self.L, perm1, perm2)
+    def projection_matrix(self):
+        """Return the projection matrix to the symmetry sector.
+        """
+        from .basis_core import projmat_Z2N
+        row, col, ele = projmat_Z2N(self.L, self.s_list, self.Ns, self.perm, self.block)
+        return _sp.csr_array((ele,(row,col)),shape=(1<<self.L, self.Ns),dtype=np.complex128)
     
-    # def _validate_Ndiff(self) -> None:
-    #     for ndiff in self.Ndiff:
-    #         assert ndiff in list(range(-self.L, self.L+1)), "Ndiff should be in range(L//2)"
+    def project(self, vec):
+        """Project a vector to the symmetry sector.
+        """
+        from .basis_core import project_Z2N
+        if vec.ndim == 1:
+            vec = vec.reshape(-1,1)
+        return project_Z2N(vec, self.L, self.s_list, self.Ns, self.perm, self.block)
+
+    def recover(self, state):
+        from .basis_core import recover_Z2N
+        if state.ndim == 1:
+            state = state.reshape(-1,1)
+        return recover_Z2N(state, self.L, self.s_list, self.Ns, self.perm, self.block)
+
+
+
+class BasisZNN(SpinHalfGeneralBasis):
+    def __init__(self, L: int, flipset, Ndiff, Nup, **blocks) -> None:
+        super().__init__(L, flipset, Ndiff, Nup, **blocks)
+         
+        if self.Nup2 is not None:
+            from .basis_core import construct_Nup2_ZNN_basis
+            self.Ns, self.s_list, self.R_list = construct_Nup2_ZNN_basis(
+                self.L, self.flipmask, self.Nup2, self.perm, self.block, self.ns
+            )
+        elif self.Ndiff is not None:
+            from .basis_core import construct_Ndiff_ZNN_basis
+            self.Ns, self.s_list, self.R_list = construct_Ndiff_ZNN_basis(
+                self.L, self.flipmask, self.Ndiff, self.perm, self.block, self.ns 
+            ) 
+        else:
+            from .basis_core import construct_ZNN_basis
+            self.Ns, self.s_list, self.R_list = construct_ZNN_basis(
+                self.L, self.perm, self.block, self.ns
+            )
+        self.default_complex = True
    
-    # def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
-    #     from .matrix_core import single_sparse_matrix_element_Z2N
-    #     return single_sparse_matrix_element_Z2N(
-    #         opnm, posn, coef, self.L, self.perm, self.block, self.Ns, self.s_list, self.R_list, 
-    #         row_init, col_init, ME_init
-    #     )
+    def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
+        from .matrix_core import single_sparse_matrix_element_ZNN
+        return single_sparse_matrix_element_ZNN(
+            opnm, posn, coef, self.L, self.perm, self.block, self.Ns, self.s_list, self.R_list, self.ns,
+            row_init, col_init, ME_init
+        )
+    
+    def projection_matrix(self):
+        """Return the projection matrix to the symmetry sector.
+        """
+        from .basis_core import projmat_ZNN
+        row, col, ele = projmat_ZNN(self.L, self.s_list, self.Ns, self.perm, self.block, self.ns)
+        return _sp.csr_array((ele,(row,col)),shape=(1<<self.L, self.Ns),dtype=np.complex128)
+   
+    def project(self, vec):
+        """Project a vector to the symmetry sector.
+        """
+        from .basis_core import project_ZNN
+        if vec.ndim == 1:
+            vec = vec.reshape(-1,1)
+        return project_ZNN(vec, self.L, self.s_list, self.Ns, self.perm, self.block, self.ns)
+    
+    def recover(self, state):
+        from .basis_core import recover_ZNN
+        if state.ndim == 1:
+            state = state.reshape(-1,1)
+        return recover_ZNN(state, self.L, self.s_list, self.Ns, self.perm, self.block, self.ns)
+
+
 
 # class SpinHalfGeneralBasis(SpinHalfBasis):
 #     def __init__(self, L: int, flipset, Ndiff, **blocks) -> None:

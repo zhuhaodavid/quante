@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-24 12:29:22
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-11 22:40:54
+# @Last Modified time: 2025-10-12 18:14:26
 
 import unittest
 import numpy as np
@@ -324,29 +324,117 @@ class TestGeneralBasis(unittest.TestCase):
                             self.assertTrue(np.allclose(eng1, eng2))
 
 
-    # def test_tmp(self):
-    #     Lx = 5
-    #     Ly = 2
-    #     N_2d = Lx * Ly  # total number of sites
-    #     s = np.arange(N_2d)  # sites [0,1,2,..]
-    #     x = s % Lx  # x positions for sites
-    #     y = s // Lx  # y positions for sites
-    #     T_x = (x + 1) % Lx + Lx * y  # translation along x-direction
-    #     basis = qs.spin_basis_2d(Lx=Lx,Ly=Ly,pauli=True,kxblock=2)
-    #     for s in basis._basis:
-    #         print(s, np.binary_repr(s, N_2d))
-    #     print(basis.Ns)
-    #     basis = BasisZNN(N_2d, None, None, None, kxblock=(T_x, 2, Lx))
-    #     print('='*10)
-    #     for s in basis.s_list:
-    #         print(s, np.binary_repr(s, N_2d))
-    #     print(basis.Ns)
+    def test_ZNN(self):
+        L = 5
+        kblock = 1
+        ham = qt.generate.operas.heisenberg_operator(L, cyclic=True)
+        basis1 = qt.generate.basis.spin_basis(L, kblock=kblock)
+        mat1 = ham.to_matrix(basis1, pauli=True)
+
+        basis2 = qs.spin_basis(L=L, pauli=True, kblock=kblock)
+        mat2 = qs.hamiltonian(ham, basis2, sparse=False, dtype=np.complex128)
+        self.assertTrue(np.allclose(mat1, mat2))
+
+        Lx = L
+        Ly = 1
+        N_2d = Lx * Ly  # total number of sites
+        s = np.arange(N_2d)  # sites [0,1,2,..]
+        x = s % Lx  # x positions for sites
+        y = s // Lx  # y positions for sites
+        T_x = (x + 1) % Lx + Lx * y  # translation along x-direction
+        basis3 = BasisZNN(L, None, None, None, kxblock=(T_x, kblock, Lx))
+        self.assertTrue(np.allclose(basis3.s_list, basis1.s_list))
+        self.assertTrue(np.allclose(basis3.R_list, basis1.other_params['R_list']))
+
+        mat3 = ham.to_matrix(basis3, pauli=True)
+        self.assertTrue(np.allclose(mat1, mat3))
+
+        zblock = 0
+        basis1 = qt.generate.basis.spin_basis(L, zblock=(-1)**zblock)
+        mat1 = ham.to_matrix(basis1, pauli=True)
+        Z = - (np.arange(N_2d) + 1)
+        basis3 = BasisZNN(L, None, None, None, zblock=(Z, zblock, 2))
+        mat3 = ham.to_matrix(basis3, pauli=True)
+
+
+        basis2 = qs.spin_basis(L=L, pauli=True, kblock=kblock, zblock=(-1)**zblock)
+        mat2 = qs.hamiltonian(ham, basis2, sparse=False, dtype=np.complex128)
+        basis3 = BasisZNN(L, None, None, None, kxblock=(T_x, kblock, Lx), zblock=(Z, zblock, 2))
+        mat3 = ham.to_matrix(basis3, pauli=True)
+        self.assertTrue(np.allclose(mat2, mat3))
+
+        basis2 = qs.spin_basis_2d(Lx=Lx, Ly=Ly, pauli=True, kxblock=kblock, zblock=zblock)
+        mat2 = qs.hamiltonian(ham, basis2, sparse=False, dtype=np.complex128)
+        basis3 = qt.generate.basis.spin_basis_2d(Lx=Lx, Ly=Ly, kxblock=kblock, zblock=zblock)
+        mat3 = ham.to_matrix(basis3, pauli=True)
+        self.assertTrue(np.allclose(mat2, mat3))
+
+
+        Lx, Ly = 3, 4
+        N_2d = Lx * Ly
+        ham = qt.generate.operas.heisenberg_operator(2, cyclic=False, j=(1,1,0))
+        ham = ham.translate(direction='x', tol=Lx, Lx=Lx, Ly=Ly).translate(direction='y', tol=Ly, Lx=Lx, Ly=Ly)
+
+        for kxblock in range(Lx):
+            for kyblock in range(Ly):
+                basis2 = qs.spin_basis_2d(Lx=Lx, Ly=Ly, pauli=True, kxblock=kxblock, kyblock=kyblock)
+                mat2 = qs.hamiltonian(ham, basis2, sparse=False, dtype=np.complex128)
+                basis3 = qt.generate.basis.spin_basis_2d(Lx=Lx, Ly=Ly, kxblock=kxblock, kyblock=kyblock)
+                mat3 = ham.to_matrix(basis3, pauli=True)
+                self.assertTrue(np.allclose(mat2, mat3))
+        
+        Lx, Ly = 3, 5
+        N_2d = Lx * Ly
+        ham = qt.generate.operas.heisenberg_operator(2, cyclic=False, j=(1,1,0))
+        ham = ham.translate(direction='x', tol=Lx, Lx=Lx, Ly=Ly).translate(direction='y', tol=Ly, Lx=Lx, Ly=Ly)
+
+        for kxblock in range(Lx):
+            for kyblock in range(Ly):
+                basis2 = qs.spin_basis_2d(Lx=Lx, Ly=Ly, pauli=True, Nup=4, kxblock=kxblock, kyblock=kyblock)
+                mat2 = qs.hamiltonian(ham, basis2, sparse=False, dtype=np.complex128)
+                basis3 = qt.generate.basis.spin_basis_2d(Lx=Lx, Ly=Ly, Nup=4, kxblock=kxblock, kyblock=kyblock)
+                mat3 = ham.to_matrix(basis3, pauli=True)
+                self.assertTrue(np.allclose(mat2, mat3))
+        
+    def test_ZNN_proj(self):
+        Lx, Ly = 3, 4
+        for kxblock in range(Lx):
+            for kyblock in range(Ly):
+                basis = qs.spin_basis_2d(Lx=Lx, Ly=Ly, pauli=True, kxblock=kxblock, kyblock=kyblock)
+                P1 = basis.get_proj(np.complex128)
+                basis = qt.generate.basis.spin_basis_2d(Lx=Lx, Ly=Ly, kxblock=kxblock, kyblock=kyblock)
+                P2 = basis.projection_matrix()
+                self.assertTrue(np.allclose((P1-P2).data, 0))
+
+        Lx, Ly = 3, 4
+        N_2d = Lx * Ly
+        for kxblock in range(Lx):
+            for kyblock in range(Ly):
+                basis = qs.spin_basis_2d(Lx=Lx, Ly=Ly, pauli=True, kxblock=kxblock, kyblock=kyblock)
+                state = np.random.rand(2**N_2d) + 1j*np.random.rand(2**N_2d)
+                state1 = basis.project_to(state, sparse=False)
+                basis = qt.generate.basis.spin_basis_2d(Lx=Lx, Ly=Ly, kxblock=kxblock, kyblock=kyblock)
+                state2 = basis.project(state).reshape(-1)
+                self.assertTrue(np.allclose(state1, state2))
+
+        Lx, Ly = 3, 4
+        N_2d = Lx * Ly
+        for kxblock in range(Lx):
+            for kyblock in range(Ly):
+                basis = qs.spin_basis_2d(Lx=Lx, Ly=Ly, pauli=True, kxblock=kxblock, kyblock=kyblock)
+                state = np.random.rand(basis.Ns) + 1j*np.random.rand(basis.Ns)
+                state1 = basis.project_from(state, sparse=False)
+
+                basis = qt.generate.basis.spin_basis_2d(Lx=Lx, Ly=Ly, kxblock=kxblock, kyblock=kyblock)
+                state2 = basis.recover(state).reshape(-1)
+                self.assertTrue(np.allclose(state1, state2))
+    
 
 
 
 if __name__ == '__main__':
     unittest.main()
     # suite = unittest.TestSuite()
-    # suite.addTest(TestGeneralBasis('test_tmp'))
+    # suite.addTest(TestGeneralBasis('test_ZNN_proj'))
     # runner = unittest.TextTestRunner()
     # runner.run(suite)

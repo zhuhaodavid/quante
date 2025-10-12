@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 15:20:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-11 20:06:43
+# @Last Modified time: 2025-10-12 18:30:47
 
 from ...basis_class import SpinHalfBasis
 import numpy as np
@@ -52,6 +52,8 @@ class SpinHalfSuperBasis(SpinHalfBasis):
         ns = []
         ps = []
         bs = []
+        self._maps_dict = {}
+        self._pcon_args = {}
         for key, (_perm, _block) in blocks.items():
             ns.append(key)
             _perm = np.array(_perm)
@@ -62,6 +64,7 @@ class SpinHalfSuperBasis(SpinHalfBasis):
                 ])
             ps.append(_perm)
             bs.append(_block)
+            self._maps_dict[key] = _perm
         self.block_name = ns
         self.perm = np.array(ps, dtype=np.int64).reshape(-1, 2*self.L, 3)
         self.block = np.array(bs, dtype=np.int64).reshape(-1)
