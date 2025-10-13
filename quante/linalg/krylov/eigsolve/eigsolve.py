@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-28 16:19:37
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-02 15:20:58
+# @Last Modified time: 2025-10-13 15:41:32
 
 import numpy as np
 from scipy.sparse import issparse
@@ -111,7 +111,8 @@ def eigsolve(
         x0 = x0.squeeze()
     if isherm:
         assert which in ['LM', 'LR', 'SR']
-        print("running Lanczos ...")
+        if kwargs.get('verbosity', 1) >= 1:
+            print("running Lanczos ...")
         return Lanczos(**kwargs).eigsolve(A, x0, howmany, which, lau)
     else:
         assert which in ['LM', 'LR', 'SR', 'LI', 'SI']
@@ -121,7 +122,8 @@ def eigsolve(
                 raise ValueError(f"Eigenvalue selector which = {which} invalid "
                 f"because it does not treat 'λ' and 'conj(λ)' equally: work in "
                 f"complex arithmetic by providing a complex starting vector 'x0'")
-        print("running Arnoldi ...")
+        if kwargs.get('verbosity', 1) >= 1:
+            print("running Arnoldi ...")
         return Arnoldi(**kwargs).eigsolve(A, x0, howmany, which, lau)
 
 def isrealobj(x0):

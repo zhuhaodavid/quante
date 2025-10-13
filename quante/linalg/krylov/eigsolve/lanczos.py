@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-08-30 19:06:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 13:56:18
+# @Last Modified time: 2025-10-13 14:49:31
 
 import warnings
 import numpy as np
@@ -105,7 +105,7 @@ class Lanczos(KrylovDefault):
                 
                 # compute eigenvalues
                 if K == 1:
-                    D = np.array([fact.alpha[0]], dtype=fact.dtype)
+                    D = np.array([fact.alphas[0]], dtype=fact.dtype)
                     f[0] = beta
                     converged = (beta <= tol)
                 else:

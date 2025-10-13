@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-28 13:00:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 18:00:49
+# @Last Modified time: 2025-10-13 19:58:13
 
 from ...basis_class import SpinHalfBasis
 import numpy as np
@@ -25,7 +25,7 @@ class SpinHalfBasisNoBlock(SpinHalf1DBasis):
         self.s_list = range(1 << L)
         self.default_complex: bool = False
         self._maps_dict = {}
-        self._pcon_args = {'N': L, 'Nup': None}
+        self._pcon_args = {'N': L}
     
     def _Op(self, opnm, posn, coef, row_init, col_init, ME_init):
         if self._isdiag(opnm, posn):
@@ -143,8 +143,8 @@ class SpinHalfBasisPBlock(SpinHalf1DBasis):
         from .basis_core import construct_pblock_basis
         self.Ns, self.s_list = construct_pblock_basis(self.L, self.pblock)
         self.default_complex = False
-        self._maps_dict = {'p': np.arange(L-1, -1, -1)}
-        self._pcon_args = {'N': L, 'Nup': None}
+        self._maps_dict = {'p': (np.arange(L-1, -1, -1), pblock)}
+        self._pcon_args = {'N': L}
 
     def _validate_pblock(self) -> None:
         assert self.pblock in [-1, 1], "pblock should be -1 or 1"
@@ -206,8 +206,8 @@ class SpinHalfBasisZBlock(SpinHalf1DBasis):
         from .basis_core import construct_zblock_basis
         self.Ns, self.s_list = construct_zblock_basis(self.L, self.zblock)
         self.default_complex = False
-        self._maps_dict = {'z': -(np.arange(L) + 1)}
-        self._pcon_args = {'N': L, 'Nup': None}
+        self._maps_dict = {'z': (-(np.arange(L) + 1), zblock)}
+        self._pcon_args = {'N': L}
 
     def _validate_zblock(self) -> None:
         assert self.zblock in [-1, 1], "zblock should be -1 or 1"
@@ -270,8 +270,8 @@ class SpinHalfBasisPZBlock(SpinHalf1DBasis):
         from .basis_core import construct_pzblock_basis
         self.Ns, self.s_list = construct_pzblock_basis(self.L, self.pzblock)
         self.default_complex = False
-        self._maps_dict = {'z': -(np.arange(L) + 1), 'p': np.arange(L-1, -1, -1)}
-        self._pcon_args = {'N': L, 'Nup': None}
+        self._maps_dict = {'pz': (-(np.arange(L-1,-1,-1) + 1), pzblock)}
+        self._pcon_args = {'N': L}
 
     def _validate_pzblock(self) -> None:
         assert self.pzblock in [-1, 1], "pzblock should be -1 or 1"
@@ -333,8 +333,8 @@ class SpinHalfBasisKBlock(SpinHalf1DBasis):
         from .basis_core import construct_kblock_basis
         self.Ns, self.s_list, R_list = construct_kblock_basis(self.L, self.kblock)
         self.other_params["R_list"] = R_list
-        self._maps_dict = {'k': (np.arange(L) + 1) % L}
-        self._pcon_args = {'N': L, 'Nup': None}
+        self._maps_dict = {'k': ((np.arange(L) + 1) % L, kblock)}
+        self._pcon_args = {'N': L}
 
     def _validate_kblock(self) -> None:
         assert self.kblock is not None and 0 <= self.kblock <= self.L - 1 and isinstance(self.kblock, int), f"kblock should be an integer between 0 and {self.L - 1}"
@@ -405,8 +405,8 @@ class SpinHalfBasisKPBlock(SpinHalf1DBasis):
         self.other_params["m_list"] = m_list
         self._double_Ns = 4
         self.default_complex = False
-        self._maps_dict = {'k': (np.arange(L) + 1) % L, 'p': np.arange(L-1, -1, -1)}
-        self._pcon_args = {'N': L, 'Nup': None}
+        self._maps_dict = {'k': ((np.arange(L) + 1) % L, kblock), 'p': (np.arange(L-1, -1, -1), pblock)}
+        self._pcon_args = {'N': L}
 
     def _validate_kblock(self) -> None:
         assert self.kblock is not None and 0 <= self.kblock <= self.L // 2 and isinstance(self.kblock, int), f"kblock should be an integer between 0 and {self.L // 2} when using kblock and pblock simutaniuously"
@@ -437,7 +437,7 @@ class SpinHalfBasisNupPBlock(SpinHalf1DBasis):
         from .basis_core import construct_Nup_pblock_basis
         self.Ns, self.s_list = construct_Nup_pblock_basis(self.L, self.Nup, self.pblock)
         self.default_complex = False
-        self._maps_dict = {'p': np.arange(L-1, -1, -1)}
+        self._maps_dict = {'p': (np.arange(L-1, -1, -1), pblock)}
         self._pcon_args = {'N': L, 'Nup': Nup}
 
     def _validate_Nup(self) -> None:
@@ -503,7 +503,7 @@ class SpinHalfBasisNupPZBlock(SpinHalf1DBasis):
         self._validate_pzblock()
         from .basis_core import construct_Nup_pzblock_basis
         self.Ns, self.s_list = construct_Nup_pzblock_basis(self.L, self.Nup, self.pzblock)
-        self._maps_dict = {'p': np.arange(L-1, -1, -1), 'z': -(np.arange(L) + 1)}
+        self._maps_dict = {'pz': (-(np.arange(L-1, -1, -1)+1), pzblock)}
         self._pcon_args = {'N': L, 'Nup': Nup}
 
     def _validate_Nup(self) -> None:
@@ -569,7 +569,7 @@ class SpinHalfBasisNupZBlock(SpinHalf1DBasis):
         from .basis_core import construct_Nup_zblock_basis
         self.Ns, self.s_list = construct_Nup_zblock_basis(self.L, self.Nup, self.zblock)
         self.default_complex: bool = False
-        self._maps_dict = {'z': -(np.arange(L) + 1)}
+        self._maps_dict = {'z': (-(np.arange(L) + 1), zblock)}
         self._pcon_args = {'N': L, 'Nup': Nup}
 
     def _validate_Nup(self) -> None:
@@ -636,7 +636,7 @@ class SpinHalfBasisNupKBlock(SpinHalf1DBasis):
         from .basis_core import construct_Nup_kblock_basis
         self.Ns, self.s_list, R_list = construct_Nup_kblock_basis(self.L, self.Nup, self.kblock)
         self.other_params["R_list"] = R_list
-        self._maps_dict = {'k': (np.arange(L) + 1) % L}
+        self._maps_dict = {'k': ((np.arange(L) + 1) % L, kblock)}
         self._pcon_args = {'N': L, 'Nup': Nup}
 
     def _validate_Nup(self) -> None:
@@ -713,7 +713,7 @@ class SpinHalfBasisNupKPBlock(SpinHalf1DBasis):
         self.other_params["m_list"] = m_list
         self._double_Ns = 4
         self.default_complex = False
-        self._maps_dict = {'k': (np.arange(L) + 1) % L, 'p': np.arange(L-1, -1, -1)}
+        self._maps_dict = {'k': ((np.arange(L) + 1) % L, kblock), 'p': (np.arange(L-1, -1, -1), pblock)}
         self._pcon_args = {'N': L, 'Nup': Nup}
 
     def _validate_Nup(self) -> None:
@@ -796,7 +796,11 @@ class SpinHalfBasisNupKPZBlock(SpinHalf1DBasis):
         self.other_params["c_list"] = c_list
         self.default_complex = False
         self._double_Ns = 4
-        self._maps_dict = {'k': (np.arange(L) + 1) % L, 'p': np.arange(L-1, -1, -1), 'z': -(np.arange(L) + 1)}
+        self._maps_dict = {
+            'k': ((np.arange(L) + 1) % L, kblock), 
+            'p': (np.arange(L-1, -1, -1), pblock), 
+            'z': (-(np.arange(L) + 1), zblock)
+        }
         self._pcon_args = {'N': L, 'Nup': Nup}
 
     def _validate_Nup(self) -> None:

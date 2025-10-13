@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-28 14:27:09
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-12 18:53:21
+# @Last Modified time: 2025-10-13 20:09:10
 
 from .....basicfun import println
 from ...basis_class import SpinHalfBasis
@@ -70,31 +70,42 @@ class SpinHalfGeneralBasis(SpinHalfBasis):
         if isinstance(Nup, int):
             Nup = [Nup]
 
+        self._pcon_args = {'N': L}
         if Ndiff is not None and Nup is not None:
             _Nup2 = []
             for i in Nup:
                 for j in Ndiff:
                     assert (i+j)%2 == 0, f"Nup + Ndiff must be even, but got Nup={i}, Ndiff={j}."
                     _Nup2.append(((i+j)//2, (i-j)//2))
-            self.Nup2 = np.array(_Nup2, dtype=np.int64)
             self.flipmask = sum(1 << (L-1-flip) for flip in flipset)
+            self.Ndiff = None
+            self.Nup2 = np.array(_Nup2, dtype=np.int64) if (len(_Nup2) > 0) else None
         elif Nup is not None:
             self.flipmask = 0
             self.Ndiff = np.array(Nup)
-            self.flipnumber = 0
+            self.Nup2 = None
         elif Ndiff is not None:
             self.flipmask = sum(1 << (L-1-flip) for flip in flipset)
             self.Ndiff = np.sort(np.array(list(set(Ndiff))))
-            self.flipnumber = len(flipset)
+            self.Nup2 = None
         else:
-            pass
+            self.flipmask = None
+            self.Ndiff = None
+            self.Nup2 = None
+        
+        if self.Ndiff is not None:
+            if self.flipmask == 0:
+                self._pcon_args['Nup'] = self.Ndiff
+            elif self.Nup2 is None:
+                self._pcon_args['Ndiff'] = (self.flipmask, self.Ndiff)
+        if self.Nup2 is not None:
+            self._pcon_args['Nup2'] = (self.flipmask, self.Nup2)
 
         ns = []
         ps = []
         bs = []
         ms = []
         self._maps_dict = {}
-        self._pcon_args = {}
         for key, (_perm, _block, _m) in blocks.items():
             ns.append(key)
             if _perm.ndim == 1:

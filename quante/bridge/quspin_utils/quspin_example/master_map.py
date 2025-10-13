@@ -2,14 +2,17 @@
 # @Author: hzhu
 # @Date:   2025-09-24 12:28:43
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-10 22:00:17
+# @Last Modified time: 2025-10-13 20:22:52
 
 from typing import Literal
 import numpy as np
 # from quspin.operators import hamiltonian
-import scipy.sparse as sp
 
-from ..quspin_extension_wrap import spin_basis_2d, hamiltonian, spin_basis_general, spin_super_basis, spin_super_basis_fast
+from ..quspin_extension_wrap.basis import spin_basis_general, spin_super_basis_fast
+from ..quspin_extension_wrap.super_basis import spin_super_basis
+from ..quspin_extension_wrap.operators import hamiltonian
+
+
 from ....generate.operas.spin import SpinOper
 from ....generate.operas.super_oper import Lindbladian
 

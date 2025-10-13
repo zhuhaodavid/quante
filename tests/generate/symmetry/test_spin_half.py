@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-08 17:12:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-28 14:18:04
+# @Last Modified time: 2025-10-13 20:29:08
 
 import unittest
 import numpy as np
@@ -109,7 +109,7 @@ class TestSpinHalf(unittest.TestCase):
         basis = gen.basis.spin_basis(L=L)
         mat3 = ham.to_matrix(basis, pauli=False)
         
-        quspin_basis = qs.spin_basis(L=L, pauli=0)
+        quspin_basis = qs.spin_basis(L=L, pauli=False)
         mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
 
         self.assertTrue(np.allclose(mat3, mat4))
@@ -140,7 +140,7 @@ class TestSpinHalf(unittest.TestCase):
         for Nup in range(1,L):
             basis = gen.basis.spin_basis(L=L, Nup=Nup)
             mat3 = ham.to_matrix(basis, pauli=False)
-            quspin_basis = qs.spin_basis(L=L, pauli=0, Nup=Nup)
+            quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup)
             mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -169,7 +169,7 @@ class TestSpinHalf(unittest.TestCase):
         for k in range(L):
             basis = gen.basis.spin_basis(L=L, kblock=k)
             mat3 = ham.to_matrix(basis, pauli=False)
-            quspin_basis = qs.spin_basis(L=L, pauli=0, kblock=k)
+            quspin_basis = qs.spin_basis(L=L, pauli=False, kblock=k)
             mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -199,7 +199,7 @@ class TestSpinHalf(unittest.TestCase):
         for p in [-1, 1]:
             basis = gen.basis.spin_basis(L=L, pblock=p)
             mat3 = ham.to_matrix(basis, pauli=False)
-            quspin_basis = qs.spin_basis(L=L, pauli=0, pblock=p)
+            quspin_basis = qs.spin_basis(L=L, pauli=False, pblock=p)
             mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -228,7 +228,7 @@ class TestSpinHalf(unittest.TestCase):
         for z in [-1, 1]:
             basis = gen.basis.spin_basis(L=L, zblock=z)
             mat3 = ham.to_matrix(basis, pauli=False)
-            quspin_basis = qs.spin_basis(L=L, pauli=0, zblock=z)
+            quspin_basis = qs.spin_basis(L=L, pauli=False, zblock=z)
             mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -259,7 +259,7 @@ class TestSpinHalf(unittest.TestCase):
         for pz in [-1, 1]:
             basis = gen.basis.spin_basis(L=L, pzblock=pz)
             mat3 = ham.to_matrix(basis, pauli=False)
-            quspin_basis = qs.spin_basis(L=L, pauli=0, pzblock=pz)
+            quspin_basis = qs.spin_basis(L=L, pauli=False, pzblock=pz)
             mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -291,7 +291,7 @@ class TestSpinHalf(unittest.TestCase):
             for k in range(L):
                 basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k)
                 mat3 = ham.to_matrix(basis, pauli=False)
-                quspin_basis = qs.spin_basis(L=L, pauli=0, Nup=Nup, kblock=k)
+                quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, kblock=k)
                 mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
                 self.assertTrue(np.allclose(mat3, mat4))
            
@@ -323,7 +323,7 @@ class TestSpinHalf(unittest.TestCase):
             for p in [-1,1]:
                 basis = gen.basis.spin_basis(L=L, Nup=Nup, pblock=p)
                 mat3 = ham.to_matrix(basis, pauli=False)
-                quspin_basis = qs.spin_basis(L=L, pauli=0, Nup=Nup, pblock=p)
+                quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, pblock=p)
                 mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
                 self.assertTrue(np.allclose(mat3, mat4))
 
@@ -356,7 +356,7 @@ class TestSpinHalf(unittest.TestCase):
         for z in [-1,1]:
             basis = gen.basis.spin_basis(L=L, Nup=Nup, zblock=z)
             mat3 = ham.to_matrix(basis, pauli=False)
-            quspin_basis = qs.spin_basis(L=L, pauli=0, Nup=Nup, zblock=z)
+            quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, zblock=z)
             mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -389,7 +389,7 @@ class TestSpinHalf(unittest.TestCase):
         for pz in [-1,1]:
             basis = gen.basis.spin_basis(L=L, Nup=Nup, pzblock=pz)
             mat3 = ham.to_matrix(basis, pauli=False)
-            quspin_basis = qs.spin_basis(L=L, pauli=0, Nup=Nup, pzblock=pz)
+            quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, pzblock=pz)
             mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
@@ -424,7 +424,7 @@ class TestSpinHalf(unittest.TestCase):
                     mat4 = ham.to_matrix(basis, pauli=False)
                     engs4 = np.linalg.eigvalsh(mat4)
 
-                    quspin_basis = qs.spin_basis(L=L, pauli=0, Nup=Nup, kblock=k, pblock=p)
+                    quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, kblock=k, pblock=p)
                     mat3 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
                     engs3 = np.linalg.eigvalsh(mat3)
 
@@ -464,7 +464,7 @@ class TestSpinHalf(unittest.TestCase):
                     mat4 = ham.to_matrix(basis, pauli=False)
                     engs4 = np.linalg.eigvalsh(mat4)
 
-                    quspin_basis = qs.spin_basis(L=L, pauli=0, Nup=Nup, kblock=k, pblock=p, zblock=z)
+                    quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, kblock=k, pblock=p, zblock=z)
                     mat3 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
                     engs3 = np.linalg.eigvalsh(mat3)
 

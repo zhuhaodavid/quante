@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-12 18:52:13
+# @Last Modified time: 2025-10-13 19:49:30
 
 import numpy as np
 import warnings
@@ -50,15 +50,12 @@ class SpinOper(Oper):
         return _transform_op(self, perm, flip_dict=flip_dict)
     
     def _check_perm(self, key, perm, pauli, flip_dict=None):
-        if key == 'Nup':
-            self.check_pcon(perm, pauli)
-        else:
-            transformed = _transform_op(self, perm, flip_dict=flip_dict)
-            transformed -= self
-            transformed = transformed.clean(pauli=pauli)
-            if transformed.data != {}:
-                raise ValueError(f"the operator is not invariant under the permutation {perm}, the difference PHP-H is:\n{transformed}")
-            println(f"{key} check passed")
+        transformed = _transform_op(self, perm, flip_dict=flip_dict)
+        transformed -= self
+        transformed = transformed.clean(pauli=pauli)
+        if transformed.data != {}:
+            raise ValueError(f"the operator is not invariant under the permutation {perm}, the difference PHP-H is:\n{transformed}")
+        println(f"{key} check passed")
 
     def check_symm(self, 
                    L:int, 
@@ -68,10 +65,11 @@ class SpinOper(Oper):
                    blocks:Literal['k', 'p', 'z', 'Nup']|None = None,
                    maps:dict[str, np.ndarray]|None = None
     ):
+        # check U1
+        Nup = None
         if basis is not None:
             _maps_dic = basis._maps_dict.copy()
-            Nup = basis._pcon_args.get('Nup', None)
-            _maps_dic['Nup'] = Nup
+            Nup = getattr(basis, '_pcon_args', {}).get('Nup', None)
         elif blocks is not None:
             if isinstance(blocks, str):
                 blocks = [blocks]
@@ -84,28 +82,33 @@ class SpinOper(Oper):
                 elif m == 'z':
                     _maps_dic[m] = -(np.arange(L) + 1)
                 elif m == 'Nup':
-                    _maps_dic[m] = 1
+                    Nup = 0
                 else:
                     raise ValueError(f"blocks should be 'kblock', 'pblock', 'zblock', but got {m}")
-            Nup = None
-            if 'Nup' in _maps_dic:
-                Nup = _maps_dic['Nup']
         elif maps is not None:
-            _maps_dic = maps
+            # if Nup in maps, remove it
+            # and set Nup = maps['Nup']
+            _maps_dic = maps.copy()
+            if 'Nup' in _maps_dic:
+                Nup = _maps_dic.pop('Nup')
         else:
-            raise ValueError("either basis or blocks or maps should be provided")
+            return None
+        if Nup is not None:
+            self.check_pcon(Nup, pauli)
         for key, m in _maps_dic.items():
             self._check_perm(key, m, pauli)
     
     def check_pcon(self, Nup, pauli):
-        if Nup is not None:
+        if Nup is None:
+            return
+        if Nup == 0: 
             expand = self.expandxy(pauli=pauli)
             for opstr, _ in expand.data.items():
                 if opstr.count('p') != opstr.count('m'):
                     raise ValueError(f"the operator does not conserve Nup due to the term {opstr}")
             println(f"U(1) check passed")
-
-        
+        else:
+            raise NotImplementedError("Ndiff is not implemented yet")
 
     def hc(self):
         """ 返回自旋算符的厄米共轭算符

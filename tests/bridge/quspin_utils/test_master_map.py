@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-24 14:05:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-10 21:56:18
+# @Last Modified time: 2025-10-13 20:32:31
 
 import unittest
 import numpy as np
@@ -251,9 +251,10 @@ class TestLindbladianDecomposition(unittest.TestCase):
         Liou_real = np.real_if_close(P_real.conj().T @ Liou_sub @ P_real)
         self.assertEqual(Liou_real.dtype, np.float64)
         ham = self._ham(L, self.J, self.Δ)
-        lind_ops = self._lind_ops(L, self.gamma)
+        lind_ops = self._jump_ops(L, self.gamma)
         basis_super = qs.spin_super_basis_fast(L, pauli=True, Nup=[L-Ndiff, L+Ndiff], flip=True)
-        mat_ref = qs.liouvillian(L, ham, lind_ops, basis_super, flip=True).toarray()
+        from quante.bridge.quspin_utils.quspin_example.master_map import lindbladian
+        mat_ref = lindbladian(L, ham, lind_ops, basis_super, flip=True).toarray()
         self.assertTrue(np.allclose(Liou_real, mat_ref))
         sign_list = (-1)**(np.vectorize(count_tot_down)(basis_antisym._basis) == L-Ndiff)
         diag = np.vectorize(lambda x: (x >> L) == (x & ((1 << L) - 1)))(basis_sym._basis)

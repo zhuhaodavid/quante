@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-15 18:08:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-12 14:57:17
+# @Last Modified time: 2025-10-13 20:24:38
 
 # quspin_basis 是 quspin 库中的源码，这里提供一个简单的封装，使得用户可以更方便地使用 quspin_basis 中的 basis 类。
 
@@ -16,6 +16,15 @@ from quspin.basis import (
 import scipy.sparse as sp    
 import numpy as np
 from typing import Literal
+
+__all__ = [
+    'spin_basis', 
+    'fermion_basis', 
+    'spinful_fermion_basis', 
+    'boson_basis', 
+    'spin_basis_2d', 
+    'spin_super_basis_fast'
+]
 
 class spin_basis_2d(spin_basis_general):
     def __init__(self,

@@ -2,13 +2,14 @@
 # @Author: hzhu
 # @Date:   2025-03-10 19:18:49
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-03-11 16:55:32
+# @Last Modified time: 2025-10-13 20:41:32
 
 import unittest
 import torch as tc
 import numpy as np
 import quante as qt
 import quante.bridge.torch_utils as qtc
+from scipy.sparse.linalg import eigsh
 
 class TestTN(unittest.TestCase):
     def test_dmrg_heisenberg(self):
@@ -19,7 +20,8 @@ class TestTN(unittest.TestCase):
         eng2, vec2 = ℋ.dmrg(Ms=[vec1], weight=[-eng1], outputlevel=0)
         eng3, vec3 = ℋ.dmrg(Ms=[vec1, vec2], weight=[-eng1, -eng2], outputlevel=0)
         mat = ℋ.to_matrix().numpy()
-        eng = qt.linalg.eigvalsh(mat, k=3)
+        eng = eigsh(mat, k=3, which='SA', return_eigenvectors=False)[::-1]
+        print(eng)
         self.assertAlmostEqual(eng1.item(), eng[0])
         self.assertAlmostEqual(eng2.item(), eng[1])
         self.assertAlmostEqual(eng3.item(), eng[2])

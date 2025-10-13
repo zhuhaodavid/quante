@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-05 09:31:36
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 17:40:22
+# @Last Modified time: 2025-10-13 19:29:54
 
 from typing import Union
 import inspect
@@ -16,6 +16,8 @@ class GeneralBasis:
         self.L: int = L
         self.Ns: int
         self.other_params: dict = {}
+        self._pcon_args: dict = {}
+        self._maps_dict: dict = {}
         self.s_list: Union[list, range]
         self.default_complex: bool = True
         self._double_Ns = 1

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 15:20:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-12 18:30:47
+# @Last Modified time: 2025-10-13 20:31:07
 
 from ...basis_class import SpinHalfBasis
 import numpy as np
@@ -14,10 +14,11 @@ class SpinHalfSuperBasis(SpinHalfBasis):
 
         if isinstance(Nup, int):
             Nup = [Nup]
+
         if isinstance(Ndiff, int):
             Ndiff = [Ndiff]
-
-        self.flipmask = None
+        
+        _Ndiff = None
         if Ndiff is not None:
             _Ndiff = []
             for n in Ndiff:
@@ -26,34 +27,43 @@ class SpinHalfSuperBasis(SpinHalfBasis):
                     _Ndiff.append(n)
                 if -n not in _Ndiff:
                     _Ndiff.append(-n)
-            if indx_order == 'stacked':
-                self.flipmask = (1 << L) - 1
-            elif indx_order == 'snake':
-                res = 0
-                for i in range(L):
-                    res = (res << 2) | 1
-                self.flipmask = res
-            else:
-                raise ValueError(f"indx_order should be 'stacked' or 'snake', not {indx_order}")
-            if Nup is not None:
-                _Nup = []
-                for ndiff in _Ndiff:
-                    for nup in Nup:
-                        assert (nup + ndiff) % 2 == 0, f"Nup={nup} and Ndiff={ndiff} are incompatible"
-                        _Nup.append([(nup + ndiff)//2, (nup - ndiff)//2])
-                Nup = np.array(_Nup)
-                self.flipmask = 0
-        else:
-            _Ndiff = None
-        
-        self.Nup = np.array(Nup)
-        self.Ndiff = np.array(_Ndiff)
 
+        if indx_order == 'stacked':
+            self.flipmask = (1 << L) - 1
+        elif indx_order == 'snake':
+            res = 0
+            for i in range(L):
+                res = (res << 2) | 1
+            self.flipmask = res
+        else:
+            raise ValueError(f"indx_order should be 'stacked' or 'snake', not {indx_order}")
+
+        self._pcon_args = {'N': L}
+
+        if _Ndiff is None and Nup is None:
+            self.flipmask = None
+            self.Ndiff = None
+            self.Nup2 = None 
+        elif _Ndiff is not None and Nup is None: 
+            self.Ndiff = _Ndiff
+            self.Nup2 = None
+        elif _Ndiff is None and Nup is not None:
+            self.flipmask = 0
+            self.Ndiff = Nup
+            self.Nup2 = None
+        else:
+            _Nup = []
+            for ndiff in _Ndiff:
+                for nup in Nup:
+                    assert (nup + ndiff) % 2 == 0, f"Nup={nup} and Ndiff={ndiff} are incompatible"
+                    _Nup.append([(nup + ndiff)//2, (nup - ndiff)//2])
+            self.Ndiff = None
+            self.Nup2 = np.array(_Nup, dtype=np.int64)
+        
         ns = []
         ps = []
         bs = []
         self._maps_dict = {}
-        self._pcon_args = {}
         for key, (_perm, _block) in blocks.items():
             ns.append(key)
             _perm = np.array(_perm)
@@ -64,7 +74,7 @@ class SpinHalfSuperBasis(SpinHalfBasis):
                 ])
             ps.append(_perm)
             bs.append(_block)
-            self._maps_dict[key] = _perm
+            self._maps_dict[key] = (_perm, _block)
         self.block_name = ns
         self.perm = np.array(ps, dtype=np.int64).reshape(-1, 2*self.L, 3)
         self.block = np.array(bs, dtype=np.int64).reshape(-1)
@@ -151,22 +161,15 @@ class BasisZ2N(SpinHalfSuperBasis):
     def __init__(self, L: int, Ndiff, Nup, indx_order, **blocks) -> None:
         super().__init__(L, Ndiff, Nup, indx_order, **blocks)
 
-        if Nup is not None and Ndiff is not None:
+        if self.Nup2 is not None:
             from .basis_core import construct_Nup2_basis_Z2N
             self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Nup2_basis_Z2N(
-                self.L, self.Nup, self.perm, self.block, self._ancillary_perm
+                self.L, self.Nup2, self.perm, self.block, self._ancillary_perm
             )
-        elif Nup is not None:
+        elif self.Ndiff is not None:
             from .basis_core import construct_Ndiff_basis_Z2N
-            flipmask = 0
             self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis_Z2N(
-                self.L, self.Nup, self.perm, self.block, self._ancillary_perm, flipmask
-            )
-        elif Ndiff is not None:
-            from .basis_core import construct_Ndiff_basis_Z2N
-            flipmask = (1 << L) - 1
-            self.s_list, self.R_list, self.Ns_sym, self.Ns_asym = construct_Ndiff_basis_Z2N(
-                self.L, self.Ndiff, self.perm, self.block, self._ancillary_perm, flipmask
+                self.L, self.Ndiff, self.perm, self.block, self._ancillary_perm, self.flipmask
             )
         else:
             from .basis_core import construct_basis_Z2N
