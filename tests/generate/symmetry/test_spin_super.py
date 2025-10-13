@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 20:07:21
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-12 18:23:49
+# @Last Modified time: 2025-10-13 23:35:00
 
 import unittest
 from quante.generate.basis.spin_half.spin_super.basis import *
@@ -66,11 +66,11 @@ class TestLiouvilleBasis(unittest.TestCase):
         eng1 = []
         for ndiff in range(0, self.L+1):
             # basis = BasisFull(self.L, ndiff, None, 'stacked')
-            basis = BasisZ2N(self.L, ndiff, None, 'stacked')
+            basis = BasisZ2N(self.L, list(set([ndiff,-ndiff])), None, 'stacked')
             mat0 = self.liou.to_matrix(basis, pauli=True, sparse=False)
             self.assertEqual(mat0.dtype, np.float64)
 
-            basis = qs.spin_super_basis(self.L, pauli=True, Nd=ndiff)
+            basis = qs.spin_super_basis(self.L, pauli=True, Nd=list(set([ndiff,-ndiff])))
             mat = qs.hamiltonian(self.liou, basis, dtype=np.complex128)
             mat11 = basis.realify(mat).toarray()
             self.assertEqual(mat11.dtype, np.float64)
@@ -114,11 +114,11 @@ class TestLiouvilleBasis(unittest.TestCase):
         for ndiff in range(0, self.L+1):
             for nup in range(ndiff, 2*self.L+1, 2):
                 # basis = BasisFull(self.L,ndiff,nup,'stacked')
-                basis = BasisZ2N(self.L,ndiff,nup,'stacked')
+                basis = BasisZ2N(self.L,list(set([ndiff,-ndiff])),nup,'stacked')
                 mat0 = self.liou.to_matrix(basis, pauli=True, sparse=False)
                 self.assertEqual(mat0.dtype, np.float64)
 
-                basis = qs.spin_super_basis(self.L, pauli=True, Np=nup, Nd=ndiff)
+                basis = qs.spin_super_basis(self.L, pauli=True, Np=nup, Nd=list(set([ndiff,-ndiff])))
                 mat = qs.hamiltonian(self.liou, basis, dtype=np.complex128)
                 mat11 = basis.realify(mat).toarray()
                 self.assertEqual(mat11.dtype, np.float64)
@@ -164,11 +164,11 @@ class TestLiouvilleBasis(unittest.TestCase):
         for ndiff in range(0, self.L+1):
             for block in [0,1]:
                 # basis = BasisZ21(self.L,ndiff,None,'stacked', pblock=(Px, block))
-                basis = BasisZ2N(self.L,ndiff,None,'stacked', pblock=(Px, block))
+                basis = BasisZ2N(self.L,list(set([ndiff,-ndiff])),None,'stacked', pblock=(Px, block))
                 mat0 = self.liou.to_matrix(basis, pauli=True, sparse=False)
                 self.assertEqual(mat0.dtype, np.float64)
                 
-                basis = qs.spin_super_basis(self.L, pauli=True, Nd=ndiff, pblock=block)
+                basis = qs.spin_super_basis(self.L, pauli=True, Nd=list(set([ndiff,-ndiff])), pblock=block)
                 mat = qs.hamiltonian(self.liou, basis, dtype=np.complex128)
                 mat11 = basis.realify(mat).toarray()
                 self.assertEqual(mat11.dtype, np.float64)
@@ -215,11 +215,11 @@ class TestLiouvilleBasis(unittest.TestCase):
             for nup in range(ndiff, 2*self.L+1, 2):
                 for block in [0,1]:
                     # basis = BasisZ21(self.L,ndiff,nup,'stacked', pblock=(Px, block))
-                    basis = BasisZ2N(self.L,ndiff,nup,'stacked', pblock=(Px, block))
+                    basis = BasisZ2N(self.L,list(set([ndiff,-ndiff])),nup,'stacked', pblock=(Px, block))
                     mat0 = self.liou.to_matrix(basis, pauli=True, sparse=False)
                     self.assertEqual(mat0.dtype, np.float64)
                      
-                    basis = qs.spin_super_basis(self.L, pauli=True, Np=nup, Nd=ndiff, pblock=block)
+                    basis = qs.spin_super_basis(self.L, pauli=True, Np=nup, Nd=list(set([ndiff,-ndiff])), pblock=block)
                     mat = qs.hamiltonian(self.liou, basis, dtype=np.complex128)
                     mat11 = basis.realify(mat).toarray()
                     self.assertEqual(mat11.dtype, np.float64)
@@ -325,11 +325,11 @@ class TestLiouvilleBasis(unittest.TestCase):
             for pblock in [0,1]:
                 for zblock in [0,1]:
                     # basis = BasisZ22(self.L,ndiff,None,'stacked', pblock=(Px, pblock), zblock=(Z,zblock))
-                    basis = BasisZ2N(self.L,ndiff,None,'stacked', pblock=(Px, pblock), zblock=(Z,zblock))
+                    basis = BasisZ2N(self.L,list(set([ndiff,-ndiff])),None,'stacked', pblock=(Px, pblock), zblock=(Z,zblock))
                     mat0 = self.liou.to_matrix(basis, pauli=True, sparse=False)
                     self.assertEqual(mat0.dtype, np.float64)
                     
-                    basis = qs.spin_super_basis(self.L, pauli=True, Nd=ndiff, pblock=pblock, zblock=zblock)
+                    basis = qs.spin_super_basis(self.L, pauli=True, Nd=list(set([ndiff,-ndiff])), pblock=pblock, zblock=zblock)
                     mat = qs.hamiltonian(self.liou, basis, dtype=np.complex128)
                     mat11 = basis.realify(mat).toarray()
                     self.assertEqual(mat11.dtype, np.float64)
@@ -382,11 +382,11 @@ class TestLiouvilleBasis(unittest.TestCase):
                     for zblock in [0,1]:
                         nup = list(set([Nup, 2*self.L-Nup]))
                         # basis = BasisZ22(self.L,ndiff,nup,'stacked', pblock=(Px, pblock), zblock=(Z,zblock))
-                        basis = BasisZ2N(self.L,ndiff,nup,'stacked', pblock=(Px, pblock), zblock=(Z,zblock))
+                        basis = BasisZ2N(self.L,list(set([ndiff,-ndiff])),nup,'stacked', pblock=(Px, pblock), zblock=(Z,zblock))
                         mat0 = self.liou.to_matrix(basis, pauli=True, sparse=False)
                         self.assertEqual(mat0.dtype, np.float64)
                         
-                        basis = qs.spin_super_basis(self.L, pauli=True, Np=nup, Nd=ndiff, pblock=pblock, zblock=zblock)
+                        basis = qs.spin_super_basis(self.L, pauli=True, Np=nup, Nd=list(set([ndiff,-ndiff])), pblock=pblock, zblock=zblock)
                         mat = qs.hamiltonian(self.liou, basis, dtype=np.complex128)
                         mat11 = basis.realify(mat).toarray()
                         self.assertEqual(mat11.dtype, np.float64)

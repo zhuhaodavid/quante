@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-12 15:04:23
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-24 14:34:31
+# @Last Modified time: 2025-10-13 23:44:39
 # setup.py
 
 from setuptools import setup, find_packages
@@ -20,7 +20,8 @@ setup(
         "psutil",
         "objprint",
         "tqdm",
-        "line_profiler"
+        "line_profiler",
+        "dowhen",
     ],
     include_package_data=True,
 )

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-19 20:46:34
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-13 15:40:29
+# @Last Modified time: 2025-10-14 00:25:06
 
 import numpy as np
 from tqdm import tqdm
@@ -123,17 +123,17 @@ def exact_avg(n, alpha=0.5, tau=0.01, trunc=1e-10):
     chi = 1
     for i in tqdm(range(0, n-1), ascii=True):
         lognm, wv, rdm = fft_integrate(tensortrain, alpha, tau)
-        # s, v = np.linalg.eigh(rdm)
+        s, v = np.linalg.eigh(rdm)
 
-        s, v = sp.eigsh(rdm, 20, which='LM', tol=1e-20, maxiter=10000)
-        print(s[::-1])
-        # s, v, chi = truncate_eig(s, v, trunc)
-        x0 = np.random.randn(rdm.shape[0])
-        s, v, _ = eigsolve(rdm, x0=x0, howmany=20, which='LM', tol=1e-40, maxiter=10000, eager=True, verbosity=0, isherm=True)
-        chi = len(s)
-        print(s)
-        if i == 2:
-            return rdm, 2, 3, 4
+        # s, v = sp.eigsh(rdm, 20, which='LM', tol=1e-20, maxiter=10000)
+        # print(s[::-1])
+        s, v, chi = truncate_eig(s, v, trunc)
+        # x0 = np.random.randn(rdm.shape[0])
+        # s, v, _ = eigsolve(rdm, x0=x0, howmany=20, which='LM', tol=1e-40, maxiter=10000, eager=True, verbosity=0, isherm=True)
+        # chi = len(s)
+        # print(s)
+        # if i == 0:
+        #     return rdm, 2, 3, 4
         # v = np.ascontiguousarray(v)
         # print(s, v)
         Ss[f'n={i}'] = s/s[0]

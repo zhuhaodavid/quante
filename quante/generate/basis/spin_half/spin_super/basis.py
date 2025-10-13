@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 15:20:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-13 20:31:07
+# @Last Modified time: 2025-10-13 23:32:23
 
 from ...basis_class import SpinHalfBasis
 import numpy as np
@@ -17,16 +17,16 @@ class SpinHalfSuperBasis(SpinHalfBasis):
 
         if isinstance(Ndiff, int):
             Ndiff = [Ndiff]
-        
-        _Ndiff = None
-        if Ndiff is not None:
-            _Ndiff = []
-            for n in Ndiff:
-                assert n >= 0, "Ndiff should be non-negative"
-                if n not in _Ndiff:
-                    _Ndiff.append(n)
-                if -n not in _Ndiff:
-                    _Ndiff.append(-n)
+        _Ndiff = list(set(Ndiff)) if Ndiff is not None else None
+        # _Ndiff = None
+        # if Ndiff is not None:
+        #     _Ndiff = []
+        #     for n in Ndiff:
+        #         assert n >= 0, "Ndiff should be non-negative"
+        #         if n not in _Ndiff:
+        #             _Ndiff.append(n)
+        #         if -n not in _Ndiff:
+        #             _Ndiff.append(-n)
 
         if indx_order == 'stacked':
             self.flipmask = (1 << L) - 1
@@ -59,6 +59,14 @@ class SpinHalfSuperBasis(SpinHalfBasis):
                     _Nup.append([(nup + ndiff)//2, (nup - ndiff)//2])
             self.Ndiff = None
             self.Nup2 = np.array(_Nup, dtype=np.int64)
+        
+        if self.Ndiff is not None:
+            if self.flipmask == 0:
+                self._pcon_args['Nup'] = self.Ndiff
+            elif self.Nup2 is None:
+                self._pcon_args['Ndiff'] = (self.flipmask, self.Ndiff)
+        if self.Nup2 is not None:
+            self._pcon_args['Nup2'] = (self.flipmask, self.Nup2)
         
         ns = []
         ps = []

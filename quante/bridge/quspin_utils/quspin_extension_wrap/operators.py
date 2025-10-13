@@ -2,13 +2,18 @@
 # @Author: hzhu
 # @Date:   2025-09-08 14:20:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 18:58:58
+# @Last Modified time: 2025-10-14 00:04:53
 
 from quspin.operators import hamiltonian as qshamiltonian
+from quspin.basis.base import _get_index_type, _is_diagonal, _update_diag
+from quspin.basis import spin_basis_1d, spin_basis_general
+
 from ....generate.operas import Oper, SpinOper
+from .super_basis import spin_super_basis
+
 import numpy as _np
 import scipy.sparse as _sp
-from quspin.basis.base import _get_index_type, _is_diagonal, _update_diag
+from warnings import warn
 
 def hamiltonian(
     oper, basis, dtype, 
@@ -29,9 +34,30 @@ def hamiltonian(
         else:
             raise ValueError("basis._pauli must be -1 or 0")
         if check_symm:
-            L = basis._pcon_args['N']
-            dic = basis._maps_dict
-            dic['Nup'] = basis._pcon_args['Nup']
+            dic = {}
+            if isinstance(basis, spin_basis_1d):
+                L = basis.L
+                blocks = basis.blocks
+                if blocks['kblock'] is not None:
+                    a = blocks['a']
+                    dic['kblock'] = (_np.arange(L) + a) % L
+                elif blocks['pblock'] is not None:
+                    dic['pblock'] = _np.arange(L-1, -1, -1)
+                elif blocks['zblock'] is not None:
+                    dic['zblock'] = -(_np.arange(L) + 1)
+                elif blocks['pzblock'] is not None:
+                    dic['pzblock'] = -(_np.arange(L-1, -1, -1) + 1)
+                    warn("check pzblock is not fully supported yet")
+                elif blocks['zAblock'] is not None:
+                    warn("check zAblock is not fully supported yet")
+                elif blocks['zBblock'] is not None:
+                    warn("check zBblock is not fully supported yet")
+                # print(basis._Np)
+                dic['Nup'] = basis._Np
+            elif isinstance(basis, (spin_basis_general,spin_super_basis)):
+                L = basis._pcon_args['N']
+                dic = basis._maps_dict
+                dic['Nup'] = basis._pcon_args['Nup']
             oper.check_symm(L, pauli=pauli, maps=dic)
             check_symm = False
             check_pcon = False
