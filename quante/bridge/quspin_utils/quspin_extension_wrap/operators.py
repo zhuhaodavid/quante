@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-08 14:20:14
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-14 00:04:53
+# @Last Modified time: 2025-10-16 17:16:21
 
 from quspin.operators import hamiltonian as qshamiltonian
 from quspin.basis.base import _get_index_type, _is_diagonal, _update_diag
@@ -54,10 +54,38 @@ def hamiltonian(
                     warn("check zBblock is not fully supported yet")
                 # print(basis._Np)
                 dic['Nup'] = basis._Np
-            elif isinstance(basis, (spin_basis_general,spin_super_basis)):
+            elif isinstance(basis, spin_basis_general):
                 L = basis._pcon_args['N']
                 dic = basis._maps_dict
                 dic['Nup'] = basis._pcon_args['Nup']
+            elif isinstance(basis, spin_super_basis):
+                L = 2*basis._user_N
+                for k, (f,p1,p2,p3) in basis._user_maps.items():
+                    res = []
+                    for i in range(L):
+                        s = 1 << (L-i-1)
+                        sp = f(s,2*basis._user_N,0,p3)
+                        
+                        ii = int(_np.log2(sp))
+                        if ii == _np.log2(sp):
+                            ii = L - ii -1
+                        else:
+                            sp = ((1 << L) - 1) ^ sp
+                            ii = int(np.log2(sp)) - L
+                        res.append(ii) 
+                    dic[k] = _np.array(res)
+                
+                if basis._user_pcon_dict is not None:
+                    nsf = basis._user_pcon_dict.get('next_state', None)
+                    if nsf is not None:
+                        if nsf.__name__ == 'next_state_Np':
+                            dic['Nup'] = 1
+                        elif nsf.__name__ == 'next_state_Nd':
+                            dic['Ndiff'] = 1
+                        elif nsf.__name__ == 'next_state_Np_Nd':
+                            dic['Nup2'] = 1
+                        else:
+                            raise ValueError(f"Unknown next_state: {nsf.__name__}")
             oper.check_symm(L, pauli=pauli, maps=dic)
             check_symm = False
             check_pcon = False

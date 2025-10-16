@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-14 00:21:30
+# @Last Modified time: 2025-10-16 17:17:27
 
 import numpy as np
 import warnings
@@ -118,6 +118,7 @@ class SpinOper(Oper):
             if 'Nup2' in _maps_dic:
                 warnings.warn("check Nup2 is not fully supported yet")
                 _maps_dic.pop('Nup2')
+                Nup = _maps_dic.pop('Nup2')
         else:
             return None
         if Nup is not None:
