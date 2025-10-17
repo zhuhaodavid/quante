@@ -8,7 +8,7 @@ from ..linalg.decomp import TruncationError, svd_truncate
 from quante.basicfun import println
 
 __all__ = ["generate_delta_tensor"]
-__all__ += ["invert_transpose_order", "tensor2matrix", "qr", "rq"]
+__all__ += ["invert_transpose_index", "tensor2matrix", "qr", "rq"]
 __all__ += ["left2right_QR_step", "right2left_QR_step", "apply_2b_gate_mps", "update_two_site"]
 __all__ += ["inner_initialize", "inner_step"]
 __all__ += ["add_mid", "add_left", "add_right"]
@@ -25,7 +25,7 @@ def generate_delta_tensor(shape:tuple) -> np.ndarray:  # todo 弄懂
     return equal_mask.astype(int)
 
 
-def invert_transpose_order(order) -> tuple:
+def invert_transpose_index(order) -> tuple:
     """Invert the order of a transpose operation.
     """
     order = tuple(order)  # Convert to tuple if list
@@ -111,7 +111,7 @@ def left2right_QR_step(W1:np.ndarray, W2:np.ndarray, lr_index1:list=None, lr_ind
     W1_update, S = qr(W1, lr_index=lr_index1)
     index1_order = sum(lr_index1, [])
     # revert the order of W1
-    W1_update = W1_update.transpose(invert_transpose_order(index1_order))
+    W1_update = W1_update.transpose(invert_transpose_index(index1_order))
     # shift OC into W2
     if lr_index2 == None:
         lr_index2 = [[0], list(range(1, W2.ndim))]
@@ -123,7 +123,7 @@ def left2right_QR_step(W1:np.ndarray, W2:np.ndarray, lr_index1:list=None, lr_ind
     W2_update = W2_update.reshape(*l_shape, *r_shape)
     # revert the order of W2
     index2_order = sum(lr_index2, [])
-    W2_update = W2_update.transpose(invert_transpose_order(index2_order))
+    W2_update = W2_update.transpose(invert_transpose_index(index2_order))
     return W1_update, W2_update
 
 
@@ -143,7 +143,7 @@ def right2left_QR_step(W1:np.ndarray, W2:np.ndarray, lr_index1:list=None, lr_ind
         lr_index2 = [[0], list(range(1, W2.ndim))]
     S, W2_update = rq(W2, lr_index=lr_index2)
     index2_order = sum(lr_index2, [])
-    W2_update = W2_update.transpose(invert_transpose_order(index2_order))
+    W2_update = W2_update.transpose(invert_transpose_index(index2_order))
     # shift OC into W1
     if lr_index1 == None:
         lr_index1 = [list(range(W1.ndim-1)), [W1.ndim-1]]
@@ -155,7 +155,7 @@ def right2left_QR_step(W1:np.ndarray, W2:np.ndarray, lr_index1:list=None, lr_ind
     W1_update = W1_update.reshape(*l_shape, *r_shape)
     # d. revert the order of W1
     index1_order = sum(lr_index1, [])
-    W1_update = W1_update.transpose(invert_transpose_order(index1_order))
+    W1_update = W1_update.transpose(invert_transpose_index(index1_order))
     return W1_update, W2_update
 
 

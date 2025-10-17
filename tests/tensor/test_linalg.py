@@ -37,7 +37,7 @@ def test_invert_transpose_order() -> None:
     order = list(np.random.permutation(ndim))
     B = A.transpose(order)
     ## main
-    re_order = qt.tensor.invert_transpose_order(order)
+    re_order = qt.tensor.invert_transpose_index(order)
     A_ = B.transpose(re_order)
     assert np.allclose(A, A_)
     
@@ -70,7 +70,7 @@ def test_tensor2matrix() -> None:
     ## main
     A_mat, l_shape, r_shape = qt.tensor.tensor2matrix(A, lr_index=[[4,2], [3,0,1]])
     A_ = A_mat.reshape(*(l_shape+r_shape))
-    re_order = qt.tensor.invert_transpose_order([4, 2, 3, 0, 1])
+    re_order = qt.tensor.invert_transpose_index([4, 2, 3, 0, 1])
     A_ = A_.transpose(re_order)
     assert np.allclose(A, A_)
     
@@ -87,7 +87,7 @@ def test_qr() -> None:
     q, r = qt.tensor.qr(A, lr_index=[[0, 2], [3, 1]])
     q_mat = q.reshape(-1, q.shape[-1])
     r_mat = r.reshape(r.shape[0], -1)
-    re_order = qt.tensor.invert_transpose_order([0, 2, 3, 1])
+    re_order = qt.tensor.invert_transpose_index([0, 2, 3, 1])
     A_ = (q_mat @ r_mat).reshape(q.shape[0], q.shape[1], r.shape[1], r.shape[2])
     A_ = A_.transpose(re_order).reshape(*shape)
     assert np.allclose(A, A_)
@@ -105,7 +105,7 @@ def test_rq() -> None:
     r, q = qt.tensor.rq(A, lr_index=[[1, 3], [2, 0]])
     r_mat = r.reshape(-1, r.shape[-1])
     q_mat = q.reshape(q.shape[0], -1)
-    re_order = qt.tensor.invert_transpose_order([1, 3, 2, 0])
+    re_order = qt.tensor.invert_transpose_index([1, 3, 2, 0])
     B_ = (r_mat @ q_mat).reshape(r.shape[0], r.shape[1], q.shape[1], q.shape[2])
     B_ = B_.transpose(re_order).reshape(*shape)
     assert np.allclose(A, B_)
