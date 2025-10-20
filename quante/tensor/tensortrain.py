@@ -5,7 +5,7 @@
 # @Last Modified time: 2025-05-30 16:32:38
 import numpy as np
 from quante.basicfun import println
-from .linalg import left2right_QR_step, right2left_QR_step, inner_initialize, inner_step, add_left, add_mid, add_right
+from .linalg import left2right_QR_step, right2left_QR_step, inner_onsite, inner_step, add_left, add_mid, add_right
 
 
 __all__ = ["TensorTrain"]
@@ -50,7 +50,7 @@ class TensorTrain:
     def norm(self) -> float:
         if self.llim == self.rlim:
             W_oc = self.Ws[self.llim]
-            norm_tensor = inner_initialize(W_oc, W_oc)
+            norm_tensor = inner_onsite(W_oc, W_oc)
             norm = np.einsum("aabb->", norm_tensor)
         else:
             norm = self.inner(self.Ws, self.Ws)
@@ -195,7 +195,7 @@ class TensorTrain:
         assert len(Ws1) == len(Ws2), "N in two Ws must be the same."
         assert Ws1[0].shape[0] == Ws1[-1].shape[-1] == Ws2[0].shape[0] == Ws2[-1].shape[-1] == 1, "The first and last tensors in two TensorTrain must be equal to unit."
         ## main
-        Lenv = inner_initialize(Ws1[0], Ws2[0])
+        Lenv = inner_onsite(Ws1[0], Ws2[0])
         for n in range(1, len(Ws1)):
             Lenv = inner_step(Lenv, Ws1[n], Ws2[n])
         return Lenv.squeeze()

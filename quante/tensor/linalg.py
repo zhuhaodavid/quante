@@ -10,7 +10,7 @@ from quante.basicfun import println
 __all__ = ["generate_delta_tensor"]
 __all__ += ["invert_transpose_index", "tensor2matrix", "qr", "rq"]
 __all__ += ["left2right_QR_step", "right2left_QR_step", "apply_2b_gate_mps", "update_two_site"]
-__all__ += ["inner_initialize", "inner_step"]
+__all__ += ["inner_onsite", "inner_step"]
 __all__ += ["add_mid", "add_left", "add_right"]
 
 
@@ -206,7 +206,7 @@ def update_two_site(theta:np.ndarray, direction:str, lr_index:list=None, trunc_p
         raise ValueError("direction must be 'right', 'left' or 'mixed'.")    
 
 
-def inner_initialize(W1:np.ndarray, W2:np.ndarray) -> np.ndarray:
+def inner_onsite(W1:np.ndarray, W2:np.ndarray) -> np.ndarray:
     """
     .. code-block:: text
         .

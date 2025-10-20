@@ -239,14 +239,14 @@ def test_inner_initialize() -> None:
     d, D = 2, 5
     W1 = np.random.rand(D, d, D) + 1j * np.random.rand(D, d, D)
     W2 = np.random.rand(D, d, D) + 1j * np.random.rand(D, d, D)
-    Lenv = qt.tensor.inner_initialize(W1, W2)
+    Lenv = qt.tensor.inner_onsite(W1, W2)
     Lenv_ = np.einsum("abc,dbf->adcf", W1.conj(), W2)
     assert np.allclose(Lenv, Lenv_)
     ## Case MPO
     d, D = 2, 5
     W1 = np.random.rand(D, d, d, D) + 1j * np.random.rand(D, d, d, D)
     W2 = np.random.rand(D, d, d, D) + 1j * np.random.rand(D, d, d, D)
-    Lenv = qt.tensor.inner_initialize(W1, W2)
+    Lenv = qt.tensor.inner_onsite(W1, W2)
     Lenv_ = np.einsum("abcd,ebcf->aedf", W1.conj(), W2)
     assert np.allclose(Lenv, Lenv_)
     
@@ -255,7 +255,7 @@ def test_inner_step() -> None:
     d, D = 2, 5
     W1 = np.random.rand(D, d, D) + 1j * np.random.rand(D, d, D)
     W2 = np.random.rand(D, d, D) + 1j * np.random.rand(D, d, D)
-    Lenv_init = qt.tensor.inner_initialize(W1, W2)
+    Lenv_init = qt.tensor.inner_onsite(W1, W2)
     ## Case MPS
     W1 = np.random.rand(D, d, D) + 1j * np.random.rand(D, d, D)
     W2 = np.random.rand(D, d, D) + 1j * np.random.rand(D, d, D)

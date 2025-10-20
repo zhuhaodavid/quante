@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
-# @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-16 15:37:40
+# @Last Modified by:   dzwang
+# @Last Modified time: 2025-10-17 16:03:59
 
 import copy
 import warnings
@@ -166,7 +166,7 @@ class TensorTrain:
         """计算 <ψ|ϕ>: ψ.inner(ϕ)
 
         如何使 MPO，那么等价于 tr(ψ^† ϕ)
-
+        
         Parameters
         ----------
         anotherMPS : MPS
