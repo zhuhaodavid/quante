@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:14:32
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-12 21:33:42
+# @Last Modified time: 2025-10-23 15:52:56
 
 import os as _os
 import numpy as _np
@@ -135,8 +135,14 @@ def _default_save(h5group:_h5py.Group, key:str, value) -> None:
             import pickle as _pickle
                         
             # 将 value 序列化为字节流
+            # serialized_params = _pickle.dumps(value)
+            # dataset = h5group.create_dataset(key, data=_np.void(serialized_params))
+
             serialized_params = _pickle.dumps(value)
-            dataset = h5group.create_dataset(key, data=_np.void(serialized_params))
+            # use h5py variable-length bytes dtype to store arbitrary pickle bytes
+            vlen_dt = _h5py.special_dtype(vlen=bytes)
+            dataset = h5group.create_dataset(key, data=serialized_params, dtype=vlen_dt)
+
             dataset.attrs["object_type"] = "serialized_bytes"
             
 

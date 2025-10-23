@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-08 17:12:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-14 00:24:33
+# @Last Modified time: 2025-10-23 17:54:48
 
 import unittest
 import numpy as np
@@ -353,7 +353,7 @@ class TestSpinHalf(unittest.TestCase):
         L = 10
         ham = self._generate_Nup_hamiltonian(L)
         ham = ham.expandn(to='pm')
-        ham += ham.transform('z')
+        ham += ham.transform(L, 'z')
         Nup = L//2
         for z in [-1,1]:
             basis = gen.basis.spin_basis(L=L, Nup=Nup, zblock=z)
@@ -388,7 +388,7 @@ class TestSpinHalf(unittest.TestCase):
         L = 10
         ham = self._generate_Nup_hamiltonian(L)
         ham = ham.expandn(to='pm')
-        ham += ham.transform('pz')
+        ham += ham.transform(L, 'pz')
         Nup = L//2
         for pz in [-1,1]:
             basis = gen.basis.spin_basis(L=L, Nup=Nup, pzblock=pz)
@@ -422,7 +422,7 @@ class TestSpinHalf(unittest.TestCase):
         L = 10
         ham = self._generate_Nup_kblock_hamiltonian(L)
         ham = ham.expandn(to='pm')
-        ham += ham.transform('p')
+        ham += ham.transform(L, 'p')
         for Nup in range(L+1):
             for k in range(L//2+1):
                 for p in [-1, 1]:
@@ -461,7 +461,7 @@ class TestSpinHalf(unittest.TestCase):
         L = 10
         ham = self._generate_Nup_kblock_zblock_hamiltonian(L)
         ham = ham.expandn(to='pm')
-        ham += ham.transform('p')
+        ham += ham.transform(L, 'p')
         Nup = L//2
         for k in range(L//2+1):
             for p in [-1, 1]:

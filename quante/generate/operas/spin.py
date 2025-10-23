@@ -2,12 +2,12 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-16 17:17:27
+# @Last Modified time: 2025-10-22 15:22:53
 
 import numpy as np
 import warnings
 import scipy.sparse as sp
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Callable
 from .general import Oper, _single_term, _merge_poscoef
 from ...basicfun.utils_logging import println
 
@@ -42,31 +42,14 @@ class SpinOper(Oper):
         for opstr, posn, coef in opr.each_term():
             lis = _merge_terms(opstr, posn, coef)
             for opstr1, posn1, coef1 in lis:
-                res += opstr1, posn1, coef1
+                if abs(coef1) > 1e-10:
+                    res += opstr1, posn1, coef1
         self._pauli = pauli
         return res.build()
     
-    def transform(self, perm, flip_dict=None) -> 'SpinOper':
-        if isinstance(perm, str):
-            if perm == 'k':
-                perm = (np.arange(self.L) + 1) % self.L
-            elif perm == 'p':
-                perm = np.arange(self.L-1, -1, -1)
-            elif perm == 'z':
-                perm = - (np.arange(self.L) + 1)
-            elif perm == 'pz':
-                perm = - (np.arange(self.L-1, -1, -1) + 1)
-            else:
-                raise ValueError(f"perm should be 'k', 'p', 'z', or 'pz', but got {perm}")
+    def transform(self, L, perm, flip_dict=None) -> 'SpinOper':
+        perm = _convert2perm(L, perm)
         return _transform_op(self, perm, flip_dict=flip_dict)
-    
-    def _check_perm(self, key, perm, pauli, flip_dict=None):
-        transformed = _transform_op(self, perm, flip_dict=flip_dict)
-        transformed -= self
-        transformed = transformed.clean(pauli=pauli)
-        if transformed.data != {}:
-            raise ValueError(f"the operator is not invariant under the permutation {perm}, the difference PHP-H is:\n{transformed}")
-        println(f"{key} check passed")
 
     def check_symm(self, 
                    L:int, 
@@ -76,65 +59,139 @@ class SpinOper(Oper):
                    blocks:Literal['k', 'p', 'z', 'pz', 'Nup']|None = None,
                    maps:dict[str, np.ndarray]|None = None
     ):
+        self._check_pauli(pauli)
         Nup = None
+        flipmask = None
         if basis is not None:
             Nup = getattr(basis, '_pcon_args', {}).get('Nup', None)
             Ndiff = getattr(basis, '_pcon_args', {}).get('Ndiff', None)
             if Ndiff is not None:
-                warnings.warn("check Ndiff is not fully supported yet")
+                Nup = Ndiff[1]
+                flipmask = Ndiff[0]
             Nup2 = getattr(basis, '_pcon_args', {}).get('Nup2', None)
             if Nup2 is not None:
-                warnings.warn("check Nup2 is not fully supported yet")
+                Nup = Nup2[1]
+                flipmask = Nup2[0]
             _maps_dic = {}
             for key, (m, _) in basis._maps_dict.items():
-                _maps_dic[key] = m
-            
+                _maps_dic[key] = _convert2perm(L, m)
         elif blocks is not None:
             if isinstance(blocks, str):
                 blocks = [blocks]
             _maps_dic = {}
             for m in blocks:
-                if m == 'k':
-                    _maps_dic[m] = (np.arange(L) + 1) % L
-                elif m == 'p':
-                    _maps_dic[m] = np.arange(L-1, -1, -1)
-                elif m == 'z':
-                    _maps_dic[m] = -(np.arange(L) + 1)
-                elif m == 'pz':
-                    _maps_dic[m] = -(np.arange(L-1, -1, -1) + 1)
-                elif m == 'Nup':
+                if m == 'Nup':
                     Nup = 0
+                elif m in ['k', 'p', 'z', 'pz']:
+                    _maps_dic[m] = _convert2perm(L, m)
                 else:
-                    raise ValueError(f"blocks should be 'kblock', 'pblock', 'zblock', but got {m}")
+                    raise ValueError(f"block {m}, not supported yet")
         elif maps is not None:
             # if Nup in maps, remove it
             # and set Nup = maps['Nup']
-            _maps_dic = maps.copy()
-            if 'Nup' in _maps_dic:
-                Nup = _maps_dic.pop('Nup')
-            if 'Ndiff' in _maps_dic:
-                warnings.warn("check Ndiff is not fully supported yet")
-                _maps_dic.pop('Ndiff')
-            if 'Nup2' in _maps_dic:
-                warnings.warn("check Nup2 is not fully supported yet")
-                _maps_dic.pop('Nup2')
-                Nup = _maps_dic.pop('Nup2')
+            _maps_dic = {}
+            for key, m in maps.items():
+                if key == 'Nup':
+                    Nup = m
+                elif key in ['Ndiff', 'Nup2']:
+                    Nup = m[1]
+                    flipmask = m[0]
+                else:
+                    _maps_dic[key] = _convert2perm(L, m)
         else:
             return None
+        
+        # main check
         if Nup is not None:
-            self.check_pcon(Nup, pauli)
+            fliplist = [i for i in range(L) if (flipmask >> (L-i-1)) & 1 == 1] if flipmask is not None else None
+            res, tp = self._check_pcon(Nup, pauli, fliplist=fliplist)
+            if res is True:
+                println(f"U(1): {tp} check passed")
+            else:
+                raise ValueError(f"U(1): {tp} symmetry broken, due to term: {res}")
+        
         for key, m in _maps_dic.items():
-            self._check_perm(key, m, pauli)
+            res = self._check_symm(m, pauli)
+            if res is True:
+                println(f"{key} check passed") 
+            else:
+                raise ValueError(f"Symmetry {key} broken, offending terms:\n{res}")
     
-    def check_pcon(self, Nup, pauli):
+    def _check_symm(self, perm:np.ndarray, pauli:bool, flip_dict=None):
+        ham = self.expandn(to='pm')
+        transformed = _transform_op(ham, perm, flip_dict=flip_dict)
+        transformed -= ham
+        transformed = transformed.clean(pauli=pauli)
+        if len(transformed.data) != 0:
+            return transformed
+        return True
+
+    def _check_pcon(self, Nup, pauli, fliplist=None):
         if Nup is None:
             return
         expand = self.expandxy(pauli=pauli)
-        for opstr, _ in expand.data.items():
-            if opstr.count('p') != opstr.count('m'):
-                raise ValueError(f"the operator does not conserve Nup due to the term {opstr}")
-        println(f"U(1) check passed")
-
+        if fliplist is None:
+            for opstr, _ in expand.data.items():
+                if opstr.count('p') != opstr.count('m'):
+                    return opstr, "Nup"
+            return True, "Nup"
+        else:
+            if isinstance(Nup, int) or np.array(Nup).ndim == 1:
+                for opstr, posn, _ in expand.each_term():
+                    ct = 0
+                    for i, o in enumerate(opstr):
+                        if o == 'p':
+                            if posn[i] in fliplist:
+                                ct -= 1
+                            else:
+                                ct += 1
+                        elif o == 'm':
+                            if posn[i] in fliplist:
+                                ct += 1
+                            else:
+                                ct -= 1
+                    if ct != 0:
+                        return (opstr, posn), "Ndiff"
+                return True, "Ndiff"
+            else:
+                for opstr, posn, _ in expand.each_term():
+                    ct1, ct2 = 0, 0
+                    for i, o in enumerate(opstr):
+                        if o == 'p':
+                            if posn[i] in fliplist:
+                                ct1 += 1
+                            else:
+                                ct2 += 1
+                        elif o == 'm':
+                            if posn[i] in fliplist:
+                                ct1 -= 1
+                            else:
+                                ct2 -= 1
+                    if ct1 != 0 or ct2 != 0:
+                        return (opstr, posn), "Nup2"
+                return True, "Nup2"
+                
+ 
+    def symmetry(self, L:int, pauli:bool, flip_dict=None) -> list[str]:
+        self._check_pauli(pauli)
+        expanded = self.expandn(to='pm')
+        res = []
+        pcon, _ = self._check_pcon(1, pauli=True)
+        if pcon is True:
+            res.append('Nup')
+        sym_test = ['kblock', 'pblock', 'zblock']
+        for sym in sym_test:
+            perm = _convert2perm(L, sym)
+            hassym = expanded._check_symm(perm, pauli=pauli)
+            if hassym is True:
+                res.append(sym)
+        if 'pblock' not in res and 'zblock' not in res:
+            perm = _convert2perm(L, 'pzblock')
+            hassym = expanded._check_symm(perm, pauli=pauli)
+            if hassym is True:
+                res.append(sym)
+        return res
+    
     def hc(self):
         """ 返回自旋算符的厄米共轭算符
         """
@@ -1319,13 +1376,9 @@ _default_flip_dict = {
 def _transform_op(ham, perm, flip_dict=None):
     if flip_dict is None:
         flip_dict = _default_flip_dict
-    if perm.ndim == 1:
-        flip_list = np.array([p < 0 for p in perm])
-        perm_list = np.array([-p-1 if p < 0 else p for p in perm])
-    else:
-        arr_sorted = perm[np.argsort(perm[:, 0])]
-        perm_list = arr_sorted[:,1]
-        flip_list = arr_sorted[:,2]
+    assert perm.ndim == 1
+    flip_list = np.array([p < 0 for p in perm])
+    perm_list = np.array([-p-1 if p < 0 else p for p in perm])
 
     builder = SpinBuilder()
     for opstr, posn, coef in ham.each_term():
@@ -1339,5 +1392,47 @@ def _transform_op(ham, perm, flip_dict=None):
             newopstr.append(no)
         builder += ''.join(newopstr), newposn, newcoef
     return builder.build()
+
+def _convert2perm(L, perm: str|np.ndarray|Callable, *args):
+    if isinstance(perm, str):
+        if perm in ['k', 'kblock', 't']:
+            return (np.arange(L) + 1) % L
+        elif perm in ['p', 'pblock']:
+            return np.arange(L-1, -1, -1)
+        elif perm in ['z', 'zblock']:
+            return -(np.arange(L) + 1)
+        elif perm in ['pz', 'pzblock']:
+            return -(np.arange(L-1, -1, -1) + 1)
+        else:
+            raise ValueError(f"Unknown symmetry transform string: {perm}")
+    elif callable(perm):
+        p1,p2,p3 = args
+        res = []
+        for i in range(L):
+            s = 1 << (L-i-1)
+            sp = perm(s,L,0,p3)
+            
+            ii = int(np.log2(sp))
+            if ii == np.log2(sp):
+                ii = L - ii -1
+            else:
+                sp = ((1 << L) - 1) ^ sp
+                ii = int(np.log2(sp)) - L
+            res.append(ii) 
+        return np.array(res)
+    elif isinstance(perm, (np.ndarray, list)):
+        permarr = np.array(perm)
+        if permarr.ndim == 1:
+            return permarr
+        elif permarr.ndim == 2:
+            arr_sorted = perm[np.argsort(perm[:, 0])]
+            perm_list = arr_sorted[:,1]
+            flip_list = arr_sorted[:,2]
+            for i, fi in enumerate(flip_list):
+                if fi == -1:
+                    perm_list[i] = -(perm_list[i]+1)
+            return perm_list
+    else:
+        raise ValueError("perm must be a string, callable, or ndarray/list")
 
 

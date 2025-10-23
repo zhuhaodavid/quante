@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-13 23:44:07
+# @Last Modified time: 2025-10-22 15:01:46
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -181,7 +181,7 @@ def spin_basis(L:int, S:Union[str, int, float]=1/2, Nup: Optional[int] = None, k
         if _process_func is not None:
             return _process_func(L, {name: value for name, value in zip(block_name_list, block_value_list)})
         else:
-            wanted_blocks = [item for item, include in zip(block_name_list, blocks_tuple) if include is not None]
+            wanted_blocks = [item for item, include in zip(block_name_list, blocks_tuple) if include is True]
             raise NotImplementedError(f"The combination of blocks: {wanted_blocks} is not supported yet for spin-1/2")
     else:
         
@@ -479,7 +479,8 @@ def spin_super_basis(
     L, 
     Nup=None, 
     Ndiff=None, 
-    Nup2=None,
+    # Nup2=None,
+    kblock=None,
     pblock=None, 
     zblock=None, 
     indx_order='stacked', 
@@ -498,11 +499,23 @@ def spin_super_basis(
     if zblock is not None:
         Pz = [-i-1 for i in range(2*L)]
         blocks.update({'zblock': (Pz, zblock)})
-    if Nup2 is not None:
-        if isinstance(Nup2, int):
-            Nup2 = [Nup2]
-        Ndiff = 0
-        Nup = [2*n for n in Nup2]
+    if kblock is not None:
+        s = np.arange(2*L)
+        x = s % L
+        y = s // L
+        if indx_order == 'stacked':
+            Tx = (x + 1) % L + L * y  # translation along x-direction
+        elif indx_order == 'snake':
+            Tx = x + L * ((y + 1) % 2)
+        else:
+            raise ValueError(f"indx_order must be 'stacked' or 'snake', but got {indx_order}.")
+        Tx = np.array(Tx)
+        blocks.update({'kblock': (Tx, kblock)})
+    # if Nup2 is not None:
+    #     if isinstance(Nup2, int):
+    #         Nup2 = [Nup2]
+    #     Ndiff = 0
+    #     Nup = [2*n for n in Nup2]
     _Ndiff = [Ndiff] if isinstance(Ndiff, int) else Ndiff
     if _Ndiff is not None:
         if len(_Ndiff) != len(set(_Ndiff + [-nd for nd in _Ndiff])):

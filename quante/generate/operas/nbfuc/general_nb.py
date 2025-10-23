@@ -2,9 +2,10 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:23:37
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:24:06
+# @Last Modified time: 2025-10-22 12:45:13
 
 from ....basicfun.utils_numba import njit, numba_cache_dir, config
+import numpy as np
 
 config.CACHE_DIR = numba_cache_dir
 @njit
@@ -26,5 +27,5 @@ def _quick_merge(res_pos, res_coef):
             
     res_pos[cur_pos] = res_pos[total_len-1]
     res_coef[cur_pos] = cur_coef
-    mask = res_coef[:cur_pos + 1] != 0  # Remove zero coefficients
+    mask = np.abs(res_coef[:cur_pos + 1]) > 1e-12  # Remove zero coefficients
     return res_pos[:cur_pos+1][mask], res_coef[:cur_pos+1][mask]

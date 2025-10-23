@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-22 13:10:02
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-12 18:27:40
+# @Last Modified time: 2025-10-22 15:48:48
 
 import numpy as np
 from typing import Literal
@@ -251,7 +251,7 @@ class Lindbladian(SpinOper):
             perm = np.flipud(np.arange(2*L).reshape(-1,2)).T.flatten()
         if self.flip:
             perm = - (perm + 1)
-        oper_reflacted = self.transform(perm)
+        oper_reflacted = self.transform(self.L, perm)
         oper_sym = self + oper_reflacted
         oper_sym *= 0.5
         oper_antisym = self - oper_reflacted
@@ -313,6 +313,65 @@ class Lindbladian(SpinOper):
         assert method in ['direct', 'eig', 'svd'], "method should be 'direct' or 'eig' or 'svd'"
         L_mat = self.to_matrix(basis, pauli, sparse=True)
         return steady_state(L_mat, method=method)
+    
+    def symmetry(self, pauli:bool) -> list[str]:
+        self._check_pauli(pauli)
+        expanded = self.expandn(to='pm')
+        res = []
+        pcon, _ = self._check_pcon(1, pauli=True)
+        if pcon is True:
+            res.append('Nup')
+        if self.indx_order == 'stacked':
+            fliplist = list(range(self.L, 2*self.L))
+        else:
+            fliplist = [2*p+1 for p in range(self.L)]
+        pcon, _ = expanded._check_pcon(Nup=[1], pauli=True, fliplist=fliplist)
+        if pcon is True:
+            res.append('Ndiff')
+        sym_test = ['kblock', 'pblock', 'zblock']
+        for sym in sym_test:
+            perm = _convert2perm(self.L, sym, self.indx_order)
+            hassym = expanded._check_symm(perm, pauli=pauli)
+            if hassym is True:
+                res.append(sym)
+        if 'pblock' not in res and 'zblock' not in res:
+            perm = _convert2perm(self.L, 'pzblock', self.indx_order)
+            hassym = expanded._check_symm(perm, pauli=pauli)
+            if hassym is True:
+                res.append('pzblock')
+        return res
+
+def _convert2perm(L, perm: str, indx_order):
+    if indx_order == 'stacked':
+        N_2d = 2*L
+        s = np.arange(N_2d)
+        x = s % L
+        y = s // L
+        if perm in ['k', 'kblock', 't']:
+            return (x+1) % L + y * L
+        elif perm in ['p', 'pblock']:
+            return (L - 1 - x) + y * L
+        elif perm in ['z', 'zblock']:
+            return -(s + 1)
+        elif perm in ['pz', 'pzblock']:
+            return -((L - 1 - x) + y * L + 1)
+        else:
+            raise ValueError(f"Unknown symmetry transform string: {perm}")
+    else:  # snake
+        N_2d = 2*L
+        s = np.arange(N_2d)
+        x = s % 2
+        y = s // 2
+        if perm in ['k', 'kblock', 't']:
+            return x + ((y + 1) // 2) * 2
+        elif perm in ['p', 'pblock']:
+            return x + (1 - y) * 2
+        elif perm in ['z', 'zblock']:
+            return -(s + 1)
+        elif perm in ['pz', 'pzblock']:
+            return -(x + (1 - y) * 2 + 1)
+        else:
+            raise ValueError(f"Unknown symmetry transform string: {perm}")
 
 def _flip_opstr(opstr, coef):
     assert 'n' not in opstr, "flip must be False when 'n' operator is present"
