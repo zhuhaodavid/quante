@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-11-20 02:20:47
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 22:59:16
+# @Last Modified time: 2025-10-16 17:11:08
 
 import numpy as np
 
@@ -78,6 +78,8 @@ def eigh_perturbation(H0, H1, H2=None, eps=1e-10):
     """
     # 首先需要求解零级部分
     E0, U0 = np.linalg.eigh(H0)
+    # E0 = -1j*E0
+    # U0 = U0.astype(E0.dtype)
     
     # 首先找到 E0 中简并能量的位置
     # 如果确认无简并可以直接通过 
@@ -134,20 +136,19 @@ def _optimize_U0_first_order(E0, U0, H1, E0_degen_pos):
         
         # 如果 E0[i] 简并数是 1，那么直接计算 E1, E2 即可
         if end - start == 1:
-            E1[start] = h1[start, start]
+            E1[start] = np.real_if_close(h1[start, start])
             continue
         
         # 如果 E0[i] 有更多简并，那么需要对角化方法找到投影空间
         # 的最优组合
         M1 = h1[start:end, start:end]
-        M1_eigvals, M1_eigvecs = np.linalg.eigh(M1)
-        
-        # 对角化得到的能级就是一级修正
-        E1[start:end] = M1_eigvals
-        
-        # 通过投影空间的本征向量最优组合，更新 U0
-        U0[:, start:end] = U0[:, start:end] @ M1_eigvecs
-        # todo 在 for 循环中的矩阵乘法效率低，如何优化？
+        if not np.allclose(M1, 0):
+            M1_eigvals, M1_eigvecs = np.linalg.eigh(M1)
+            # 对角化得到的能级就是一级修正
+            E1[start:end] = M1_eigvals
+            # 通过投影空间的本征向量最优组合，更新 U0
+            U0[:, start:end] = U0[:, start:end] @ M1_eigvecs
+            # todo 在 for 循环中的矩阵乘法效率低，如何优化？
         
     return E1
 
@@ -157,6 +158,8 @@ def _optimize_U0_second_order(E0, E1, U0, H1, H2, E0_degen_pos, eps):
     h1 = U0.conj().T @ H1 @ U0
     if H2 is not None:
         h2 = U0.conj().T @ H2 @ U0  # 当 H2 为 None 时，不计算 H2 相关的修正
+    else:
+        h2 = None
     
     # 逐个处理每个简并
     for i in range(len(E0_degen_pos)-1):
@@ -201,7 +204,8 @@ def _optimize_U0_second_order(E0, E1, U0, H1, H2, E0_degen_pos, eps):
             M2 = (vec1/E0diff[:E0start]) @ vec1.conj().T + (vec2/E0diff[E0end:]) @ vec2.conj().T
             
             # 还要补上 H2 相关的修正
-            M2 += h2[E1_start:E1_end, E1_start:E1_end]
+            if h2 is not None:
+                M2 += h2[E1_start:E1_end, E1_start:E1_end]
             
             # 通过对角化找到最优组合
             _, M2_eigvecs = np.linalg.eigh(M2)

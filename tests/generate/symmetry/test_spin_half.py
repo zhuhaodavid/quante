@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-08 17:12:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-13 20:29:08
+# @Last Modified time: 2025-10-14 00:24:33
 
 import unittest
 import numpy as np
@@ -136,12 +136,12 @@ class TestSpinHalf(unittest.TestCase):
     @unittest.skipIf(not has_quspin, "quspin not installed")
     def test_Nup_quspin(self):
         L = 10
-        ham = self._generate_random_hamiltonian(L)
+        ham = self._generate_Nup_hamiltonian(L)
         for Nup in range(1,L):
             basis = gen.basis.spin_basis(L=L, Nup=Nup)
             mat3 = ham.to_matrix(basis, pauli=False)
             quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup)
-            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, check_symm=True, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
        
@@ -163,14 +163,14 @@ class TestSpinHalf(unittest.TestCase):
             self.assertTrue(np.allclose(mat1, mat2))
 
     @unittest.skipIf(not has_quspin, "quspin not installed")
-    def test_Nup_quspin(self):
+    def test_kblock_quspin(self):
         L = 10
-        ham = self._generate_random_hamiltonian(L)
+        ham = self._generate_kblock_hamiltonian(L)
         for k in range(L):
             basis = gen.basis.spin_basis(L=L, kblock=k)
             mat3 = ham.to_matrix(basis, pauli=False)
             quspin_basis = qs.spin_basis(L=L, pauli=False, kblock=k)
-            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+            mat4 = qs.hamiltonian(ham, quspin_basis, check_symm=True, dtype=np.complex128, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
     def test_pblock(self):
@@ -195,12 +195,12 @@ class TestSpinHalf(unittest.TestCase):
     @unittest.skipIf(not has_quspin, "quspin not installed")
     def test_pblock_quspin(self):
         L = 10
-        ham = self._generate_random_hamiltonian(L)
+        ham = self._generate_pblock_hamiltonian(L)
         for p in [-1, 1]:
             basis = gen.basis.spin_basis(L=L, pblock=p)
             mat3 = ham.to_matrix(basis, pauli=False)
             quspin_basis = qs.spin_basis(L=L, pauli=False, pblock=p)
-            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, check_symm=True, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
     def test_zblock(self):
@@ -224,12 +224,12 @@ class TestSpinHalf(unittest.TestCase):
     @unittest.skipIf(not has_quspin, "quspin not installed")
     def test_zblock_quspin(self):
         L = 10
-        ham = self._generate_random_hamiltonian(L)
+        ham = self._generate_zblock_hamiltonian(L)
         for z in [-1, 1]:
             basis = gen.basis.spin_basis(L=L, zblock=z)
             mat3 = ham.to_matrix(basis, pauli=False)
             quspin_basis = qs.spin_basis(L=L, pauli=False, zblock=z)
-            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, check_symm=True, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
     def test_pzblock(self):
@@ -255,12 +255,12 @@ class TestSpinHalf(unittest.TestCase):
     @unittest.skipIf(not has_quspin, "quspin not installed")
     def test_pzblock_quspin(self):
         L = 10
-        ham = self._generate_random_hamiltonian(L)
+        ham = self._generate_Nup_kblock_zblock_hamiltonian(L)
         for pz in [-1, 1]:
             basis = gen.basis.spin_basis(L=L, pzblock=pz)
             mat3 = ham.to_matrix(basis, pauli=False)
             quspin_basis = qs.spin_basis(L=L, pauli=False, pzblock=pz)
-            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, check_symm=True, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
     def test_Nup_kblock(self):
@@ -286,13 +286,13 @@ class TestSpinHalf(unittest.TestCase):
     @unittest.skipIf(not has_quspin, "quspin not installed")
     def test_Nup_kblock_quspin(self):
         L = 10
-        ham = self._generate_random_hamiltonian(L)
+        ham = self._generate_Nup_kblock_hamiltonian(L)
         for Nup in range(L+1):
             for k in range(L):
                 basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k)
                 mat3 = ham.to_matrix(basis, pauli=False)
                 quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, kblock=k)
-                mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+                mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False, check_symm=True)
                 self.assertTrue(np.allclose(mat3, mat4))
            
     def test_Nup_pblock(self):
@@ -318,13 +318,13 @@ class TestSpinHalf(unittest.TestCase):
     @unittest.skipIf(not has_quspin, "quspin not installed")
     def test_Nup_pblock_quspin(self):
         L = 10
-        ham = self._generate_random_hamiltonian(L)
+        ham = self._generate_Nup_pblock_hamiltonian(L)
         for Nup in range(L+1):
             for p in [-1,1]:
                 basis = gen.basis.spin_basis(L=L, Nup=Nup, pblock=p)
                 mat3 = ham.to_matrix(basis, pauli=False)
                 quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, pblock=p)
-                mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+                mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, check_symm=True, sparse=False)
                 self.assertTrue(np.allclose(mat3, mat4))
 
     def test_Nup_zblock(self):
@@ -351,13 +351,15 @@ class TestSpinHalf(unittest.TestCase):
     @unittest.skipIf(not has_quspin, "quspin not installed")
     def test_Nup_zblock_quspin(self):
         L = 10
-        ham = self._generate_random_hamiltonian(L)
+        ham = self._generate_Nup_hamiltonian(L)
+        ham = ham.expandn(to='pm')
+        ham += ham.transform('z')
         Nup = L//2
         for z in [-1,1]:
             basis = gen.basis.spin_basis(L=L, Nup=Nup, zblock=z)
             mat3 = ham.to_matrix(basis, pauli=False)
             quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, zblock=z)
-            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, check_symm=True, sparse=False)
             self.assertTrue(np.allclose(mat3, mat4))
 
 
@@ -382,15 +384,17 @@ class TestSpinHalf(unittest.TestCase):
                     self.assertTrue(np.allclose(mat1, mat2))
 
     @unittest.skipIf(not has_quspin, "quspin not installed")
-    def test_Nup_zblock_quspin(self):
+    def test_Nup_pzblock_quspin(self):
         L = 10
-        ham = self._generate_random_hamiltonian(L)
+        ham = self._generate_Nup_hamiltonian(L)
+        ham = ham.expandn(to='pm')
+        ham += ham.transform('pz')
         Nup = L//2
         for pz in [-1,1]:
             basis = gen.basis.spin_basis(L=L, Nup=Nup, pzblock=pz)
             mat3 = ham.to_matrix(basis, pauli=False)
             quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, pzblock=pz)
-            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+            mat4 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False, check_symm=True)
             self.assertTrue(np.allclose(mat3, mat4))
 
     def test_Nup_kblock_pblock(self):
@@ -417,6 +421,8 @@ class TestSpinHalf(unittest.TestCase):
     def test_Nup_kblock_pblock_quspin(self):
         L = 10
         ham = self._generate_Nup_kblock_hamiltonian(L)
+        ham = ham.expandn(to='pm')
+        ham += ham.transform('p')
         for Nup in range(L+1):
             for k in range(L//2+1):
                 for p in [-1, 1]:
@@ -425,7 +431,7 @@ class TestSpinHalf(unittest.TestCase):
                     engs4 = np.linalg.eigvalsh(mat4)
 
                     quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, kblock=k, pblock=p)
-                    mat3 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+                    mat3 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False, check_symm=True)
                     engs3 = np.linalg.eigvalsh(mat3)
 
                     self.assertTrue(np.allclose(engs3, engs4))
@@ -453,7 +459,9 @@ class TestSpinHalf(unittest.TestCase):
     @unittest.skipIf(not has_quspin, "quspin not installed")
     def test_Nup_kblock_pblock_zblock_quspin(self):
         L = 10
-        ham = self._generate_random_hamiltonian(L)
+        ham = self._generate_Nup_kblock_zblock_hamiltonian(L)
+        ham = ham.expandn(to='pm')
+        ham += ham.transform('p')
         Nup = L//2
         for k in range(L//2+1):
             for p in [-1, 1]:
@@ -461,11 +469,11 @@ class TestSpinHalf(unittest.TestCase):
 
                     
                     basis = gen.basis.spin_basis(L=L, Nup=Nup, kblock=k, pblock=p, zblock=z)
-                    mat4 = ham.to_matrix(basis, pauli=False)
+                    mat4 = ham.to_matrix(basis, pauli=False, check_symm=True)
                     engs4 = np.linalg.eigvalsh(mat4)
 
                     quspin_basis = qs.spin_basis(L=L, pauli=False, Nup=Nup, kblock=k, pblock=p, zblock=z)
-                    mat3 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False)
+                    mat3 = qs.hamiltonian(ham, quspin_basis, dtype=np.complex128, sparse=False, check_symm=True)
                     engs3 = np.linalg.eigvalsh(mat3)
 
                     self.assertTrue(np.allclose(engs3, engs4))

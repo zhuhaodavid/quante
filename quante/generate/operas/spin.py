@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-13 19:49:30
+# @Last Modified time: 2025-10-16 17:17:27
 
 import numpy as np
 import warnings
@@ -47,6 +47,17 @@ class SpinOper(Oper):
         return res.build()
     
     def transform(self, perm, flip_dict=None) -> 'SpinOper':
+        if isinstance(perm, str):
+            if perm == 'k':
+                perm = (np.arange(self.L) + 1) % self.L
+            elif perm == 'p':
+                perm = np.arange(self.L-1, -1, -1)
+            elif perm == 'z':
+                perm = - (np.arange(self.L) + 1)
+            elif perm == 'pz':
+                perm = - (np.arange(self.L-1, -1, -1) + 1)
+            else:
+                raise ValueError(f"perm should be 'k', 'p', 'z', or 'pz', but got {perm}")
         return _transform_op(self, perm, flip_dict=flip_dict)
     
     def _check_perm(self, key, perm, pauli, flip_dict=None):
@@ -62,14 +73,22 @@ class SpinOper(Oper):
                    pauli:bool,
                    *,
                    basis = None,
-                   blocks:Literal['k', 'p', 'z', 'Nup']|None = None,
+                   blocks:Literal['k', 'p', 'z', 'pz', 'Nup']|None = None,
                    maps:dict[str, np.ndarray]|None = None
     ):
-        # check U1
         Nup = None
         if basis is not None:
-            _maps_dic = basis._maps_dict.copy()
             Nup = getattr(basis, '_pcon_args', {}).get('Nup', None)
+            Ndiff = getattr(basis, '_pcon_args', {}).get('Ndiff', None)
+            if Ndiff is not None:
+                warnings.warn("check Ndiff is not fully supported yet")
+            Nup2 = getattr(basis, '_pcon_args', {}).get('Nup2', None)
+            if Nup2 is not None:
+                warnings.warn("check Nup2 is not fully supported yet")
+            _maps_dic = {}
+            for key, (m, _) in basis._maps_dict.items():
+                _maps_dic[key] = m
+            
         elif blocks is not None:
             if isinstance(blocks, str):
                 blocks = [blocks]
@@ -81,6 +100,8 @@ class SpinOper(Oper):
                     _maps_dic[m] = np.arange(L-1, -1, -1)
                 elif m == 'z':
                     _maps_dic[m] = -(np.arange(L) + 1)
+                elif m == 'pz':
+                    _maps_dic[m] = -(np.arange(L-1, -1, -1) + 1)
                 elif m == 'Nup':
                     Nup = 0
                 else:
@@ -91,6 +112,13 @@ class SpinOper(Oper):
             _maps_dic = maps.copy()
             if 'Nup' in _maps_dic:
                 Nup = _maps_dic.pop('Nup')
+            if 'Ndiff' in _maps_dic:
+                warnings.warn("check Ndiff is not fully supported yet")
+                _maps_dic.pop('Ndiff')
+            if 'Nup2' in _maps_dic:
+                warnings.warn("check Nup2 is not fully supported yet")
+                _maps_dic.pop('Nup2')
+                Nup = _maps_dic.pop('Nup2')
         else:
             return None
         if Nup is not None:
@@ -101,14 +129,11 @@ class SpinOper(Oper):
     def check_pcon(self, Nup, pauli):
         if Nup is None:
             return
-        if Nup == 0: 
-            expand = self.expandxy(pauli=pauli)
-            for opstr, _ in expand.data.items():
-                if opstr.count('p') != opstr.count('m'):
-                    raise ValueError(f"the operator does not conserve Nup due to the term {opstr}")
-            println(f"U(1) check passed")
-        else:
-            raise NotImplementedError("Ndiff is not implemented yet")
+        expand = self.expandxy(pauli=pauli)
+        for opstr, _ in expand.data.items():
+            if opstr.count('p') != opstr.count('m'):
+                raise ValueError(f"the operator does not conserve Nup due to the term {opstr}")
+        println(f"U(1) check passed")
 
     def hc(self):
         """ 返回自旋算符的厄米共轭算符

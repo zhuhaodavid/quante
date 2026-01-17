@@ -116,7 +116,7 @@ class SpinHalfGeneralBasis(SpinHalfBasis):
             ps.append(_perm)
             bs.append(_block)
             ms.append(_m)
-            self._maps_dict[key] = _perm
+            self._maps_dict[key] = (_perm, _block)
         self.block_name = ns
         self.perm = np.array(ps, dtype=np.int64).reshape(-1, self.L, 3)
         self.block = np.array(bs, dtype=np.int64).reshape(-1)

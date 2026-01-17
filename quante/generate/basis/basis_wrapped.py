@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-22 16:51:39
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-12 18:18:31
+# @Last Modified time: 2025-10-13 23:44:07
 
 """
 生成有对称性的基矢(`SpinBasis`类）：
@@ -10,7 +10,9 @@
 """
 
 import numpy as np
-from typing import Union, Optional, Literal
+from typing import Union, Optional
+from warnings import warn
+
 
 # !! 这个文件提供到 symmetry 中给个基矢的接口，涉及的 basis 类都在 symmetry 中
 
@@ -501,6 +503,10 @@ def spin_super_basis(
             Nup2 = [Nup2]
         Ndiff = 0
         Nup = [2*n for n in Nup2]
+    _Ndiff = [Ndiff] if isinstance(Ndiff, int) else Ndiff
+    if _Ndiff is not None:
+        if len(_Ndiff) != len(set(_Ndiff + [-nd for nd in _Ndiff])):
+            warn(f"Ndiff does not contain both +nd and -nd, cannot realify :(")
     
     from .spin_half.spin_general.basis import get_permute_number, _check_commute
     # Validate each provided symmetry block is Z2

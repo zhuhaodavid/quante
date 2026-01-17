@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2023-10-01 17:17:48
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-03 18:24:18
+# @Last Modified time: 2025-10-13 23:55:02
 
 #!! linalg 中不要 import linalg 之外的文件
 
@@ -547,13 +547,13 @@ def choose_backend(A, k, int_eps=False):
         _warnings.warn("shift-invert of dense matrix, back to scipy")
         return "SCIPY"
 
-    # slepc seems faster for sparse, dense and LinearOperators
-    if SLEPC4PY_FOUND:
-        # only spool up an mpi pool for big sparse matrices though
-        if _sparse.issparse(A) and A.nnz > 10000:
-            return "SLEPC"
+    # # slepc seems faster for sparse, dense and LinearOperators
+    # if SLEPC4PY_FOUND:
+    #     # only spool up an mpi pool for big sparse matrices though
+    #     if _sparse.issparse(A) and A.nnz > 10000:
+    #         return "SLEPC"
 
-        return "SLEPC-NOMPI"
+    #     return "SLEPC-NOMPI"
 
     return "SCIPY"
 

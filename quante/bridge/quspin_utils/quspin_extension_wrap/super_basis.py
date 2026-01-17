@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-10 17:12:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-10 21:57:51
+# @Last Modified time: 2025-10-13 23:44:22
 
 import scipy.sparse as sp    
 from quspin.basis.user import user_basis  # Hilbert space user basis
@@ -32,6 +32,7 @@ from numba import carray, cfunc  # numba helper functions
 from numba import uint32, int32  # numba data types
 import numpy as np
 from scipy.special import comb
+from warnings import warn
 
 
 #
@@ -380,10 +381,16 @@ class spin_super_basis(user_basis):
                     next_state_args = np.array(Np, dtype=np.uint32) 
             else:
                 if isinstance(Nd, int):
-                    Nd = list(set([Nd, -Nd]))
-                else:
-                    assert all([0 <= nd <= N for nd in Nd]), f"All Ndiff must be between 0 and N={N}, but got Ndiff={Nd}."
-                    Nd = list(set(Nd + [-nd for nd in Nd if nd != 0]))
+                    Nd = [Nd]
+                Nd = list(set(Nd))
+                if len(Nd) != len(set(Nd + [-nd for nd in Nd])):
+                    warn(f"Ndiff does not contain both +nd and -nd, cannot realify :(")
+                    
+                # if isinstance(Nd, int):
+                #     Nd = list(set([Nd, -Nd]))
+                # else:
+                #     assert all([0 <= nd <= N for nd in Nd]), f"All Ndiff must be between 0 and N={N}, but got Ndiff={Nd}."
+                #     Nd = list(set(Nd + [-nd for nd in Nd if nd != 0]))
                 
                 if Np is None:
                     next_state = next_state_Nd
