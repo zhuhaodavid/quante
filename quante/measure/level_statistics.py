@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
 # @Date:   2025-06-11 22:38:18
-# @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-22 15:54:00
+# @Last Modified by:   dzwang
+# @Last Modified time: 2026-01-12 16:27:31
 
 import numpy as _np
 import math
@@ -297,8 +297,9 @@ def plot_level_spacing_distribution(
         bins = _np.linspace(0, 4+0.1, bins)
     
     # plot the histogram
-    ax.hist(eps_spc, bins=bins, density=True, color='lightgray', ec="gray") # type: ignore
-
+    ax.hist(eps_spc, bins=bins, density=True, color='lightgray', ec="gray",
+            edgecolor='gray', linewidth=0.8, alpha=0.7) # type: ignore
+    
     # plot the standard distributions
     if st_dists is not None:
         if isinstance(st_dists, str):
@@ -310,10 +311,10 @@ def plot_level_spacing_distribution(
                 ax.plot(xs, ys, label="Poisson", color="red")
             elif dist.lower() == "poisson-c":
                 ys = Poisson_distribution(xs, complex_plane=True)
-                ax.plot(xs, ys, label="Poisson", color="red")
+                ax.plot(xs, ys, label="2D Poisson", color="red")
             elif dist.lower() == "wigner-dyson-1":
                 ys = WignerDyson_distribution(xs, beta=1)
-                ax.plot(xs, ys, label="Wigner-Dyson-1", color="blue")
+                ax.plot(xs, ys, label="WD", color="blue")
             elif dist.lower() == "wigner-dyson-2":
                 ys = WignerDyson_distribution(xs, beta=2)
                 ax.plot(xs, ys, label="Wigner-Dyson-2", color="blue")
@@ -322,7 +323,7 @@ def plot_level_spacing_distribution(
                 ax.plot(xs, ys, label="Wigner-Dyson-4", color="blue")
             elif dist.lower() == "ginibre":
                 ys = Ginibre_distribution(xs)
-                ax.plot(xs, ys, label="Ginibre", color="blue")
+                ax.plot(xs, ys, label="Ginibre", color="blue", alpha=0.7)
             else:
                 raise ValueError(f"Unknown distribution: {dist}")
     return ax
