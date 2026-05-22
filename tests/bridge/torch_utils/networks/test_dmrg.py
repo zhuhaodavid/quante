@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-03-10 19:18:49
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-13 20:41:32
+# @Last Modified time: 2026-05-23 02:45:22
 
 import unittest
 import torch as tc
@@ -15,7 +15,7 @@ class TestTN(unittest.TestCase):
     def test_dmrg_heisenberg(self):
         L = 10
         ham = qt.generate.operas.heisenberg_operator(L)
-        H = ham.to_mpo(pauli=False, backend='torch', device='cpu')
+        H = ham.to_mpo(pauli=False).to_torch('cpu')
         eng1, vec1 = ℋ.dmrg(outputlevel=0)
         eng2, vec2 = ℋ.dmrg(Ms=[vec1], weight=[-eng1], outputlevel=0)
         eng3, vec3 = ℋ.dmrg(Ms=[vec1, vec2], weight=[-eng1, -eng2], outputlevel=0)
@@ -32,7 +32,7 @@ class TestTN(unittest.TestCase):
     def test_dmrg_ProjMPS(self):
         L = 10
         ham = qt.generate.operas.heisenberg_operator(L)
-        H = ham.to_mpo(pauli=False, backend='torch', device='cpu')
+        H = ham.to_mpo(pauli=False).to_torch('cpu')
         PH = qtc.networks.projtt.ProjMPO(H, nsite=2)
         dmrg = qtc.DMRG(PH, outputlevel=0)
         eng1, vec1 = dmrg.run2()

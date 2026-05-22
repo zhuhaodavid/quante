@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:20:07
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 17:15:24
+# @Last Modified time: 2026-05-23 00:47:28
 
 import numpy as _np
 from ....basicfun.utils_numba import njit, prange, pnjit
@@ -17,7 +17,7 @@ class NpLinearAlgebraUtils:
 
     @staticmethod
     def apply(A, x):
-        return dot_parallel(A, x)
+        return A(x) if callable(A) else dot_parallel(A, x)
         return A @ x
 
     @staticmethod

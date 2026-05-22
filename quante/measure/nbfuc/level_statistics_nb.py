@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:44:12
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-11 22:45:30
+# @Last Modified time: 2025-11-22 15:51:04
 
 import numpy as np
 from ...basicfun.utils_numba import njit, pnjit, prange, vectorize, numba_cache_dir, config
@@ -53,10 +53,10 @@ def _spectral_form_factor(engs, ts):
     mat = np.empty((iternum, dim), dtype=float)
     for i in prange(iternum):
         mat[i,:] = engs[i]
-    sff = np.empty_like(ts)
+    sff = np.empty_like((iternum, ts))
     l = len(ts)
     for j in prange(l):
-        sff[j] = np.mean(np.abs(np.sum(np.exp(1j*mat*ts[j]), axis=1))**2)
+        sff[:, j] = np.abs(np.sum(np.exp(1j*mat*ts[j]), axis=1))**2
     return sff
  
 

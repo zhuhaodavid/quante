@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-25 22:20:58
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-31 15:42:52
+# @Last Modified time: 2026-05-23 02:33:00
 
 # 梯度下降的工具
 
@@ -184,7 +184,9 @@ def totc(data: list | np.ndarray | tc.Tensor, dtype=None, device=None) -> list |
     >>> totc(x)
     [tensor([1., 2.], dtype=torch.float64), tensor([3., 4.], dtype=torch.float64)]
     """
-    if isinstance(data, tc.Tensor):
+    if data is None:
+        return data
+    elif isinstance(data, tc.Tensor):
         return data.to(dtype=dtype, device=device)
     elif isinstance(data, np.ndarray):
         return tc.from_numpy(data).to(dtype=dtype, device=device)

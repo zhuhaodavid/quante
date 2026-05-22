@@ -2,12 +2,12 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-22 15:22:53
+# @Last Modified time: 2026-05-23 02:33:47
 
 import numpy as np
 import warnings
 import scipy.sparse as sp
-from typing import TYPE_CHECKING, Literal, Callable
+from typing import TYPE_CHECKING, Literal, Callable, overload
 from .general import Oper, _single_term, _merge_poscoef
 from ...basicfun.utils_logging import println
 
@@ -361,13 +361,13 @@ class SpinOper(Oper):
             static.append([opnm.replace('m', '-').replace('p', '+').replace('Z', 'z'), static_bond])
         return static
     
-    # @overload
-    # def to_matrix(self, basis, pauli=False, sparse:Literal[True]=True) -> sp.csr_array:
-    #     ...
+    @overload
+    def to_matrix(self, basis, pauli=False, sparse:Literal[True]=True) -> sp.csr_array:
+        ...
     
-    # @overload
-    # def to_matrix(self, basis, pauli=False, sparse:Literal[False]=False) -> np.ndarray:
-    #     ...
+    @overload
+    def to_matrix(self, basis, pauli=False, sparse:Literal[False]=False) -> np.ndarray:
+        ...
 
     def to_matrix(self, basis, pauli:bool, sparse=False, check_symm=False):
         """
@@ -879,54 +879,66 @@ class SpinOper(Oper):
             return steps * N_steps
         # else
         raise ValueError("Unknown order {0!r} for Suzuki Trotter decomposition".format(order))
-    
+
     def to_mpo(
         self, 
         L=None, 
         pauli=False, 
-        backend:Literal['torch', 'tenpy', 'tensor', 'quimb']='torch', 
+        backend:Literal['torch', 'numpy', 'tensor', 'quimb']='numpy', 
         device=None
     ):
         L = L if L is not None else self.L
         self._check_pauli(pauli)
         self._check_length(L)
+        from ...tensornetwork import MPO
+        tt = self.automata(L, pauli=pauli)
+        dtype = np.float64
+        for i in tt:
+            if np.iscomplexobj(i):
+                dtype = np.complex128
+        return MPO([i.astype(dtype) for i in tt])
          
-        if backend == 'torch':
-            from ...bridge.torch_utils.networks import MPO
-            from ...bridge.torch_utils.core_utils import totc
-            import torch as tc # type: ignore
-            tt = self.automata(L, pauli=pauli)
-            dtype = tc.float64
-            for i in tt:
-                if np.iscomplexobj(i):
-                    dtype = tc.complex128
-            return MPO(totc(tt, dtype=dtype, device=device))
-        elif backend == 'tensor':
-            # todo 
-            raise NotImplementedError("还没有实现")
-        elif backend == 'quimb':
-            import quimb.tensor as qtn
-            builder = qtn.SpinHam1D()
-            for oper, posn, coef in self.expandxy(pauli).each_term():
-                conuntZ = 2**oper.count('Z') # quimb 总是使用 spin oper 需要调整 Z
-                if len(posn) == 1:
-                    builder[posn[0]] += tuple([coef*conuntZ] + list(oper))
-                else:
-                    builder[*posn] += tuple([coef*conuntZ] + list(oper))
-            return builder.build_mpo(L=L)
-        elif backend == 'tenpy':
-            from ...bridge.tenpy_utils.convert import TenpyMPOModel
-            oper = self.clean(pauli=pauli)
-            model_params = {
-                'L': int(L),
-                'oper': oper,
-                'pauli': pauli,
-                'conserve': 'None',
-                'bc_MPS': 'finite',
-            }
-            return TenpyMPOModel(model_params)
-        else:
-            raise ValueError("backend should be 'torch' or 'tensor'")
+        # if backend == 'torch':
+        #     from ...bridge.torch_utils.networks import MPO  # type: ignore
+        #     from ...bridge.torch_utils.core_utils import totc  # type: ignore
+        #     import torch as tc # type: ignore
+        #     tt = self.automata(L, pauli=pauli)
+        #     dtype = tc.float64
+        #     for i in tt:
+        #         if np.iscomplexobj(i):
+        #             dtype = tc.complex128
+        #     return MPO(totc(tt, dtype=dtype, device=device)) # type: ignore
+        # elif backend == 'numpy':
+        #     from ...tensornetwork import MPO
+        #     tt = self.automata(L, pauli=pauli)
+        #     dtype = np.float64
+        #     for i in tt:
+        #         if np.iscomplexobj(i):
+        #             dtype = np.complex128
+        #     return MPO([i.astype(dtype) for i in tt])
+        # elif backend == 'quimb':
+        #     import quimb.tensor as qtn
+        #     builder = qtn.SpinHam1D()
+        #     for oper, posn, coef in self.expandxy(pauli).each_term():
+        #         conuntZ = 2**oper.count('Z') # quimb 总是使用 spin oper 需要调整 Z
+        #         if len(posn) == 1:
+        #             builder[posn[0]] += tuple([coef*conuntZ] + list(oper))
+        #         else:
+        #             builder[*posn] += tuple([coef*conuntZ] + list(oper))
+        #     return builder.build_mpo(L=L)
+        # elif backend == 'tenpy':
+        #     from ...bridge.tenpy_utils.convert import TenpyMPOModel
+        #     oper = self.clean(pauli=pauli)
+        #     model_params = {
+        #         'L': int(L),
+        #         'oper': oper,
+        #         'pauli': pauli,
+        #         'conserve': 'None',
+        #         'bc_MPS': 'finite',
+        #     }
+        #     return TenpyMPOModel(model_params)
+        # else:
+        #     raise ValueError("backend should be 'torch' or 'tensor'")
  
     def _minimal_shift(self):
         l = min([np.min(posn) for posn, _ in self.data.values()])

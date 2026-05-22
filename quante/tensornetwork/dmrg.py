@@ -2,15 +2,17 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:45:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-23 01:06:48
+# @Last Modified time: 2026-05-23 01:43:54
 
 import time  # type: ignore
-import torch as tc
 from tqdm import tqdm
 import warnings
 
-from ....linalg.krylov.toy import lanczos_arpack
-from ..linalg.krylov import argsort, arnoldi_ground_state, lanczos_ground_state
+from ..linalg.krylov.toy import lanczos_arpack, lanczos_ground_state, arnoldi_ground_state
+from ..linalg.krylov.eigsolve.arnoldi import Arnoldi
+from ..linalg.krylov.eigsolve.lanczos import Lanczos
+from .tensor_utils import argsort
+import numpy as np
 
 from .mps import MPS
 from .mpo import MPO, SumMPO
@@ -31,16 +33,16 @@ def solve_ground_state(oper:'ProjMPO', v, *,
             # use ED for small matrix dimensions, but lanczos by default
             if oper.shape < 400:
                 mat = oper.to_matrix()
-                E, theta = tc.linalg.eigh(mat)
+                E, theta = np.linalg.eigh(mat)
                 sort = argsort(E, which, refer=refer)
                 return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
             else:
-                method = 'lanczos' if which == 'SA' else 'arnoldi'
+                method = 'lanczos'
         else:
             # use ED for small matrix dimensions, but lanczos by default
             if oper.shape < 400:
                 mat = oper.to_matrix()
-                E, theta = tc.linalg.eig(mat)
+                E, theta = np.linalg.eig(mat)
                 sort = argsort(E, which, refer=refer)
                 # print(E[sort[:10]])
                 return E[sort[0]], theta[:, sort[0]].reshape(*v.shape)
@@ -48,24 +50,28 @@ def solve_ground_state(oper:'ProjMPO', v, *,
                 method = 'arnoldi'
 
     s = v.shape
-    matmul = oper.get_matmul_func('torch')
-    if method == 'lanczos':  # 自己实现的 lanczos
-        assert which == 'SA' and isherm
+    matmul = oper.get_matmul_func()
+    x0 = v.reshape(-1)
 
-        val, vec = lanczos_ground_state(matmul, v.reshape(-1), tol=lanczos_tol,
-                                         **eigs_kwargs)
+    if method == 'lanczos':  # 自己实现的 lanczos
+        assert which in ['LM', 'LR', 'SR'], f'which: {which} not allowed, should be in [LM, LR, SR]'
+        # val, vec, _ = Lanczos(tol=lanczos_tol, maxiter=1, krylovdim=3, verbosity=0, **eigs_kwargs).eigsolve(matmul, x0, 1, which, lau=None) 
+        # return val[0], vec[0].reshape(*s)
+        val, vec = lanczos_ground_state(matmul, v.reshape(-1), E_tol=lanczos_tol,**eigs_kwargs)
         return val, vec.reshape(*s)
 
     elif method == 'arnoldi':  # tenpy arnoldi 用来处理非厄密矩阵时可以考虑 #todo 自己实现
-        val, vec = arnoldi_ground_state(matmul, v.reshape(-1),refer=refer,
-                                        which=which, **eigs_kwargs)  # tol 并没有用
+        assert which in ['LM', 'LR', 'SR', 'LI', 'SI']
+        # val, vec, _ = Arnoldi(maxiter=1, krylovdim=3, verbosity=0, **eigs_kwargs).eigsolve(matmul, x0, 2, which, lau=None)
+        # return val[0], vec[0].reshape(*s)
+        val, vec = arnoldi_ground_state(matmul, v.reshape(-1),refer=refer, which=which, **eigs_kwargs)  # tol 并没有用
         return val[0], vec[0].reshape(*s)
-
-    matmul = oper.get_matmul_func('numpy')
-    if method == 'larpack': # scipy sparse eigs
+    
+    elif method == 'larpack': # scipy sparse eigs
         val, vec = lanczos_arpack(matmul, v.numpy().reshape(-1), tol=lanczos_tol,
                                   which=which, **eigs_kwargs)
-        return tc.tensor(val, device=v.device), tc.tensor(vec, dtype=v.dtype, device=v.device).reshape(*s)
+        return val, vec
+   
     else:
         raise ValueError(f"Unknown method: {method}")
 
@@ -98,7 +104,7 @@ class DMRG:
             # 如果没有指定初态，那就随机出来，数据类型与 self.mpo 相同
             dtype = kwargs.get('dtype', self.mpo.dtype)
             used_kwargs.add('dtype')
-            self.psi = MPS.from_random(self.L, bond_dim=2, phys_dim=self.mpo.phys_dim, dtype=dtype, device=self.mpo.device)
+            self.psi = MPS.from_random(self.L, bond_dim=2, phys_dim=self.mpo.phys_dim, dtype=dtype)
         self.psi.orthogonalize_(0)
         assert self.L == len(self.psi.data), 'MPS 和 MPO 的长度应该相等'
 
@@ -116,7 +122,7 @@ class DMRG:
         used_kwargs.add('restol')
         self.outputlevel = kwargs.get('outputlevel', 2)  # 输出级别
         used_kwargs.add('outputlevel')
-        self.which = kwargs.get('which', 'SA')  # 计算基态还是边界态
+        self.which = kwargs.get('which', 'SR')  # 计算基态还是边界态
         used_kwargs.add('which')
         self.isherm = kwargs.get('isherm', True)  # 是否厄密
         used_kwargs.add('isherm')
@@ -153,7 +159,7 @@ class DMRG:
             warnings.warn(f"未使用的参数: {unused_kwargs}")
 
         # 记录结果：
-        self.energy = tc.inf
+        self.energy = np.inf
         self.sw = 0
 
     def precheck(self):
@@ -175,8 +181,6 @@ class DMRG:
             return self.mpo
 
         oper = self.mpo.copy()
-        if self.psi.dtype.is_complex and not self.mpo.dtype.is_complex:
-            oper.to(dtype=tc.complex128,device=self.psi.device)
         if isinstance(self.mpo, MPO) and self.Ms is None:
             projH = ProjMPO(oper, nsite=nsite, ifnorm=self.ifnorm)
         elif isinstance(self.mpo, MPO) and isinstance(self.Ms, list) and all(isinstance(x, MPS) for x in self.Ms):
@@ -205,18 +209,18 @@ class DMRG:
                 self.psi.orthogonalize_(pos)
                 projH.set_position_(self.psi, pos)
                 phi = self.psi.data[pos]
-                phi = phi/tc.norm(phi)
+                phi = phi/np.norm(phi)
                 # solve for the ground state of the effective Hamiltonian
                 lanczos_tol=max(self.svd_min, 0.05*self.max_trunc_err) # todo `lanczos_tol` 有没有更好的选择？
                 energy, phi = solve_ground_state(projH, phi, method=self.backend, lanczos_tol=lanczos_tol)
                 # update the MPS
                 self.psi.update_single_site_(pos, phi)
-            energy *= tc.exp(self.mpo.lognm + projH.lrlognm)
+            energy *= np.exp(self.mpo.lognm + projH.lrlognm)
             sw_time = time.time() - sw_time_start  # 记录每步的时间
             self.logstate(sw, sw_time, energy)
             if self.checkdone(energy):
                 break
-        return energy * tc.exp(self.mpo.lognm), self.psi
+        return energy * np.exp(self.mpo.lognm), self.psi
     
 
     def run2(self):
@@ -238,7 +242,7 @@ class DMRG:
                 projH.set_position_(self.psi, pos)
                 
                 phi = tf._full_contract_two(self.psi.data[pos], self.psi.data[pos + 1])
-                phi /= tc.norm(phi)
+                phi /= np.linalg.norm(phi)
            
                 lanczos_tol=max(self.svd_min, 0.05*self.max_trunc_err) # todo `lanczos_tol` 有没有更好的选择？
                 energy, phi = solve_ground_state(projH, phi, 
@@ -257,7 +261,7 @@ class DMRG:
                                         eigdirection=drt, pertube=drho, updateS=True)
                 
                 if drt == 'left' and pos == self.L // 2:
-                    real_energy = energy * tc.exp(self.mpo.lognm + projH.lrlognm)
+                    real_energy = energy * np.exp(self.mpo.lognm + projH.lrlognm)
 
                 if pbar is not None:
                     pbar.set_postfix({"pE": f"{energy:.4e}", "chi": self.psi.maxbonddim()})
@@ -291,6 +295,6 @@ class DMRG:
         #     yield (position, "left") 
     
     def checkdone(self, energy):
-        isdone = tc.abs(self.energy - energy) < self.restol * tc.abs(energy)
+        isdone = abs(self.energy - energy) < self.restol * abs(energy)
         self.energy = energy
         return isdone

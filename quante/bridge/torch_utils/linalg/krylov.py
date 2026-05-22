@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-09-09 18:07:00
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 22:18:17
+# @Last Modified time: 2026-05-23 01:58:30
 
 import torch as tc
 import numpy as np
@@ -837,7 +837,7 @@ def _lanczos_ground_state(matvec, psi0, N_min, N_max, P_tol, min_gap, reortho, c
     return E0, res/resnorm, k + 1
 
     
-def lanczos_evolve_state(matvec:Callable[[tc.Tensor], tc.Tensor], psi0:tc.Tensor, delta, **kwargs) -> tc.Tensor:
+def lanczos_evolve_state2(matvec:Callable[[tc.Tensor], tc.Tensor], psi0:tc.Tensor, delta, **kwargs) -> tc.Tensor:
     """
     从初始猜测 `|psi0>` 迭代地构建 Krylov 空间的正交基计算 `exp(delta H) |psi0>`：
     

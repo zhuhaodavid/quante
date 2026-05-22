@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:38:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-07-22 15:54:00
+# @Last Modified time: 2025-11-22 15:51:08
 
 import numpy as _np
 import math
@@ -108,9 +108,9 @@ def spectral_form_factor(engs:_np.ndarray, times:_np.ndarray | float):
               else tc.tensor(times, device='cuda'))
         mat = (engs.to('cuda') if isinstance(engs, tc.Tensor)
                else tc.tensor(engs, device='cuda'))
-        sff = tc.zeros(len(ts), device='cuda', dtype=tc.float64)
+        sff = tc.zeros((engs.shape[0], len(ts)), device='cuda', dtype=tc.float64)
         for j in tqdm(range(len(ts)), ascii=True):
-            sff[j] = tc.mean(tc.abs(tc.sum(tc.exp(1j*mat*ts[j]), dim=1))**2)
+            sff[:,j] = tc.abs(tc.sum(tc.exp(1j*mat*ts[j]), dim=1))**2
         return sff.cpu().numpy()
     #     sff = tc.zeros(len(ts), engs.shape[0], device='cuda', dtype=tc.float64)
     #     for j in tqdm(range(len(ts)), ascii=True):
