@@ -39,6 +39,12 @@ class TestTN(unittest.TestCase):
         vec3 = ψ3.to_vector()
         self.assertTrue(tc.allclose(vec3, vec2+vec1))
 
+    def test_inner_operator(self):
+        ψ1 = qtc.MPS.from_random(L=4, bond_dim=3)
+        ψ2 = qtc.MPS.from_random(L=4, bond_dim=3)
+
+        self.assertTrue(tc.allclose(ψ1 | ψ2, ψ1.inner(ψ2)))
+
     def test_apply(self):
         # 随机生成一个态
         N = 5

@@ -299,27 +299,28 @@ import quante.bridge.torch_utils as qtc
 生成随机的 MPS:
 
 ```python
+import quante.tensornetwork as tn
 L = 12
-𝜓 = qtc.MPS.from_random(L, bond_dim=4, dtype=tc.float64, device='cpu')
+𝜓 = tn.MPS.from_random(L, bond_dim=4)
 𝜓.show()
 ```
 
 ```
-MPS;  torch.float64;  norm: 1.096e+05;  maxbonddim: 4;  device: cpu;
-physdim:    2|    2|    2|    2|    2|    2|    2|    2|    2|    2|    2|    2| 
-         ----O-----O-----O-----O-----O-----O-----O-----O-----O-----O-----O-----O----
-bonddim:  1     4     4     4     4     4     4     4     4     4     4     4     1
+MPS;  complex128;  norm: 8.760e+06;  maxbonddim: 4;
+physdim:    2|    2|    2|    2|    2|    2|    2|    2|    2|    2|    2|    2|                 
+         ----O-----O-----O-----O-----O-----O-----O-----O-----O-----O-----O-----O-----
+bonddim:  1     4     4     4     4     4     4     4     4     4     4     4     1  
 site:        0     1     2     3     4     5     6     7     8     9     10    11
 ```
 
 计算局域观测量
 
 ```python
-𝜓.measure('x',0)
+(𝜓 | ('x', 0) | 𝜓)
 ```
 
 ```
-tensor(-0.0180, dtype=torch.float64)
+(-27749684652982.14+0.00054931640625j)
 ```
 
 DMRG 
@@ -333,11 +334,12 @@ ham.gdenergy(pauli=False)
 ```
 
 ```
-Sweep 1: 100%|##########| 18/18 [00:00<00:00, 304.74it/s, pE=-4.2575e+00, chi=8]
-Sweep 2: 100%|##########| 18/18 [00:00<00:00, 148.58it/s, pE=-4.2580e+00, chi=20]
-Sweep 3: 100%|##########| 18/18 [00:00<00:00, 162.75it/s, pE=-4.2580e+00, chi=20]
-Sweep 4: 100%|##########| 18/18 [00:00<00:00, 155.70it/s, pE=-4.2580e+00, chi=20]
-Energy converged to -4.2580352068 after 4 sweeps.
+Sweep 1: 100%|##########| 18/18 [00:00<00:00, 529.41it/s, pE=-4.2577e+00, chi=8] 
+Sweep 2: 100%|##########| 18/18 [00:00<00:00, 178.21it/s, pE=-4.2580e+00, chi=20]
+Sweep 3: 100%|##########| 18/18 [00:00<00:00, 173.08it/s, pE=-4.2580e+00, chi=20]
+Energy converged to -4.2580352068 after 3 sweeps.
+
+-4.25803520728288
 ```
 
 ## todos

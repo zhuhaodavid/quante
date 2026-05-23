@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-22 23:14:42
+# @Last Modified time: 2026-05-23 20:10:25
 
 import numpy as np
 
@@ -1995,6 +1995,38 @@ def _mele_init_left_env(H:np.ndarray, psi1:np.ndarray, psi2:np.ndarray) -> np.nd
     out = out.reshape(-1,c,j*e).swapaxes(1,2).reshape(-1, c) @ psi1.swapaxes(0,1).reshape(c,-1)
     
     return out.reshape(k,h,j,e,i,b).transpose([4,2,0,5,3,1]).reshape(-1,b,e,h)
+
+
+
+def _mele_init_left_env2(H:np.ndarray, psi1:np.ndarray, psi2:np.ndarray) -> np.ndarray:
+    """
+    .. code-block:: text
+        
+        .     psi1                     ╭-╮       
+        --(i)---◻--(b)--               │ ├--(b)--
+        |       │                      │ │       
+        |      (c)                     │ │       
+        |       │H                     │ │       
+        |-(j)---◻--(e)--  --->   -(j)--│ ├--(e)--
+        |       │                      │ │       
+        |      (f)                     │ │       
+        |       │                      │ │       
+        --(i)---◻--(h)--               │ ├--(h)--
+              psi2                     ╰-╯       
+     
+    np.einsum("icb,jcfe,ifh->jbeh", Lenv, psi1, H, psi2)
+    """
+    i, c, b = psi1.shape
+    i, f, h = psi2.shape
+    j, c, f, e = H.shape
+    
+    # (i,f,h) -> (i,h,f) -> (ih, f) @ (j,c,f,e) -> (f,c,j,e) -> (f,cje) = (ih,cje)
+    out = psi2.swapaxes(1,2).reshape(-1, f) @ H.swapaxes(0,2).reshape(f, -1)
+    # (ih,cje) -> (i,h,c,je) -> (h,je,i,c) -> (hje,ic) @ (i,c,b) -> (ic,b) = (hje,b)
+    out = out.reshape(i,-1,c,j*e).transpose([1,3,0,2]).reshape(-1, i*c) @ psi1.reshape(-1,b)
+    
+    return out.reshape(h,j,e,b).transpose([1,3,2,0]).reshape(-1,b,e,h)
+
 
 
 

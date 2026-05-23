@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-12-07 20:26:18
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-23 02:33:47
+# @Last Modified time: 2026-05-23 19:41:25
 
 import numpy as np
 import warnings
@@ -884,8 +884,8 @@ class SpinOper(Oper):
         self, 
         L=None, 
         pauli=False, 
-        backend:Literal['torch', 'numpy', 'tensor', 'quimb']='numpy', 
-        device=None
+        # backend:Literal['torch', 'numpy', 'tensor', 'quimb']='numpy', 
+        # device=None
     ):
         L = L if L is not None else self.L
         self._check_pauli(pauli)

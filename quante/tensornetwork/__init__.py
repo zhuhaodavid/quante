@@ -4,7 +4,7 @@
 # @Last Modified by:   hzhu
 # @Last Modified time: 2025-01-18 16:02:06
 
-from .mps import MPS
+from .mps import MPS, BraMPS
 from .mpo import MPO
 from .dmrg import DMRG
 from .tdvp import TDVP

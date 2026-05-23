@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-22 23:15:00
+# @Last Modified time: 2026-05-23 18:35:26
 
 import copy
 import warnings
@@ -52,6 +52,82 @@ class TensorTrain:
     def __len__(self):
         return self.L
     
+    def _get_str_index(self, full, l):
+        L = len(self.data)
+        if full:
+            siteindx = list(range(L))
+        else:
+            siteindx = [0, 1, L-2, L-1]
+            llim = self.llim
+            rlim = self.rlim
+            if llim is not None and llim > 1:
+                siteindx.append(llim-1)
+                siteindx.append(llim)
+            if rlim is not None and rlim < L-2:
+                siteindx.append(rlim)
+                siteindx.append(rlim+1)
+            siteindx = list(np.sort(list(set(siteindx))))
+            if len(siteindx) < l:
+                for i in range(L):
+                    if i not in siteindx:
+                        siteindx.append(i)
+                    if len(siteindx) == l:
+                        break
+                siteindx = list(np.sort(siteindx))
+        return siteindx
+        
+    def _get_tsr_str(self, siteindx):
+        out = "--"
+        for i in range(len(siteindx)):
+            s = siteindx[i]
+            if i > 0 and s != siteindx[i-1] + 1:
+            #     out += " ... -" if out[-3:] == '---' else "- ... -"
+                out += " ... -"
+            if s < self.llim:
+                out += "--|>--"
+            elif s > self.rlim:
+                out += "-<|---"
+            else:
+                if s == self.rlim:
+                    out += "--O---"
+                else:
+                    out += "--O---"
+        return out + "--"
+    
+    def _get_full_str(self, tsrstr, siteindx):
+        phydims = []
+        pnum = len(self.data[0].shape)-2
+        for i in range(pnum):
+            phydims.append([" "]*len(tsrstr))
+        bonddim = [" "] * len(tsrstr)
+        site = [" "] * len(tsrstr)
+        bonddim[1] = '1'
+        j = 0
+        for i in range(len(tsrstr)-3):
+            if tsrstr[i] in ['|', 'O']:
+                a, *b, c = self.data[siteindx[j]].shape
+                for k in range(pnum):
+                    phydims[k][i-4:i] = f'{b[k]:>4}|'
+                if tsrstr[i+1] == '>':
+                    bonddim[i+2:i+6] = f'{c:^4}'
+                else:
+                    bonddim[i+1:i+6] = f'{c:^5}'
+                site[i-1:i+3] = f'{siteindx[j]:^4}'
+                j += 1
+            if tsrstr[i:i+3] == '...':
+                a, *b, c = self.data[siteindx[j-1]].shape
+                bonddim[i-4:i] = f'{c:^4}'
+                a, *b, c = self.data[siteindx[j]].shape
+                for k in range(pnum):
+                    phydims[k][i:i+3] = '...'
+                if a < 10:
+                    bonddim[i+5] = f'{a}'
+                else:
+                    bonddim[i+3:i+7] = f'{a:^4}'
+                bonddim[i:i+3] = '...'
+                site[i:i+3] = '...'
+        return "".join(bonddim), "".join(site), ["".join(phydim) for phydim in phydims]
+           
     def __getitem__(self, key):
         return self.data[key]
     
@@ -912,5 +988,6 @@ def _local_operator(gate, dims, pos, site_num):
     after = int(np.prod(dims[pos + site_num:]))
     local_dim = int(np.prod(dims[pos:pos + site_num]))
     return np.kron(np.kron(np.eye(before), np.asarray(gate).reshape(local_dim, local_dim)), np.eye(after))
+
 
 

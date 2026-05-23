@@ -38,6 +38,29 @@ class TestTN(unittest.TestCase):
         vec3 = ψ3.to_vector()
         self.assertTrue(np.allclose(vec3, vec2+vec1))
 
+    def test_inner_operator(self):
+        ψ1 = qtn.MPS.from_random(L=4, bond_dim=3)
+        ψ2 = qtn.MPS.from_random(L=4, bond_dim=3)
+
+        self.assertTrue(np.allclose(ψ1 | ψ2, ψ1.inner(ψ2)))
+        self.assertTrue(np.allclose(ψ1 | ψ1, ψ1.norm() ** 2))
+
+    def test_mpo_matrix_element_operator(self):
+        ψ1 = qtn.MPS.from_random(L=4, bond_dim=3)
+        ψ2 = qtn.MPS.from_random(L=4, bond_dim=3)
+        H = qtn.MPO.from_random(L=4, bond_dim=3)
+
+        self.assertTrue(np.allclose(ψ1 | H | ψ2, H.mele(ψ1, ψ2)))
+        self.assertTrue(np.allclose(ψ1 | H | ψ2, ψ1.to_vector().conj() @ H.to_matrix() @ ψ2.to_vector()))
+
+    def test_bramps_repr(self):
+        ψ = qtn.MPS.from_random(L=4, bond_dim=3)
+        H = qtn.MPO.from_random(L=4, bond_dim=3)
+
+        text = repr(ψ | H)
+        self.assertIn("<bra|mpo", text)
+        self.assertIn("open ket legs", text)
+
     def test_apply(self):
         # 随机生成一个态
         N = 5

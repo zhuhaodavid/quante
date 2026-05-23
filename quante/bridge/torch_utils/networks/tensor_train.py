@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-16 15:37:40
+# @Last Modified time: 2026-05-23 15:03:40
 
 import copy
 import warnings
@@ -165,6 +165,8 @@ class TensorTrain:
     def inner(self, anotherTT, logscale=False, conj=True):
         """计算 <ψ|ϕ>: ψ.inner(ϕ)
 
+        默认情况下，``ψ | ϕ`` 等价于 ``ψ.inner(ϕ, logscale=False, conj=True)``。
+
         如何使 MPO，那么等价于 tr(ψ^† ϕ)
 
         Parameters
@@ -191,6 +193,12 @@ class TensorTrain:
             return tc.log(coef) + lognm + self.lognm + anotherTT.lognm
         else:
             return tf.tn_inner(conjdata, anotherTT.data, logscale=False) * tc.exp(self.lognm) * tc.exp(anotherTT.lognm)
+
+    def __or__(self, anotherTT):
+        """计算默认内积: ``self | anotherTT`` 等价于 ``self.inner(anotherTT)``。"""
+        if self is anotherTT:
+            return self.norm(lognorm=False)**2
+        return self.inner(anotherTT, logscale=False, conj=True)
 
     def norm(self, lognorm=False):
         if self.is_canonical_form():

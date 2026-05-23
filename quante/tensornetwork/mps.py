@@ -2,12 +2,13 @@
 # @Author: hzhu
 # @Date:   2026-05-22 22:29:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-22 22:33:34
+# @Last Modified time: 2026-05-23 22:07:09
 
 
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
+import re
 
 if TYPE_CHECKING:
     from quimb.tensor.tensor_1d import MatrixProductState
@@ -39,6 +40,34 @@ class MPS(TensorTrain):
         return tf._full_contract_mps(self.data) * np.exp(self.lognm)
 
     to_matrix = to_vector
+
+    def __or__(self, another):
+        """Bra notation sugar.
+
+        ``psi1 | psi2`` computes ``<psi1|psi2>``.
+        ``psi1 | H`` returns a delayed ``BraMPS`` so that
+        ``psi1 | H | psi2`` computes ``<psi1|H|psi2>``.
+        """
+        if isinstance(another, MPS):
+            if another is self:
+                return self.norm() ** 2
+            return self.inner(another)
+
+        from .mpo import MPO
+        if isinstance(another, MPO):
+            assert len(self) == len(another), (
+                f"length mismatch: mps={len(self)}, mpo={len(another)}"
+            )
+            return BraMPS(self, another)
+
+        if isinstance(another, tuple):
+            return BraMPS(self, another)
+
+        from ..generate.operas import SpinOper
+        if isinstance(another, SpinOper):
+            return BraMPS(self, another)
+   
+        return NotImplemented
 
     def to_quimb(self) -> "MatrixProductState":
         import quimb.tensor as qtn
@@ -261,7 +290,9 @@ class MPS(TensorTrain):
 
     from_matrix = from_vector
 
-    def _get_str(self, full=False):
+
+
+    def _get_str(self, full=False, l=4):
         out1 = (
             self.__class__.__name__
             + ";  "
@@ -275,75 +306,36 @@ class MPS(TensorTrain):
         L = len(self.data)
         if L < 15:
             full = True
-        out2 = "physdim: "
-        out3 = "         --"
-        out4 = "bonddim: "
-        out5 = "site:     "
-        llim = self.llim if self.llim is not None else -1
-        rlim = self.rlim if self.rlim is not None else -1
-        ldis = 0
-        rdis = llim if llim > -1 else rlim if rlim > -1 else L
-        tag = False
-        for i in range(L):
-            if full or ldis < 2 or rdis <= 2:
-                a, b, c = self.data[i].shape
-                ldis += 1
-                rdis -= 1
-                if i < llim:
-                    out3 += "-|>---"
-                    ldis = 1 if rdis <= 0 else ldis
-                    rdis = (llim - i - 1) if rdis <= 0 else rdis
-                elif i > rlim:
-                    out3 += "-<|---"
-                    ldis = 1 if rdis <= 0 else ldis
-                    rdis = (L - i - 1) if rdis <= 0 else rdis
-                else:
-                    out3 += "--O---"
-                    ldis = 1 if rdis <= 0 else ldis
-                    rdis = (rlim - i) if rdis <= 0 else rdis
-                out2 += f"{b:>4}| "
-                out4 += f"{a:^5} " if tag else f"{a:^4}  "
-                out5 += f"  {i:^4}"
-                tag = False
-            elif ldis == 2:
-                a, b, c = self.data[i].shape
-                ldis += 1
-                rdis -= 1
-                out3 += " ... -"
-                out2 += f"   ..."
-                out4 = out4[:-1] + f"{a:^4}..."
-                out5 += f"  ... "
-                tag = True
-            else:
-                ldis += 1
-                rdis -= 1
 
-        out4 += f" {c}"
-        out2 += "\n"
-        out3 += "-\n"
-        out4 += "\n"
-        out = out1 + out2 + out3 + out4 + out5
-        return out
+        siteindx = self._get_str_index(full, l)
+        tsrstr = self._get_tsr_str(siteindx)
+        bonddim, site, phydims = self._get_full_str(tsrstr, siteindx)
+        out2 = "physdim: " + phydims[0] + "\n"
+        out3 = "         " + tsrstr + "\n"
+        out4 = "bonddim: " + bonddim + "\n"
+        out5 = "site:    " + site + "\n"
+        return out1 + out2 + out3 + out4 + out5
+        
 
-    def show(self, full=False):
-        print(self._get_str(full=full))
+    def show(self, full=False, l=4):
+        print(self._get_str(full=full, l=l))
 
     def __repr__(self) -> str:
         return self._get_str()
-
-    def measure(self, operator: Union[np.ndarray, str, list[str], list[np.ndarray]], pos: Union[int, list[int], None] = None, pauli=False, logscale=False) -> np.ndarray:
+    
+    def measure_single(self, operator:list[np.ndarray], pos:list[int], logscale=False):
         """
         局域算符的观测值：
 
         .. code-block:: text
 
-            -----▷------▷------◻------⨞------⨞------⨞----- ψ.conj()
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ1.conj()
                  |      |      |      |      |      |
-                 |      |      ◻      |      |      |
+                 |      |      ◻      |      ◻      |
                  |      |      |      |      |      |
-            -----▷------▷------◻------⨞------⨞------⨞----- ψ
-                               ↑
-                              pos
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ2
+                               ↑             ↑
+                              pos           pos
 
         移动正交中心到 pos 位置，然后将 operator 作用在 pos 位置上。
 
@@ -353,140 +345,154 @@ class MPS(TensorTrain):
 
         #todo 使用局部 MPO 的方法来计算非最近邻的观测值
         """
+        assert len(operator) == len(pos), f"长度需要一致, operator = {operator}, pos = {pos}"
+        assert len(pos) == len(set(pos)), f"位置必须唯一, pos = {pos}"
+        for p,o in zip(pos, operator):
+            assert isinstance(o, np.ndarray)
+            assert isinstance(p, int)
+        assert (np.diff(pos) > 0).all(), "pos 需要从小到大"
+
+        # 做个正则化
+        firstpos, lastpos = pos[0], pos[-1]
+        if self.is_canonical_form():
+            firstdata = self.Ss[firstpos].reshape(-1, 1, 1) * self.data[firstpos]
+        else:
+            self.move_llim_(firstpos)
+            self.move_rlim_(pos[-1])
+            firstdata = self.data[firstpos]
+
+        # 收缩左环境
+        Lenv = tf._ProjMPS_contract_left_env(
+            firstdata,
+            tf._local_apply(firstdata, operator[0]),
+            np.eye(firstdata.shape[0], dtype=firstdata.dtype),
+        )
+        lognm = 0.0
+        ct = 1
+        for i in range(firstpos + 1, lastpos + 1):
+            if i in pos:
+                data, mat = self.data[i], operator[ct]
+                Lenv = tf._ProjMPS_contract_left_env(data, tf._local_apply(data, mat), Lenv)
+                ct += 1
+            else:
+                data = self.data[i]
+                Lenv = tf._ProjMPS_contract_left_env(data, data, Lenv)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+
+        if logscale:
+            return np.log(np.trace(Lenv)) + self.lognm * 2
+        return np.trace(Lenv) * np.exp(self.lognm) ** 2
+
+    def measure_local(self, operator:np.ndarray, pos:list[int], logscale=False):
+        """
+        局域算符的观测值：
+
+        .. code-block:: text
+
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ.conj()
+                 |      |      |      |      |      |
+                 |      |     -----------------     |
+                 |      |    |     operator    |    |
+                 |      |     -----------------     |
+                 |      |      |      |      |      |
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ
+                               ↑      ↑      ↑
+                              pos    pos    pos
+        """
+        assert (np.diff(pos) == 1).all(), "必须是连续的格点"
+        dim = 1
+        for p in pos:
+            dim *= self.data[p].shape[1]
+            if dim == operator.shape[0]:
+                break
+        else:
+            raise ValueError("operator shape is not match")
+        minpos, maxpos = pos[0], pos[-1]
+
+        if self.is_canonical_form():
+            contracted_tsr = self.Ss[minpos].reshape(-1, 1, 1) * self.data[minpos]
+        else:
+            self.orthogonalize_(minpos)
+            contracted_tsr = self.data[minpos]
+        for i in range(minpos + 1, maxpos + 1):
+            contracted_tsr = tf._full_contract_right_mps(contracted_tsr, self.data[i])
+        res = contracted_tsr.conj().reshape(-1) @ tf._local_apply(contracted_tsr, operator).reshape(-1)
+        if logscale:
+            return self.lognm * 2 + np.log(res)
+        return np.exp(self.lognm * 2) * res
+
+    def measure_mpo(self, operator:np.ndarray, pos:int, logscale=False):
+        """
+        mpo 的观测值：
+
+        .. code-block:: text
+
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ.conj()
+                 |      |      |      |      |      |
+                 |      |      ◻------◻------◻      |
+                 |      |      |      |      |      |
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ
+                               ↑             ↑
+                              pos           pos
+        """
+        if self.is_canonical_form():
+            firstdata = self.Ss[pos].reshape(-1, 1, 1) * self.data[pos]
+        else:
+            self.move_llim_(pos)
+            self.move_rlim_(pos + operator.L - 1)
+            firstdata = self.data[pos]
+        
+        Lenv = tf._mele_init_left_env2(operator.data[0], firstdata.conj(), firstdata)
+        lognm = 0.0
+        for i in range(1, operator.L):
+            Lenv = tf._mele_contract_left_env(operator.data[i], self.data[pos + i].conj(), self.data[pos + i], Lenv)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+        a, b, c, d = Lenv.shape
+        trLenv = np.trace(Lenv.reshape(b, d))
+        if logscale:
+            return np.log(trLenv) + self.lognm * 2 + operator.lognm
+        return trLenv * np.exp(self.lognm) ** 2 * np.exp(operator.lognm)
+
+
+    def measure(self, operator: Union[str, list[np.ndarray], np.ndarray], pos: list[int] = None, pauli=False, logscale=False) -> np.ndarray:
+        """计算观测值
+
+        operator 可以是
+        - string
+        - list of array
+        - SpinOper
+        - MPO
+        """
         # -------- 单体门观测 --------
-        if isinstance(operator, list):
-            assert len(operator) == len(pos), f"长度需要一致, operator = {operator}, pos = {pos}"
-            assert len(pos) == len(set(pos)), f"位置必须唯一, pos = {pos}"
-            argpos = np.argsort(pos)
-            newpos, newlocalmat = [], []
-            for i in argpos:
-                p = pos[i]
-                newpos.append(p)
-                o = operator[i]
-                if isinstance(o, str):
-                    assert len(o) == 1, f"str 形式只支持单体门， o = {o}"
-                    local_mat = np.asarray(pauli_matrix(o))
-                elif isinstance(o, np.ndarray):
-                    local_mat = o
-                else:
-                    local_mat = np.asarray(o)
-                assert isinstance(local_mat, np.ndarray), f"operator 必须是 ndarray 或 str, type = {type(local_mat)}"
-                assert local_mat.shape[0] == self.data[pos[i]].shape[1], "list 形式只支持单体门"
-                newlocalmat.append(local_mat)
-
-            firstpos, lastpos = newpos[0], newpos[-1]
-            if self.is_canonical_form():
-                firstdata = self.Ss[firstpos].reshape(-1, 1, 1) * self.data[firstpos]
-            else:
-                self.move_llim_(firstpos)
-                self.move_rlim_(newpos[-1])
-                firstdata = self.data[firstpos]
-
-            firstdata, mat = promote_dtype(firstdata, newlocalmat[0])
-            Lenv = tf._ProjMPS_contract_left_env(
-                firstdata,
-                tf._local_apply(firstdata, mat),
-                np.eye(firstdata.shape[0], dtype=firstdata.dtype),
-            )
-
-            lognm = np.array(0.0, dtype=self.dtype)
-            ct = 1
-            for i in range(firstpos + 1, lastpos + 1):
-                if i in newpos:
-                    Lenv, data, mat = promote_dtype(Lenv, self.data[i], newlocalmat[ct])
-                    Lenv = tf._ProjMPS_contract_left_env(data, tf._local_apply(data, mat), Lenv)
-                    ct += 1
-                else:
-                    Lenv, data = promote_dtype(Lenv, self.data[i])
-                    Lenv = tf._ProjMPS_contract_left_env(data, data, Lenv)
-                Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
-
-            if logscale:
-                return np.log(np.trace(Lenv)) + self.lognm * 2
-            return np.trace(Lenv) * np.exp(self.lognm) ** 2
-
         if isinstance(operator, str):
-            nop, npos = [], []
-            for i, o in enumerate(operator):
-                if o == "I" or o == "i":
-                    continue
-                if o not in ["x", "y", "z", "X", "Y", "Z", "I", "i", "p", "P", "m", "M"]:
-                    break
-                nop.append(o)
-                npos.append(i + pos)
-            else:
-                return self.measure(nop, npos, logscale=logscale)
-            operator = pauli_matrix(operator)
+            assert pos is not None
+            if len(operator) == 1 and isinstance(pos, int):
+                pos = [pos]
+            operator = [pauli_matrix(o) for o in operator]
+        if isinstance(operator, list):
+            assert pos is not None
+            return self.measure_single(operator, pos, logscale)
 
         # -------- 局域门 --------
         if isinstance(operator, np.ndarray):
-            minpos = pos
-            dim = 1
-            for maxpos in range(pos, self.L):
-                dim *= self.data[maxpos].shape[1]
-                if dim == operator.shape[0]:
-                    break
-            else:
-                raise ValueError("operator shape is not match")
+            assert pos is not None
+            return self.measure_local(operator, pos, logscale)
 
-            if self.is_canonical_form():
-                contracted_tsr = self.Ss[minpos].reshape(-1, 1, 1) * self.data[minpos]
-            else:
-                self.orthogonalize_(minpos)
-                contracted_tsr = self.data[minpos]
-            for i in range(minpos + 1, maxpos + 1):
-                contracted_tsr = tf._full_contract_right_mps(contracted_tsr, self.data[i])
-            res = contracted_tsr.conj().reshape(-1) @ tf._local_apply(contracted_tsr, operator).reshape(-1)
-            if logscale:
-                return self.lognm * 2 + np.log(res)
-            return np.exp(self.lognm * 2) * res
-
-        # -------- 部分 MPO --------
+        # -------- Oper --------
         from ..generate.operas import SpinOper
-
         if isinstance(operator, SpinOper):
-            assert pos is None, "pos must be None when operator is SpinOper"
-            # 如果 operator 只包含一项
-            if len(operator.data) == 1 and list(operator.data.values())[0][0].shape[0] == 1:
-                nop, npos = [], []
-                for i, j in zip(list(operator.data.keys())[0], list(operator.data.values())[0][0]):
-                    if i == "I":
-                        continue
-                    nop.append(i.upper() if pauli else i.lower())
-                    npos.append(j)
-                return self.measure(nop, npos, logscale=logscale)
-
-            # 利用 MPO 方法
             pos, operator = operator._minimal_shift()
-            from .mpo import MPO
+            return self.measure_mpo(operator.to_mpo(pauli=pauli), pos, logscale)
 
-            operator = MPO.from_oper(operator, pauli=pauli)
-
+        # -------- MPO --------
         from .mpo import MPO
-
         if isinstance(operator, MPO):
             if pos is None:
-                assert len(operator.data) == self.L, "operator length must be equal to MPS length"
                 pos = 0
-            if self.is_canonical_form():
-                firstdata = self.Ss[pos].reshape(-1, 1, 1) * self.data[pos]
-            else:
-                self.move_llim_(pos)
-                self.move_rlim_(pos + operator.L - 1)
-                firstdata = self.data[pos]
-            Lenv = tf._mele_init_left_env(operator.data[0], firstdata.conj(), firstdata)
-            lognm = np.array(0.0, dtype=self.dtype)
-            for i in range(1, operator.L):
-                Lenv = tf._mele_contract_left_env(operator.data[i], self.data[pos + i].conj(), self.data[pos + i], Lenv)
-                Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
-            a, b, c, d = Lenv.shape
-            assert a == 1 and c == 1, "should be 1"
-            trLenv = np.trace(Lenv.reshape(b, d))
-            if logscale:
-                return np.log(trLenv) + self.lognm * 2 + operator.lognm
-            return trLenv * np.exp(self.lognm) ** 2 * np.exp(operator.lognm)
+            return self.measure_mpo(operator, pos, logscale)
 
         raise ValueError(f"operator type {type(operator)} is not supported")
+
 
     def _apply_1b_gate(self, pos, gate_1b):
         gate_1b = self._convert_gate(gate_1b, 1)
@@ -518,3 +524,280 @@ class MPS(TensorTrain):
 
         W = self.data[pos]
         return np.einsum("abcd,cge,dhf,abef->gh", Lenv, W.conj(), W, Renv)
+
+class BraMPS:
+    """Delayed expression for ``bra | mpo``.
+
+    It stores the left MPS and the MPO without contracting them. The matrix
+    element is evaluated when another MPS is attached on the right:
+    ``bra | mpo | ket``.
+    """
+
+    def __init__(self, bra: "MPS", operator) -> None:
+        self.bra = bra
+        self.operator = operator
+    
+    def __or__(self, ket):
+        assert isinstance(ket, MPS)
+        from .mpo import MPO
+        if self.bra is ket:
+            if isinstance(self.operator, tuple):
+                return self.bra.measure(*self.operator)
+            else:
+                return self.bra.measure(self.operator)
+        if isinstance(self.operator, MPO):
+            return self.operator.mele(self.bra, ket)
+        if isinstance(self.operator, tuple):
+            operator, pos = self.operator
+            # -------- 单体门 --------
+            if isinstance(operator, str):
+                assert pos is not None
+                operator = [pauli_matrix(o) for o in operator]
+            if isinstance(operator, list):
+                assert pos is not None
+                return self.inner_single(operator, pos, ket)
+            # -------- 局域门 --------
+            if isinstance(operator, np.ndarray):
+                assert pos is not None
+                return self.inner_local(operator, pos, ket)
+            # -------- MPO --------
+            from .mpo import MPO
+            if isinstance(operator, MPO):
+                assert pos is not None
+                return self.inner_mpo(operator, pos, ket)
+        # -------- Oper --------
+        from ..generate.operas import SpinOper
+        if isinstance(self.operator, SpinOper):
+            pos, operator = self.operator._minimal_shift()
+            return self.inner_mpo(operator.to_mpo(pauli=False), pos, ket)
+        return NotImplemented
+    
+
+    def inner_single(self, operator:list[np.ndarray], pos:list[int], ket:"MPS", logscale=False):
+        """
+        局域算符的观测值：
+
+        .. code-block:: text
+
+            -----▷------▷------◻------⨞------⨞------⨞----- bra.conj()
+                 |      |      |      |      |      |
+                 |      |      ◻      |      ◻      |
+                 |      |      |      |      |      |
+            -----▷------▷------◻------⨞------⨞------⨞----- ket
+                               ↑             ↑
+                              pos           pos
+
+        移动正交中心到 pos 位置，然后将 operator 作用在 pos 位置上。
+
+        如果不是局域的测量，使用单体门作用后 inner 的方法计算。
+
+        pauli 只当 operator 是 SpinOper 时生效，表示 operator 是 Pauli 矩阵。
+
+        #todo 使用局部 MPO 的方法来计算非最近邻的观测值
+        """
+        assert len(operator) == len(pos), f"长度需要一致, operator = {operator}, pos = {pos}"
+        assert len(pos) == len(set(pos)), f"位置必须唯一, pos = {pos}"
+        for p,o in zip(pos, operator):
+            assert isinstance(o, np.ndarray)
+            assert isinstance(p, int)
+        assert (np.diff(pos) > 0).all(), "pos 需要从小到大"
+
+        # 收缩左环境
+        bra0 = self.bra.data[0]
+        Lenv = np.eye(bra0.shape[0], dtype=bra0.dtype).reshape(1,1)
+        lognm = 0.0
+        ct = 0
+        for i in range(self.bra.L):
+            if i in pos:
+                bra_i, mat, ket_i = self.bra.data[i], operator[ct], ket.data[i]
+                Lenv = tf._ProjMPS_contract_left_env(bra_i.conj(), tf._local_apply(ket_i, mat), Lenv)
+                ct += 1
+            else:
+                bra_i, ket_i = self.bra.data[i], ket.data[i]
+                Lenv = tf._ProjMPS_contract_left_env(bra_i.conj(), ket_i, Lenv)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+
+        if logscale:
+            return np.log(np.trace(Lenv)) + self.bra.lognm + ket.lognm
+        return np.trace(Lenv) * np.exp(self.bra.lognm + ket.lognm)
+
+    def inner_local(self, operator:np.ndarray, pos:list[int], ket:"MPS", logscale=False):
+        """
+        局域算符的观测值：
+
+        .. code-block:: text
+
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ.conj()
+                 |      |      |      |      |      |
+                 |      |     -----------------     |
+                 |      |    |     operator    |    |
+                 |      |     -----------------     |
+                 |      |      |      |      |      |
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ
+                               ↑      ↑      ↑
+                              pos    pos    pos
+        """
+        assert (np.diff(pos) == 1).all(), "必须是连续的格点"
+        dim = 1
+        for p in pos:
+            dim *= self.bra.data[p].shape[1]
+            if dim == operator.shape[0]:
+                break
+        else:
+            raise ValueError("operator shape is not match")
+        minpos, maxpos = pos[0], pos[-1]
+
+        # 收缩左环境
+        bra0 = self.bra.data[0]
+        Lenv = np.eye(bra0.shape[0], dtype=bra0.dtype).reshape(1,1)
+        lognm = 0.0
+        for i in range(minpos):
+            bra_i, ket_i = self.bra.data[i], ket.data[i]
+            Lenv = tf._ProjMPS_contract_left_env(bra_i.conj(), ket_i, Lenv)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+
+        bra_contracted_tsr = self.bra.data[minpos]
+        for i in range(minpos + 1, maxpos + 1):
+            bra_contracted_tsr = tf._full_contract_right_mps(bra_contracted_tsr, self.bra.data[i])
+        
+        ket_contracted_tsr = ket.data[minpos]
+        for i in range(minpos + 1, maxpos + 1):
+            ket_contracted_tsr = tf._full_contract_right_mps(ket_contracted_tsr, ket.data[i])
+
+        ket_contracted_tsr = tf._local_apply(ket_contracted_tsr, operator)
+        Lenv = tf._ProjMPS_contract_left_env(bra_contracted_tsr.conj(), ket_contracted_tsr, Lenv)
+        Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+
+        for i in range(maxpos+1, self.bra.L):
+            bra_i, ket_i = self.bra.data[i], ket.data[i]
+            Lenv = tf._ProjMPS_contract_left_env(bra_i.conj(), ket_i, Lenv)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+
+        if logscale:
+            return np.log(np.trace(Lenv)) + self.bra.lognm + ket.lognm
+        return np.trace(Lenv) * np.exp(self.bra.lognm + ket.lognm)
+
+    def inner_mpo(self, operator:np.ndarray, pos:int, ket:"MPS", logscale=False):
+        """
+        mpo 的观测值：
+
+        .. code-block:: text
+
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ.conj()
+                 |      |      |      |      |      |
+                 |      |      ◻------◻------◻      |
+                 |      |      |      |      |      |
+            -----▷------▷------◻------⨞------⨞------⨞----- ψ
+                               ↑             ↑
+                              pos           pos
+        """
+        bra0, ket0 = self.bra.data[0], ket.data[0]
+        
+        Lenv = np.eye(bra0.shape[0], dtype=bra0.dtype).reshape(1,1)
+        lognm = 0.0
+        for i in range(pos):
+            bra_i, ket_i = self.bra.data[i], ket.data[i]
+            Lenv = tf._ProjMPS_contract_left_env(bra_i.conj(), ket_i, Lenv)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+
+        a, b = Lenv.shape
+        Lenv = Lenv.reshape(1,a,1,b)
+        for i in range(operator.L):
+            Lenv = tf._mele_contract_left_env(operator.data[i], self.bra.data[pos + i].conj(), ket[pos + i], Lenv)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+        
+        a, b, c, d = Lenv.shape
+        assert a == c == 1
+        Lenv = Lenv.reshape(b, d)
+        for i in range(pos+operator.L, ket.L):
+            bra_i, ket_i = self.bra.data[i], ket.data[i]
+            Lenv = tf._ProjMPS_contract_left_env(bra_i.conj(), ket_i, Lenv)
+            Lenv, lognm = log_or_not_update(Lenv, lognm, use_log=logscale)
+
+        trLenv = np.trace(Lenv)
+        if logscale:
+            return np.log(trLenv) + self.bra.lognm + ket.lognm + operator.lognm
+        return trLenv * np.exp(self.bra.lognm + ket.lognm + operator.lognm) ** 2 
+
+
+    # def _get_str(self, full=True, l=4):
+    #     out = (
+    #         "BraMPS;  "
+    #         + f"sites: {len(self.bra)}; \n"
+    #     )
+    #     siteindx = self.bra._get_str_index(full, l)
+    #     tsrstr = self.bra._get_tsr_str(siteindx)
+    #     bonddim, site, bra_phydims = self.bra._get_full_str(tsrstr, siteindx)
+    #     out += "site:     " + site + "\n"
+    #     out += "bra:      " + tsrstr + "\n"
+
+    #     bonddim = ['|' if bra_phydims[0][i] == '|' else c for i, c in enumerate(bonddim)]
+    #     out += f"bra bond: {''.join(bonddim)}\n"
+
+    #     from .mpo import MPO
+    #     for o in self.operators:
+    #         print(isinstance(o, MPO))
+    #         if isinstance(o, MPO):
+    #             mpo_str = o._get_tsr_str(siteindx)
+    #             out += "mpo:      " + mpo_str + "\n"
+    #             bonddim, site, mpo_phydims = o._get_full_str(tsrstr, siteindx)
+    #             bonddim = ['|' if mpo_phydims[0][i] == '|' else c for i, c in enumerate(bonddim)]
+    #             out += "mpo bond: " + "".join(bonddim) + "\n"
+    #         else:
+    #             return NotImplemented
+    #     return out
+    
+    # def show(self, full=False, l=4):
+    #     print(self._get_str(full=full, l=l))
+
+    # def __repr__(self) -> str:
+    #     return self._get_str()
+
+    def _get_str(self, full=False, l=4):
+        from .mpo import MPO
+
+        if not isinstance(self.operator, MPO):
+            return f"<bra|{type(self.operator).__name__}; sites: {len(self.bra)};"
+
+        L = len(self.bra)
+        if L < 15:
+            full = True
+
+        siteindx = sorted(
+            set(self.bra._get_str_index(full, l))
+            | set(self.operator._get_str_index(full, l))
+        )
+
+        bra_tsrstr = self.bra._get_tsr_str(siteindx)
+        bra_bonddim, site, bra_phydims = self.bra._get_full_str(
+            bra_tsrstr, siteindx
+        )
+
+        mpo_tsrstr = self.operator._get_tsr_str(siteindx)
+        mpo_bonddim, _, mpo_phydims = self.operator._get_full_str(
+            mpo_tsrstr, siteindx
+        )
+
+        out = (
+            "<bra|mpo"
+            + ";  "
+            + str(np.result_type(self.bra.dtype, self.operator.dtype))
+            + ";  "
+            + f"sites: {L}"
+            + ";\n"
+        )
+        out += "bra bond: " + bra_bonddim + "\n"
+        out += "bra:      " + bra_tsrstr + "  bra.conj()\n"
+        out += "bra phys: " + bra_phydims[0] + "\n"
+        out += "mpo phys: " + mpo_phydims[0] + "\n"
+        out += "mpo:      " + mpo_tsrstr + "  mpo\n"
+        out += "ket phys: " + mpo_phydims[1] + "  open ket legs\n"
+        out += "mpo bond: " + mpo_bonddim + "\n"
+        out += "site:     " + site + "\n"
+        return out
+    
+    def show(self, full=False, l=4):
+        print(self._get_str(full=full, l=l))
+
+    def __repr__(self) -> str:
+        return self._get_str()
