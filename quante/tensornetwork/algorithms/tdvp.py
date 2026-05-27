@@ -8,12 +8,12 @@ import time  # type: ignore
 import numpy as np
 from typing import Generator, Union
 
-from .mps import MPS
-from .projtt import ProjMPO
-from . import tensor_operations as tf
-from ..linalg.krylov.toy import lanczos_evolve_state
-from ..linalg import svd, expm_multiply
-from ..linalg.decomp.svd_robust import TruncationError
+from ..networks.mps import MPS
+from .projections import ProjMPO
+from ..core import tensor_operations as tf
+from ...linalg.krylov.toy import lanczos_evolve_state
+from ...linalg import svd, expm_multiply
+from ...linalg.decomp.svd_robust import TruncationError
 import scipy.linalg
 
 

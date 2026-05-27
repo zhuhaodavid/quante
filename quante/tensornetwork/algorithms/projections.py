@@ -22,8 +22,8 @@ from typing import TypeVar
 from functools import reduce
 T = TypeVar('T')
 
-from . import MPS, MPO
-from . import tensor_operations as tf
+from ..networks import MPS, MPO
+from ..core import tensor_operations as tf
 
 class ProjOper:
     """具体的实例需要包括：

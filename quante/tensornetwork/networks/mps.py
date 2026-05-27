@@ -13,10 +13,10 @@ import re
 if TYPE_CHECKING:
     from quimb.tensor.tensor_1d import MatrixProductState
 
-from .tensor_train import TensorTrain
-from . import tensor_operations as tf
-from .tensor_utils import log_or_not_update, promote_dtype, tt_decompose
-from ..generate.matrix import pauli_matrix
+from ..core.tensor_train import TensorTrain
+from ..core import tensor_operations as tf
+from ..core.tensor_utils import log_or_not_update, promote_dtype, tt_decompose
+from ...generate.matrix import pauli_matrix
 
 
 class MPS(TensorTrain):
@@ -63,7 +63,7 @@ class MPS(TensorTrain):
         if isinstance(another, tuple):
             return BraMPS(self, another)
 
-        from ..generate.operas import SpinOper
+        from ...generate.operas import SpinOper
         if isinstance(another, SpinOper):
             return BraMPS(self, another)
    
@@ -86,7 +86,7 @@ class MPS(TensorTrain):
         return np.exp(self.lognm).item() * qtn.MatrixProductState(res)
 
     def to_itensor(self, filename) -> None:
-        from ..basicfun import save_hdf5
+        from ...basicfun import save_hdf5
 
         assert self.data[0].shape[0] == 1, "只能处理 OBC"
         data_dict = {}
@@ -479,7 +479,7 @@ class MPS(TensorTrain):
             return self.measure_local(operator, pos, logscale)
 
         # -------- Oper --------
-        from ..generate.operas import SpinOper
+        from ...generate.operas import SpinOper
         if isinstance(operator, SpinOper):
             pos, operator = operator._minimal_shift()
             return self.measure_mpo(operator.to_mpo(pauli=pauli), pos, logscale)
@@ -566,7 +566,7 @@ class BraMPS:
                 assert pos is not None
                 return self.inner_mpo(operator, pos, ket)
         # -------- Oper --------
-        from ..generate.operas import SpinOper
+        from ...generate.operas import SpinOper
         if isinstance(self.operator, SpinOper):
             pos, operator = self.operator._minimal_shift()
             return self.inner_mpo(operator.to_mpo(pauli=False), pos, ket)

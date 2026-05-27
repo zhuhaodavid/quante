@@ -8,16 +8,16 @@ import time  # type: ignore
 from tqdm import tqdm
 import warnings
 
-from ..linalg.krylov.toy import lanczos_arpack, lanczos_ground_state, arnoldi_ground_state
-from ..linalg.krylov.eigsolve.arnoldi import Arnoldi
-from ..linalg.krylov.eigsolve.lanczos import Lanczos
-from .tensor_utils import argsort
+from ...linalg.krylov.toy import lanczos_arpack, lanczos_ground_state, arnoldi_ground_state
+from ...linalg.krylov.eigsolve.arnoldi import Arnoldi
+from ...linalg.krylov.eigsolve.lanczos import Lanczos
+from ..core.tensor_utils import argsort
 import numpy as np
 
-from .mps import MPS
-from .mpo import MPO, SumMPO
-from .projtt import (ProjMPO, ProjMPOMPS, ProjSumMPO, ProjOper)
-from . import tensor_operations as tf
+from ..networks.mps import MPS
+from ..networks.mpo import MPO, SumMPO
+from .projections import (ProjMPO, ProjMPOMPS, ProjSumMPO, ProjOper)
+from ..core import tensor_operations as tf
 
 
 def solve_ground_state(oper:'ProjMPO', v, *,

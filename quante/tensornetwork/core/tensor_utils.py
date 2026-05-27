@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2026-05-22 21:30:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-23 00:01:09
+# @Last Modified time: 2026-05-27 11:58:12
 
 
 from copy import deepcopy
@@ -32,20 +32,6 @@ def clone(tensor):
     return deepcopy(tensor)
 
 
-def tonp(tensors):
-    if isinstance(tensors, list):
-        return [tonp(x) for x in tensors]
-    if issparse(tensors):
-        return tensors
-    return np.asarray(tensors)
-
-
-def totc(data, dtype=None):
-    if isinstance(data, list):
-        return [totc(x, dtype=dtype) for x in data]
-    return np.asarray(data, dtype=dtype)
-
-
 def promote_dtype(*datas):
     dtype = np.complex128 if any(np.iscomplexobj(x) for x in datas) else np.float64
     return [np.asarray(x, dtype=dtype) for x in datas]
@@ -53,19 +39,6 @@ def promote_dtype(*datas):
 
 def real_if_close(a, tol=100):
     return np.real_if_close(a, tol=tol)
-
-
-def open_grad(tensors):
-    return None
-
-
-def close_grad(tensors):
-    return None
-
-
-class AdaptiveLRScheduler:
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError("NumPy backend has no optimizer/lr scheduler.")
 
 
 def log_or_not_update(data, lognm, use_log):

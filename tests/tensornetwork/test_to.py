@@ -7,7 +7,9 @@
 
 import unittest
 import numpy as np
-import quante.tensornetwork.tensor_operations as tf
+import quante.tensornetwork as qtn
+
+tf = qtn.tensor_operations
 
 class TestTN(unittest.TestCase):
     def test_noise_proj_left(self):

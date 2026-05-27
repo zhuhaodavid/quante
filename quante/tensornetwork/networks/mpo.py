@@ -15,9 +15,9 @@ if TYPE_CHECKING:
     from .mps import MPS
     from quimb.tensor.tensor_1d import MatrixProductOperator
 
-from .tensor_train import TensorTrain
-from . import tensor_operations as tf
-from .tensor_utils import log_or_not_update, tt_decompose
+from ..core.tensor_train import TensorTrain
+from ..core import tensor_operations as tf
+from ..core.tensor_utils import log_or_not_update, tt_decompose
 
 
 class MPO(TensorTrain):
@@ -41,8 +41,8 @@ class MPO(TensorTrain):
         return tf._full_contract_mpo(self.data) * np.exp(self.lognm)
     
     def to_torch(self, device='cpu'):
-        from ..bridge.torch_utils.networks import MPO as tcMPO  # type: ignore
-        from ..bridge.torch_utils.core_utils import totc  # type: ignore
+        from ...bridge.torch_utils.networks import MPO as tcMPO  # type: ignore
+        from ...bridge.torch_utils.core_utils import totc  # type: ignore
         import torch as tc # type: ignore
         Ws = totc(self.data)
         Ss = totc(self.Ss)
@@ -66,7 +66,7 @@ class MPO(TensorTrain):
         return np.exp(self.lognm).item() * qtn.MatrixProductOperator(res)
 
     def to_itensor(self, filename) -> None:
-        from ..basicfun import save_hdf5
+        from ...basicfun import save_hdf5
 
         assert self.data[0].shape[0] == 1, "只能处理 OBC"
         data_dict = {}
@@ -148,7 +148,7 @@ class MPO(TensorTrain):
 
     @classmethod
     def from_heisenberg(cls, L, j=1, h=0, cyclic=False, pauli=True) -> "MPO":
-        from ..generate.operas import heisenberg_operator
+        from ...generate.operas import heisenberg_operator
 
         ham = heisenberg_operator(L, j=j, h=h, cyclic=cyclic)
         return cls.from_oper(ham, L=L, pauli=pauli)
@@ -395,7 +395,7 @@ class MPO(TensorTrain):
         todo: eig pertube mixer
         todo: dmrg 求第一激发态
         """
-        from .dmrg import DMRG
+        from ..algorithms.dmrg import DMRG
 
         return DMRG(self, psi=psi, **kwargs).run2()
 
@@ -427,7 +427,7 @@ class MPO(TensorTrain):
         ----------
         https://arxiv.org/abs/1408.5056
         """
-        from .tdvp import TDVP
+        from ..algorithms.tdvp import TDVP
 
         return TDVP(mpo=self, psi0=init, time_step=time_step, final_time=final_time, **kwargs).run()
 
