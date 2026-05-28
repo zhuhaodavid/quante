@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-17 10:10:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-06-17 10:27:06
+# @Last Modified time: 2026-05-27 22:27:39
 
 
 import math
@@ -12,12 +12,12 @@ import itertools
 from typing import Union, Optional
 import functools
 
-__all__ = [
-    "kron",
-    "kron_power",
-    "matrix_power",
-    "ikron",
-]
+# __all__ = [
+#     "kron",
+#     "kron_power",
+#     "matrix_power",
+#     "ikron",
+# ]
 
 def kron(
     *ops: Union[_np.ndarray, _sparse.sparray],

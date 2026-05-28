@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-05 21:30:59
+# @Last Modified time: 2026-05-28 00:16:58
 
 
 from scipy import sparse as sps
@@ -181,13 +181,14 @@ class EvolveEngine:
         """
         calculate the time evolution of the state vector
         """
-        try:
-            dt = self.dts[self.cur_step]
-        except:
+        if self.cur_step >= len(self.tlist):
             _warnings.warn(
                 f"t {self.evolved_time} has been reached, dt = {self.dts[-1]} will be used"
             )
             dt = self.dts[-1]
+        else:
+            dt = self.dts[self.cur_step]
+        
         self.cur_step += 1
         if dt != 0:
             self.evolved_time += dt

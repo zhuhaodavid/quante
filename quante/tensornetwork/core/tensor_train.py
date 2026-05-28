@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-23 18:35:26
+# @Last Modified time: 2026-05-28 02:47:42
 
 import copy
 import warnings
@@ -548,6 +548,15 @@ class TensorTrain:
         assert self.data[pos].ndim == phi.ndim, "维度不匹配"
         phi, self.lognm = log_or_not_update(phi, self.lognm, use_log=normalize)
         self.data[pos] = phi
+        if not unitary_gate:
+            if self.is_canonical_form():
+                self.llim = 0
+                self.rlim = pos
+            else:
+                if self.llim > pos:
+                    self.llim = pos
+                if self.rlim < pos:
+                    self.rlim = pos
         return TruncationError(0.0, 1.0)
     
     def update_two_site_(self, pos, W, direction, *,
@@ -866,7 +875,11 @@ class TensorTrain:
             
             # 替换
             linkdim2 = len(S)
-            self.data[j] = V.T.reshape(linkdim2, *self.data[j].shape[1:-1], linkdim)
+            if self.data[j].ndim == 3:
+                nshape = (Ws_mpo.data[j].shape[1], )
+            else:
+                nshape = (Ws_mpo.data[j].shape[1], self.data[j].shape[2])
+            self.data[j] = V.T.reshape(linkdim2, *nshape, linkdim)
             linkdim = linkdim2
 
             # 前进一步

@@ -2,9 +2,9 @@
 # @Author: hzhu
 # @Date:   2025-01-18 16:01:25
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-01-18 16:02:06
+# @Last Modified time: 2026-05-27 21:54:44
 
-from . import algorithms, core, networks, opensystem
+from . import algorithms, core, networks
 from .algorithms import (
     DMRG,
     TDVP,
@@ -42,7 +42,6 @@ __all__ = [
     "core",
     "networks",
     "algorithms",
-    "opensystem",
     "MPS",
     "BraMPS",
     "MPO",
