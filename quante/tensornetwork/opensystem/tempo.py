@@ -2,11 +2,12 @@
 # @Author: hzhu
 # @Date:   2026-05-27 23:04:05
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-28 02:44:42
+# @Last Modified time: 2026-05-29 12:40:39
 
 from dataclasses import dataclass
 import math
 import warnings
+from typing import Callable, Literal
 
 from numpy import ndarray
 import numpy as np
@@ -16,6 +17,9 @@ from .system import System
 from .bath import Bath
 from ..networks import MPS, MPO
 from ..core import tensor_operations as top
+from ..core.tensor_utils import TruncationError
+
+ApplyMPOMethod = Literal["naive", "density_matrix", "zip_up"]
 
 def create_delta(tensor, index_scrambling):
     tensor = np.asarray(tensor)
@@ -39,8 +43,24 @@ class TempoParams:
     chi_max: int | None = None
     svd_min: float | None = None
     trunc_cut: float | None = None
-    apply_mpo_method: str = "naive"
+    apply_mpo_method: ApplyMPOMethod = "naive"
     normalize: bool = True
+
+    def __post_init__(self):
+        if self.dt <= 0:
+            raise ValueError(f"dt must be positive, got {self.dt}")
+        if self.tcut < 0:
+            raise ValueError(f"tcut must be non-negative, got {self.tcut}")
+        if self.epsrel <= 0:
+            raise ValueError(f"epsrel must be positive, got {self.epsrel}")
+        if self.chi_max is not None and self.chi_max <= 0:
+            raise ValueError(f"chi_max must be positive or None, got {self.chi_max}")
+        if self.svd_min is not None and self.svd_min < 0:
+            raise ValueError(f"svd_min must be non-negative or None, got {self.svd_min}")
+        if self.trunc_cut is not None and self.trunc_cut < 0:
+            raise ValueError(f"trunc_cut must be non-negative or None, got {self.trunc_cut}")
+        if self.apply_mpo_method not in ("naive", "density_matrix", "zip_up"):
+            raise ValueError(f"apply_mpo_method {self.apply_mpo_method!r} is not supported")
 
     @property
     def dkmax(self) -> int:  # noqa: A003
@@ -69,7 +89,9 @@ class TempoEngine:
         self.dts = np.insert(np.diff(times), 0, times[0])
         self.cur_step = 0
         self.cur_layer = 0
-        self.spetral_density = bath.spectral_density
+        self.spectral_density = bath.spectral_density
+        self.truncation_errors = []
+        self.last_truncation_error = TruncationError(0.0, 1.0)
     
         self.initialize()
     
@@ -88,7 +110,7 @@ class TempoEngine:
             )
         
         influences = []
-        for i in range(self.params.dkmax):
+        for i in range(self.params.dkmax+1):
             infl = self._influence(i)
             if i == 0:
                 infl_four_legs = create_delta(infl, [1, 0, 0, 1])
@@ -119,13 +141,12 @@ class TempoEngine:
         elif dk < 0:
             t1 = float(dkmax) * dt
             return None
-            shape = "rectangle"
         else:
             t1 = float(dk) * dt
             t2 = None
             shape = "square"
         
-        eta_dk = self.spetral_density.correlation_2d_integral(
+        eta_dk = self.spectral_density.correlation_2d_integral(
             delta=dt,
             t1=t1,
             t2=t2,
@@ -144,7 +165,7 @@ class TempoEngine:
         return infl
     
     def run(self):
-        """Run the TEMPO tensornetwork evolution."""
+        """Advance the TEMPO network by one time step."""
         if self.cur_step >= len(self.times):
             warnings.warn(
                 f"t {self.times[-1]} has been reached, dt = {self.dts[-1]} will be used"
@@ -153,11 +174,22 @@ class TempoEngine:
         else:
             dt = self.dts[self.cur_step]
         
+        trunc_err = TruncationError(0.0, 1.0)
         if not np.isclose(dt, 0.0): 
-            self.update_mps(dt)
+            trunc_err = self.update_mps(dt)
             self.cur_layer += 1
+        self.last_truncation_error = trunc_err
+        self.truncation_errors.append(trunc_err)
         self.cur_step += 1
-    
+
+    @property
+    def truncation_error(self):
+        """Return the accumulated TEMPO truncation error."""
+        err = TruncationError(0.0, 1.0)
+        for trunc_err in self.truncation_errors:
+            err += trunc_err
+        return err
+
     def update_mps(self, dt: float):
         """Update the MPS by applying the TEMPO evolution.
         
@@ -169,6 +201,16 @@ class TempoEngine:
                 ◻——————◻——————◻——————◻
         """
         prop_1, prop_2 = self.system.get_propagators(dt)
+        mpo = self._current_mpo()
+
+        self._apply_first_propagator_(prop_1)
+        self._align_mps_to_mpo_(mpo)
+
+        trunc_err = self._apply_influence_mpo_(mpo)
+        self._append_second_propagator_(prop_2)
+        return trunc_err
+
+    def _current_mpo(self):
         if self.cur_layer <= self.params.dkmax:
             mpo = MPO(self.mpo.data[-self.cur_layer-1:])
         else:
@@ -179,31 +221,88 @@ class TempoEngine:
                 mpo.data.append(infl_tensor)
                 mpo.data.pop(0)
         sum_west_(mpo)
+        return mpo
 
+    def _apply_first_propagator_(self, prop_1):
         self.mps.apply_gate_(self.mps.L-1, gate=prop_1, gate_range=1)
 
+    def _align_mps_to_mpo_(self, mpo):
         if self.mps.L > mpo.L:
             sum_north_(self.mps, self.mps.L - mpo.L)
         assert mpo.L == self.mps.L
 
-        trunc_para = (
+    def _trunc_para(self):
+        return (
             self.params.chi_max,
             self.params.svd_min,
             self.params.trunc_cut,
         )
+
+    def _apply_influence_mpo_(self, mpo):
+        trunc_para = self._trunc_para()
         nm = self.params.normalize
+        right_boundary_shape = _fold_right_boundary_into_north_(mpo)
         if self.params.apply_mpo_method == 'naive':
             self.mps.apply_mpo_naive_(mpo)
-            a, b = prop_2.shape
-            append_mps_(self.mps, prop_2.T.reshape(b,a,1))
-            self.mps.canonicalize_(trunc_para=trunc_para, canonicalform=False, qrnormalize=nm)
+            trunc_err = self.mps.canonicalize_(
+                trunc_para=trunc_para,
+                canonicalform=False,
+                qrnormalize=nm,
+            )
         elif self.params.apply_mpo_method == 'density_matrix':
-            append_mps_(self.mps, np.ones(1).reshape(1,1,1))
-            a, b = prop_2.shape
-            append_mpo_(mpo, prop_2.T.reshape(b,a,1,1))
-            self.mps.apply_mpo_(mpo, trunc_para=trunc_para, normalize=nm)
+            trunc_err = self.mps.apply_mpo_(mpo, trunc_para=trunc_para, normalize=nm)
+        elif self.params.apply_mpo_method == 'zip_up':
+            trunc_err = self.mps.apply_mpo_zip_up(
+                mpo,
+                trunc_para=trunc_para,
+                direction="right",
+                normalize=nm,
+            )
+            self.mps.data, self.mps.Ss, sweep_trunc_err = top._right2left_SVD(
+                self.mps.data,
+                self.mps.L,
+                trunc_para=trunc_para,
+            )
+            trunc_err += sweep_trunc_err
+            self.mps.Ss[0] = self.mps.Ss[-1] = np.array([1.], dtype=self.mps.dtype)
+            self.mps.llim = self.mps.rlim = 0
+        else:
+            raise ValueError(f"apply_mpo_method {self.params.apply_mpo_method!r} is not supported")
     
-    def get_rho(self):
+        _unfold_right_boundary_from_north_(self.mps, right_boundary_shape)
+        return _as_truncation_error(trunc_err)
+
+    def _append_second_propagator_(self, prop_2):
+        a, b = prop_2.shape
+        append_mps_(self.mps, prop_2.T.reshape(b,a,1))
+
+    def measure(
+        self,
+        obs: ndarray | Callable[[float, ndarray], ndarray] | None = None,
+        *,
+        progressbar: bool = False,
+    ):
+        """Run remaining steps and measure each reduced density matrix."""
+        values = []
+        stop_step = len(self.times)
+        iterator = range(self.cur_step, stop_step)
+        if progressbar:
+            from tqdm import tqdm
+            iterator = tqdm(iterator, ascii=True)
+
+        for _ in iterator:
+            self.run()
+            rho = self.density_matrix()
+            t = self.times[self.cur_step - 1]
+            if obs is None:
+                values.append(rho)
+            elif callable(obs):
+                values.append(obs(t, rho))
+            else:
+                values.append(np.trace(obs @ rho))
+        return np.real_if_close(values)
+    
+    def density_matrix(self):
         """Return the density matrix of the system."""
         left = np.sum(self.mps.data[0], axis=1, keepdims=False)
         for i in range(1, self.mps.L-1):
@@ -212,13 +311,34 @@ class TempoEngine:
         
         right = self.mps.data[-1]
         a, b, c = right.shape
-        rho = left @ right.reshape(a,b).reshape(self.dim, self.dim)
+        rho = (left @ right.reshape(a,b)).reshape(self.dim, self.dim)
         rho *= np.exp(self.mps.lognm)
         return rho
 
 
 def sum_west_(mpo):
     mpo.data[0] = np.sum(mpo.data[0], axis=0, keepdims=True)
+
+def _as_truncation_error(trunc_err):
+    if trunc_err is None:
+        return TruncationError(0.0, 1.0)
+    return trunc_err
+
+def _fold_right_boundary_into_north_(mpo):
+    """Fold the right MPO boundary leg into the north/output leg."""
+    left, north, south, right = mpo.data[-1].shape
+    mpo.data[-1] = (
+        mpo.data[-1]
+        .swapaxes(2, 3)
+        .reshape(left, north * right, south, 1)
+    )
+    return north, right
+
+def _unfold_right_boundary_from_north_(mps, shape):
+    """Undo ``_fold_right_boundary_into_north_`` on the right MPS tensor."""
+    north, right = shape
+    mps.data[-1] = mps.data[-1].reshape(-1, north, right)
+    return mps
 
 def append_mps_(mps, tensor):
     """Append one MPS tensor to the right boundary in place."""

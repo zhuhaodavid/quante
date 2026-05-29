@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2026-05-22 22:35:13
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-23 18:23:11
+# @Last Modified time: 2026-05-29 13:03:42
 
 
 import math as math_lib
@@ -30,7 +30,19 @@ class MPO(TensorTrain):
         lognm: float = None,
         L: int = None,
     ):
+        Ws = self._ensure_open_boundary_tensors(Ws)
         super().__init__(Ws, Ss, llim, rlim, lognm, L=L)
+
+    @staticmethod
+    def _ensure_open_boundary_tensors(Ws):
+        if len(Ws) > 0:
+            if Ws[0].ndim == 3:
+                a, b, c = Ws[0].shape
+                Ws[0] = Ws[0].reshape(1, a, b, c)
+            if Ws[-1].ndim == 3:
+                a, b, c = Ws[-1].shape
+                Ws[-1] = Ws[-1].reshape(a, b, c, 1)
+        return Ws
 
     _dm_get_R = tf._dm_get_R_mpo
     _dm_left2right = tf._dm_left2right_mpo
@@ -195,12 +207,16 @@ class MPO(TensorTrain):
         return MPO(Ws=tt, Ss=Ss, llim=0, rlim=0, lognm=lognm)
 
     def _get_str(self, full=False, l=4):
+        try:
+            norm = self.norm()
+        except:
+            norm = 'NaN'
         out1 = (
             self.__class__.__name__
             + ";  "
             + str(self.data[0].dtype)
             + ";  "
-            + f"norm: {self.norm():.3e}"
+            + f"norm: {norm}"
             + ";  "
             + f"maxbonddim: {self.maxbonddim()}"
             + ";\n"
@@ -218,72 +234,6 @@ class MPO(TensorTrain):
         out5 = "bonddim: " + bonddim + "\n"
         out6 = "site:    " + site + "\n"
         return out1 + out2 + out3 + out4 + out5 + out6
-        # out1 = (
-        #     self.__class__.__name__
-        #     + ";  "
-        #     + str(self.data[0].dtype)
-        #     + ";  "
-        #     + f"norm: {self.norm():.3e}"
-        #     + ";  "
-        #     + f"maxbonddim: {self.maxbonddim()}"
-        #     + ";\n"
-        # )
-        # L = len(self.data)
-        # if L < 15:
-        #     full = True
-        # out2 = "physdim: "
-        # out6 = "physdim: "
-        # out3 = "         --"
-        # out4 = "bonddim: "
-        # out5 = "site:     "
-        # llim = self.llim if self.llim is not None else -1
-        # rlim = self.rlim if self.rlim is not None else -1
-        # ldis = 0
-        # rdis = llim if llim > -1 else rlim if rlim > -1 else L
-        # tag = False
-        # for i in range(L):
-        #     if full or ldis < 2 or rdis <= 2:
-        #         a, b, d, c = self.data[i].shape
-        #         ldis += 1
-        #         rdis -= 1
-        #         if i < llim:
-        #             out3 += "--|>--"
-        #             ldis = 1 if rdis <= 0 else ldis
-        #             rdis = (llim - i - 1) if rdis <= 0 else rdis
-        #         elif i > rlim:
-        #             out3 += "-<|---"
-        #             ldis = 1 if rdis <= 0 else ldis
-        #             rdis = (L - i - 1) if rdis <= 0 else rdis
-        #         else:
-        #             out3 += "--O---"
-        #             ldis = 1 if rdis <= 0 else ldis
-        #             rdis = (rlim - i - 1) if rdis <= 0 else rdis
-        #         out2 += f"{b:>4}| "
-        #         out6 += f"{d:>4}| "
-        #         out4 += f"{a:^5} " if tag else f"{a:^4}  "
-        #         out5 += f"  {i:^4}"
-        #         tag = False
-        #     elif ldis == 2:
-        #         a, b, d, c = self.data[i].shape
-        #         ldis += 1
-        #         rdis -= 1
-        #         out3 += " ... -"
-        #         out2 += f"   ..."
-        #         out6 += f"   ..."
-        #         out4 = out4[:-1] + f"{a:^4}..."
-        #         out5 += f"  ... "
-        #         tag = True
-        #     else:
-        #         ldis += 1
-        #         rdis -= 1
-
-        # out4 += f" {c}"
-        # out2 += "\n"
-        # out6 += "\n"
-        # out3 += "-\n"
-        # out4 += "\n"
-        # out = out1 + out2 + out3 + out6 + out4 + out5
-        # return out
 
     def show(self, full=False):
         print(self._get_str(full=full))

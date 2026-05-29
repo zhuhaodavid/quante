@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2024-07-08 13:53:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-23 20:10:25
+# @Last Modified time: 2026-05-28 12:44:48
 
 import numpy as np
 
@@ -593,7 +593,7 @@ def canonicalize(
     As, lognm = _left2right_QR(Ws, L, qrnormalize=qrnormalize)
     # print("SVD")
     Bs, Ss, trunc_err = _right2left_SVD(As, L, trunc_para=trunc_para)
-    Ss[0] = Ss[-1] = np.array([1.], dtype=Ss[1].dtype)
+    Ss[0] = Ss[-1] = np.array([1.])
     return Bs, Ss, lognm, trunc_err
 
 

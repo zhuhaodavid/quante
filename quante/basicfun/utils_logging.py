@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:13:41
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-24 13:37:08
+# @Last Modified time: 2026-05-29 12:57:10
  
 import os as _os
 import ast as _ast
@@ -12,6 +12,7 @@ import time as _time
 import inspect as _inspect
 import logging as _logging
 import traceback as _traceback
+from tqdm import tqdm as _tqdm
 
 from types import FunctionType
 from typing import Union
@@ -21,7 +22,7 @@ import platform as _platform
 import difflib
 
 import warnings
-from functools import wraps
+from functools import wraps, partial
 
 
 __all__ = [
@@ -35,6 +36,7 @@ __all__ = [
     "logger",
     "set_show",
     "deprecated",
+    "tqdm",
 ]
 
 # ===================================
@@ -724,3 +726,11 @@ def deprecated(reason):
             return func(*args, **kwargs)
         return wrapper
     return decorator
+
+bar_format = (
+    "{percentage:5.1f}% "
+    "{n_fmt:>4} of {total_fmt:<4} "
+    "[{bar:40}] "
+    "{elapsed}<{remaining}, {rate_fmt}"
+)
+tqdm = partial(_tqdm, ascii=True, ncols=90, bar_format=bar_format)

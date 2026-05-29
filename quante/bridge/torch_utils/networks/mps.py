@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-23 02:36:36
+# @Last Modified time: 2026-05-28 16:56:32
 
 import numpy as np
 import torch as tc
@@ -26,7 +26,19 @@ class MPS(TensorTrain):
         lognm: float = None,
         L: int = None,
     ):
+        Ws = self._ensure_open_boundary_tensors(Ws)
         super().__init__(Ws, Ss, llim, rlim, lognm, L=L)
+
+    @staticmethod
+    def _ensure_open_boundary_tensors(Ws):
+        if len(Ws) > 0:
+            if Ws[0].ndim == 2:
+                a, b = Ws[0].shape
+                Ws[0] = Ws[0].reshape(1, a, b)
+            if Ws[-1].ndim == 2:
+                a, b = Ws[-1].shape
+                Ws[-1] = Ws[-1].reshape(a, b, 1)
+        return Ws
 
     _dm_get_R = tf._dm_get_R_mps
     _dm_left2right = tf._dm_left2right_mps

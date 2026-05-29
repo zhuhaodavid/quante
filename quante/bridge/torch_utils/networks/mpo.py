@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:44:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-23 02:44:53
+# @Last Modified time: 2026-05-28 16:57:30
 
 import numpy as np
 import torch as tc
@@ -29,7 +29,19 @@ class MPO(TensorTrain):
         L: int = None,
         **kwargs
     ):
+        Ws = self._ensure_open_boundary_tensors(Ws)
         super().__init__(Ws, Ss, llim, rlim, lognm, L=L, **kwargs)
+
+    @staticmethod
+    def _ensure_open_boundary_tensors(Ws):
+        if len(Ws) > 0:
+            if Ws[0].ndim == 3:
+                a, b, c = Ws[0].shape
+                Ws[0] = Ws[0].reshape(1, a, b, c)
+            if Ws[-1].ndim == 3:
+                a, b, c = Ws[-1].shape
+                Ws[-1] = Ws[-1].reshape(a, b, c, 1)
+        return Ws
 
     _dm_get_R = tf._dm_get_R_mpo
     _dm_left2right = tf._dm_left2right_mpo
@@ -174,6 +186,10 @@ class MPO(TensorTrain):
         return MPO(Ws=tt, Ss=Ss, llim=0, rlim=0, lognm=lognm)
 
     def _get_str(self, full=False):
+        try:
+            norm = self.norm()
+        except:
+            norm = 'NaN'
         out1 = self.__class__.__name__ +";  " + str(self.data[0].dtype) + ";  " + f"norm: {self.norm():.3e}" + ";  " + f"maxbonddim: {self.maxbonddim()}" + ";  " + f"device: {self.device.type}"  + ";\n"
         L = len(self.data)
         if L < 15:

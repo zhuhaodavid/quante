@@ -2,13 +2,15 @@
 # @Author: hzhu
 # @Date:   2024-10-09 18:38:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-22 23:07:26
+# @Last Modified time: 2026-05-28 16:55:17
 
 
 import numpy as np
 from ....linalg.decomp.svd_robust import TruncationError
 import torch as tc
 # from ....basicfun import save_hdf5, load_hdf5
+
+RELATIVE_TRACT_METHOD_DEBUG = False
 
 def log_or_not_update(data, lognm, use_log):
     if use_log:
@@ -29,9 +31,16 @@ def truncate(S, chi_max=None, svd_min=None, trunc_cut=None):
     if svd_min is not None:
         good = good & (S > svd_min)
     if trunc_cut is not None:
-        normS = S / tc.norm(S)
-        revert_cumsum = tc.flip((tc.cumsum(tc.flip(normS**2, [0]), 0)), [0])
-        good = good & (revert_cumsum > trunc_cut)
+        if RELATIVE_TRACT_METHOD_DEBUG:
+            trunc_errs = tc.flip(tc.sqrt(tc.cumsum(tc.square(tc.flip(S)))))
+            abs_max_truncation_error = trunc_cut * S[0]
+            good = trunc_errs > abs_max_truncation_error
+        else:
+            norm = tc.norm(S)
+            if norm != 0:
+                normS = S / norm
+                revert_cumsum = tc.flip((tc.cumsum(tc.flip(normS**2, [0]), 0)), [0])
+                good = good & (revert_cumsum > trunc_cut)
     eps = tc.square(S[~good]).sum()
     ov = 1. - 2. * eps
     return good, TruncationError(eps, ov)

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2026-05-22 22:29:52
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-23 22:07:09
+# @Last Modified time: 2026-05-28 15:26:36
 
 
 from typing import TYPE_CHECKING, Union
@@ -29,7 +29,19 @@ class MPS(TensorTrain):
         lognm: float = None,
         L: int = None,
     ):
+        Ws = self._ensure_open_boundary_tensors(Ws)
         super().__init__(Ws, Ss, llim, rlim, lognm, L=L)
+
+    @staticmethod
+    def _ensure_open_boundary_tensors(Ws):
+        if len(Ws) > 0:
+            if Ws[0].ndim == 2:
+                a, b = Ws[0].shape
+                Ws[0] = Ws[0].reshape(1, a, b)
+            if Ws[-1].ndim == 2:
+                a, b = Ws[-1].shape
+                Ws[-1] = Ws[-1].reshape(a, b, 1)
+        return Ws
 
     _dm_get_R = tf._dm_get_R_mps
     _dm_left2right = tf._dm_left2right_mps

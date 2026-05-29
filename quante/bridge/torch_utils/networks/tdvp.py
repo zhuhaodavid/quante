@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:45:38
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-08-30 22:17:21
+# @Last Modified time: 2026-05-29 12:15:05
 
 import time  # type: ignore
 import torch as tc
@@ -96,7 +96,7 @@ class TDVP:
             new_cutoff = [self.trunc_cut[-1]] * (nsweeps - len(self.trunc_cut))
             self.trunc_cut.extend(new_cutoff)
 
-    def run(self) -> Generator[tuple[Union[float, complex], MPS], None, None]:
+    def step(self) -> Generator[tuple[Union[float, complex], MPS], None, None]:
         # 参数检查
         nsweeps = int(np.real(self.final_time/self.time_step))
         self.precheck(nsweeps)

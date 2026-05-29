@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2026-05-22 21:30:40
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-27 11:58:12
+# @Last Modified time: 2026-05-29 12:34:49
 
 
 from copy import deepcopy
@@ -10,9 +10,8 @@ from dataclasses import dataclass
 
 import numpy as np
 import scipy.linalg
-import scipy.sparse.linalg
-from scipy.sparse import issparse
 
+RELATIVE_TRACT_METHOD_DEBUG = False
 
 @dataclass
 class TruncationError:
@@ -61,11 +60,16 @@ def truncate(S, chi_max=None, svd_min=None, trunc_cut=None):
     if svd_min is not None:
         good &= S > svd_min
     if trunc_cut is not None:
-        norm = np.linalg.norm(S)
-        if norm != 0:
-            normS = S / norm
-            tail = np.flip(np.cumsum(np.flip(normS**2)))
-            good &= tail > trunc_cut
+        if RELATIVE_TRACT_METHOD_DEBUG:
+            trunc_errs = np.sqrt(np.cumsum(np.square(S[::-1])))[::-1]
+            abs_max_truncation_error = trunc_cut * S[0]
+            good = trunc_errs > abs_max_truncation_error
+        else:
+            norm = np.linalg.norm(S)
+            if norm != 0:
+                normS = S / norm
+                tail = np.flip(np.cumsum(np.flip(normS**2)))
+                good &= tail > trunc_cut
     eps = float(np.sum(S[~good] ** 2))
     return good, TruncationError(eps=eps, ov=1.0 - 2.0 * eps)
 

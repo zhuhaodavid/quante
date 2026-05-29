@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-16 18:32:54
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-28 00:16:58
+# @Last Modified time: 2026-05-29 12:17:54
 
 
 from scipy import sparse as sps
@@ -13,7 +13,6 @@ import numpy as _np
 import warnings as _warnings
 from typing import Callable, Literal
 from functools import lru_cache
-from typing import Literal
 from tqdm import tqdm
 
 from ...measure.expect import expect
@@ -44,7 +43,7 @@ class EvolveEngine:
             'eig-cpu', 'eig-cuda:0', 'mul-cpu', 'mul-cuda:0',
             'RK45', 'RK23', 'DOP853', 'Radau', 'BDF', 'LSODA'
         ] = 'mul-cpu',
-        ivp_kwargs: dict = {}
+        ivp_kwargs: dict | None = None
     ):
         """calculate the time evolution of the state vector
 
@@ -108,7 +107,7 @@ class EvolveEngine:
             else:
                 try:
                     self.csr_mt = ham.tocsr()
-                except:
+                except AttributeError:
                     self.csr_mt = sps.csr_array(ham)
         
             # the initial state should be a column vector
@@ -140,7 +139,8 @@ class EvolveEngine:
         self.herm = herm
         self.method = method
         self.ivp_kwargs = dict(rtol=1e-9, atol=1e-12)
-        self.ivp_kwargs.update(**ivp_kwargs)
+        if ivp_kwargs is not None:
+            self.ivp_kwargs.update(**ivp_kwargs)
         self._eigen = self._UinvPsi = self._all_states = None
 
     ####################
@@ -299,8 +299,8 @@ class EvolveEngine:
                         f"Error details:\n{e}"
                     ) from e
             try:
-                return _np.real_if_close(res)    
-            except:
+                return _np.real_if_close(res)
+            except (TypeError, ValueError):
                 return res
 
     def plot_measure(
@@ -434,7 +434,7 @@ def evolve_and_measure(
     ] = 'mul-cpu',
     herm = None,
     progressbar: bool = True,
-    ivp_kwargs = {},
+    ivp_kwargs: dict | None = None,
 ):
     """
     A wrapper for the `EvolveEngine().measure()`

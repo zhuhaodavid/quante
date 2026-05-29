@@ -113,6 +113,12 @@ class TestTN(unittest.TestCase):
         vec1 = ψ1.to_vector()
         vec2 = M1.to_matrix() @ ψ.to_vector()
         self.assertTrue(np.allclose(vec1, vec2))
+
+        for direction in ("right", "left"):
+            ψ1 = ψ.copy()
+            ψ1.apply_mpo_zip_up(M1, direction=direction)
+            vec1 = ψ1.to_vector()
+            self.assertTrue(np.allclose(vec1, vec2))
     
     def test_swapsite(self):
         vec = np.random.randn(*[2]*8).astype(np.float64)

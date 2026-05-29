@@ -2,13 +2,12 @@
 # @Author: hzhu
 # @Date:   2026-05-27 21:53:55
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-28 02:49:54
+# @Last Modified time: 2026-05-28 11:43:03
 
 import numpy as np
 from numpy import ndarray
 
 from ...linalg.matops import super as opr
-from .bath_correlation import SpectralDensity
 
 from typing import Callable, Optional, Text
 
@@ -20,7 +19,7 @@ class Bath:
     def __init__(
             self,
             coupling_oper: ndarray,
-            spectral_density: SpectralDensity,
+            spectral_density: 'SpectralDensity',
         ) -> None:
         assert np.allclose(np.diag(coupling_oper.diagonal()), coupling_oper), \
             "Coupling operator must be hermitian."

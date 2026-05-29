@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-01-18 15:43:04
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-28 02:47:42
+# @Last Modified time: 2026-05-28 12:48:34
 
 import copy
 import warnings
@@ -198,6 +198,8 @@ class TensorTrain:
         return type(self)(self.data, lognm=lognmber)
 
     def maxbonddim(self):
+        if len(self.data) == 1:
+            return 1
         return max([i.shape[0] for i in self.data[1:]])
     
     def bonddims(self):
@@ -841,7 +843,8 @@ class TensorTrain:
         n = len(Ws_mpo.data)
         
         if n == 1:
-            self.data[0] = Ws_mpo.data[0] @ self.data[0]
+            self.data[0] = tf._apply_on_mps_step(Ws_mpo.data[0], self.data[0])
+            # self.data[0] = Ws_mpo.data[0] @ self.data[0]
             return None
         
         dtype = self.dtype
@@ -925,6 +928,99 @@ class TensorTrain:
         """
         for i in range(len(self.data)):
             self.data[i] = type(self)._apply_mpo_step(Ws_mpo.data[i], self.data[i])
+    
+    def apply_mpo_zip_up(
+        self,
+        Ws_mpo,
+        trunc_para: tuple[int, float, float] = (None, None, None),
+        *,
+        direction: str = "right",
+        updateS: bool = True,
+        normalize: bool = False,
+    ) -> TruncationError:
+        """Apply an MPO with the zip-up algorithm.
+
+        The local MPO-MPS/MPO contraction is compressed immediately by SVD,
+        so only one matrix ``carry`` is propagated through the chain instead
+        of first building the full product-bond tensor train.
+        """
+        n = len(Ws_mpo.data)
+        assert n == len(self.data), f"MPO 和 TensorTrain 的长度应该相等: {n} != {len(self.data)}"
+        if n == 1:
+            self.apply_mpo_naive_(Ws_mpo)
+            self.lognm = self.lognm + Ws_mpo.lognm
+            self.llim = self.rlim = 0
+            return TruncationError(0.0, 1.0)
+
+        trunc_err_sum = TruncationError(0.0, 1.0)
+
+        if direction == "right":
+            carry = None
+            for j in range(n - 1):
+                theta = type(self)._apply_mpo_step(Ws_mpo.data[j], self.data[j])
+                if carry is not None:
+                    raw_left = theta.shape[0]
+                    theta = (carry @ theta.reshape(raw_left, -1)).reshape(
+                        carry.shape[0], *theta.shape[1:]
+                    )
+
+                Wj, S, Vh, trunc_err = svd(
+                    theta,
+                    lr_indx=[list(range(theta.ndim - 1)), [theta.ndim - 1]],
+                    trunc_para=trunc_para,
+                )
+                S, self.lognm = log_or_not_update(S, self.lognm, use_log=normalize)
+                self.data[j] = Wj
+                carry = S.reshape(-1, 1) * Vh.reshape(len(S), -1)
+                trunc_err_sum += trunc_err
+                if updateS:
+                    self.Ss[j + 1] = S
+
+            theta = type(self)._apply_mpo_step(Ws_mpo.data[-1], self.data[-1])
+            raw_left = theta.shape[0]
+            theta = (carry @ theta.reshape(raw_left, -1)).reshape(
+                carry.shape[0], *theta.shape[1:]
+            )
+            theta, self.lognm = log_or_not_update(theta, self.lognm, use_log=normalize)
+            self.data[-1] = theta
+            self.llim = self.rlim = n - 1
+
+        elif direction == "left":
+            carry = None
+            for j in range(n - 1, 0, -1):
+                theta = type(self)._apply_mpo_step(Ws_mpo.data[j], self.data[j])
+                if carry is not None:
+                    raw_right = theta.shape[-1]
+                    theta = (theta.reshape(-1, raw_right) @ carry).reshape(
+                        *theta.shape[:-1], carry.shape[-1]
+                    )
+
+                U, S, Wj, trunc_err = svd(
+                    theta,
+                    lr_indx=[[0], list(range(1, theta.ndim))],
+                    trunc_para=trunc_para,
+                )
+                S, self.lognm = log_or_not_update(S, self.lognm, use_log=normalize)
+                self.data[j] = Wj
+                carry = U.reshape(-1, len(S)) * S.reshape(1, -1)
+                trunc_err_sum += trunc_err
+                if updateS:
+                    self.Ss[j] = S
+
+            theta = type(self)._apply_mpo_step(Ws_mpo.data[0], self.data[0])
+            raw_right = theta.shape[-1]
+            theta = (theta.reshape(-1, raw_right) @ carry).reshape(
+                *theta.shape[:-1], carry.shape[-1]
+            )
+            theta, self.lognm = log_or_not_update(theta, self.lognm, use_log=normalize)
+            self.data[0] = theta
+            self.llim = self.rlim = 0
+
+        else:
+            raise ValueError(f"not defined direction (left or right): {direction}")
+
+        self.lognm = self.lognm + Ws_mpo.lognm
+        return trunc_err_sum
 
 
     def apply_submpo_(self, Ws_mpo, start_pos: int):
