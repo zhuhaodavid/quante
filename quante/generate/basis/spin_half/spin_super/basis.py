@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-10-01 15:20:57
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-13 23:32:23
+# @Last Modified time: 2026-05-30 22:39:05
 
 from ...basis_class import SpinHalfBasis
 import numpy as np
@@ -203,12 +203,29 @@ class BasisZ2N(SpinHalfSuperBasis):
                 self.s_list, row_init, col_init, ME_init
             )
     
-    def project(self, vec):
+    def _project_from_Nup2_space(self, vec, Nup2):
+        from ..spin_1d.basis_core import construct_Nup_basis
+        from .basis_core import project_Nup2_space_Z2N
+        nup1, nup2 = Nup2
+        Ns1, s1_list = construct_Nup_basis(self.L, nup1)
+        Ns2, s2_list = construct_Nup_basis(self.L, nup2)
+        assert vec.shape[0] == Ns1 * Ns2, (
+            f"vec has length {vec.shape[0]}, but Nup2={Nup2} space has length {Ns1 * Ns2}"
+        )
+        return project_Nup2_space_Z2N(
+            vec, self.L, s1_list, s2_list, self.s_list, self.Ns_sym, self.Ns,
+            self._ancillary_perm, self.perm, self.block
+        )
+
+    def project(self, vec, Nup2=None):
         """Project a vector to the symmetry sector.
         """
         from .basis_core import project_Z2N
         if vec.ndim == 1:
             vec = vec.reshape(-1,1)
+        if Nup2 is not None:
+            res = self._project_from_Nup2_space(vec, Nup2)
+            return np.real_if_close(res)
         res = project_Z2N(vec, 2*self.L, self.s_list, self.Ns_sym, self.Ns, self._ancillary_perm, self.perm, self.block)
         return np.real_if_close(res)
 

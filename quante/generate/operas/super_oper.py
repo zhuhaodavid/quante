@@ -326,7 +326,7 @@ class Lindbladian(SpinOper):
         separate, so ODE methods can apply the Lindblad equation directly to a
         density matrix without materializing the full Liouvillian.
         """
-        from .dynamics import LiouvillianDynamics
+        from ..dynamics import LiouvillianDynamics
         from ..basis.spin_half.spin_1d.basis import SpinHalf1DBasis
 
         if not isinstance(basis, SpinHalf1DBasis):

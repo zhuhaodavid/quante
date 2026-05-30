@@ -12,7 +12,7 @@ from scipy import sparse as sps
 from scipy.sparse.linalg import LinearOperator, eigsh, spsolve, svds
 
 if TYPE_CHECKING:
-    from ...generate.operas.dynamics import LiouvillianDynamics
+    from ...generate.dynamics import LiouvillianDynamics
 
 SteadyStateMethod = Literal["direct", "eig", "svd"]
 
@@ -44,7 +44,7 @@ def steady_state(
 
 
 def _as_density_generator(generator, *, explicit: bool):
-    from ...generate.operas.dynamics import LiouvillianDynamics
+    from ...generate.dynamics import LiouvillianDynamics
 
     if isinstance(generator, LiouvillianDynamics):
         if explicit:

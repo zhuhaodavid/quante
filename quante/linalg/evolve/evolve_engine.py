@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2026-05-30 19:55:16
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-30 20:16:46
+# @Last Modified time: 2026-05-31 00:49:08
 
 
 from scipy import sparse as sps
@@ -22,7 +22,7 @@ from .eigen_evolve import (
 )
 
 if TYPE_CHECKING:
-    from ...generate.operas.dynamics import Dynamics
+    from ...generate.dynamics import Dynamics
 
 MatrixLikeInput: TypeAlias = _np.ndarray | sps.sparray | sps.spmatrix | LinearOperator
 MatrixRole = Literal["hamiltonian", "generator"]
@@ -82,7 +82,7 @@ def _method_device(method: str) -> str:
 
 def _trace_sentinel_to_unset(traceA):
     if isinstance(traceA, float) and _np.isnan(traceA):
-        from ...generate.operas.dynamics import _TRACE_UNSET
+        from ...generate.dynamics import _TRACE_UNSET
 
         return _TRACE_UNSET
     return traceA
@@ -98,12 +98,15 @@ class EvolveEngineBase:
         self.dts = _np.insert(_np.diff(self.tlist), 0, self.tlist[0] - start_time)
         self.cur_step = 0
 
+    @property
+    def finished(self):
+        return self.cur_step >= len(self.tlist)
+
     def _next_dt(self):
-        if self.cur_step >= len(self.tlist):
-            _warnings.warn(
-                f"t {self.cur_time} has been reached, dt = {self.dts[-1]} will be used"
+        if self.finished:
+            raise StopIteration(
+                f"Evolution has already reached the end of tlist at t={self.cur_time}."
             )
-            return self.dts[-1]
         return self.dts[self.cur_step]
 
     def step(self):
@@ -116,6 +119,29 @@ class EvolveEngineBase:
 
     def propagate(self, state, dt: float):
         raise NotImplementedError
+    
+    def _run(self, measure_func, progressbar):
+        res = []
+        t_iter = tqdm(self.tlist, ascii=True) if progressbar else self.tlist
+        for t in t_iter:
+            state = self.step()
+            res.append(measure_func(t, state))
+        try:
+            return _np.real_if_close(res)
+        except (TypeError, ValueError):
+            return res
+    
+    def _plot(self, measure_func, ax=None, *args, **kwargs):
+        from ...basicfun import DynamicPlot
+        dp = DynamicPlot(self.tlist, ax, **kwargs)
+        for t in self.tlist:
+            state = self.step()
+            res = _np.real_if_close(measure_func(t, state))
+            if isinstance(res, _np.ndarray) and res.ndim >= 1 and len(res) == 1:
+                res = res[0]
+            dp.append(res)
+        res = dp.data
+        return res
 
 
 class ArrayEvolveEngine(EvolveEngineBase):
@@ -136,7 +162,7 @@ class ArrayEvolveEngine(EvolveEngineBase):
         start_time: float = 0.0,
         options: dict | None = None,
     ):
-        from ...generate.operas.dynamics import Dynamics
+        from ...generate.dynamics import Dynamics
 
         super().__init__(ts, start_time=start_time)
         if not isinstance(dynamics, Dynamics):
@@ -206,40 +232,12 @@ class ArrayEvolveEngine(EvolveEngineBase):
         raise ValueError("measure should be a list of sparse matrices or a function")
 
     def run(self, measure: Observable = None, *, progressbar: bool = True):
-        measure = self._prepare_measure(measure)
-        res = []
-        t_iter = tqdm(self.tlist, ascii=True) if progressbar else self.tlist
-        for t in t_iter:
-            state = self.step()
-            try:
-                res.append(measure(t, state))
-            except Exception as e:
-                raise MeasureError(
-                    "An error occurred while processing the measure function.\n"
-                    "Please ensure the measure function can handle the following:\n"
-                    f"- State type: {type(state)}\n"
-                    f"- State shape: {state.shape}\n"
-                    f"- State dtype: {state.dtype}\n"
-                    f"Error details:\n{e}"
-                ) from e
-        try:
-            return _np.real_if_close(res)
-        except (TypeError, ValueError):
-            return res
+        measure_func = self._prepare_measure(measure)
+        return self._run(measure_func, progressbar=progressbar)
 
-    def plot(self, measure: Observable, *args, ax=None, **kwargs):
-        measure = self._prepare_measure(measure)
-        from ...basicfun import DynamicPlot
-
-        try:
-            dp = DynamicPlot(self.tlist, ax, *args, **kwargs)
-            for t in self.tlist:
-                state = self.step()
-                dp.append(_np.real_if_close(measure(t, state)))
-            res = dp.data
-        except Exception as e:
-            _warnings.warn(f"DynamicPlot error: {e}, with result res: {res}")
-        return res
+    def plot(self, measure: Observable, ax=None, **kwargs):
+        measure_func = self._prepare_measure(measure)
+        return self._plot(measure_func, ax=ax, **kwargs)
 
 
 class ExpmMulEvolveEngine(ArrayEvolveEngine):
@@ -559,7 +557,7 @@ def make_evolve_engine(
     backend_options: dict | None = None,
     ivp_options: dict | None = None,
 ):
-    from ...generate.operas.dynamics import as_dynamics
+    from ...generate.dynamics import as_dynamics
 
     device = _method_device(method) if device is None else device
     family = _method_family(method)

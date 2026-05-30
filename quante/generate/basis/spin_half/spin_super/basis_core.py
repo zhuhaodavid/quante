@@ -2,11 +2,11 @@
 # @Author: hzhu
 # @Date:   2025-10-01 15:43:21
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-12 17:22:06
+# @Last Modified time: 2026-05-30 23:10:41
 
 import numpy as np
 from .....basicfun.utils_numba import njit, config, numba_cache_dir
-from ..bitsoperation import perm_operation, count_tot_down, next_combination
+from ..bitsoperation import perm_operation, count_tot_down, next_combination, findstate
 
 config.CACHE_DIR = numba_cache_dir
 @njit(inline='always')
@@ -306,8 +306,8 @@ def projmat_Z2N(L, s_list, N_sym, Ns, anci_perm, ps, bs):
     return row[:ct], col[:ct], ele[:ct]
 
 
-# config.CACHE_DIR = numba_cache_dir
-# @njit
+config.CACHE_DIR = numba_cache_dir
+@njit
 def project_Z2N(state, L, s_list, N_sym, Ns, anci_perm, ps, bs):
     M, N = state.shape
     res = np.zeros((Ns, N), dtype=np.complex128)
@@ -324,6 +324,52 @@ def project_Z2N(state, L, s_list, N_sym, Ns, anci_perm, ps, bs):
             l = len(news)
             for k in range(l):
                 res[i, j] += -1j * l**(-0.5) * _sign(ops[k], bs, True) * state[news[k], j]
+    return res
+
+config.CACHE_DIR = numba_cache_dir
+@njit
+def project_Nup2_space_Z2N(state, L, s1_list, s2_list, s_list, N_sym, Ns, anci_perm, ps, bs):
+    _, N = state.shape
+    Ns2 = len(s2_list)
+    mask = (1 << L) - 1
+    res = np.zeros((Ns, N), dtype=np.complex128)
+
+    for i in range(N_sym):
+        t = s_list[i]
+        news, ops = proj_coef_Z2N(t, ps, anci_perm)
+        l = len(news)
+        norm = l**(-0.5)
+        for k in range(l):
+            s = news[k]
+            idx1 = findstate(s1_list, s >> L)
+            if idx1 < 0:
+                continue
+            idx2 = findstate(s2_list, s & mask)
+            if idx2 < 0:
+                continue
+            coef = norm * _sign(ops[k], bs, False)
+            state_idx = idx1 * Ns2 + idx2
+            for j in range(N):
+                res[i, j] += coef * state[state_idx, j]
+
+    for i in range(N_sym, Ns):
+        t = s_list[i]
+        news, ops = proj_coef_Z2N(t, ps, anci_perm)
+        l = len(news)
+        norm = l**(-0.5)
+        for k in range(l):
+            s = news[k]
+            idx1 = findstate(s1_list, s >> L)
+            if idx1 < 0:
+                continue
+            idx2 = findstate(s2_list, s & mask)
+            if idx2 < 0:
+                continue
+            coef = -1j * norm * _sign(ops[k], bs, True)
+            state_idx = idx1 * Ns2 + idx2
+            for j in range(N):
+                res[i, j] += coef * state[state_idx, j]
+
     return res
 
 

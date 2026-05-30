@@ -541,7 +541,7 @@ class Oper:
         Pass ``traceA=None`` to explicitly mark the trace as unavailable; leave
         ``traceA='auto'`` to let ``Dynamics.traceA`` compute it lazily if needed.
         """
-        from .dynamics import GeneratorDynamics, HamiltonianDynamics
+        from ..dynamics import GeneratorDynamics, HamiltonianDynamics
 
         kwargs = dict(kwargs)
         kwargs.setdefault("sparse", is_sparse is not False)

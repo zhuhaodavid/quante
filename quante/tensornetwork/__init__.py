@@ -7,6 +7,8 @@
 from . import algorithms, core, networks
 from .algorithms import (
     DMRG,
+    TEBD,
+    TEBDEvolveEngine,
     TDVP,
     ProjMPO,
     ProjMPOMPS,
@@ -48,6 +50,8 @@ __all__ = [
     "SumMPO",
     "TensorTrain",
     "DMRG",
+    "TEBD",
+    "TEBDEvolveEngine",
     "TDVP",
     "ProjMPO",
     "ProjMPS",
