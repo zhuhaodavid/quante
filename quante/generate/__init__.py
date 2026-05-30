@@ -10,3 +10,10 @@ from . import operas
 from . import matrix
 from . import state
 from . import solvable
+from .operas.dynamics import (
+    Dynamics,
+    GeneratorDynamics,
+    HamiltonianDynamics,
+    LiouvillianDynamics,
+    as_dynamics,
+)

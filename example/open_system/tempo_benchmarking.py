@@ -21,7 +21,7 @@ Omega = 1.0
 omega_cutoff = 5.0
 alpha = 0.3
 
-system = qto.System(0.5 * Omega * sigma_x)
+system = qto.LindbladDynamics(0.5 * Omega * sigma_x)
 correlation = qto.PowerLawSpectralDensity(alpha=alpha, zeta=1.0, cutoff=omega_cutoff)
 bath = qto.Bath(0.5 * sigma_z, correlation)
 params = qto.TempoParams(dt=0.1, tcut=3.0, epsrel=1e-4, trunc_cut=1e-10, apply_mpo_method='density_matrix')

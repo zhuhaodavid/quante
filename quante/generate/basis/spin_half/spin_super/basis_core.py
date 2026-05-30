@@ -306,8 +306,8 @@ def projmat_Z2N(L, s_list, N_sym, Ns, anci_perm, ps, bs):
     return row[:ct], col[:ct], ele[:ct]
 
 
-config.CACHE_DIR = numba_cache_dir
-@njit
+# config.CACHE_DIR = numba_cache_dir
+# @njit
 def project_Z2N(state, L, s_list, N_sym, Ns, anci_perm, ps, bs):
     M, N = state.shape
     res = np.zeros((Ns, N), dtype=np.complex128)

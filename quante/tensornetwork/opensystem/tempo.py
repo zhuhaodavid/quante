@@ -11,15 +11,55 @@ from typing import Callable, Literal
 
 from numpy import ndarray
 import numpy as np
+from scipy import sparse as sps
+from scipy.linalg import expm
+from scipy.sparse.linalg import LinearOperator
 
 from ...linalg.matops import super as opr
-from .system import System
+from ...generate.operas.dynamics import Dynamics
 from .bath import Bath
 from ..networks import MPS, MPO
 from ..core import tensor_operations as top
 from ..core.tensor_utils import TruncationError
 
 ApplyMPOMethod = Literal["naive", "density_matrix", "zip_up"]
+
+
+def propagator(
+    generator,
+    dt: float,
+    *,
+    sparse: bool = False,
+):
+    """Return an explicit propagator for TEMPO local system dynamics."""
+    matrix = _as_generator_matrix(generator, sparse=sparse)
+    if isinstance(matrix, LinearOperator):
+        raise TypeError("TEMPO requires an explicit local propagator")
+    expm_fn = sps.linalg.expm if sparse else expm
+    return expm_fn(matrix * dt)
+
+
+def half_step_propagators(
+    generator,
+    dt: float,
+    *,
+    sparse: bool = False,
+):
+    """Return two explicit half-step propagators."""
+    prop = propagator(generator, dt / 2.0, sparse=sparse)
+    return prop, prop
+
+
+def _as_generator_matrix(
+    generator,
+    *,
+    sparse: bool,
+):
+    if hasattr(generator, "explicit"):
+        return generator.explicit()
+    if sparse and not isinstance(generator, LinearOperator):
+        return generator if sps.issparse(generator) else sps.csr_array(generator)
+    return generator
 
 def create_delta(tensor, index_scrambling):
     tensor = np.asarray(tensor)
@@ -74,7 +114,7 @@ class TempoEngine:
     """
     def __init__(
             self,
-            system: System,
+            system: Dynamics,
             bath: Bath,
             params: TempoParams,
             initial_state: ndarray,
@@ -200,7 +240,7 @@ class TempoEngine:
                 |      |      |      |   
                 ◻——————◻——————◻——————◻
         """
-        prop_1, prop_2 = self.system.get_propagators(dt)
+        prop_1, prop_2 = half_step_propagators(self.system, dt)
         mpo = self._current_mpo()
 
         self._apply_first_propagator_(prop_1)

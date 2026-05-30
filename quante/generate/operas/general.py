@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-05-17 22:07:46
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-12 15:33:45
+# @Last Modified time: 2026-05-30 15:00:43
 
 import numpy as np
 import copy 
@@ -520,6 +520,40 @@ class Oper:
     
     def trotter_gates(self) -> None:
         raise NotImplementedError("Subclasses should implement this.")
+
+    def to_dynamics(
+        self,
+        *args,
+        time_type: Literal["real-time", "imag-time"] = "real-time",
+        is_sparse: bool | None = True,
+        herm: bool | None = None,
+        traceA="auto",
+        dim: int | None = None,
+        **kwargs,
+    ):
+        """Build a dynamics object from ``self.to_matrix(...)``.
+
+        Parameters not listed here are forwarded to ``to_matrix``.  If
+        ``sparse`` is not supplied, it is inferred from ``is_sparse``.
+        ``time_type='real-time'`` returns ``HamiltonianDynamics`` for
+        ``exp(-1j H t)``. ``time_type='imag-time'`` returns
+        ``GeneratorDynamics`` for ``exp(-H t)``.
+        Pass ``traceA=None`` to explicitly mark the trace as unavailable; leave
+        ``traceA='auto'`` to let ``Dynamics.traceA`` compute it lazily if needed.
+        """
+        from .dynamics import GeneratorDynamics, HamiltonianDynamics
+
+        kwargs = dict(kwargs)
+        kwargs.setdefault("sparse", is_sparse is not False)
+        matrix = self.to_matrix(*args, **kwargs)
+        dynamics_kwargs = dict(is_sparse=is_sparse, dim=dim)
+        if traceA != "auto":
+            dynamics_kwargs["traceA"] = traceA
+        if time_type == "real-time":
+            return HamiltonianDynamics(matrix, herm=herm, **dynamics_kwargs)
+        if time_type == "imag-time":
+            return GeneratorDynamics(-matrix, **dynamics_kwargs)
+        raise ValueError(f"Unknown time_type: {time_type!r}")
     
     def expandn(self):
         res = {}

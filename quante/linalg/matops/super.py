@@ -6,23 +6,39 @@
 
 import numpy as np
 from numpy import ndarray
+from scipy import sparse as sps
 
-def commutator(operator: ndarray) -> ndarray:
+from .kron import eye, kron
+
+
+def commutator(operator: ndarray, *, sparse: bool | None = None):
     """Construct commutator superoperator from operator. """
+    sparse = sps.issparse(operator) if sparse is None else sparse
     dim = operator.shape[0]
-    return np.kron(operator, np.identity(dim)) \
-            - np.kron(np.identity(dim), operator.T)
+    identity = eye(dim, sparse=sparse, stype="csr", dtype=operator.dtype)
+    stype = "csr" if sparse else None
+    return kron(operator, identity, stype=stype) - kron(identity, operator.T, stype=stype)
 
-def acommutator(operator: ndarray) -> ndarray:
+
+def acommutator(operator: ndarray, *, sparse: bool | None = None):
     """Construct anti-commutator superoperator from operator. """
+    sparse = sps.issparse(operator) if sparse is None else sparse
     dim = operator.shape[0]
-    return np.kron(operator, np.identity(dim)) \
-            + np.kron(np.identity(dim), operator.T)
+    identity = eye(dim, sparse=sparse, stype="csr", dtype=operator.dtype)
+    stype = "csr" if sparse else None
+    return kron(operator, identity, stype=stype) + kron(identity, operator.T, stype=stype)
 
 def left_right_super(
         left_operator: ndarray,
-        right_operator: ndarray) -> ndarray:
+        right_operator: ndarray,
+        *,
+        sparse: bool | None = None):
     """Construct left and right acting superoperator from operators. """
-    return np.kron(left_operator, right_operator.T)
+    sparse = (
+        sps.issparse(left_operator) or sps.issparse(right_operator)
+        if sparse is None
+        else sparse
+    )
+    return kron(left_operator, right_operator.T, stype="csr" if sparse else None)
 
 

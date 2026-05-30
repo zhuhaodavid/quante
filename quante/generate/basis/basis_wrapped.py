@@ -479,7 +479,7 @@ def spin_super_basis(
     L, 
     Nup=None, 
     Ndiff=None, 
-    # Nup2=None,
+    Nup2=None,
     kblock=None,
     pblock=None, 
     zblock=None, 
@@ -511,11 +511,11 @@ def spin_super_basis(
             raise ValueError(f"indx_order must be 'stacked' or 'snake', but got {indx_order}.")
         Tx = np.array(Tx)
         blocks.update({'kblock': (Tx, kblock)})
-    # if Nup2 is not None:
-    #     if isinstance(Nup2, int):
-    #         Nup2 = [Nup2]
-    #     Ndiff = 0
-    #     Nup = [2*n for n in Nup2]
+    if Nup2 is not None:
+        if isinstance(Nup2, int):
+            Nup2 = [Nup2]
+        Ndiff = 0
+        Nup = [2*n for n in Nup2]
     _Ndiff = [Ndiff] if isinstance(Ndiff, int) else Ndiff
     if _Ndiff is not None:
         if len(_Ndiff) != len(set(_Ndiff + [-nd for nd in _Ndiff])):

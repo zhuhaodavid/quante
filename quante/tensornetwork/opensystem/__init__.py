@@ -6,6 +6,6 @@
 
 
 from .bath import *
-from .system import *
+from ...generate.operas.dynamics import Dynamics, HamiltonianDynamics, LiouvillianDynamics
 # from .bath_correlation import *
 from .tempo import *

@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-22 13:10:02
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-10-22 15:48:48
+# @Last Modified time: 2026-05-30 18:49:35
 
 import numpy as np
 from typing import Literal
@@ -308,11 +308,60 @@ class Lindbladian(SpinOper):
         ham = self.ham.to_matrix(basis=basis, pauli=pauli, sparse=sparse, check_symm=check_symm)
         jump_ops = [lo.to_matrix(basis=basis, pauli=pauli, sparse=sparse, check_symm=check_symm) for lo in self.jump_ops]
         return LindbladianLinearOperator(ham=ham, jump_ops=jump_ops)
+
+    def to_dynamics(
+        self,
+        basis,
+        pauli: bool,
+        *,
+        sparse: bool = True,
+        is_sparse: bool | None = None,
+        traceA="auto",
+        dim: int | None = None,
+        check_symm: bool = False,
+    ):
+        """Build a ``LiouvillianDynamics`` object from the split Lindblad data.
+
+        Unlike ``to_matrix()``, this keeps the Hamiltonian and jump operators
+        separate, so ODE methods can apply the Lindblad equation directly to a
+        density matrix without materializing the full Liouvillian.
+        """
+        from .dynamics import LiouvillianDynamics
+        from ..basis.spin_half.spin_1d.basis import SpinHalf1DBasis
+
+        if not isinstance(basis, SpinHalf1DBasis):
+            raise ValueError("need basis in Hilbert space not the vectorized space")
+        if is_sparse is not None:
+            sparse = is_sparse
+
+        if self.ham.data == {}:
+            ham = None
+        else:
+            ham = self.ham.to_matrix(
+                basis=basis,
+                pauli=pauli,
+                sparse=sparse,
+                check_symm=check_symm,
+            )
+        jump_ops = [
+            lo.to_matrix(
+                basis=basis,
+                pauli=pauli,
+                sparse=sparse,
+                check_symm=check_symm,
+            )
+            for lo in self.jump_ops
+        ]
+        dynamics_kwargs = dict(
+            ham=ham,
+            jump_ops=jump_ops,
+            dim=dim,
+            is_sparse=is_sparse,
+        )
+        if traceA != "auto":
+            dynamics_kwargs["traceA"] = traceA
+        return LiouvillianDynamics(**dynamics_kwargs)
     
-    def steady_state(self, basis, pauli, method:Literal['direct', 'eig', 'svd'] = 'direct'):
-        assert method in ['direct', 'eig', 'svd'], "method should be 'direct' or 'eig' or 'svd'"
-        L_mat = self.to_matrix(basis, pauli, sparse=True)
-        return steady_state(L_mat, method=method)
     
     def symmetry(self, pauli:bool) -> list[str]:
         self._check_pauli(pauli)
@@ -487,48 +536,7 @@ class LindbladianLinearOperator(LinearOperator):
     
     def strady_sate(self, method:Literal['direct', 'eig', 'svd'] = 'direct'):
         assert method in ['direct', 'eig', 'svd'], "method should be 'direct' or 'eig' or 'svd'"
+
         mat = self.to_matrix()
         return steady_state(mat, method=method)
-   
-def steady_state(L_mat, method:Literal['direct', 'eig', 'svd'] = 'direct'):
-    N = L_mat.shape[0]
-    n = int(np.sqrt(N))
-    assert N == n * n, "L_mat shape is not a square of an integer"
-    if method == 'direct':
-        # Find the weight, to stable the iteration
-        weight = np.mean(abs(L_mat.data))
-
-        # add normalization constraint by adding a row of vec(weight*I)
-        # Create an n x n sparse matrix with the first row as (weight * I).reshape(1, -1), others are zeros
-        eye_row = sps.lil_array((N, N))
-        eye_row[0, :] = (sps.eye(n, format='lil') * weight).reshape(1, -1)
-        L_mat_aug = L_mat + eye_row.tocsr()
-
-        # initial guess
-        x0 = np.zeros((N, 1), dtype=np.complex128)
-        x0[0, 0] = weight
-
-        out = spsolve(L_mat_aug, x0)
-        return out.reshape(n, n)
-    elif method == 'eig':
-        # from .nbfuc.operations_numba import dot_parallel
-        def LdagL_matvec(x):
-            # return dot_parallel(L.conj().T, dot_parallel(L, x))
-            return L_mat.conj().T @ (L_mat @ x)
-        linop = LinearOperator((N, N), matvec=LdagL_matvec, dtype=np.complex128)
-        val, vec = eigsh(linop, k=1, which='SM')
-        rho = vec.reshape(L_mat.Ns, L_mat.Ns)
-        return rho / np.trace(rho)
-    elif method == 'svd':
-        u, s, v = svds(L_mat, k=1, which='SM')
-        rho = v.reshape(n, n)
-        return rho / rho.trace()
-    else:
-        raise ValueError("method should be 'direct' or 'eig' or 'svd'")
-
-
-# def make_Liouvillian(ham, lindblad_ops, basis, pauli):
-#     hammat = ham.to_matrix(basis, sparse=True, pauli=pauli)
-#     lindmat = [lo.to_matrix(basis, sparse=True, pauli=pauli) for lo in lindblad_ops]
-#     return Liouvillian(hammat, lindmat)
 
