@@ -272,9 +272,7 @@ measure = lambda t, rho: np.real_if_close([n @ rho.reshape(-1) for n in particle
 
 res = qt.linalg.evolve_and_measure(
     liou_mat, rhoinit, [10, 20, 30, 40, 50], 
-    measure=measure, 
-    ttype='imag-time',
-    method='mul-cpu'
+    measure=measure, matrix_role="generator"
 )
 
 res.shape

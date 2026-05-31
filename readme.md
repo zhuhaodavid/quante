@@ -18,6 +18,7 @@ The package aims to facilitate fast prototyping and reproducible research in the
 - **Efficient matrix-element generation** accelerated by [`Numba`](https://numba.pydata.org/) JIT compilation.
 - **Exact diagonalization** and **Krylov-based time evolution** with support for sparse matrices and GPU acceleration.
 - **Tensor-network algorithms** including TEBD and DMRG, implemented with [`PyTorch`](https://pytorch.org/) backend.
+- **Open System Simulation** TEMPO algorithm for open system dynamics.
 - **Unified basis and operator interface**, compatible with external libraries such as [`QuSpin`](https://github.com/QuSpin/QuSpin), [`TenPy`](https://github.com/tenpy/tenpy), [`ITensor`](https://github.com/ITensor/ITensors.jl)
 - Simple I/O utilities for saving and loading large-scale state and operator data.
 
@@ -66,7 +67,7 @@ import numpy as np
 op = qt.generate.operas
 
 L = 10
-hammat = qt.generate.matrix.ising_matrix(L, sparse=True)
+hammat = qt.generate.matrix.models.spin1d.ising_matrix(L, sparse=True)
 print(qt.linalg.krylov.eigsolve(hammat, which='SR')[0])
 print(qt.generate.solvable.heisenberg.ising_ground_energy(L))
 
