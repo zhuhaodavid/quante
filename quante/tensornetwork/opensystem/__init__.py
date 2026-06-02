@@ -6,6 +6,6 @@
 
 
 from .bath import SpectralDensity, PowerLawSpectralDensity, Bath
-from ...generate.dynamics import LiouvillianDynamics as System
+from .system import System
 from .tempo import TempoEngine, TempoParams
 

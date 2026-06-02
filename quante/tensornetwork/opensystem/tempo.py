@@ -10,57 +10,19 @@ from typing import Callable, Literal
 
 from numpy import ndarray
 import numpy as np
-from scipy import sparse as sps
-from scipy.linalg import expm
-from scipy.sparse.linalg import LinearOperator
 
 from ...linalg.evolve.evolve_engine import EvolveEngineBase
 from ...linalg.matops import super as opr
-from ...generate.dynamics import Dynamics
+from ...generate.dynamics import LiouvillianDynamics
 from .bath import Bath
+from .system import System, as_system
 from ..networks import MPS, MPO
 from ..core import tensor_operations as top
 from ..core.tensor_utils import TruncationError
 
 ApplyMPOMethod = Literal["naive", "density_matrix", "zip_up"]
-MeasureType = ndarray | Callable[[float, ndarray], ndarray]
+MeasureType = None | ndarray | Callable[[float, ndarray], ndarray]
 
-
-def propagator(
-    generator,
-    dt: float,
-    *,
-    sparse: bool = False,
-):
-    """Return an explicit propagator for TEMPO local system dynamics."""
-    matrix = _as_generator_matrix(generator, sparse=sparse)
-    if isinstance(matrix, LinearOperator):
-        raise TypeError("TEMPO requires an explicit local propagator")
-    expm_fn = sps.linalg.expm if sparse else expm
-    return expm_fn(matrix * dt)
-
-
-def half_step_propagators(
-    generator,
-    dt: float,
-    *,
-    sparse: bool = False,
-):
-    """Return two explicit half-step propagators."""
-    prop = propagator(generator, dt / 2.0, sparse=sparse)
-    return prop, prop
-
-
-def _as_generator_matrix(
-    generator,
-    *,
-    sparse: bool,
-):
-    if hasattr(generator, "explicit"):
-        return generator.explicit()
-    if sparse and not isinstance(generator, LinearOperator):
-        return generator if sps.issparse(generator) else sps.csr_array(generator)
-    return generator
 
 def create_delta(tensor, index_scrambling):
     tensor = np.asarray(tensor)
@@ -115,7 +77,7 @@ class TempoEngine(EvolveEngineBase):
     """
     def __init__(
             self,
-            system: Dynamics,
+            system: System | LiouvillianDynamics,
             bath: Bath,
             params: TempoParams,
             initial_state: ndarray,
@@ -125,8 +87,8 @@ class TempoEngine(EvolveEngineBase):
         ) -> None:
         super().__init__(times, start_time=start_time)
         self.bath = bath
-        self.system = system
-        self.dim = system.dim
+        self.system = as_system(system)
+        self.dim = self.system.dim
         self.initial_state = initial_state
         self.params = params
         self.times = times
@@ -236,7 +198,7 @@ class TempoEngine(EvolveEngineBase):
                 |      |      |      |   
                 ◻——————◻——————◻——————◻
         """
-        prop_1, prop_2 = half_step_propagators(self.system, dt)
+        prop_1, prop_2 = self.system.half_step_propagators(dt, t=self.cur_time)
         mpo = self._current_mpo()
 
         self._apply_first_propagator_(prop_1)
@@ -314,24 +276,28 @@ class TempoEngine(EvolveEngineBase):
 
     def run(
         self,
-        measure: MeasureType,
+        measure: MeasureType = None,
         *,
         progressbar: bool = True,
     ):
         """Run remaining steps and measure each reduced density matrix."""
         def measure_func(t, state):
             rho = self.density_matrix()
+            if measure is None:
+                return rho
             if callable(measure):
-                return measure(rho)
+                return measure(t, rho)
             else:
                 return np.trace(measure @ rho)
         return self._run(measure_func, progressbar=progressbar)
     
-    def plot(self, measure, progressbar=True, ax=None, **kwargs):
+    def plot(self, measure: MeasureType = None, progressbar=True, ax=None, **kwargs):
         def measure_func(t, state):
             rho = self.density_matrix()
+            if measure is None:
+                return rho
             if callable(measure):
-                return measure(rho)
+                return measure(t, rho)
             else:
                 return np.trace(measure @ rho)
         return self._plot(measure_func, ax=ax, **kwargs)

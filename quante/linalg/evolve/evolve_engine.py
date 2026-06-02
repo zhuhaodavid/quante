@@ -122,7 +122,8 @@ class EvolveEngineBase:
     
     def _run(self, measure_func, progressbar):
         res = []
-        t_iter = tqdm(self.tlist, ascii=True) if progressbar else self.tlist
+        tlist = self.tlist[self.cur_step:]
+        t_iter = tqdm(tlist, ascii=True) if progressbar else tlist
         for t in t_iter:
             state = self.step()
             res.append(measure_func(t, state))
@@ -133,8 +134,9 @@ class EvolveEngineBase:
     
     def _plot(self, measure_func, ax=None, *args, **kwargs):
         from ...basicfun import DynamicPlot
-        dp = DynamicPlot(self.tlist, ax, **kwargs)
-        for t in self.tlist:
+        tlist = self.tlist[self.cur_step:]
+        dp = DynamicPlot(tlist, ax, **kwargs)
+        for t in tlist:
             state = self.step()
             res = _np.real_if_close(measure_func(t, state))
             if isinstance(res, _np.ndarray) and res.ndim >= 1 and len(res) == 1:
