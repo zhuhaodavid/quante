@@ -5,6 +5,7 @@
 # @Last Modified time: 2025-09-30 18:41:42
 
 import numpy as np
+from scipy import integrate
 from typing import Optional, Union, Literal
 number = Union[int, float, complex]
 
@@ -68,6 +69,41 @@ def ising_matrix(L, j=1.0, h=1.0, cyclic=False, pauli=False, sparse=False):
 def xxz_matrix(L, j=1., delta=1.0, cyclic=False, pauli=False, sparse=False):
     return heisenberg_matrix(L, j=(j,j,j*delta), cyclic=cyclic, pauli=pauli, sparse=sparse)
 
+def xxz_pbc_finite_ground_energy(
+    L,
+    j=1.0,
+    delta=1.0,
+    *,
+    pauli=False,
+    tol=1e-12,
+    raise_error=True,
+):
+    r"""Ground-state energy for the finite periodic XXZ chain.
+
+    .. math::
+        H = J \sum_i (S_i^x S_{i+1}^x
+            + S_i^y S_{i+1}^y
+            + \Delta S_i^z S_{i+1}^z).
+
+    This uses the Bethe-ansatz solution for periodic boundary conditions.
+    For ``J < 0`` the ground-state branch is obtained by mapping
+    ``Delta -> -Delta`` before solving.
+    """
+    if j == 0:
+        return 0.0
+
+    from .bethe_ansatz import solve_xxz_state, xxz_energy
+
+    branch_delta = delta if j > 0 else -delta
+    state = solve_xxz_state(
+        L,
+        branch_delta,
+        M=L // 2,
+        tol=tol,
+        raise_error=raise_error,
+    )
+    return xxz_energy(state, j=abs(j), pauli=pauli)
+
 def xxx_infinite_ground_energy(j, pauli=False):
     r"""Ground state energy for the infinite Heisenberg model.
 
@@ -93,9 +129,57 @@ def xxx_finite_approx_ground_energy(L, j, pauli=False):
     correction = 1 + 0.375 / np.log(L) ** 3
     return j * (Einf - Efinite * correction) / 2 * (4 if pauli else 1)
 
-# def xxz_gdenergy_inf(J=1, Δ=0):
-#     # todo M. Takahashi, "Thermodynamics of One-Dimensional Solvable Models," Cambridge University Press, 1999.
-#     # 但是只能给出 L->∞ 的近似结果? 并且需要 J < 0???
+def xxz_infinite_ground_energy(
+    j=1.0,
+    delta=1.0,
+    *,
+    pauli=False,
+    epsrel=1e-12,
+    limit=256,
+):
+    r"""Ground-state energy density for the infinite periodic XXZ chain.
+
+    .. math::
+        H = J \sum_i (S_i^x S_{i+1}^x
+            + S_i^y S_{i+1}^y
+            + \Delta S_i^z S_{i+1}^z).
+
+    For ``J > 0`` this uses the antiferromagnetic Bethe-ansatz branch at
+    ``Delta``. For ``J < 0`` the ground-state energy is obtained from the
+    corresponding branch at ``-Delta``.
+    """
+    if j == 0:
+        return 0.0
+
+    branch_delta = delta if j > 0 else -delta
+    branch_delta = float(branch_delta)
+    if not (-1.0 < branch_delta < 1.0):
+        raise ValueError(
+            "xxz_infinite_ground_energy currently supports the massless "
+            f"regime after the J-sign mapping, got delta={branch_delta}"
+        )
+    eta = float(np.arccos(branch_delta))
+
+    def integrand(alpha):
+        with np.errstate(over="ignore"):
+            return (
+                1.0 / np.cosh(np.pi * alpha / (2.0 * eta))
+                / (np.cosh(alpha) - np.cos(eta))
+            )
+
+    integral = integrate.quad(
+        integrand,
+        -np.inf,
+        np.inf,
+        epsrel=epsrel,
+        limit=limit,
+    )[0]
+    energy_density = abs(j) * (
+        np.cos(eta) - np.sin(eta) ** 2 / eta * integral
+    )
+    if not pauli:
+        energy_density /= 4.0
+    return float(np.real_if_close(energy_density))
 
 
 def xy_infinite_ground_energy(jx, jy, jxy, jyx, hz, pauli=False):

@@ -8,4 +8,4 @@ from . import free_fermion
 from . import anderson_model
 from . import gaussian_state
 from . import heisenberg
-
+from . import bethe_ansatz
