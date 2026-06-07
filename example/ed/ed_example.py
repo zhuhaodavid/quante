@@ -1,8 +1,29 @@
 # -*- coding: utf-8 -*-
 # @Author: hzhu
-# @Date:   2026-06-07 13:28:50
+# @Date:   2026-06-07 14:11:17
+# @Last Modified by:   hzhu
+# @Last Modified time: 2026-06-08 00:42:01
 
-"""XXZ dynamic correlation from ED.
+"""XXZ ED example for future AI-assisted library use.
+
+This file is meant to be a compact, executable catalogue of useful Quante
+patterns rather than a plotting script.  A future AI reading this example
+should treat it as a reference for:
+
+1. building symmetry-resolved spin bases and XXZ Hamiltonians with
+   ``quante.generate.basis`` and ``quante.generate.operas``;
+2. comparing ground-state solvers: SciPy CSR ARPACK, a ``LinearOperator`` that
+   uses ``dot_parallel``, Quante Krylov ``eigsolve``, and CUDA sparse tensors;
+3. constructing diagonal local observables directly from a basis;
+4. evolving a state with ``make_evolve_engine`` and measuring connected
+   real-time correlation functions;
+5. extracting velocities from momentum-sector gaps and from the spatial
+   Fourier transform ``C(r,t) -> S(q,t)`` using phase fitting;
+6. saving results with ``quante.basicfun.save_hdf5`` as ordinary nested
+   groups/datasets so ``load_hdf5(path, "/")`` returns a convenient dict.
+
+Plotting is intentionally kept out of this file.  Use ``ed_plot_example.py``
+to load the saved HDF5 data and make diagnostic figures.
 
 Benchmark on this machine for ``L=24, Delta=0.7`` using
 ``quante.generate.operas`` + ``to_matrix`` in the ``Nup=L//2`` sector:
@@ -21,19 +42,22 @@ by default.
 """
 
 import os
+import sys
 import time
 from pathlib import Path
 
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
-import matplotlib.pyplot as plt
-import h5py
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import numpy as np
 import scipy.sparse as sps
 from scipy.sparse.linalg import LinearOperator, eigsh
 
 import quante as qt
-from quante.basicfun import Timer
+from quante.basicfun import Timer, save_hdf5
 from quante.generate import operas as op
 from quante.linalg import make_evolve_engine
 from quante.linalg.krylov.eigsolve.eigsolve import eigsolve
@@ -48,7 +72,14 @@ KRYLOVDIM = int(os.environ.get("XXZ_KRYLOVDIM", 40))
 T_MAX = float(os.environ.get("XXZ_TMAX", 3.0))
 N_TIME = int(os.environ.get("XXZ_NTIME", 121))
 J_SITE = int(os.environ.get("XXZ_JSITE", L // 2))
-RIDGE_FIT_T_MAX = float(os.environ.get("XXZ_RIDGE_FIT_TMAX", 2.0))
+PHASE_FIT_T_MIN = float(os.environ.get("XXZ_PHASE_FIT_TMIN", 0.5))
+PHASE_FIT_T_MAX = os.environ.get("XXZ_PHASE_FIT_TMAX")
+PHASE_FIT_T_MAX = None if PHASE_FIT_T_MAX in (None, "", "none", "None") else float(PHASE_FIT_T_MAX)
+PHASE_FIT_M_LIST = tuple(
+    int(item.strip())
+    for item in os.environ.get("XXZ_PHASE_FIT_M_LIST", "1,2,3,4").split(",")
+    if item.strip()
+)
 MODE = os.environ.get("XXZ_MODE", "dynamic")
 EVOLVE_METHOD = os.environ.get("XXZ_EVOLVE_METHOD", "mul-cuda:0")
 OUTPUT_STEM = os.environ.get("XXZ_OUTPUT_STEM", "xxz_dynamic_correlation")
@@ -232,48 +263,145 @@ def fold_by_distance(corr, j_site):
     return folded
 
 
-def estimate_velocity_from_structure_factor(tlist, correlations, q):
-    dt = tlist[1] - tlist[0]
+def signed_r_grid(L, j_site):
+    """Signed displacement grid in the same site order as ``correlations``."""
+    sites = np.arange(L)
+    return ((sites - j_site + L // 2) % L) - L // 2
+
+
+def structure_factor_time_from_correlation(correlations, q, j_site, *, normalize=True):
+    r"""Convert site-resolved ``C_ij(t)`` to ``S(q,t)=sum_r exp(-iqr) C(r,t)``."""
+    correlations = np.asarray(correlations, dtype=np.complex128)
     L = correlations.shape[1]
-    phase = np.exp(-1j * q * np.arange(L))
-    signal = correlations @ phase
-    signal = signal - np.mean(signal)
-    window = np.hanning(len(signal))
-    spectrum = np.fft.fft(signal * window)
-    omega = 2.0 * np.pi * np.fft.fftfreq(len(signal), d=dt)
-    mask = omega > 0
-    omega_pos = omega[mask]
-    weight = np.abs(spectrum[mask])
-    peak = int(np.argmax(weight))
-    omega_peak = float(omega_pos[peak])
-    return omega_peak / q, omega_pos, weight
+    r = signed_r_grid(L, j_site)
+    signal = correlations @ np.exp(-1j * q * r)
+    if normalize:
+        if abs(signal[0]) < 1e-14:
+            raise ValueError("S(q,0) is too small to normalize.")
+        signal = signal / signal[0]
+    return signal
 
 
-def estimate_velocity_from_ray_score(tlist, profiles, v_ba, *, fit_t_max=2.0):
-    distances = np.arange(profiles.shape[1], dtype=float)
-    max_distance = distances[-1]
-    velocities = np.linspace(0.5 * v_ba, 1.5 * v_ba, 301)
-    scores = np.zeros_like(velocities)
+def estimate_phase_frequency(tlist, signal, *, tmin=0.5, tmax=None, amp_cut=0.05):
+    r"""Estimate ``omega`` from ``S(q,t) ~ exp(-i omega t)`` by phase fitting."""
+    tlist = np.asarray(tlist, dtype=float)
+    signal = np.asarray(signal, dtype=np.complex128)
+    phase = np.unwrap(np.angle(signal))
+    amp = np.abs(signal)
 
-    for index, velocity in enumerate(velocities):
-        samples = []
-        for time, profile in zip(tlist, profiles):
-            ray_distance = velocity * time
-            if time <= 0.25 or time >= fit_t_max:
-                continue
-            if ray_distance < 1.0 or ray_distance > max_distance - 1.0:
-                continue
-            weight = np.abs(profile).astype(float)
-            weight[0] = 0.0
-            norm = np.max(weight)
-            if norm <= 0.0:
-                continue
-            samples.append(np.interp(ray_distance, distances, weight / norm))
-        if samples:
-            scores[index] = float(np.mean(samples))
+    mask = tlist >= tmin
+    if tmax is not None:
+        mask &= tlist <= tmax
+    mask &= amp > amp_cut * np.max(amp)
 
-    best = int(np.argmax(scores))
-    return float(velocities[best]), velocities, scores
+    if np.count_nonzero(mask) < 3:
+        return np.nan, np.nan, phase, mask
+
+    slope, intercept = np.polyfit(
+        tlist[mask],
+        phase[mask],
+        deg=1,
+        w=amp[mask],
+    )
+    return abs(float(-slope)), float(intercept), phase, mask
+
+
+def estimate_velocity_from_correlation_phase(
+    tlist,
+    correlations,
+    L,
+    j_site,
+    m,
+    *,
+    tmin=0.5,
+    tmax=None,
+):
+    q = 2.0 * np.pi * m / L
+    signal = structure_factor_time_from_correlation(
+        correlations,
+        q,
+        j_site,
+        normalize=True,
+    )
+    omega, intercept, phase, mask = estimate_phase_frequency(
+        tlist,
+        signal,
+        tmin=tmin,
+        tmax=tmax,
+    )
+    return {
+        "m": m,
+        "q": q,
+        "omega": omega,
+        "v": omega / q,
+        "intercept": intercept,
+        "signal": signal,
+        "phase": phase,
+        "mask": mask,
+    }
+
+
+def estimate_vs_from_many_m(
+    tlist,
+    correlations,
+    L,
+    j_site,
+    m_list=(1, 2, 3, 4),
+    *,
+    tmin=0.5,
+    tmax=None,
+):
+    rows = []
+    for m in m_list:
+        item = estimate_velocity_from_correlation_phase(
+            tlist,
+            correlations,
+            L,
+            j_site,
+            m,
+            tmin=tmin,
+            tmax=tmax,
+        )
+        if np.isfinite(item["omega"]):
+            rows.append(item)
+
+    qs = np.array([item["q"] for item in rows], dtype=float)
+    omegas = np.array([item["omega"] for item in rows], dtype=float)
+    velocities = np.array([item["v"] for item in rows], dtype=float)
+
+    if len(qs) == 0:
+        return {
+            "rows": rows,
+            "qs": qs,
+            "omegas": omegas,
+            "velocities": velocities,
+            "v_linear": np.nan,
+            "v_cubic": np.nan,
+            "a_cubic": np.nan,
+        }
+
+    v_linear = float(np.sum(qs * omegas) / np.sum(qs ** 2))
+    if len(qs) >= 2:
+        coeff, *_ = np.linalg.lstsq(
+            np.column_stack([qs, qs ** 3]),
+            omegas,
+            rcond=None,
+        )
+        v_cubic = float(coeff[0])
+        a_cubic = float(coeff[1])
+    else:
+        v_cubic = np.nan
+        a_cubic = np.nan
+
+    return {
+        "rows": rows,
+        "qs": qs,
+        "omegas": omegas,
+        "velocities": velocities,
+        "v_linear": v_linear,
+        "v_cubic": v_cubic,
+        "a_cubic": a_cubic,
+    }
 
 
 def scan_kblock_ground_energies(L, delta):
@@ -354,7 +482,9 @@ def dynamic_parameters(*, used_method=None):
         "T_MAX": T_MAX,
         "N_TIME": N_TIME,
         "J_SITE": J_SITE,
-        "RIDGE_FIT_T_MAX": RIDGE_FIT_T_MAX,
+        "PHASE_FIT_T_MIN": PHASE_FIT_T_MIN,
+        "PHASE_FIT_T_MAX": "" if PHASE_FIT_T_MAX is None else PHASE_FIT_T_MAX,
+        "PHASE_FIT_M_LIST": ",".join(str(m) for m in PHASE_FIT_M_LIST),
         "MODE": MODE,
         "EVOLVE_METHOD": EVOLVE_METHOD,
         "USED_EVOLVE_METHOD": used_method or "",
@@ -366,98 +496,50 @@ def dynamic_parameters(*, used_method=None):
 
 
 def save_dynamic_results(results, output_path):
-    with h5py.File(output_path, "w") as h5:
-        h5.attrs["description"] = "XXZ connected dynamic Sz-Sz correlation from ED"
-        h5.attrs["created_unix_time"] = time.time()
-        params = h5.create_group("parameters")
-        for key, value in results["parameters"].items():
-            params.attrs[key] = value
+    scalar_keys = [
+        "e0",
+        "e0_per_site",
+        "e_q",
+        "q_min",
+        "v_ba",
+        "v_gap",
+        "v_phase",
+        "v_phase_linear",
+        "v_phase_cubic",
+        "phase_a_cubic",
+        "phase_q_primary",
+        "gap_ground_kblock",
+        "gap_excitation_kblock",
+    ]
+    array_keys = [
+        "tlist",
+        "distances",
+        "signed_distances",
+        "correlations",
+        "profiles",
+        "phase_qs",
+        "phase_omegas",
+        "phase_velocities",
+        "phase_signal",
+        "phase_unwrapped",
+        "phase_fit_mask",
+    ]
 
-        scalars = h5.create_group("scalars")
-        for key in [
-            "e0",
-            "e0_per_site",
-            "e_q",
-            "q_min",
-            "v_ba",
-            "v_gap",
-            "v_fft",
-            "v_ray",
-            "gap_ground_kblock",
-            "gap_excitation_kblock",
-        ]:
-            scalars.attrs[key] = results[key]
+    data = {
+        "metadata": {
+            "description": "XXZ connected dynamic Sz-Sz correlation from ED",
+            "created_unix_time": time.time(),
+            "schema": "ed_dynamic_results_v2",
+        },
+        "parameters": results["parameters"],
+        "scalars": {key: results[key] for key in scalar_keys},
+        "data": {key: results[key] for key in array_keys},
+    }
+    if "kblock_energies" in results:
+        data["data"]["kblock_energies"] = results["kblock_energies"]
+        data["data"]["kblock_dimensions"] = results["kblock_dimensions"]
 
-        h5.create_dataset("tlist", data=results["tlist"])
-        h5.create_dataset("distances", data=results["distances"])
-        h5.create_dataset("correlations", data=results["correlations"], compression="gzip")
-        h5.create_dataset("profiles", data=results["profiles"], compression="gzip")
-        h5.create_dataset("omega", data=results["omega"])
-        h5.create_dataset("spectrum", data=results["spectrum"])
-        h5.create_dataset("ray_velocities", data=results["ray_velocities"])
-        h5.create_dataset("ray_scores", data=results["ray_scores"])
-        if "kblock_energies" in results:
-            h5.create_dataset("kblock_energies", data=results["kblock_energies"])
-            h5.create_dataset("kblock_dimensions", data=results["kblock_dimensions"])
-
-
-def plot_dynamic_results(results, output_path):
-    tlist = results["tlist"]
-    profiles = results["profiles"]
-    distances = results["distances"]
-    omega = results["omega"]
-    spectrum = results["spectrum"]
-    q_min = results["q_min"]
-    v_ba = results["v_ba"]
-    v_gap = results["v_gap"]
-    v_fft = results["v_fft"]
-    v_ray = results["v_ray"]
-
-    fig, (ax, ax_spec) = plt.subplots(
-        2,
-        1,
-        figsize=(7.0, 5.6),
-        gridspec_kw={"height_ratios": [3.0, 1.35]},
-    )
-    mesh = ax.pcolormesh(tlist, distances, profiles.T, shading="auto", cmap="RdBu_r")
-    fig.colorbar(mesh, ax=ax, pad=0.015, label=r"$C^{zz}(r,t)$")
-    ax.plot(tlist, v_ba * tlist, color="black", linewidth=1.8, label=fr"BA $v={v_ba:.3f}$")
-    ax.plot(
-        tlist,
-        v_gap * tlist,
-        color="tab:orange",
-        linestyle="--",
-        linewidth=1.5,
-        label=fr"ED gap $v={v_gap:.3f}$",
-    )
-    ax.plot(
-        tlist,
-        v_ray * tlist,
-        color="tab:purple",
-        linestyle="-.",
-        linewidth=1.3,
-        label=fr"ray score $v={v_ray:.3f}$",
-    )
-    ax.set_xlabel(r"$t$")
-    ax.set_ylabel(r"$r=|i-j|$")
-    ax.set_ylim(0, L // 2)
-    ax.set_title(fr"XXZ $C^{{zz}}(r,t)$, $L={L}$, $\Delta={Delta}$")
-    ax.legend(frameon=False, loc="upper left")
-
-    ax_spec.plot(omega, spectrum, color="tab:blue", linewidth=1.2)
-    ax_spec.axvline(v_ba * q_min, color="black", linewidth=1.4, label="BA")
-    ax_spec.axvline(v_gap * q_min, color="tab:orange", linestyle="--", linewidth=1.4, label="ED gap")
-    ax_spec.axvline(v_fft * q_min, color="tab:green", linestyle=":", linewidth=1.2, label="FFT peak")
-    ax_spec.set_xlim(0, min(np.max(omega), 4.0 * v_ba * q_min))
-    ax_spec.set_xlabel(r"$\omega$")
-    ax_spec.set_ylabel(r"$|S(q,\omega)|$")
-    ax_spec.legend(frameon=False)
-    fig.tight_layout()
-
-    fig.savefig(output_path, dpi=200)
-    if plt.get_backend().lower() != "agg":
-        plt.show()
-    plt.close(fig)
+    save_hdf5(str(output_path), data=data, group="/", mode="w")
 
 
 def run_dynamic():
@@ -534,25 +616,43 @@ def run_dynamic():
         gap_ground_kblock = 0
         gap_excitation_kblock = 1
     timer.mark("momentum-gap solver")
-    v_ray, ray_velocities, ray_scores = estimate_velocity_from_ray_score(
-        tlist,
-        profiles,
-        v_ba,
-        fit_t_max=RIDGE_FIT_T_MAX,
-    )
     q_min = 2.0 * np.pi / L
-    v_fft, omega, spectrum = estimate_velocity_from_structure_factor(
+    phase_fit = estimate_vs_from_many_m(
         tlist,
         correlations,
-        q_min,
+        L,
+        J_SITE,
+        PHASE_FIT_M_LIST,
+        tmin=PHASE_FIT_T_MIN,
+        tmax=PHASE_FIT_T_MAX,
     )
+    if phase_fit["rows"]:
+        primary_phase = phase_fit["rows"][0]
+        v_phase = float(primary_phase["v"])
+        phase_q_primary = float(primary_phase["q"])
+        phase_signal = primary_phase["signal"]
+        phase_unwrapped = primary_phase["phase"]
+        phase_fit_mask = primary_phase["mask"]
+    else:
+        v_phase = np.nan
+        phase_q_primary = q_min
+        phase_signal = np.full_like(tlist, np.nan, dtype=np.complex128)
+        phase_unwrapped = np.full_like(tlist, np.nan, dtype=float)
+        phase_fit_mask = np.zeros_like(tlist, dtype=bool)
     print(f"BA velocity: {v_ba:.8f}")
     print(f"ED gap velocity: {v_gap:.8f}  (E(q)-E0={e_q - e0:.12f})")
     print(f"ED gap kblocks: {gap_ground_kblock} -> {gap_excitation_kblock}")
-    print(f"ED S(q=2pi/L,t) velocity: {v_fft:.8f}")
-    print(f"ED ray-score velocity: {v_ray:.8f}")
+    print("ED phase velocity from C(r,t) -> S(q,t):")
+    for item in phase_fit["rows"]:
+        print(
+            f"  m={item['m']:2d}, q={item['q']:.8f}, "
+            f"omega={item['omega']:.10f}, v={item['v']:.10f}"
+        )
+    print(f"ED phase linear fit velocity: {phase_fit['v_linear']:.8f}")
+    print(f"ED phase cubic fit velocity: {phase_fit['v_cubic']:.8f}")
 
     distances = np.arange(profiles.shape[1])
+    signed_distances = signed_r_grid(L, J_SITE)
     results = {
         "parameters": dynamic_parameters(used_method=used_method),
         "e0": e0,
@@ -561,18 +661,24 @@ def run_dynamic():
         "q_min": q_min,
         "v_ba": v_ba,
         "v_gap": v_gap,
-        "v_fft": v_fft,
-        "v_ray": v_ray,
+        "v_phase": v_phase,
+        "v_phase_linear": phase_fit["v_linear"],
+        "v_phase_cubic": phase_fit["v_cubic"],
+        "phase_a_cubic": phase_fit["a_cubic"],
+        "phase_q_primary": phase_q_primary,
         "gap_ground_kblock": gap_ground_kblock,
         "gap_excitation_kblock": gap_excitation_kblock,
         "tlist": tlist,
         "distances": distances,
+        "signed_distances": signed_distances,
         "correlations": correlations,
         "profiles": profiles,
-        "omega": omega,
-        "spectrum": spectrum,
-        "ray_velocities": ray_velocities,
-        "ray_scores": ray_scores,
+        "phase_qs": phase_fit["qs"],
+        "phase_omegas": phase_fit["omegas"],
+        "phase_velocities": phase_fit["velocities"],
+        "phase_signal": phase_signal,
+        "phase_unwrapped": phase_unwrapped,
+        "phase_fit_mask": phase_fit_mask,
     }
     if kblock_energies is not None:
         results["kblock_energies"] = kblock_energies
@@ -583,11 +689,7 @@ def run_dynamic():
     save_dynamic_results(results, h5_path)
     print(f"saved hdf5: {h5_path}")
     timer.mark("save hdf5")
-
-    output_path = stem.with_suffix(".png")
-    plot_dynamic_results(results, output_path)
-    print(f"saved figure: {output_path}")
-    timer.mark("plot/save")
+    print(f"plot with: python {Path(__file__).with_name('ed_plot_example.py')} {h5_path}")
 
 
 def run_benchmark():
