@@ -369,8 +369,9 @@ def save_dynamic_results(results, output_path):
     with h5py.File(output_path, "w") as h5:
         h5.attrs["description"] = "XXZ connected dynamic Sz-Sz correlation from ED"
         h5.attrs["created_unix_time"] = time.time()
+        params = h5.create_group("parameters")
         for key, value in results["parameters"].items():
-            h5.attrs[key] = value
+            params.attrs[key] = value
 
         scalars = h5.create_group("scalars")
         for key in [
