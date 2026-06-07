@@ -92,7 +92,16 @@ def profile(
 
 
 class Timer:
-    def __init__(self, *str_or_funcs, output_unit: float|None = None, save=False, level=1, use=True):
+    def __init__(
+        self,
+        *str_or_funcs,
+        output_unit: float | None = None,
+        save=False,
+        level=1,
+        use=True,
+        mark_prefix="[timer]",
+        mark_print=True,
+    ):
         """通过上下文管理器记录函数的执行时间.
 
         Parameters
@@ -103,6 +112,10 @@ class Timer:
             时间单位，默认根据实际运行时间自动调整, by default None
         save : bool, optional
             是否保存到文件中, by default False
+        mark_prefix : str, optional
+            ``mark`` 方法输出信息的前缀, by default "[timer]"
+        mark_print : bool, optional
+            ``mark`` 方法是否直接打印信息, by default True
         
         Examples
         --------
@@ -117,10 +130,17 @@ class Timer:
         >>> with qt.basicfun.Timer(test,test2):
         >>>     a = test()
         >>>     b = test2()
+        >>>
+        >>> timer = qt.basicfun.Timer()
+        >>> heavy_step()
+        >>> timer.mark("heavy step")
         """
         self.use = use
         if not use:
             return
+        self.mark_prefix = mark_prefix
+        self.mark_print = mark_print
+        self.reset()
         if len(str_or_funcs) == 0:
             self.only_time = True
             self.string = "Time elapsed"
@@ -153,10 +173,44 @@ class Timer:
         else:
             logger.debug(message)
 
+    def reset(self):
+        """重置阶段计时器并返回当前对象."""
+        if not self.use:
+            return self
+        self.start_time = _time.perf_counter()
+        self.last_time = self.start_time
+        return self
+
+    def mark(self, label: str, *, print_time: bool | None = None) -> tuple[float, float]:
+        """打印并返回从上一次 ``mark`` 到现在、以及从 ``reset`` 到现在的时间.
+
+        Parameters
+        ----------
+        label : str
+            当前阶段的名称。
+        print_time : bool | None, optional
+            是否打印；默认使用初始化时的 ``mark_print``。
+
+        Returns
+        -------
+        tuple[float, float]
+            ``(elapsed, total)``，分别为阶段耗时和累计耗时，单位为秒。
+        """
+        if not self.use:
+            return 0.0, 0.0
+        now = _time.perf_counter()
+        elapsed = now - self.last_time
+        total = now - self.start_time
+        self.last_time = now
+        should_print = self.mark_print if print_time is None else print_time
+        if should_print:
+            print(f"{self.mark_prefix} {label}: {elapsed:.3f}s, total {total:.3f}s", flush=True)
+        return elapsed, total
+
     def __enter__(self):
         if not self.use:
             return None
-        self.start_time = _time.perf_counter()  # 记录开始时间
+        self.reset()  # 记录开始时间
         if not self.only_time:
             self.profile.enable()  # 开始分析时间
             return self.profile

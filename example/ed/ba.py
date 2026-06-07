@@ -45,55 +45,46 @@ sector_energies = (
 ground_energy = np.min(sector_energies, axis=0)
 ground_sector = n_downs[np.argmin(sector_energies, axis=0)]
 
-# print(zero_field_energies)
-# print(h_values[-201])
-print(sector_energies[:,-201])
-print(zero_field_energies - h_values[-201] * magnetizations)
-# print(zero_field_energies)
-# print(magnetizations[33])
-# print(ground_energy[-201])
-# print(ground_sector[-201])
+fig, ax = plt.subplots(figsize=(7, 3.6))
+cmap = plt.get_cmap("viridis")
+norm = plt.Normalize(n_downs.min(), n_downs.max())
 
-# fig, ax = plt.subplots(figsize=(7, 3.6))
-# cmap = plt.get_cmap("viridis")
-# norm = plt.Normalize(n_downs.min(), n_downs.max())
+for n_down, magnetization, energy_h in zip(n_downs, magnetizations, sector_energies):
+    ax.plot(
+        h_values,
+        energy_h,
+        color=cmap(norm(n_down)),
+        linewidth=0.75,
+        alpha=0.55,
+    )
 
-# for n_down, magnetization, energy_h in zip(n_downs, magnetizations, sector_energies):
-#     ax.plot(
-#         h_values,
-#         energy_h,
-#         color=cmap(norm(n_down)),
-#         linewidth=0.75,
-#         alpha=0.55,
-#     )
+ax.plot(
+    h_values,
+    ground_energy,
+    color="black",
+    linewidth=2.2,
+    label="ground-state envelope",
+)
 
-# ax.plot(
-#     h_values,
-#     ground_energy,
-#     color="black",
-#     linewidth=2.2,
-#     label="ground-state envelope",
-# )
+switch_idx = np.flatnonzero(np.diff(ground_sector) != 0)
+for idx in switch_idx:
+    h_mid = 0.5 * (h_values[idx] + h_values[idx + 1])
+    ax.axvline(h_mid, color="0.45", linestyle=":", linewidth=0.8)
 
-# switch_idx = np.flatnonzero(np.diff(ground_sector) != 0)
-# for idx in switch_idx:
-#     h_mid = 0.5 * (h_values[idx] + h_values[idx + 1])
-#     ax.axvline(h_mid, color="0.45", linestyle=":", linewidth=0.8)
+ax.set_xlabel(r"$h$")
+ax.set_ylabel(r"$E_N^{(0)} - h (L - 2N)$")
+ax.set_title(fr"XXZ sectors with field, $L={L}$, $\Delta={Delta}$")
+sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+sm.set_array([])
+colorbar = fig.colorbar(sm, ax=ax, pad=0.015)
+colorbar.set_label(r"$N_\downarrow$")
+fig.tight_layout()
+output_path = Path(__file__).with_name("xxz_sector_field_energy.png")
+fig.savefig(output_path, dpi=200)
+if plt.get_backend().lower() != "agg":
+    plt.show()
 
-# ax.set_xlabel(r"$h$")
-# ax.set_ylabel(r"$E_N^{(0)} - h (L - 2N)$")
-# ax.set_title(fr"XXZ sectors with field, $L={L}$, $\Delta={Delta}$")
-# sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
-# sm.set_array([])
-# colorbar = fig.colorbar(sm, ax=ax, pad=0.015)
-# colorbar.set_label(r"$N_\downarrow$")
-# fig.tight_layout()
-# output_path = Path(__file__).with_name("xxz_sector_field_energy.png")
-# fig.savefig(output_path, dpi=200)
-# if plt.get_backend().lower() != "agg":
-#     plt.show()
-
-# print("sector zero-field energies")
-# for n_down, magnetization, energy in zip(n_downs, magnetizations, zero_field_energies):
-#     print(f"N_down={n_down:2d}, Sz={magnetization:3d}, E0={energy:.12f}")
-# print(f"saved figure: {output_path}")
+print("sector zero-field energies")
+for n_down, magnetization, energy in zip(n_downs, magnetizations, zero_field_energies):
+    print(f"N_down={n_down:2d}, Sz={magnetization:3d}, E0={energy:.12f}")
+print(f"saved figure: {output_path}")
