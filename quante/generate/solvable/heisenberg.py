@@ -2,10 +2,9 @@
 # @Author: hzhu
 # @Date:   2025-09-02 13:20:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2025-09-30 18:41:42
+# @Last Modified time: 2026-06-06 18:30:40
 
 import numpy as np
-from scipy import integrate
 from typing import Optional, Union, Literal
 number = Union[int, float, complex]
 
@@ -63,10 +62,10 @@ def heisenberg_matrix(
     ham = heisenberg_operator(L, j, hx=hx, hy=hy, hz=hz, jxy=jxy, jyx=jyx, cyclic=cyclic)
     return ham.to_matrix(basis, pauli=pauli, sparse=sparse)
 
-def ising_matrix(L, j=1.0, h=1.0, cyclic=False, pauli=False, sparse=False):
+def ising_matrix(L, j=1.0, h=1.0, cyclic=False, pauli=True, sparse=False):
     return heisenberg_matrix(L, j=(j,0,0), hz=h, cyclic=cyclic, pauli=pauli, sparse=sparse)
 
-def xxz_matrix(L, j=1., delta=1.0, cyclic=False, pauli=False, sparse=False):
+def xxz_matrix(L, j=1., delta=1.0, cyclic=False, pauli=True, sparse=False):
     return heisenberg_matrix(L, j=(j,j,j*delta), cyclic=cyclic, pauli=pauli, sparse=sparse)
 
 def xxz_pbc_finite_ground_energy(
@@ -74,7 +73,8 @@ def xxz_pbc_finite_ground_energy(
     j=1.0,
     delta=1.0,
     *,
-    pauli=False,
+    h=0.0,
+    pauli=True,
     tol=1e-12,
     raise_error=True,
 ):
@@ -89,22 +89,18 @@ def xxz_pbc_finite_ground_energy(
     For ``J < 0`` the ground-state branch is obtained by mapping
     ``Delta -> -Delta`` before solving.
     """
-    if j == 0:
-        return 0.0
-
-    from .bethe_ansatz import solve_xxz_state, xxz_energy
-
-    branch_delta = delta if j > 0 else -delta
-    state = solve_xxz_state(
+    from .bethe_ansatz.xxz_z import xxz_pbc_finite_ground_energy as _xxz_finite
+    return _xxz_finite(
         L,
-        branch_delta,
-        M=L // 2,
+        j=j,
+        delta=delta,
+        h=h,
+        pauli=pauli,
         tol=tol,
         raise_error=raise_error,
     )
-    return xxz_energy(state, j=abs(j), pauli=pauli)
 
-def xxx_infinite_ground_energy(j, pauli=False):
+def xxx_infinite_ground_energy(j, pauli=True):
     r"""Ground state energy for the infinite Heisenberg model.
 
     .. math::
@@ -112,7 +108,7 @@ def xxx_infinite_ground_energy(j, pauli=False):
     """
     return j * (0.5 - 2 * np.log(2))/2 * (4 if pauli else 1)
 
-def xxx_finite_approx_ground_energy(L, j, pauli=False):
+def xxx_finite_approx_ground_energy(L, j, pauli=True):
     r"""Approximate ground state energy for the *pbc* Heisenberg model.
 
     .. math::
@@ -129,11 +125,14 @@ def xxx_finite_approx_ground_energy(L, j, pauli=False):
     correction = 1 + 0.375 / np.log(L) ** 3
     return j * (Einf - Efinite * correction) / 2 * (4 if pauli else 1)
 
-def xxz_infinite_ground_energy(
+def xxz_pbc_infinite_ground_energy(
     j=1.0,
     delta=1.0,
     *,
-    pauli=False,
+    h=0.0,
+    pauli=True,
+    n_quad=240,
+    B_max=40.0,
     epsrel=1e-12,
     limit=256,
 ):
@@ -148,41 +147,20 @@ def xxz_infinite_ground_energy(
     ``Delta``. For ``J < 0`` the ground-state energy is obtained from the
     corresponding branch at ``-Delta``.
     """
-    if j == 0:
-        return 0.0
-
-    branch_delta = delta if j > 0 else -delta
-    branch_delta = float(branch_delta)
-    if not (-1.0 < branch_delta < 1.0):
-        raise ValueError(
-            "xxz_infinite_ground_energy currently supports the massless "
-            f"regime after the J-sign mapping, got delta={branch_delta}"
-        )
-    eta = float(np.arccos(branch_delta))
-
-    def integrand(alpha):
-        with np.errstate(over="ignore"):
-            return (
-                1.0 / np.cosh(np.pi * alpha / (2.0 * eta))
-                / (np.cosh(alpha) - np.cos(eta))
-            )
-
-    integral = integrate.quad(
-        integrand,
-        -np.inf,
-        np.inf,
+    from .bethe_ansatz.xxz_z import xxz_pbc_infinite_ground_energy as _xxz_infinite
+    return _xxz_infinite(
+        j=j,
+        delta=delta,
+        h=h,
+        pauli=pauli,
+        n_quad=n_quad,
+        B_max=B_max,
         epsrel=epsrel,
         limit=limit,
-    )[0]
-    energy_density = abs(j) * (
-        np.cos(eta) - np.sin(eta) ** 2 / eta * integral
     )
-    if not pauli:
-        energy_density /= 4.0
-    return float(np.real_if_close(energy_density))
 
 
-def xy_infinite_ground_energy(jx, jy, jxy, jyx, hz, pauli=False):
+def xy_infinite_ground_energy(jx, jy, jxy, jyx, hz, pauli=True):
     r"""Ground state energy for the infinite XY model.
 
     .. math::
@@ -193,7 +171,7 @@ def xy_infinite_ground_energy(jx, jy, jxy, jyx, hz, pauli=False):
     from .free_fermion.spectrum import _XY_gdenergy_inf
     return _XY_gdenergy_inf(jxx=jx, jyy=jy, jxy=jxy, jyx=jyx, hz=hz, pauli=pauli)
 
-def xy_finite_ground_energy(L, jx, jy, jxy, jyx, hz, pauli=False):
+def xy_finite_ground_energy(L, jx, jy, jxy, jyx, hz, pauli=True):
     r"""Ground state energy for the finite XY model with *obc*.
 
     .. math:: 
@@ -216,7 +194,7 @@ def xy_finite_ground_energy(L, jx, jy, jxy, jyx, hz, pauli=False):
     omega = _XY_omega(L, jxx=jx, jyy=jy, jxy=jxy, jyx=jyx, hz=hz, pauli=pauli)
     return - np.sum(omega)
     
-def xy_spectrum(L, jx, jy, jxy, jyx, hz, pauli=False):
+def xy_spectrum(L, jx, jy, jxy, jyx, hz, pauli=True):
     r"""Ground state energy for the finite XY model with *obc*.
 
     .. math:: 
@@ -241,7 +219,7 @@ def xy_spectrum(L, jx, jy, jxy, jyx, hz, pauli=False):
 
 def xy_evolve(L, jx, jy, jxy, jyx, hz, init_state, tlist, 
               obs_name:Literal['particle_number'], 
-              obs_para=None, pauli=False):
+              obs_para=None, pauli=True):
     r"""Evolve the obc finite XY model from a product state.
 
     .. math:: 
@@ -274,7 +252,7 @@ def xy_evolve(L, jx, jy, jxy, jyx, hz, init_state, tlist,
 
 def xx_evolve(L, j, h, init_state, tlist, 
               obs_name:Literal['particle_number', 'entanglement', 'reduced_density_matrix'], 
-              obs_para=None, pauli=False):
+              obs_para=None, pauli=True):
     r"""Evolve the obc finite XY model from a product state.
 
     .. math::
@@ -304,15 +282,15 @@ def xx_evolve(L, j, h, init_state, tlist,
     else:
         raise NotImplementedError(f"Observable {obs_name} not implemented yet.")
 
-def ising_ground_energy(L, j=1.0, h=1.0, cyclic=False, pauli=False):
+def ising_ground_energy(L, j=1.0, h=1.0, cyclic=False, pauli=True):
     assert not cyclic, "should be not cyclic"
     return xy_finite_ground_energy(L=L, jx=j, jy=0, jxy=0, jyx=0, hz=h, pauli=pauli)
 
-def ising_spectrum(L, j=1.0, h=1.0, cyclic=False, pauli=False):
+def ising_spectrum(L, j=1.0, h=1.0, cyclic=False, pauli=True):
     assert not cyclic, "should be not cyclic"
     return xy_spectrum(L=L, jx=j, jy=0, jxy=0, jyx=0, hz=h, pauli=pauli)
 
-def ising_spectrum_block(L, j=1.0, h=1.0, pauli=False):
+def ising_spectrum_block(L, j=1.0, h=1.0, pauli=True):
     r"""Spectrum of the obc finite Ising model in blocks.
 
     .. math::
