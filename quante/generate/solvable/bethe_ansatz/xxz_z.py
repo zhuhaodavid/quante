@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2026-06-06 17:55:06
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-06-06 19:43:25
+# @Last Modified time: 2026-06-07 19:08:10
 import numpy as np
 from scipy import integrate
 from scipy.linalg import solve
@@ -87,8 +87,91 @@ class XXZGroundStateDensity:
 
     def items(self):
         return self.asdict().items()
+    
+
+    def dressed_energy(self, alphas, chunk_size=2048):
+        eta = float(self.eta)
+        h = float(self.h) 
+        alpha_eval = np.asarray(alphas, dtype=float)
+
+        # These beta points are the sea rapidities where epsilon_B(beta) was solved.
+        beta = np.asarray(self.epsilon_alpha, dtype=float)
+        eps_beta = np.asarray(self.epsilon, dtype=float)
+        weight = np.asarray(self.weight, dtype=float)
+
+        # Start from the bare energy.
+        epsilon_full = bare_energy(alpha_eval, eta, h)
+
+        # If B = 0, the sea is empty, so there is no dressing integral.
+        if self.B == 0 or len(beta) == 0:
+            return epsilon_full
+
+        weighted_eps = weight * eps_beta
+
+        # Evaluate
+        #
+        # epsilon(alpha)
+        # = bare(alpha)
+        #   - 1/(2 pi) int_{-B}^{B} epsilon(beta) theta'(alpha-beta) d beta
+        #
+        # using quadrature on the solved sea points beta.
+        for start in range(0, len(alpha_eval), chunk_size):
+            stop = min(start + chunk_size, len(alpha_eval))
+            a = alpha_eval[start:stop]
+
+            K = theta_prime(a[:, None] - beta[None, :], eta)
+            correction = K @ weighted_eps
+
+            epsilon_full[start:stop] -= correction / (2.0 * np.pi)
+
+        return epsilon_full
+
+    def plot_dressed_energy(self, alphas):
+        epsilon_plot = self.dressed_energy(alphas)
+        fig, ax = plt.subplots()
+        ax.plot(alphas, epsilon_plot, label=r"full $\varepsilon_B(\alpha)$", c='b')
+        xlim1, xlim2 = ax.get_xlim()
+        ax.axhline(0, color="0.7", linestyle="--", linewidth=0.8)
+        if np.isinf(self.B):
+            used_alphas = np.linspace(
+                xlim1, xlim2, 100
+            )
+            used_epsilon = bare_energy(used_alphas, self.eta, self.h)
+        else:
+            used_alphas = self.epsilon_alpha
+            used_epsilon = self.epsilon
+        ax.plot(
+            used_alphas,
+            used_epsilon,
+            ".",
+            color="orange",
+            markersize=3,
+            label=r"solved points in $[-B,B]$",
+        )
+        ax.fill_between(
+            used_alphas,
+            used_epsilon,
+            0,
+            interpolate=True,
+            color="orange",
+            alpha=0.25,
+            label=r"$\varepsilon_B(\alpha)<0$",
+        )
+        ax.axvline(0, color="0.7", linestyle="--", linewidth=0.8)
+        B = self.B
+        if self.B != 0:
+            ax.text(-B, 0.0, r"$-B$", ha="right", va="top")
+            ax.text(B, 0.0, r"$B$", ha="left", va="top")
+        ax.set_xlabel(r"$\alpha$")
+        ax.set_ylabel(r"$\varepsilon_B(\alpha)$")
+        ax.set_title(
+            rf"Dressed energy, $\eta={self.eta:.4g}$, $h={self.h:.4g}$, $B={self.B:.4g}$"
+        )
+        ax.set_xlim(xlim1, xlim2)
+        ax.legend()
 
 
+        
 def _check_delta(delta):
     delta = float(delta)
     if not (-1.0 < delta < 1.0):
@@ -748,3 +831,59 @@ def _zero_field_infinite_energy_density(eta, *, epsrel=1e-12, limit=256):
 
 def _zero_field_root_density(alpha, eta):
     return 1.0 / (4.0 * eta * np.cosh(np.pi * np.asarray(alpha) / (2.0 * eta)))
+
+
+def evaluate_full_dressed_energy(
+    gs,
+    alpha_eval,
+    *,
+    chunk_size=2048,
+):
+    eta = float(gs.eta)
+    h = float(gs.h)
+
+    alpha_eval = np.asarray(alpha_eval, dtype=float)
+
+    # These beta points are the sea rapidities where epsilon_B(beta) was solved.
+    beta = np.asarray(gs.epsilon_alpha, dtype=float)
+    eps_beta = np.asarray(gs.epsilon, dtype=float)
+    weight = np.asarray(gs.weight, dtype=float)
+
+    if beta.shape != eps_beta.shape:
+        raise ValueError(
+            "gs.epsilon_alpha and gs.epsilon must have the same shape."
+        )
+
+    if weight.shape != eps_beta.shape:
+        raise ValueError(
+            "gs.weight and gs.epsilon must have the same shape. "
+            "This function assumes the quadrature weights correspond to epsilon_alpha."
+        )
+
+    # Start from the bare energy.
+    epsilon_full = bare_energy(alpha_eval, eta, h)
+
+    # If B = 0, the sea is empty, so there is no dressing integral.
+    if gs.B == 0 or len(beta) == 0:
+        return epsilon_full
+
+    weighted_eps = weight * eps_beta
+
+    # Evaluate
+    #
+    # epsilon(alpha)
+    # = bare(alpha)
+    #   - 1/(2 pi) int_{-B}^{B} epsilon(beta) theta'(alpha-beta) d beta
+    #
+    # using quadrature on the solved sea points beta.
+    for start in range(0, len(alpha_eval), chunk_size):
+        stop = min(start + chunk_size, len(alpha_eval))
+        a = alpha_eval[start:stop]
+
+        K = theta_prime(a[:, None] - beta[None, :], eta)
+        correction = K @ weighted_eps
+
+        epsilon_full[start:stop] -= correction / (2.0 * np.pi)
+
+    return epsilon_full
+
