@@ -12,19 +12,13 @@ The calculation example saves ordinary nested HDF5 groups/datasets:
     data/
 
 This script converts that nested structure back into one flat plotting
-dictionary.  It also keeps a small legacy reader for files where
-``parameters`` and ``scalars`` were stored as HDF5 attrs.
+dictionary.  It expects the current ``ed_dynamic_results_v2`` schema and does
+not try to read older ad-hoc files.
 """
 
 import argparse
-import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -32,6 +26,7 @@ import quante as qt
 
 
 DEFAULT_INPUT = Path(__file__).with_name("xxz_dynamic_correlation.h5")
+EXPECTED_SCHEMA = "ed_dynamic_results_v2"
 
 
 def _as_python_scalar(value):
@@ -55,17 +50,16 @@ def flatten_dynamic_results(saved):
 
 
 def load_dynamic_results(path):
-    """Load new ``save_hdf5`` data, with compatibility for the old attrs file."""
+    """Load the nested ``save_hdf5`` result written by ``ed_example.py``."""
     saved = qt.basicfun.load_hdf5(str(path), data="/")
-    if "data" in saved and "scalars" in saved and "parameters" in saved:
-        return flatten_dynamic_results(saved)
-
-    results = dict(saved)
-    with h5py.File(path, "r") as h5:
-        for group_name in ("parameters", "scalars"):
-            if group_name in h5:
-                for key, value in h5[group_name].attrs.items():
-                    results[key] = value
+    required_groups = {"metadata", "parameters", "scalars", "data"}
+    missing = required_groups.difference(saved)
+    if missing:
+        raise ValueError(f"Missing HDF5 groups for ed_dynamic_results_v2: {sorted(missing)}")
+    results = flatten_dynamic_results(saved)
+    schema = results.get("schema")
+    if schema != EXPECTED_SCHEMA:
+        raise ValueError(f"Expected schema {EXPECTED_SCHEMA!r}, got {schema!r}.")
     return results
 
 

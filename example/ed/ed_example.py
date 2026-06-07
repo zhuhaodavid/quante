@@ -2,28 +2,36 @@
 # @Author: hzhu
 # @Date:   2026-06-07 14:11:17
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-06-08 00:42:01
+# @Last Modified time: 2026-06-08 01:05:27
 
-"""XXZ ED example for future AI-assisted library use.
+"""XXZ ED toolkit example for future AI-assisted Quante use.
 
-This file is meant to be a compact, executable catalogue of useful Quante
-patterns rather than a plotting script.  A future AI reading this example
-should treat it as a reference for:
+Purpose
+-------
+This file is a compact, executable catalogue of Quante exact-diagonalization
+patterns.  It is intentionally more explicit than a minimal physics script:
+future AI agents should be able to copy small pieces from here when they need
+to use this library correctly.
 
-1. building symmetry-resolved spin bases and XXZ Hamiltonians with
-   ``quante.generate.basis`` and ``quante.generate.operas``;
-2. comparing ground-state solvers: SciPy CSR ARPACK, a ``LinearOperator`` that
-   uses ``dot_parallel``, Quante Krylov ``eigsolve``, and CUDA sparse tensors;
-3. constructing diagonal local observables directly from a basis;
-4. evolving a state with ``make_evolve_engine`` and measuring connected
-   real-time correlation functions;
-5. extracting velocities from momentum-sector gaps and from the spatial
-   Fourier transform ``C(r,t) -> S(q,t)`` using phase fitting;
-6. saving results with ``quante.basicfun.save_hdf5`` as ordinary nested
-   groups/datasets so ``load_hdf5(path, "/")`` returns a convenient dict.
+What to learn from this file
+----------------------------
+1. Build symmetry-resolved spin bases and XXZ Hamiltonians with
+   ``qt.generate.basis.spin_basis`` and ``quante.generate.operas``.
+2. Compare ground-state solvers:
+   SciPy CSR ARPACK, SciPy ``LinearOperator`` + ``dot_parallel``, Quante
+   Krylov ``eigsolve``, and CUDA sparse tensors.
+3. Construct diagonal local observables directly from a basis when doing so is
+   cheaper than materializing operator matrices.
+4. Use ``make_evolve_engine`` for real-time dynamics and measure connected
+   correlation functions on CPU or CUDA.
+5. Estimate a finite-size velocity from momentum-sector gaps, and estimate a
+   dynamic velocity from the spatial Fourier transform ``C(r,t) -> S(q,t)``
+   using phase fitting instead of a short-time FFT.
+6. Save results with ``quante.basicfun.save_hdf5`` as ordinary nested
+   groups/datasets.  The matching loader is ``qt.basicfun.load_hdf5(path, "/")``.
 
 Plotting is intentionally kept out of this file.  Use ``ed_plot_example.py``
-to load the saved HDF5 data and make diagnostic figures.
+to load the saved HDF5 data and make diagnostic figures. 
 
 Benchmark on this machine for ``L=24, Delta=0.7`` using
 ``quante.generate.operas`` + ``to_matrix`` in the ``Nup=L//2`` sector:
@@ -42,15 +50,10 @@ by default.
 """
 
 import os
-import sys
 import time
 from pathlib import Path
 
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np
 import scipy.sparse as sps
@@ -64,6 +67,10 @@ from quante.linalg.krylov.eigsolve.eigsolve import eigsolve
 from quante.linalg.matops.sparse_mul import dot_parallel
 
 
+# ---------------------------------------------------------------------------
+# Runtime configuration
+# ---------------------------------------------------------------------------
+
 L = int(os.environ.get("XXZ_L", 26))
 Delta = float(os.environ.get("XXZ_DELTA", 0.7))
 TOL = float(os.environ.get("XXZ_TOL", 1e-10))
@@ -73,8 +80,12 @@ T_MAX = float(os.environ.get("XXZ_TMAX", 3.0))
 N_TIME = int(os.environ.get("XXZ_NTIME", 121))
 J_SITE = int(os.environ.get("XXZ_JSITE", L // 2))
 PHASE_FIT_T_MIN = float(os.environ.get("XXZ_PHASE_FIT_TMIN", 0.5))
-PHASE_FIT_T_MAX = os.environ.get("XXZ_PHASE_FIT_TMAX")
-PHASE_FIT_T_MAX = None if PHASE_FIT_T_MAX in (None, "", "none", "None") else float(PHASE_FIT_T_MAX)
+PHASE_FIT_T_MAX_RAW = os.environ.get("XXZ_PHASE_FIT_TMAX")
+PHASE_FIT_T_MAX = (
+    None
+    if PHASE_FIT_T_MAX_RAW in (None, "", "none", "None")
+    else float(PHASE_FIT_T_MAX_RAW)
+)
 PHASE_FIT_M_LIST = tuple(
     int(item.strip())
     for item in os.environ.get("XXZ_PHASE_FIT_M_LIST", "1,2,3,4").split(",")
@@ -84,6 +95,12 @@ MODE = os.environ.get("XXZ_MODE", "dynamic")
 EVOLVE_METHOD = os.environ.get("XXZ_EVOLVE_METHOD", "mul-cuda:0")
 OUTPUT_STEM = os.environ.get("XXZ_OUTPUT_STEM", "xxz_dynamic_correlation")
 SCAN_KBLOCKS = os.environ.get("XXZ_SCAN_KBLOCKS", "1") != "0"
+RESULT_SCHEMA = "ed_dynamic_results_v2"
+
+
+# ---------------------------------------------------------------------------
+# Model construction
+# ---------------------------------------------------------------------------
 
 
 def xxz_sound_velocity(delta):
@@ -120,6 +137,10 @@ def build_xxz_matrix_kblock(L, delta, kblock):
     hmat = ham.to_matrix(basis=basis, pauli=True, sparse=True).tocsr()
     return basis, hmat
 
+
+# ---------------------------------------------------------------------------
+# Ground-state solvers and sparse-matrix backends
+# ---------------------------------------------------------------------------
 
 def parallel_linear_operator(mat):
     mat = mat.tocsr()
@@ -190,6 +211,10 @@ def eigsolve_ground_state_cuda(hmat, *, return_vector=True):
     torch.cuda.empty_cache()
     return energy, psi0, info
 
+
+# ---------------------------------------------------------------------------
+# Local observables and real-time correlation measurement
+# ---------------------------------------------------------------------------
 
 def sz_values_for_basis(basis, site, *, pauli=False):
     """Diagonal entries of ``S_site^z`` in a quante spin-half basis."""
@@ -268,6 +293,10 @@ def signed_r_grid(L, j_site):
     sites = np.arange(L)
     return ((sites - j_site + L // 2) % L) - L // 2
 
+
+# ---------------------------------------------------------------------------
+# Momentum-space velocity estimators
+# ---------------------------------------------------------------------------
 
 def structure_factor_time_from_correlation(correlations, q, j_site, *, normalize=True):
     r"""Convert site-resolved ``C_ij(t)`` to ``S(q,t)=sum_r exp(-iqr) C(r,t)``."""
@@ -454,6 +483,10 @@ def estimate_velocity_from_momentum_gap(L, delta, e0):
     return (e_q - e0) / q, e_q
 
 
+# ---------------------------------------------------------------------------
+# Time evolution and HDF5 result schema
+# ---------------------------------------------------------------------------
+
 def make_preferred_evolve_engine(hmat, psi, tlist):
     shifted_hmat = hmat - sps.identity(hmat.shape[0], format="csr") * 0.0
     return make_evolve_engine(
@@ -464,12 +497,6 @@ def make_preferred_evolve_engine(hmat, psi, tlist):
         matrix_role="hamiltonian",
         herm=True,
     ), EVOLVE_METHOD
-
-
-def to_numpy_state(state):
-    if hasattr(state, "detach"):
-        state = state.detach().cpu().numpy()
-    return np.asarray(state).reshape(-1)
 
 
 def dynamic_parameters(*, used_method=None):
@@ -529,7 +556,7 @@ def save_dynamic_results(results, output_path):
         "metadata": {
             "description": "XXZ connected dynamic Sz-Sz correlation from ED",
             "created_unix_time": time.time(),
-            "schema": "ed_dynamic_results_v2",
+            "schema": RESULT_SCHEMA,
         },
         "parameters": results["parameters"],
         "scalars": {key: results[key] for key in scalar_keys},
@@ -541,6 +568,10 @@ def save_dynamic_results(results, output_path):
 
     save_hdf5(str(output_path), data=data, group="/", mode="w")
 
+
+# ---------------------------------------------------------------------------
+# Executable modes
+# ---------------------------------------------------------------------------
 
 def run_dynamic():
     if L % 2 != 0:
