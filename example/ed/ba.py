@@ -6,8 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from quante.generate.solvable.bethe_ansatz import solve_xxz_state, xxz_energy
-from quante.generate.solvable.bethe_ansatz.xxz import xxz_energy_from_rapidities
+from quante.generate.solvable.bethe_ansatz import solve_xxz_state, energy
+from quante.generate.solvable.bethe_ansatz.finite_pbc_xxz import energy_from_rapidities
 
 
 L = 100
@@ -21,7 +21,7 @@ def sector_zero_field_energy(L, delta, n_down):
     n_ba = min(n_down, L - n_down)
 
     if n_ba == 0:
-        return xxz_energy_from_rapidities([], L, delta, pauli=True)
+        return energy_from_rapidities([], L, delta, pauli=True)
 
     state = solve_xxz_state(
         L,
@@ -29,7 +29,7 @@ def sector_zero_field_energy(L, delta, n_down):
         M=n_ba,
         raise_error=True,
     )
-    return xxz_energy(state, pauli=True)
+    return energy(state, pauli=True)
 
 
 n_downs = np.arange(L + 1)

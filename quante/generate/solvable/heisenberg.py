@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-09-02 13:20:19
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-06-06 18:30:40
+# @Last Modified time: 2026-06-08 14:04:46
 
 import numpy as np
 from typing import Optional, Union, Literal
@@ -89,7 +89,7 @@ def xxz_pbc_finite_ground_energy(
     For ``J < 0`` the ground-state branch is obtained by mapping
     ``Delta -> -Delta`` before solving.
     """
-    from .bethe_ansatz.xxz_z import xxz_pbc_finite_ground_energy as _xxz_finite
+    from .bethe_ansatz.finite_pbc_xxz import ground_energy as _xxz_finite
     return _xxz_finite(
         L,
         j=j,
@@ -147,7 +147,7 @@ def xxz_pbc_infinite_ground_energy(
     ``Delta``. For ``J < 0`` the ground-state energy is obtained from the
     corresponding branch at ``-Delta``.
     """
-    from .bethe_ansatz.xxz_z import xxz_pbc_infinite_ground_energy as _xxz_infinite
+    from .bethe_ansatz.infinite_pbc_xxz import ground_energy as _xxz_infinite
     return _xxz_infinite(
         j=j,
         delta=delta,

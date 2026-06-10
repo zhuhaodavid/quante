@@ -91,6 +91,22 @@ class SixVertexBetheState(BetheState):
         if alphas is None:
             alphas = self.alphas
         return self._map_alpha_to_u(alphas, self.eta)
+    
+    def xxz_energy(self, j: float = 1.0, *, pauli: bool = True):
+        """Return the periodic XXZ energy for a state from ``solve_xxz_state``."""
+        from .finite_pbc_xxz import energy_from_rapidities
+        delta = self.metadata["delta"]
+        return energy_from_rapidities(
+            self.alphas,
+            self.L,
+            delta,
+            eta=self.eta,
+            j=j,
+            pauli=pauli,
+        )
+    
+    def xxz_energy_density(self, j: float = 1.0, *, pauli: bool = True):
+        return self.xxz_energy(j=j, pauli=pauli) / self.L
 
 
 def plot_roots(state_or_roots, ax=None, **kwargs):

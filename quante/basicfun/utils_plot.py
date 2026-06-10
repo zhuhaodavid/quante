@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2025-06-11 22:15:34
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-05-30 18:11:15
+# @Last Modified time: 2026-06-08 14:39:01
 
 import numpy as _np
 from typing import Literal
@@ -31,14 +31,17 @@ def plt_style_use(stylename:Literal['quante', 'default', 'science'] = "quante", 
     import matplotlib.pyplot as _plt
     
     try:
-        if svg:
+        fmt = "svg" if svg else "png"
+        # New recommended interface
+        from matplotlib_inline.backend_inline import set_matplotlib_formats
+        set_matplotlib_formats(fmt)
+    except Exception:
+        try:
+            # Fallback for older IPython versions
             from IPython.display import set_matplotlib_formats
-            set_matplotlib_formats("svg")
-        else:
-            from IPython.display import set_matplotlib_formats
-            set_matplotlib_formats("png")
-    except:
-        pass
+            set_matplotlib_formats(fmt)
+        except Exception:
+            pass
     
     if stylename == "quante":
         try:

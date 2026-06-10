@@ -2,15 +2,14 @@
 # @Author: hzhu
 # @Date:   2026-06-06 17:55:06
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-06-07 19:08:10
+# @Last Modified time: 2026-06-08 13:52:35
 import numpy as np
+import warnings
 from scipy import integrate
 from scipy.linalg import solve
 from scipy.optimize import brentq
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
-
-from .xxz import solve_xxz_state, xxz_energy, xxz_energy_from_rapidities
 
 
 __all__ = [
@@ -25,10 +24,7 @@ __all__ = [
     "solve_root_density_fixed_B",
     "energy_density",
     "compute_ground_state_density",
-    "xxz_pbc_finite_sector_energies",
-    "xxz_pbc_finite_ground_energy",
-    "xxz_pbc_infinite_ground_energy",
-    "plot_xxz_pbc_finite_energy_vs_h",
+    "ground_energy",
     "plot_xxz_root_distribution",
 ]
 
@@ -390,6 +386,16 @@ def compute_ground_state_density(eta, h, n_quad=240, B_max=40.0):
     """
     eta = float(eta)
     h = float(h)
+    if h < 0:
+        warnings.warn(
+            "compute_ground_state_density received h < 0. The TBA equations "
+            "in this file solve the positive-field minority-root branch; using "
+            "abs(h). The returned filling_density is the branch/root filling, "
+            "not the spin-flipped physical N_down/L.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        h = abs(h)
     if h == 0:
         alpha = np.linspace(-float(B_max), float(B_max), int(n_quad))
         rho = _zero_field_root_density(alpha, eta)
@@ -444,116 +450,10 @@ def compute_ground_state_density(eta, h, n_quad=240, B_max=40.0):
 
 
 # ============================================================
-# Public finite/infinite XXZ helpers with longitudinal field
+# Public infinite XXZ helpers with longitudinal field
 # ============================================================
 
-def xxz_pbc_finite_sector_energies(
-    L,
-    delta,
-    h_values,
-    *,
-    j=1.0,
-    pauli=True,
-    tol=1e-12,
-    raise_error=True,
-):
-    r"""Return all finite-size sector energies in a longitudinal field.
-
-    The field convention is
-
-    .. math::
-        E(h) = E(0) - h M_z,
-
-    where ``M_z = L - 2 N_down`` in the Pauli convention and
-    ``M_z = (L - 2 N_down) / 2`` in the spin-operator convention.
-    """
-    L = int(L)
-    if L <= 0:
-        raise ValueError(f"L should be positive, got {L}")
-    _check_delta(delta)
-    h_values = np.atleast_1d(np.asarray(h_values, dtype=float))
-    if j == 0:
-        n_downs = np.arange(L + 1)
-        magnetizations = _sector_magnetizations(L, n_downs, pauli=pauli)
-        sector_energies = -h_values[None, :] * magnetizations[:, None]
-        return {
-            "n_downs": n_downs,
-            "magnetizations": magnetizations,
-            "zero_field_energies": np.zeros(L + 1),
-            "h_values": h_values,
-            "sector_energies": sector_energies,
-            "ground_energy": np.min(sector_energies, axis=0),
-            "ground_sector": n_downs[np.argmin(sector_energies, axis=0)],
-        }
-
-    branch_delta = _check_delta(delta if j > 0 else -delta)
-    n_downs = np.arange(L + 1)
-    magnetizations = _sector_magnetizations(L, n_downs, pauli=pauli)
-    zero_field_energies = np.array([
-        _finite_zero_field_sector_energy(
-            L,
-            branch_delta,
-            int(n_down),
-            j=abs(j),
-            pauli=pauli,
-            tol=tol,
-            raise_error=raise_error,
-        )
-        for n_down in n_downs
-    ])
-    sector_energies = zero_field_energies[:, None] - h_values[None, :] * magnetizations[:, None]
-    ground_index = np.argmin(sector_energies, axis=0)
-
-    return {
-        "n_downs": n_downs,
-        "magnetizations": magnetizations,
-        "zero_field_energies": zero_field_energies,
-        "h_values": h_values,
-        "sector_energies": sector_energies,
-        "ground_energy": sector_energies[ground_index, np.arange(len(h_values))],
-        "ground_sector": n_downs[ground_index],
-    }
-
-
-def xxz_pbc_finite_ground_energy(
-    L,
-    j=1.0,
-    delta=1.0,
-    *,
-    h=0.0,
-    pauli=False,
-    tol=1e-12,
-    raise_error=True,
-):
-    r"""Ground-state energy for the finite periodic XXZ chain with field."""
-    _check_delta(delta)
-    if j == 0:
-        return -abs(float(h)) * _sector_magnetizations(int(L), [0, int(L)], pauli=pauli).max()
-
-    branch_delta = _check_delta(delta if j > 0 else -delta)
-    L = int(L)
-    if h == 0:
-        state = solve_xxz_state(
-            L,
-            branch_delta,
-            M=L // 2,
-            tol=tol,
-            raise_error=raise_error,
-        )
-        return xxz_energy(state, j=abs(j), pauli=pauli)
-
-    return _finite_field_ground_energy_scalar(
-        L,
-        branch_delta,
-        h=float(h),
-        j=abs(j),
-        pauli=pauli,
-        tol=tol,
-        raise_error=raise_error,
-    )
-
-
-def xxz_pbc_infinite_ground_energy(
+def ground_energy(
     j=1.0,
     delta=1.0,
     *,
@@ -570,6 +470,14 @@ def xxz_pbc_infinite_ground_energy(
     supports only ``-1 < delta < 1`` after the ``j < 0`` branch mapping.
     """
     _check_delta(delta)
+    if h < 0:
+        warnings.warn(
+            "xxz_pbc_infinite_ground_energy received h < 0. Using spin-flip "
+            "symmetry and abs(h) for the positive-field TBA branch; the energy "
+            "density is unchanged by this flip.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
     if j == 0:
         return -abs(float(h)) * (1.0 if pauli else 0.5)
 
@@ -595,60 +503,6 @@ def xxz_pbc_infinite_ground_energy(
     return float(np.real_if_close(energy_density))
 
 
-def plot_xxz_pbc_finite_energy_vs_h(
-    L,
-    delta,
-    h_values,
-    *,
-    j=1.0,
-    pauli=True,
-    ax=None,
-    tol=1e-12,
-    raise_error=True,
-    show_sector_lines=True,
-):
-    """Plot the finite-size XXZ ``E-h`` sector envelope and return ``(fig, ax, data)``."""
-    data = xxz_pbc_finite_sector_energies(
-        L,
-        delta,
-        h_values,
-        j=j,
-        pauli=pauli,
-        tol=tol,
-        raise_error=raise_error,
-    )
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(7, 3.6))
-    else:
-        fig = ax.figure
-
-    n_downs = data["n_downs"]
-    h_values = data["h_values"]
-    sector_energies = data["sector_energies"]
-    cmap = plt.get_cmap("viridis")
-    norm = plt.Normalize(n_downs.min(), n_downs.max())
-
-    if show_sector_lines:
-        for n_down, energy_h in zip(n_downs, sector_energies):
-            ax.plot(h_values, energy_h, color=cmap(norm(n_down)), linewidth=0.75, alpha=0.55)
-
-    ax.plot(h_values, data["ground_energy"], color="black", linewidth=2.2, label="ground-state envelope")
-    switch_idx = np.flatnonzero(np.diff(data["ground_sector"]) != 0)
-    for idx in switch_idx:
-        h_mid = 0.5 * (h_values[idx] + h_values[idx + 1])
-        ax.axvline(h_mid, color="0.45", linestyle=":", linewidth=0.8)
-
-    ax.set_xlabel(r"$h$")
-    ax.set_ylabel(r"$E(h)$")
-    ax.set_title(fr"XXZ sectors with field, $L={L}$, $\Delta={delta}$")
-    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
-    sm.set_array([])
-    colorbar = fig.colorbar(sm, ax=ax, pad=0.015)
-    colorbar.set_label(r"$N_\downarrow$")
-    fig.tight_layout()
-    return fig, ax, data
-
-
 def plot_xxz_root_distribution(
     delta,
     h,
@@ -661,6 +515,13 @@ def plot_xxz_root_distribution(
     """Plot the infinite-chain root density at fixed field and return ``(fig, ax, data)``."""
     if j == 0:
         raise ValueError("root distribution is not defined for j=0")
+    if h < 0:
+        warnings.warn(
+            "plot_xxz_root_distribution received h < 0. Plotting the "
+            "spin-flipped positive-field minority-root density using abs(h).",
+            RuntimeWarning,
+            stacklevel=2,
+        )
     branch_delta = _check_delta(delta if j > 0 else -delta)
     data = compute_ground_state_density(
         eta=_eta_from_delta(branch_delta),
@@ -683,132 +544,6 @@ def plot_xxz_root_distribution(
     ax.legend()
     fig.tight_layout()
     return fig, ax, data
-
-
-def _finite_zero_field_sector_energy(L, delta, n_down, *, j, pauli, tol, raise_error):
-    n_ba = min(int(n_down), int(L) - int(n_down))
-    if n_ba == 0:
-        return xxz_energy_from_rapidities([], int(L), delta, j=j, pauli=pauli)
-    try:
-        state = solve_xxz_state(
-            int(L),
-            delta,
-            M=n_ba,
-            tol=tol,
-            raise_error=raise_error,
-        )
-    except RuntimeError:
-        state = solve_xxz_state(
-            int(L),
-            delta,
-            M=n_ba,
-            tol=max(tol, 1e-10),
-            method="lm",
-            raise_error=raise_error,
-        )
-    return xxz_energy(state, j=j, pauli=pauli)
-
-
-def _finite_field_ground_energy_scalar(L, delta, *, h, j, pauli, tol, raise_error):
-    abs_h = abs(float(h))
-    max_n_down = int(L) // 2
-    cache = {}
-
-    def sector_energy(n_down):
-        n_down = int(n_down)
-        if n_down not in cache:
-            zero_field_energy = _finite_zero_field_sector_energy(
-                L,
-                delta,
-                n_down,
-                j=j,
-                pauli=pauli,
-                tol=tol,
-                raise_error=raise_error,
-            )
-            magnetization = _sector_magnetizations(L, n_down, pauli=pauli)
-            cache[n_down] = zero_field_energy - abs_h * magnetization
-        return cache[n_down]
-
-    if max_n_down <= 64:
-        n_down = _minimize_integer_by_scan(sector_energy, 0, max_n_down)
-    else:
-        estimate_h = abs_h / j * (2.0 if not pauli else 1.0)
-        n_down = _estimate_finite_ground_sector(L, delta, h=estimate_h)
-        if n_down is None:
-            n_down = _minimize_integer_unimodal(sector_energy, 0, max_n_down)
-        else:
-            n_down = _minimize_near_integer_guess(sector_energy, n_down, 0, max_n_down)
-    return float(sector_energy(n_down))
-
-
-def _minimize_integer_by_scan(func, lo, hi):
-    candidates = np.arange(int(lo), int(hi) + 1)
-    values = np.array([func(n) for n in candidates])
-    return int(candidates[np.argmin(values)])
-
-
-def _estimate_finite_ground_sector(L, delta, *, h):
-    if h == 0:
-        return int(L) // 2
-    try:
-        data = compute_ground_state_density(
-            eta=_eta_from_delta(delta),
-            h=h,
-            n_quad=120,
-            B_max=40.0,
-        )
-    except Exception:
-        return None
-
-    filling = min(max(data.filling_density(), 0.0), 0.5)
-    return int(round(int(L) * filling))
-
-
-def _minimize_near_integer_guess(func, guess, lo, hi):
-    lo = int(lo)
-    hi = int(hi)
-    guess = int(np.clip(int(guess), lo, hi))
-    radius = max(4, min(32, (hi - lo + 1) // 100))
-
-    while True:
-        left = max(lo, guess - radius)
-        right = min(hi, guess + radius)
-        candidates = np.arange(left, right + 1)
-        values = np.array([func(n) for n in candidates])
-        best = int(candidates[np.argmin(values)])
-
-        if (best != left or left == lo) and (best != right or right == hi):
-            return best
-        if left == lo and right == hi:
-            return best
-
-        guess = best
-        radius = min(hi - lo + 1, radius * 2)
-
-
-def _minimize_integer_unimodal(func, lo, hi):
-    lo = int(lo)
-    hi = int(hi)
-    while hi - lo > 8:
-        third = (hi - lo) // 3
-        m1 = lo + third
-        m2 = hi - third
-        if func(m1) <= func(m2):
-            hi = m2 - 1
-        else:
-            lo = m1 + 1
-
-    candidates = np.arange(lo, hi + 1)
-    values = np.array([func(n) for n in candidates])
-    return int(candidates[np.argmin(values)])
-
-
-def _sector_magnetizations(L, n_downs, *, pauli):
-    magnetizations = int(L) - 2 * np.asarray(n_downs, dtype=float)
-    if not pauli:
-        magnetizations /= 2.0
-    return magnetizations
 
 
 def _zero_field_infinite_energy_density(eta, *, epsrel=1e-12, limit=256):
