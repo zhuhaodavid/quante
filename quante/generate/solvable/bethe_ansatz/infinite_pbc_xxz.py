@@ -2,7 +2,7 @@
 # @Author: hzhu
 # @Date:   2026-06-06 17:55:06
 # @Last Modified by:   hzhu
-# @Last Modified time: 2026-06-08 13:52:35
+# @Last Modified time: 2026-06-11 11:16:53
 import numpy as np
 import warnings
 from scipy import integrate
@@ -11,8 +11,11 @@ from scipy.optimize import brentq
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
 
+from .bethe_state import XXZBetheKernel
+
 
 __all__ = [
+    "XXZBetheKernel",
     "XXZGroundStateDensity",
     "p_prime",
     "theta_prime",
@@ -33,6 +36,8 @@ __all__ = [
 class XXZGroundStateDensity:
     """Root-density solution for the infinite periodic XXZ chain."""
 
+    delta: float
+    regime: str
     eta: float
     h: float
     B: float
@@ -64,7 +69,11 @@ class XXZGroundStateDensity:
 
     def asdict(self):
         return {
+            "delta": self.delta,
+            "regime": self.regime,
             "eta": self.eta,
+            "parameter": self.eta,
+            "parameter_name": "eta" if self.regime == "massless" else "gamma",
             "h": self.h,
             "B": self.B,
             "alpha": self.alpha,
@@ -86,9 +95,12 @@ class XXZGroundStateDensity:
     
 
     def dressed_energy(self, alphas, chunk_size=2048):
-        eta = float(self.eta)
+        kernel = XXZBetheKernel.from_delta(self.delta)
         h = float(self.h) 
         alpha_eval = np.asarray(alphas, dtype=float)
+
+        if h == 0.0 and kernel.regime == "massive":
+            return _zero_field_massive_dressed_energy(alpha_eval, kernel.parameter)
 
         # These beta points are the sea rapidities where epsilon_B(beta) was solved.
         beta = np.asarray(self.epsilon_alpha, dtype=float)
@@ -96,7 +108,7 @@ class XXZGroundStateDensity:
         weight = np.asarray(self.weight, dtype=float)
 
         # Start from the bare energy.
-        epsilon_full = bare_energy(alpha_eval, eta, h)
+        epsilon_full = kernel.bare_energy(alpha_eval, h)
 
         # If B = 0, the sea is empty, so there is no dressing integral.
         if self.B == 0 or len(beta) == 0:
@@ -115,39 +127,36 @@ class XXZGroundStateDensity:
             stop = min(start + chunk_size, len(alpha_eval))
             a = alpha_eval[start:stop]
 
-            K = theta_prime(a[:, None] - beta[None, :], eta)
+            K = kernel.theta_prime(a[:, None] - beta[None, :])
             correction = K @ weighted_eps
 
             epsilon_full[start:stop] -= correction / (2.0 * np.pi)
 
         return epsilon_full
 
-    def plot_dressed_energy(self, alphas):
+    def plot_dressed_energy(self, alphas, *, n_solved_points=600):
+        alphas = np.asarray(alphas, dtype=float)
         epsilon_plot = self.dressed_energy(alphas)
         fig, ax = plt.subplots()
         ax.plot(alphas, epsilon_plot, label=r"full $\varepsilon_B(\alpha)$", c='b')
         xlim1, xlim2 = ax.get_xlim()
         ax.axhline(0, color="0.7", linestyle="--", linewidth=0.8)
-        if np.isinf(self.B):
-            used_alphas = np.linspace(
-                xlim1, xlim2, 100
-            )
-            used_epsilon = bare_energy(used_alphas, self.eta, self.h)
-        else:
-            used_alphas = self.epsilon_alpha
-            used_epsilon = self.epsilon
+        solved_alphas = np.linspace(float(np.min(alphas)), float(np.max(alphas)), int(n_solved_points))
+        solved_epsilon = self.dressed_energy(solved_alphas)
+        solved_mask = solved_epsilon < 0.0
         ax.plot(
-            used_alphas,
-            used_epsilon,
+            solved_alphas[solved_mask],
+            solved_epsilon[solved_mask],
             ".",
             color="orange",
             markersize=3,
             label=r"solved points in $[-B,B]$",
         )
         ax.fill_between(
-            used_alphas,
-            used_epsilon,
+            alphas,
+            epsilon_plot,
             0,
+            where=epsilon_plot < 0.0,
             interpolate=True,
             color="orange",
             alpha=0.25,
@@ -156,15 +165,16 @@ class XXZGroundStateDensity:
         ax.axvline(0, color="0.7", linestyle="--", linewidth=0.8)
         B = self.B
         if self.B != 0:
-            ax.text(-B, 0.0, r"$-B$", ha="right", va="top")
-            ax.text(B, 0.0, r"$B$", ha="left", va="top")
+            ax.text(-B, 0.0, r"$-B$", ha="right", va="bottom")
+            ax.text(B, 0.0, r"$B$", ha="left", va="bottom")
         ax.set_xlabel(r"$\alpha$")
         ax.set_ylabel(r"$\varepsilon_B(\alpha)$")
         ax.set_title(
-            rf"Dressed energy, $\eta={self.eta:.4g}$, $h={self.h:.4g}$, $B={self.B:.4g}$"
+            rf"Dressed energy, $\Delta={self.delta:.4g}$, $h={self.h:.4g}$, $B={self.B:.4g}$"
         )
         ax.set_xlim(xlim1, xlim2)
-        ax.legend()
+        ax.legend(loc="lower left")
+        return epsilon_plot, ax
 
 
         
@@ -173,6 +183,16 @@ def _check_delta(delta):
     if not (-1.0 < delta < 1.0):
         raise ValueError(f"XXZ Bethe-ansatz helpers currently support -1 < delta < 1, got {delta}")
     return delta
+
+
+def _check_ground_delta(delta):
+    delta = float(delta)
+    if delta != -1.0 and delta != 1.0:
+        return delta
+    raise ValueError(
+        "XXZ infinite ground_energy currently excludes the singular isotropic "
+        f"points delta=+/-1, got {delta}"
+    )
 
 
 def _eta_from_delta(delta):
@@ -223,13 +243,13 @@ def gauss_legendre_on_minus_B_B(B, n_quad):
 # Solve dressed energy for a fixed B
 # ============================================================
 
-def solve_dressed_energy_fixed_B(B, eta, h, n_quad=240):
+def solve_dressed_energy_fixed_B(B, kernel: XXZBetheKernel, h, n_quad=240):
     """
     Solve
 
         epsilon_B(beta)
         =
-        2h - 4 sin^2 eta / (cosh beta - cos eta)
+        bare_energy(beta)
         - 1/(2 pi) int_{-B}^B theta'(alpha - beta) epsilon_B(alpha) d alpha
 
     for a fixed B.
@@ -245,42 +265,42 @@ def solve_dressed_energy_fixed_B(B, eta, h, n_quad=240):
     # 2h - 4 sin^2 eta / (cosh alpha_i - cos eta)
 
     diff = alpha[None, :] - alpha[:, None]
-    matrix = np.eye(n_quad) + (weight[None, :] / (2 * np.pi)) * theta_prime(diff, eta)
+    matrix = np.eye(n_quad) + (weight[None, :] / (2 * np.pi)) * kernel.theta_prime(diff)
 
-    rhs = bare_energy(alpha, eta, h)
+    rhs = kernel.bare_energy(alpha, h)
 
     epsilon = solve(matrix, rhs, assume_a="gen")
 
     return alpha, weight, epsilon
 
 
-def evaluate_dressed_energy(beta, alpha, weight, epsilon, eta, h):
+def evaluate_dressed_energy(beta, alpha, weight, epsilon, kernel: XXZBetheKernel, h):
     """
     Evaluate epsilon_B(beta) from the integral equation after epsilon_B(alpha)
     has been solved on quadrature nodes.
     """
 
     return (
-        bare_energy(beta, eta, h)
-        - np.sum(weight * theta_prime(alpha - beta, eta) * epsilon) / (2 * np.pi)
+        kernel.bare_energy(beta, h)
+        - np.sum(weight * kernel.theta_prime(alpha - beta) * epsilon) / (2 * np.pi)
     )
 
 
-def epsilon_boundary(B, eta, h, n_quad=240):
+def epsilon_boundary(B, kernel: XXZBetheKernel, h, n_quad=240):
     """
     Compute epsilon_B(B).
     """
 
-    alpha, weight, epsilon = solve_dressed_energy_fixed_B(B, eta, h, n_quad=n_quad)
+    alpha, weight, epsilon = solve_dressed_energy_fixed_B(B, kernel, h, n_quad=n_quad)
 
-    return evaluate_dressed_energy(B, alpha, weight, epsilon, eta, h)
+    return evaluate_dressed_energy(B, alpha, weight, epsilon, kernel, h)
 
 
 # ============================================================
 # Find B from epsilon_B(B) = 0
 # ============================================================
 
-def find_fermi_B(eta, h, n_quad=240, B_min=1e-6, B_max=40.0, n_scan=80):
+def find_fermi_B(kernel: XXZBetheKernel, h, n_quad=240, B_min=1e-6, B_max=40.0, n_scan=80):
     """
     Find B such that epsilon_B(B) = 0.
 
@@ -289,14 +309,23 @@ def find_fermi_B(eta, h, n_quad=240, B_min=1e-6, B_max=40.0, n_scan=80):
     or B_max is too small.
     """
 
-    value_min = epsilon_boundary(B_min, eta, h, n_quad=n_quad)
+    if kernel.regime == "massive_negative":
+        return 0.0
+
+    if kernel.regime == "massive":
+        value_max = epsilon_boundary(np.pi, kernel, h, n_quad=n_quad)
+        if value_max <= 0.0:
+            return float(np.pi)
+        B_max = min(float(B_max), float(np.pi))
+
+    value_min = epsilon_boundary(B_min, kernel, h, n_quad=n_quad)
 
     if value_min > 0:
         print("epsilon_B(0+) > 0: the sea is empty. Returning B = 0.")
         return 0.0
 
     B_values = np.linspace(B_min, B_max, n_scan)
-    values = np.array([epsilon_boundary(B, eta, h, n_quad=n_quad) for B in B_values])
+    values = np.array([epsilon_boundary(B, kernel, h, n_quad=n_quad) for B in B_values])
 
     for i in range(len(B_values) - 1):
         if values[i] == 0:
@@ -307,7 +336,7 @@ def find_fermi_B(eta, h, n_quad=240, B_min=1e-6, B_max=40.0, n_scan=80):
             B_right = B_values[i + 1]
 
             B_root = brentq(
-                lambda B: epsilon_boundary(B, eta, h, n_quad=n_quad),
+                lambda B: epsilon_boundary(B, kernel, h, n_quad=n_quad),
                 B_left,
                 B_right,
                 xtol=1e-11,
@@ -327,7 +356,15 @@ def find_fermi_B(eta, h, n_quad=240, B_min=1e-6, B_max=40.0, n_scan=80):
 # Solve root density after B is known
 # ============================================================
 
-def solve_root_density_fixed_B(B, eta, n_quad=240):
+def solve_root_density_fixed_B(
+    B,
+    kernel: XXZBetheKernel,
+    n_quad=240,
+    *,
+    alpha_cut=40.0,
+    series_terms=4096,
+    series_tol=1e-14,
+):
     """
     Solve
 
@@ -337,7 +374,38 @@ def solve_root_density_fixed_B(B, eta, n_quad=240):
         - 1/(2 pi) int_{-B}^B theta'(alpha - beta) rho_B(beta) d beta
 
     for a fixed B.
+
+    The kernel chooses the massless or massive XXZ equation. For the
+    zero-field closed-form case, pass ``B=np.inf`` for massless or
+    ``B=np.pi`` for massive:
+
+    - ``|Delta| < 1`` returns
+      ``rho(alpha) = sech(pi alpha / (2 eta)) / (4 eta)`` on
+      ``[-alpha_cut, alpha_cut]``.
+    - ``Delta > 1`` returns the massive branch with
+      ``gamma = arccosh(|delta|)`` on ``[-pi, pi]``:
+      ``rho(alpha) = (1 + 2 sum_l cos(l alpha) / cosh(l gamma)) / (4 pi)``.
     """
+    B = float(B)
+
+    if kernel.regime == "massive_negative":
+        return np.array([]), np.array([]), np.array([])
+
+    if np.isinf(B) or (kernel.regime == "massive" and np.isclose(B, np.pi)):
+        if kernel.regime == "massless":
+            alpha = np.linspace(-float(alpha_cut), float(alpha_cut), int(n_quad))
+            weight = np.array([])
+            rho = _zero_field_density(kernel, alpha)
+            return alpha, weight, rho
+
+        alpha, weight = gauss_legendre_on_minus_B_B(np.pi, int(n_quad))
+        rho = _zero_field_density(
+            kernel,
+            alpha,
+            series_terms=series_terms,
+            series_tol=series_tol,
+        )
+        return alpha, weight, rho
 
     alpha, weight = gauss_legendre_on_minus_B_B(B, n_quad)
 
@@ -349,9 +417,9 @@ def solve_root_density_fixed_B(B, eta, n_quad=240):
     # 1/(2 pi) p'(alpha_i)
 
     diff = alpha[:, None] - alpha[None, :]
-    matrix = np.eye(n_quad) + (weight[None, :] / (2 * np.pi)) * theta_prime(diff, eta)
+    matrix = np.eye(n_quad) + (weight[None, :] / (2 * np.pi)) * kernel.theta_prime(diff)
 
-    rhs = p_prime(alpha, eta) / (2 * np.pi)
+    rhs = kernel.p_prime(alpha) / (2 * np.pi)
 
     rho = solve(matrix, rhs, assume_a="gen")
 
@@ -362,29 +430,37 @@ def solve_root_density_fixed_B(B, eta, n_quad=240):
 # Energy density
 # ============================================================
 
-def energy_density(B, eta, h, alpha, weight, rho):
+def energy_density(B, kernel: XXZBetheKernel, h, alpha, weight, rho):
     """
-    e(B) =
-    cos eta - h
-    + int_{-B}^B [2h - 4 sin^2 eta/(cosh alpha - cos eta)] rho_B(alpha) d alpha
+    e(B) = reference energy density + int bare_energy(alpha) rho_B(alpha) d alpha
     """
 
-    integral = np.sum(weight * bare_energy(alpha, eta, h) * rho)
+    integral = np.sum(weight * kernel.bare_energy(alpha, h) * rho)
 
-    return np.cos(eta) - h + integral
+    return kernel.vacuum_energy_density(h) + integral
 
 
 # ============================================================
 # Main driver
 # ============================================================
 
-def compute_ground_state_density(eta, h, n_quad=240, B_max=40.0):
+def compute_ground_state_density(
+    delta,
+    h,
+    n_quad=240,
+    B_max=40.0,
+    *,
+    epsrel=1e-12,
+    limit=256,
+    series_terms=4096,
+    series_tol=1e-14,
+):
     """
     1. Find B from epsilon_B(B) = 0.
     2. Solve rho_B(alpha).
     3. Return data.
     """
-    eta = float(eta)
+    kernel = XXZBetheKernel.from_delta(delta)
     h = float(h)
     if h < 0:
         warnings.warn(
@@ -396,26 +472,12 @@ def compute_ground_state_density(eta, h, n_quad=240, B_max=40.0):
             stacklevel=2,
         )
         h = abs(h)
-    if h == 0:
-        alpha = np.linspace(-float(B_max), float(B_max), int(n_quad))
-        rho = _zero_field_root_density(alpha, eta)
-        return XXZGroundStateDensity(
-            eta=eta,
-            h=h,
-            B=np.inf,
-            alpha=alpha,
-            weight=np.array([]),
-            rho=rho,
-            epsilon_alpha=np.array([]),
-            epsilon=np.array([]),
-            energy_density=_zero_field_infinite_energy_density(eta),
-        )
 
-    B = find_fermi_B(eta, h, n_quad=n_quad, B_max=B_max)
-
-    if B == 0.0:
+    if kernel.regime == "massive_negative":
         return XXZGroundStateDensity(
-            eta=eta,
+            delta=kernel.delta,
+            regime=kernel.regime,
+            eta=kernel.parameter,
             h=h,
             B=0.0,
             alpha=np.array([]),
@@ -423,21 +485,70 @@ def compute_ground_state_density(eta, h, n_quad=240, B_max=40.0):
             rho=np.array([]),
             epsilon_alpha=np.array([]),
             epsilon=np.array([]),
-            energy_density=np.cos(eta) - h,
+            energy_density=kernel.vacuum_energy_density(h),
+        )
+
+    if h == 0:
+        B = np.inf if kernel.regime == "massless" else np.pi
+        alpha, weight, rho = solve_root_density_fixed_B(
+            B,
+            kernel,
+            n_quad=n_quad,
+            alpha_cut=B_max,
+            series_terms=series_terms,
+            series_tol=series_tol,
+        )
+        return XXZGroundStateDensity(
+            delta=kernel.delta,
+            regime=kernel.regime,
+            eta=kernel.parameter,
+            h=h,
+            B=B,
+            alpha=alpha,
+            weight=weight,
+            rho=rho,
+            epsilon_alpha=np.array([]),
+            epsilon=np.array([]),
+            energy_density=_zero_field_energy_density(kernel, epsrel=epsrel, limit=limit),
+        )
+
+    search_B_max = min(float(B_max), np.pi) if kernel.regime == "massive" else float(B_max)
+    B = find_fermi_B(kernel, h, n_quad=n_quad, B_max=search_B_max)
+
+    if B == 0.0:
+        return XXZGroundStateDensity(
+            delta=kernel.delta,
+            regime=kernel.regime,
+            eta=kernel.parameter,
+            h=h,
+            B=0.0,
+            alpha=np.array([]),
+            weight=np.array([]),
+            rho=np.array([]),
+            epsilon_alpha=np.array([]),
+            epsilon=np.array([]),
+            energy_density=kernel.vacuum_energy_density(h),
         )
 
     epsilon_alpha, epsilon_weight, epsilon = solve_dressed_energy_fixed_B(
-        B, eta, h, n_quad=n_quad
+        B, kernel, h, n_quad=n_quad
     )
 
     alpha, weight, rho = solve_root_density_fixed_B(
-        B, eta, n_quad=n_quad
+        B,
+        kernel,
+        n_quad=n_quad,
+        alpha_cut=B_max,
+        series_terms=series_terms,
+        series_tol=series_tol,
     )
 
-    e = energy_density(B, eta, h, alpha, weight, rho)
+    e = energy_density(B, kernel, h, alpha, weight, rho)
 
     return XXZGroundStateDensity(
-        eta=eta,
+        delta=kernel.delta,
+        regime=kernel.regime,
+        eta=kernel.parameter,
         h=h,
         B=B,
         alpha=alpha,
@@ -466,10 +577,12 @@ def ground_energy(
 ):
     r"""Ground-state energy density for the infinite periodic XXZ chain.
 
-    This uses the massless-regime TBA equation in this file and currently
-    supports only ``-1 < delta < 1`` after the ``j < 0`` branch mapping.
+    This uses the massless-regime TBA equation for ``-1 < delta < 1``. At
+    zero field it also supports the massive antiferromagnetic branch
+    ``delta = cosh(gamma) > 1`` using the closed-form series. For
+    ``delta < -1`` it returns the fully polarized ferromagnetic branch.
     """
-    _check_delta(delta)
+    _check_ground_delta(delta)
     if h < 0:
         warnings.warn(
             "xxz_pbc_infinite_ground_energy received h < 0. Using spin-flip "
@@ -481,23 +594,16 @@ def ground_energy(
     if j == 0:
         return -abs(float(h)) * (1.0 if pauli else 0.5)
 
-    branch_delta = _check_delta(delta if j > 0 else -delta)
-    eta = _eta_from_delta(branch_delta)
-    scaled_h = abs(float(h)) / abs(j)
-    if scaled_h == 0:
-        energy_density = abs(j) * _zero_field_infinite_energy_density(
-            eta,
-            epsrel=epsrel,
-            limit=limit,
-        )
-    else:
-        result = compute_ground_state_density(
-            eta=eta,
-            h=scaled_h,
-            n_quad=n_quad,
-            B_max=B_max,
-        )
-        energy_density = abs(j) * result["energy_density"]
+    branch_delta = _check_ground_delta(delta if j > 0 else -delta)
+    result = compute_ground_state_density(
+        delta=branch_delta,
+        h=abs(float(h)) / abs(j),
+        n_quad=n_quad,
+        B_max=B_max,
+        epsrel=epsrel,
+        limit=limit,
+    )
+    energy_density = abs(j) * result["energy_density"]
     if not pauli:
         energy_density /= 4.0
     return float(np.real_if_close(energy_density))
@@ -522,9 +628,9 @@ def plot_xxz_root_distribution(
             RuntimeWarning,
             stacklevel=2,
         )
-    branch_delta = _check_delta(delta if j > 0 else -delta)
+    branch_delta = _check_ground_delta(delta if j > 0 else -delta)
     data = compute_ground_state_density(
-        eta=_eta_from_delta(branch_delta),
+        delta=branch_delta,
         h=abs(float(h)) / abs(j),
         n_quad=n_quad,
         B_max=B_max,
@@ -564,8 +670,128 @@ def _zero_field_infinite_energy_density(eta, *, epsrel=1e-12, limit=256):
     return np.cos(eta) - np.sin(eta) ** 2 / eta * integral
 
 
+def _zero_field_energy_density(kernel: XXZBetheKernel, *, epsrel=1e-12, limit=256):
+    if kernel.regime == "massless":
+        return _zero_field_infinite_energy_density(kernel.parameter, epsrel=epsrel, limit=limit)
+    if kernel.regime == "massive":
+        return _zero_field_massive_infinite_energy_density(kernel.parameter, epsrel=epsrel, limit=limit)
+    return float(kernel.delta)
+
+
+def _zero_field_massive_infinite_energy_density(gamma, *, epsrel=1e-12, limit=256):
+    r"""Zero-field infinite-chain energy density for ``Delta = cosh(gamma) > 1``."""
+    gamma = float(gamma)
+    if gamma <= 0.0:
+        raise ValueError(f"gamma should be positive for Delta > 1, got {gamma}")
+
+    max_terms = max(int(limit), int(np.ceil(40.0 / gamma)))
+    series = 0.0
+    for ell in range(1, max_terms + 1):
+        x = ell * gamma
+        if x > 700.0:
+            break
+        term = np.exp(-x) / np.cosh(x)
+        series += term
+        if 2.0 * abs(term) < epsrel:
+            break
+    return np.cosh(gamma) - 2.0 * np.sinh(gamma) * (1.0 + 2.0 * series)
+
+
+def _zero_field_massive_dressed_energy(
+    alpha,
+    gamma,
+    *,
+    series_terms=4096,
+    series_tol=1e-14,
+):
+    alpha = np.asarray(alpha, dtype=float)
+    gamma = float(gamma)
+    if gamma <= 0.0:
+        raise ValueError(f"gamma should be positive for Delta > 1, got {gamma}")
+
+    series = np.ones_like(alpha, dtype=float)
+    for ell in range(1, int(series_terms) + 1):
+        x = ell * gamma
+        if x > 700.0:
+            break
+        coeff = 2.0 / np.cosh(x)
+        if coeff < series_tol:
+            break
+        series += coeff * np.cos(ell * alpha)
+    return -2.0 * np.sinh(gamma) * series
+
+
 def _zero_field_root_density(alpha, eta):
     return 1.0 / (4.0 * eta * np.cosh(np.pi * np.asarray(alpha) / (2.0 * eta)))
+
+
+def _zero_field_density(
+    kernel: XXZBetheKernel,
+    alpha,
+    *,
+    series_terms=4096,
+    series_tol=1e-14,
+):
+    if kernel.regime == "massless":
+        return _zero_field_root_density(alpha, kernel.parameter)
+    if kernel.regime == "massive":
+        return _zero_field_massive_root_density(
+            alpha,
+            kernel.parameter,
+            series_terms=series_terms,
+            series_tol=series_tol,
+        )
+    return np.zeros_like(np.asarray(alpha, dtype=float))
+
+
+def _zero_field_massive_root_density(
+    alpha,
+    gamma,
+    *,
+    series_terms=4096,
+    series_tol=1e-14,
+):
+    alpha = np.asarray(alpha, dtype=float)
+    gamma = float(gamma)
+    if gamma <= 0.0:
+        raise ValueError(f"gamma should be positive for |Delta| > 1, got {gamma}")
+
+    rho = np.ones_like(alpha, dtype=float)
+    for ell in range(1, int(series_terms) + 1):
+        x = ell * gamma
+        if x > 700.0:
+            break
+        coeff = 2.0 / np.cosh(x)
+        if coeff < series_tol:
+            break
+        rho += coeff * np.cos(ell * alpha)
+    return rho / (4.0 * np.pi)
+
+
+def _root_density_regime(eta, delta):
+    parameter = float(eta)
+    if delta is None:
+        if not (0.0 < parameter < np.pi):
+            raise ValueError(
+                "eta should satisfy 0 < eta < pi for the massless root-density "
+                f"equation, got {parameter}. Pass delta for |Delta| > 1."
+            )
+        return "massless", parameter
+
+    delta = float(delta)
+    if -1.0 < delta < 1.0:
+        expected = np.arccos(delta)
+        if not np.isclose(parameter, expected):
+            raise ValueError("delta and eta are inconsistent")
+        return "massless", parameter
+
+    if abs(delta) > 1.0:
+        expected = np.arccosh(abs(delta))
+        if not np.isclose(parameter, expected):
+            raise ValueError("delta and gamma are inconsistent")
+        return "massive", parameter
+
+    raise ValueError(f"zero-field closed-form density is singular at delta={delta}")
 
 
 def evaluate_full_dressed_energy(
@@ -574,7 +800,7 @@ def evaluate_full_dressed_energy(
     *,
     chunk_size=2048,
 ):
-    eta = float(gs.eta)
+    kernel = XXZBetheKernel.from_delta(gs.delta)
     h = float(gs.h)
 
     alpha_eval = np.asarray(alpha_eval, dtype=float)
@@ -596,7 +822,7 @@ def evaluate_full_dressed_energy(
         )
 
     # Start from the bare energy.
-    epsilon_full = bare_energy(alpha_eval, eta, h)
+    epsilon_full = kernel.bare_energy(alpha_eval, h)
 
     # If B = 0, the sea is empty, so there is no dressing integral.
     if gs.B == 0 or len(beta) == 0:
@@ -615,7 +841,7 @@ def evaluate_full_dressed_energy(
         stop = min(start + chunk_size, len(alpha_eval))
         a = alpha_eval[start:stop]
 
-        K = theta_prime(a[:, None] - beta[None, :], eta)
+        K = kernel.theta_prime(a[:, None] - beta[None, :])
         correction = K @ weighted_eps
 
         epsilon_full[start:stop] -= correction / (2.0 * np.pi)

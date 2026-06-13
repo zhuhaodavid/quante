@@ -12,7 +12,7 @@ import numpy as np
 from numpy import ndarray
 from scipy.optimize import root
 
-from .bethe_state import BetheState, SixVertexBetheState
+from .bethe_state import BetheState, SixVertexBetheState, XXZBetheKernel
 
 
 __all__ = [
@@ -73,8 +73,12 @@ def solve_xxz_state(
 ) -> SixVertexBetheState:
     r"""Solve XXZ Bethe equations for a chosen set of quantum numbers.
 
-    This solves the massless-regime branch
-    ``u = -eta / 2 + 1j * alpha / 2`` with ``Delta = cos(eta)``. The returned
+    For ``-1 < Delta < 1`` this solves the massless-regime branch
+    ``u = -eta / 2 + 1j * alpha / 2`` with ``Delta = cos(eta)``. For
+    ``|Delta| > 1`` it solves the massive real-root branch with
+    ``|Delta| = cosh(gamma)`` and ``alpha`` roots in ``(-pi, pi)``. For
+    ``Delta < -1`` this is the branch obtained from the even-periodic-chain
+    staggered-rotation map to ``-H(|Delta|)``. The returned
     ``SixVertexBetheState`` stores ``state.roots`` as spectral parameters and
     keeps the branch coordinates in ``state.alphas``.
 
@@ -84,11 +88,11 @@ def solve_xxz_state(
     different parametrization and are not represented here.
     """
     L = _check_chain_length(L)
-    delta, eta = _check_delta_eta(delta, eta)
+    kernel = _check_xxz_kernel(delta, eta)
     qnums = _prepare_qnums(L, qnums, M)
 
     if x0 is None:
-        x0 = _initial_guess(L, eta, qnums)
+        x0 = kernel.finite_initial_guess(L, qnums)
     else:
         x0 = np.asarray(x0, dtype=float)
         if x0.shape != qnums.shape:
@@ -98,7 +102,7 @@ def solve_xxz_state(
         _residual,
         x0,
         jac=_jacobian,
-        args=(L, eta, qnums),
+        args=(L, kernel, qnums),
         method=method,
         tol=tol,
     )
@@ -110,18 +114,25 @@ def solve_xxz_state(
     if raise_error and not sol.success:
         raise RuntimeError(f"Bethe rapidity solver did not converge: {sol.message}")
 
+    def mapper(alphas, _parameter):
+        return kernel.map_alpha_to_u(alphas)
+
     return SixVertexBetheState(
         L=L,
         qnums=qnums,
         alphas=alphas,
-        map_alpha_to_u=map_alpha_to_u,
+        map_alpha_to_u=mapper,
         solver=sol,
-        eta=eta,
+        eta=kernel.parameter,
         metadata={
             "model": "XXZ",
-            "delta": delta,
+            "delta": kernel.delta,
+            "regime": kernel.regime,
+            "anisotropy_parameter": kernel.parameter,
+            "anisotropy_name": kernel.parameter_name,
+            "mapped_delta": kernel.mapped_delta,
         },
-        root_branch="u = -eta / 2 + 1j * alpha / 2",
+        root_branch=kernel.root_branch,
     )
 
 
@@ -141,7 +152,7 @@ def energy_from_rapidities(
 ):
     r"""Return periodic XXZ energy from ``alpha`` rapidities.
 
-    With ``Delta = cos(eta)`` and
+    With ``Delta = cos(eta)`` in the massless regime and
     ``u_j = -eta / 2 + 1j * alpha_j / 2``,
 
     .. math::
@@ -151,16 +162,22 @@ def energy_from_rapidities(
             \frac{\sin^2\eta}{\cosh\alpha_j - \cos\eta}
         \right].
 
+    For ``|Delta| = cosh(gamma) > 1`` this uses the massive real-root branch
+
+    .. math::
+        E = J \left[
+            s \frac{L |\Delta|}{4}
+            - \sum_j
+            s \frac{\sinh^2\gamma}{\cosh\gamma - \cos\alpha_j}
+        \right].
+
+    where ``s=1`` for ``Delta>1`` and ``s=-1`` for the even-periodic-chain
+    branch mapped from ``Delta<-1``.
+
     By default ``pauli=True`` returns the energy in the Pauli-matrix
     convention, which is four times the spin-operator convention above.
     """
-    delta, eta = _check_delta_eta(delta, eta)
-    alphas = np.asarray(alphas, dtype=float)
-    bare = -np.sin(eta) ** 2 / (np.cosh(alphas) - np.cos(eta))
-    energy = j * (int(L) * delta / 4.0 + np.sum(bare))
-    if pauli:
-        energy *= 4.0
-    return float(np.real_if_close(energy))
+    return _check_xxz_kernel(delta, eta).finite_energy(alphas, L, j=j, pauli=pauli)
 
 
 def sound_velocity(
@@ -180,7 +197,10 @@ def sound_velocity(
 
     The Pauli-matrix convention is four times this value.
     """
-    _, eta = _check_delta_eta(delta, eta)
+    kernel = _check_xxz_kernel(delta, eta)
+    if not kernel.is_massless:
+        raise ValueError("sound_velocity is only defined for the gapless -1 < Delta < 1 regime")
+    eta = kernel.parameter
     velocity = abs(float(j)) * np.pi * np.sin(eta) / (2.0 * eta)
     if pauli:
         velocity *= 4.0
@@ -229,42 +249,39 @@ def half_filling_linear_edge_spectrum(
 # Logarithmic Bethe equation internals
 # ============================================================
 
-def _theta(x, n: int, eta: float):
-    return 2.0 * np.arctan(np.tanh(x) / np.tan(n * eta / 2.0))
-
-
-def _theta_derivative(x, n: int, eta: float):
-    tan_half = np.tan(n * eta / 2.0)
-    tanh_x = np.tanh(x)
-    sech2_x = 1.0 / np.cosh(x) ** 2
-    return 2.0 * tan_half * sech2_x / (tan_half ** 2 + tanh_x ** 2)
-
-
-def _residual(alphas, L: int, eta: float, qnums):
+def _residual(alphas, L: int, kernel: XXZBetheKernel, qnums):
     alphas = np.asarray(alphas, dtype=float)
     qnums = np.asarray(qnums, dtype=float)
-    diff = (alphas[:, None] - alphas[None, :]) / 2.0
-    scatter = np.sum(_theta(diff, 2, eta), axis=1)
-    return L * _theta(alphas / 2.0, 1, eta) - scatter - 2.0 * np.pi * qnums
+    if kernel.is_massless:
+        diff = (alphas[:, None] - alphas[None, :]) / 2.0
+        scatter = np.sum(kernel.finite_theta(diff, 2), axis=1)
+        return L * kernel.finite_theta(alphas / 2.0, 1) - scatter - 2.0 * np.pi * qnums
+
+    diff = alphas[:, None] - alphas[None, :]
+    scatter = np.sum(kernel.finite_theta(diff, 2), axis=1)
+    return L * kernel.finite_theta(alphas, 1) - scatter - 2.0 * np.pi * qnums
 
 
-def _jacobian(alphas, L: int, eta: float, qnums):
+def _jacobian(alphas, L: int, kernel: XXZBetheKernel, qnums):
     alphas = np.asarray(alphas, dtype=float)
-    diff = (alphas[:, None] - alphas[None, :]) / 2.0
-    jac = 0.5 * _theta_derivative(diff, 2, eta)
-    diag = (
-        0.5 * L * _theta_derivative(alphas / 2.0, 1, eta)
-        - np.sum(jac, axis=1)
-        + np.diag(jac)
-    )
+    if kernel.is_massless:
+        diff = (alphas[:, None] - alphas[None, :]) / 2.0
+        jac = 0.5 * kernel.finite_theta_derivative(diff, 2)
+        diag = (
+            0.5 * L * kernel.finite_theta_derivative(alphas / 2.0, 1)
+            - np.sum(jac, axis=1)
+            + np.diag(jac)
+        )
+    else:
+        diff = alphas[:, None] - alphas[None, :]
+        jac = kernel.finite_theta_derivative(diff, 2)
+        diag = (
+            L * kernel.finite_theta_derivative(alphas, 1)
+            - np.sum(jac, axis=1)
+            + np.diag(jac)
+        )
     np.fill_diagonal(jac, diag)
     return jac
-
-
-def _initial_guess(L: int, eta: float, qnums):
-    arg = np.tan(np.pi * qnums / L) * np.tan(eta / 2.0)
-    arg = np.clip(arg, -0.95, 0.95)
-    return 2.0 * np.arctanh(arg)
 
 
 def _prepare_qnums(L: int, qnums, M):
@@ -375,6 +392,8 @@ def ground_energy(
     branch_delta = _check_delta_eta(delta if j > 0 else -delta, None)[0]
     L = int(L)
     if h == 0:
+        if branch_delta < -1.0:
+            return energy_from_rapidities([], L, branch_delta, j=abs(j), pauli=pauli)
         state = solve_xxz_state(
             L,
             branch_delta,
@@ -593,9 +612,11 @@ def _estimate_finite_ground_sector(L, delta, *, h):
     try:
         from .infinite_pbc_xxz import compute_ground_state_density
 
-        _, eta = _check_delta_eta(delta, None)
+        _, _, regime = _check_delta_eta(delta, None)
+        if regime == "massive_negative":
+            return None
         data = compute_ground_state_density(
-            eta=eta,
+            delta=delta,
             h=h,
             n_quad=120,
             B_max=40.0,
@@ -665,21 +686,13 @@ def _check_chain_length(L: int):
 
 
 def _check_delta_eta(delta, eta):
+    kernel = _check_xxz_kernel(delta, eta)
+    return kernel.delta, kernel.parameter, kernel.regime
+
+
+def _check_xxz_kernel(delta, eta=None):
     if eta is None:
         if delta is None:
             raise ValueError("either delta or eta should be supplied")
-        delta = float(delta)
-        if not (-1.0 < delta < 1.0):
-            raise ValueError(f"massless XXZ solver expects -1 < delta < 1, got {delta}")
-        eta = float(np.arccos(delta))
-    else:
-        eta = float(eta)
-        if not (0.0 < eta < np.pi):
-            raise ValueError(f"eta should satisfy 0 < eta < pi, got {eta}")
-        if delta is None:
-            delta = float(np.cos(eta))
-        else:
-            delta = float(delta)
-            if not np.isclose(delta, np.cos(eta)):
-                raise ValueError("delta and eta are inconsistent")
-    return delta, eta
+        return XXZBetheKernel.from_delta(delta)
+    return XXZBetheKernel.from_delta_parameter(delta, eta)
