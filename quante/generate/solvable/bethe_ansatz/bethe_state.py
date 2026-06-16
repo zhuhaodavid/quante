@@ -26,11 +26,15 @@ class XXZBetheKernel:
         delta = float(delta)
         if -1.0 < delta < 1.0:
             return cls(delta=delta, regime="massless", parameter=float(np.arccos(delta)))
+        if delta == 1.0:
+            return cls(delta=delta, regime="isotropic", parameter=0.0)
+        if delta == -1.0:
+            return cls(delta=delta, regime="isotropic_negative", parameter=0.0)
         if delta > 1.0:
             return cls(delta=delta, regime="massive", parameter=float(np.arccosh(delta)))
         if delta < -1.0:
             return cls(delta=delta, regime="massive_negative", parameter=float(np.arccosh(-delta)))
-        raise ValueError(f"XXZ Bethe helpers exclude the isotropic points delta=+/-1, got {delta}")
+        raise ValueError(f"invalid XXZ anisotropy delta={delta}")
 
     @classmethod
     def from_delta_parameter(cls, delta, parameter):
@@ -47,6 +51,9 @@ class XXZBetheKernel:
         if kernel.regime == "massless":
             if not np.isclose(kernel.delta, np.cos(parameter)):
                 raise ValueError("delta and eta are inconsistent")
+        elif kernel.regime in {"isotropic", "isotropic_negative"}:
+            if not np.isclose(parameter, 0.0):
+                raise ValueError("eta should be zero for abs(delta)=1")
         else:
             expected = np.cosh(parameter)
             expected = expected if kernel.delta > 0.0 else -expected
@@ -58,11 +65,17 @@ class XXZBetheKernel:
 
     @property
     def parameter_name(self):
-        return "eta" if self.regime == "massless" else "gamma"
+        return (
+            "eta"
+            if self.regime in {"massless", "isotropic", "isotropic_negative"}
+            else "gamma"
+        )
 
     @property
     def mapped_delta(self):
-        return -self.delta if self.regime == "massive_negative" else self.delta
+        if self.regime in {"massive_negative", "isotropic_negative"}:
+            return -self.delta
+        return self.delta
 
     @property
     def is_massless(self):
@@ -73,16 +86,33 @@ class XXZBetheKernel:
         return self.regime in {"massive", "massive_negative"}
 
     @property
+    def is_isotropic(self):
+        return self.regime in {"isotropic", "isotropic_negative"}
+
+    @property
+    def is_ferromagnetic_isotropic(self):
+        return self.regime == "isotropic_negative"
+
+    @property
     def energy_sign(self):
-        return -1.0 if self.regime == "massive_negative" else 1.0
+        if self.regime in {"massive_negative", "isotropic_negative"}:
+            return -1.0
+        return 1.0
 
     def map_alpha_to_u(self, alphas):
+        if self.is_isotropic:
+            return -0.5 + 0.5j * np.asarray(alphas)
         return -self.parameter / 2.0 + 0.5j * np.asarray(alphas)
 
     @property
     def root_branch(self):
         if self.is_massless:
             return "u = -eta / 2 + 1j * alpha / 2"
+        if self.is_isotropic:
+            return (
+                "u = -1 / 2 + 1j * alpha / 2, "
+                f"mapped Delta = 1 (physical Delta = {self.delta:g})"
+            )
         return "u = -gamma / 2 + 1j * alpha / 2, |Delta| = cosh(gamma), alpha in (-pi, pi)"
 
     def p_prime(self, alpha):
@@ -90,6 +120,8 @@ class XXZBetheKernel:
         if self.is_massless:
             eta = self.parameter
             return np.sin(eta) / (np.cosh(alpha) - np.cos(eta))
+        if self.is_isotropic:
+            return 2.0 / (1.0 + alpha ** 2)
         gamma = self.parameter
         return np.sinh(gamma) / (np.cosh(gamma) - np.cos(alpha))
 
@@ -98,6 +130,8 @@ class XXZBetheKernel:
         if self.is_massless:
             eta = self.parameter
             return np.sin(2.0 * eta) / (np.cosh(x) - np.cos(2.0 * eta))
+        if self.is_isotropic:
+            return 4.0 / (4.0 + x ** 2)
         gamma = self.parameter
         return np.sinh(2.0 * gamma) / (np.cosh(2.0 * gamma) - np.cos(x))
 
@@ -107,6 +141,8 @@ class XXZBetheKernel:
         if self.is_massless:
             eta = self.parameter
             return 2.0 * h - 4.0 * np.sin(eta) ** 2 / (np.cosh(alpha) - np.cos(eta))
+        if self.is_isotropic:
+            return 2.0 * h - 8.0 / (1.0 + alpha ** 2)
         gamma = self.parameter
         return 2.0 * h - 4.0 * np.sinh(gamma) ** 2 / (np.cosh(gamma) - np.cos(alpha))
 
@@ -118,6 +154,8 @@ class XXZBetheKernel:
         if self.is_massless:
             eta = self.parameter
             return -np.sin(eta) ** 2 / (np.cosh(alphas) - np.cos(eta))
+        if self.is_isotropic:
+            return -2.0 / (1.0 + alphas ** 2)
         gamma = self.parameter
         return -np.sinh(gamma) ** 2 / (np.cosh(gamma) - np.cos(alphas))
 
@@ -136,6 +174,8 @@ class XXZBetheKernel:
     def finite_theta(self, x, n: int):
         if self.is_massless:
             return 2.0 * np.arctan(np.tanh(x) / np.tan(n * self.parameter / 2.0))
+        if self.is_isotropic:
+            return 2.0 * np.arctan(np.asarray(x) / n)
 
         x = np.asarray(x)
         branch = np.floor((x + np.pi) / (2.0 * np.pi))
@@ -151,6 +191,9 @@ class XXZBetheKernel:
             tanh_x = np.tanh(x)
             sech2_x = 1.0 / np.cosh(x) ** 2
             return 2.0 * tan_half * sech2_x / (tan_half ** 2 + tanh_x ** 2)
+        if self.is_isotropic:
+            x = np.asarray(x)
+            return 2.0 * n / (n ** 2 + x ** 2)
 
         x = np.asarray(x)
         branch = np.floor((x + np.pi) / (2.0 * np.pi))
@@ -165,6 +208,8 @@ class XXZBetheKernel:
             arg = np.tan(np.pi * qnums / int(L)) * np.tan(self.parameter / 2.0)
             arg = np.clip(arg, -0.95, 0.95)
             return 2.0 * np.arctanh(arg)
+        if self.is_isotropic:
+            return np.tan(np.pi * qnums / int(L))
 
         arg = np.tan(np.pi * qnums / int(L)) * np.tanh(self.parameter / 2.0)
         return 2.0 * np.arctan(arg)

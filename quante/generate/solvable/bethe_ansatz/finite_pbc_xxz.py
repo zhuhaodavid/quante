@@ -75,6 +75,15 @@ def solve_xxz_state(
 
     For ``-1 < Delta < 1`` this solves the massless-regime branch
     ``u = -eta / 2 + 1j * alpha / 2`` with ``Delta = cos(eta)``. For
+    ``Delta = 1`` it solves the isotropic rational equation
+
+    ``2 L arctan(alpha_k) - 2 sum_{j != k} arctan((alpha_k-alpha_j)/2)
+    = 2 pi I_k``.
+
+    Its rational spectral parameters are
+    ``u = -1 / 2 + 1j * alpha / 2``.
+
+    For
     ``|Delta| > 1`` it solves the massive real-root branch with
     ``|Delta| = cosh(gamma)`` and ``alpha`` roots in ``(-pi, pi)``. For
     ``Delta < -1`` this is the branch obtained from the even-periodic-chain
@@ -173,6 +182,12 @@ def energy_from_rapidities(
 
     where ``s=1`` for ``Delta>1`` and ``s=-1`` for the even-periodic-chain
     branch mapped from ``Delta<-1``.
+
+    At ``Delta=1`` the rational rapidities use
+
+    .. math::
+        E = J \left[\frac{L}{4}
+            - \sum_j \frac{2}{1+\alpha_j^2}\right].
 
     By default ``pauli=True`` returns the energy in the Pauli-matrix
     convention, which is four times the spin-operator convention above.
@@ -376,8 +391,34 @@ def ground_energy(
     For ``h < 0`` this function uses spin-flip symmetry and optimizes the
     positive-field minority-root branch. The returned energy is physical, but
     the internally selected Bethe sector is the flipped one.
+
+    At the ferromagnetic isotropic boundary of the effective branch,
+    ``Delta = -1``, no Bethe roots are needed. The exact energy is
+
+    .. math::
+        E_0 = -|J|L - |h|L
+
+    in the Pauli-matrix convention, and
+    ``E_0 = -|J|L/4 - |h|L/2`` in the spin-operator convention.
     """
-    delta = _check_delta_eta(delta, None)[0]
+    L = _check_chain_length(L)
+    delta = float(delta)
+    if not np.isfinite(delta):
+        raise ValueError(f"delta should be finite, got {delta}")
+
+    if j == 0:
+        return -abs(float(h)) * _sector_magnetizations(L, [0, L], pauli=pauli).max()
+
+    branch_delta = delta if j > 0 else -delta
+    if branch_delta == -1.0:
+        exchange_scale = 1.0 if pauli else 0.25
+        field_scale = 1.0 if pauli else 0.5
+        return float(
+            -abs(float(j)) * L * exchange_scale
+            - abs(float(h)) * L * field_scale
+        )
+
+    branch_delta = _check_delta_eta(branch_delta, None)[0]
     if h < 0:
         warnings.warn(
             "xxz_pbc_finite_ground_energy received h < 0. Using spin-flip "
@@ -386,11 +427,6 @@ def ground_energy(
             RuntimeWarning,
             stacklevel=2,
         )
-    if j == 0:
-        return -abs(float(h)) * _sector_magnetizations(int(L), [0, int(L)], pauli=pauli).max()
-
-    branch_delta = _check_delta_eta(delta if j > 0 else -delta, None)[0]
-    L = int(L)
     if h == 0:
         if branch_delta < -1.0:
             return energy_from_rapidities([], L, branch_delta, j=abs(j), pauli=pauli)
@@ -613,7 +649,7 @@ def _estimate_finite_ground_sector(L, delta, *, h):
         from .infinite_pbc_xxz import compute_ground_state_density
 
         _, _, regime = _check_delta_eta(delta, None)
-        if regime == "massive_negative":
+        if regime in {"massive_negative", "isotropic_negative"}:
             return None
         data = compute_ground_state_density(
             delta=delta,

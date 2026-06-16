@@ -73,7 +73,11 @@ class XXZGroundStateDensity:
             "regime": self.regime,
             "eta": self.eta,
             "parameter": self.eta,
-            "parameter_name": "eta" if self.regime == "massless" else "gamma",
+            "parameter_name": (
+                "eta"
+                if self.regime in {"massless", "isotropic", "isotropic_negative"}
+                else "gamma"
+            ),
             "h": self.h,
             "B": self.B,
             "alpha": self.alpha,
@@ -186,13 +190,7 @@ def _check_delta(delta):
 
 
 def _check_ground_delta(delta):
-    delta = float(delta)
-    if delta != -1.0 and delta != 1.0:
-        return delta
-    raise ValueError(
-        "XXZ infinite ground_energy currently excludes the singular isotropic "
-        f"points delta=+/-1, got {delta}"
-    )
+    return float(delta)
 
 
 def _eta_from_delta(delta):
@@ -309,7 +307,7 @@ def find_fermi_B(kernel: XXZBetheKernel, h, n_quad=240, B_min=1e-6, B_max=40.0, 
     or B_max is too small.
     """
 
-    if kernel.regime == "massive_negative":
+    if kernel.regime in {"massive_negative", "isotropic_negative"}:
         return 0.0
 
     if kernel.regime == "massive":
@@ -375,12 +373,15 @@ def solve_root_density_fixed_B(
 
     for a fixed B.
 
-    The kernel chooses the massless or massive XXZ equation. For the
-    zero-field closed-form case, pass ``B=np.inf`` for massless or
+    The kernel chooses the massless, isotropic, or massive XXZ equation. For
+    the zero-field closed-form case, pass ``B=np.inf`` for massless/isotropic or
     ``B=np.pi`` for massive:
 
     - ``|Delta| < 1`` returns
       ``rho(alpha) = sech(pi alpha / (2 eta)) / (4 eta)`` on
+      ``[-alpha_cut, alpha_cut]``.
+    - ``Delta = 1`` returns
+      ``rho(alpha) = sech(pi alpha / 2) / 4`` on
       ``[-alpha_cut, alpha_cut]``.
     - ``Delta > 1`` returns the massive branch with
       ``gamma = arccosh(|delta|)`` on ``[-pi, pi]``:
@@ -388,11 +389,11 @@ def solve_root_density_fixed_B(
     """
     B = float(B)
 
-    if kernel.regime == "massive_negative":
+    if kernel.regime in {"massive_negative", "isotropic_negative"}:
         return np.array([]), np.array([]), np.array([])
 
     if np.isinf(B) or (kernel.regime == "massive" and np.isclose(B, np.pi)):
-        if kernel.regime == "massless":
+        if kernel.regime in {"massless", "isotropic"}:
             alpha = np.linspace(-float(alpha_cut), float(alpha_cut), int(n_quad))
             weight = np.array([])
             rho = _zero_field_density(kernel, alpha)
@@ -473,7 +474,7 @@ def compute_ground_state_density(
         )
         h = abs(h)
 
-    if kernel.regime == "massive_negative":
+    if kernel.regime in {"massive_negative", "isotropic_negative"}:
         return XXZGroundStateDensity(
             delta=kernel.delta,
             regime=kernel.regime,
@@ -489,7 +490,7 @@ def compute_ground_state_density(
         )
 
     if h == 0:
-        B = np.inf if kernel.regime == "massless" else np.pi
+        B = np.inf if kernel.regime in {"massless", "isotropic"} else np.pi
         alpha, weight, rho = solve_root_density_fixed_B(
             B,
             kernel,
@@ -577,13 +578,22 @@ def ground_energy(
 ):
     r"""Ground-state energy density for the infinite periodic XXZ chain.
 
-    This uses the massless-regime TBA equation for ``-1 < delta < 1``. At
-    zero field it also supports the massive antiferromagnetic branch
-    ``delta = cosh(gamma) > 1`` using the closed-form series. For
-    ``delta < -1`` it returns the fully polarized ferromagnetic branch.
+    This uses the massless-regime TBA equation for ``-1 < delta < 1`` and its
+    rational isotropic limit at ``delta = 1``. At zero field it also supports
+    the massive antiferromagnetic branch ``delta = cosh(gamma) > 1`` using the
+    closed-form series. For ``delta <= -1`` it returns the fully polarized
+    ferromagnetic branch.
     """
     _check_ground_delta(delta)
-    if h < 0:
+    if j == 0:
+        return -abs(float(h)) * (1.0 if pauli else 0.5)
+
+    branch_delta = _check_ground_delta(delta if j > 0 else -delta)
+    branch_kernel = XXZBetheKernel.from_delta(branch_delta)
+    if h < 0 and branch_kernel.regime not in {
+        "massive_negative",
+        "isotropic_negative",
+    }:
         warnings.warn(
             "xxz_pbc_infinite_ground_energy received h < 0. Using spin-flip "
             "symmetry and abs(h) for the positive-field TBA branch; the energy "
@@ -591,13 +601,10 @@ def ground_energy(
             RuntimeWarning,
             stacklevel=2,
         )
-    if j == 0:
-        return -abs(float(h)) * (1.0 if pauli else 0.5)
-
-    branch_delta = _check_ground_delta(delta if j > 0 else -delta)
+    field_scale = 1.0 if pauli else 2.0
     result = compute_ground_state_density(
         delta=branch_delta,
-        h=abs(float(h)) / abs(j),
+        h=field_scale * abs(float(h)) / abs(j),
         n_quad=n_quad,
         B_max=B_max,
         epsrel=epsrel,
@@ -673,6 +680,8 @@ def _zero_field_infinite_energy_density(eta, *, epsrel=1e-12, limit=256):
 def _zero_field_energy_density(kernel: XXZBetheKernel, *, epsrel=1e-12, limit=256):
     if kernel.regime == "massless":
         return _zero_field_infinite_energy_density(kernel.parameter, epsrel=epsrel, limit=limit)
+    if kernel.regime == "isotropic":
+        return float(1.0 - 4.0 * np.log(2.0))
     if kernel.regime == "massive":
         return _zero_field_massive_infinite_energy_density(kernel.parameter, epsrel=epsrel, limit=limit)
     return float(kernel.delta)
@@ -722,7 +731,20 @@ def _zero_field_massive_dressed_energy(
 
 
 def _zero_field_root_density(alpha, eta):
-    return 1.0 / (4.0 * eta * np.cosh(np.pi * np.asarray(alpha) / (2.0 * eta)))
+    eta = float(eta)
+    if not (0.0 < eta < np.pi):
+        raise ValueError(f"eta should satisfy 0 < eta < pi, got {eta}")
+    return _sech(np.pi * np.asarray(alpha) / (2.0 * eta)) / (4.0 * eta)
+
+
+def _zero_field_isotropic_root_density(alpha):
+    return 0.25 * _sech(np.pi * np.asarray(alpha, dtype=float) / 2.0)
+
+
+def _sech(x):
+    x_abs = np.abs(np.asarray(x, dtype=float))
+    exp_minus_abs = np.exp(-x_abs)
+    return 2.0 * exp_minus_abs / (1.0 + exp_minus_abs ** 2)
 
 
 def _zero_field_density(
@@ -734,6 +756,8 @@ def _zero_field_density(
 ):
     if kernel.regime == "massless":
         return _zero_field_root_density(alpha, kernel.parameter)
+    if kernel.regime == "isotropic":
+        return _zero_field_isotropic_root_density(alpha)
     if kernel.regime == "massive":
         return _zero_field_massive_root_density(
             alpha,
@@ -784,6 +808,11 @@ def _root_density_regime(eta, delta):
         if not np.isclose(parameter, expected):
             raise ValueError("delta and eta are inconsistent")
         return "massless", parameter
+
+    if delta == 1.0:
+        if not np.isclose(parameter, 0.0):
+            raise ValueError("eta should be zero for delta=1")
+        return "isotropic", 0.0
 
     if abs(delta) > 1.0:
         expected = np.arccosh(abs(delta))

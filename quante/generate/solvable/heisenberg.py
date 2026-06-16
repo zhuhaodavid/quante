@@ -100,6 +100,40 @@ def xxz_pbc_finite_ground_energy(
         raise_error=raise_error,
     )
 
+def xxz_obc_finite_ground_energy(
+    L,
+    j=1.0,
+    delta=0.0,
+    *,
+    h_minus=0.0,
+    h_plus=0.0,
+    pauli=True,
+    tol=1e-12,
+    raise_error=True,
+):
+    r"""Ground-state energy for the finite open XXZ chain.
+
+    ``h_minus`` and ``h_plus`` are longitudinal fields on the first and last
+    sites, respectively, in the same dimensionless normalization as the
+    Pauli exchange Hamiltonian inside the overall scale ``j``. For
+    ``pauli=False``, the corresponding spin-operator boundary coefficients
+    are ``j * h_minus / 2`` and ``j * h_plus / 2``.
+
+    For ``j < 0``, the Bethe branch is obtained by mapping
+    ``(delta, h_minus, h_plus) -> (-delta, -h_minus, -h_plus)``.
+    """
+    from .bethe_ansatz.finite_obc_xxz import ground_energy as _xxz_obc_finite
+    return _xxz_obc_finite(
+        L,
+        j=j,
+        delta=delta,
+        h_minus=h_minus,
+        h_plus=h_plus,
+        pauli=pauli,
+        tol=tol,
+        raise_error=raise_error,
+    )
+
 def xxx_infinite_ground_energy(j, pauli=True):
     r"""Ground state energy for the infinite Heisenberg model.
 
